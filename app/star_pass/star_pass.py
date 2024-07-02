@@ -415,10 +415,14 @@ class AmplifyShifts():
 
             Args:
                 json (Any):
-                    JSON body.
+                    JSON body of shift data.  Default value is None in
+                    order to allow sending a custom JSON body of shift
+                    data, although the method will use the data in the
+                    self._shift_data variable to construct a JSON body
+                    by default.
 
                 timeout (int):
-                    HTTP timeout.
+                    HTTP timeout.  Default is HTTP_TIMEOUT.
 
             Returns:
                 None.

@@ -5,6 +5,9 @@
 
 # Imports - Third-Party
 
+# Imports - Local
+from star_pass.star_pass import AmplifyShifts
+
 # Load environment variables
 
 # Constants
@@ -21,9 +24,17 @@ def main() -> None:
 
     """
 
+    # Create AmplifyShifts object
+    shifts = AmplifyShifts(
+        dry_run=True
+    )
+
+    # Create shifts
+    shifts.create_new_shifts()
+
     return None
 
 
 # Run main application function
-if __name__ == 'main':
+if __name__ == '__main__':
     main()
