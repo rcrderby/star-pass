@@ -6,7 +6,7 @@
 # Imports - Third-Party
 
 # Imports - Local
-from star_pass.star_pass import AmplifyShifts
+from .star_pass.star_pass import AmplifyShifts
 
 # Load environment variables
 
