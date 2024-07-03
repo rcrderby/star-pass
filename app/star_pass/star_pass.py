@@ -63,7 +63,7 @@ START_TIME_COLUMN = getenv('START_TIME_COLUMN')
 
 
 # Class definitions
-class AmplifyShifts():
+class AmplifyShifts:
     """ AmplifyShifts base class object. """
 
     def __init__(
