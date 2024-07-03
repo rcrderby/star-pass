@@ -6,54 +6,39 @@ from typing import Any
 from pprint import pprint as pp
 
 
-class Helpers:
-    """ Helpers base class object. """
+def print_message(
+        self,
+        message: Any,
+        end: str = '\n',
+        pretty_print: bool = False
+) -> None:
+    """ Print messages.
 
-    def __init__(self) -> None:
-        """ Helpers initialization method.
+        Args:
+            message (Any):
+                Pre-formatted content to print.
 
-            Args:
-                None.
+            end (str):
+                String appended at the end of the message.  Default
+                is a new line.  Ignored when pretty_print is True.
 
-            Returns:
-                None.
-        """
+            pretty_print (bool):
+                Display the output using pprint.pprint.  Default is
+                False.
 
-        return None
+        Returns:
+            None.
+    """
 
-    def print_message(
-            self,
-            message: Any,
-            end: str = '\n',
-            pretty_print: bool = False
-    ) -> None:
-        """ Print messages.
+    # Print formatted output
+    if pretty_print is False:
+        # Standard print
+        print(
+            message,
+            end=end
+        )
+    else:
+        # Pretty Print
+        pp(message)
 
-            Args:
-                message (Any):
-                    Pre-formatted content to print.
-
-                end (str):
-                    String appended at the end of the message.  Default
-                    is a new line.  Ignored when pretty_print is True.
-
-                pretty_print (bool):
-                    Display the output using pprint.pprint.  Default is
-                    False.
-
-            Returns:
-                None.
-        """
-
-        # Print formatted output
-        if pretty_print is False:
-            # Standard print
-            print(
-                message,
-                end=end
-            )
-        else:
-            # Pretty Print
-            pp(message)
-
-        return None
+    return None
