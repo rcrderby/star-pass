@@ -201,7 +201,7 @@ class AmplifyShifts:
         self._shift_data = shift_data
 
         # Print preliminary status message
-        message = f'Reading shift data from "{input_file}"...'
+        message = f'\nReading shift data from "{input_file}"...'
         print_message(
             message=message,
             end=''
@@ -239,7 +239,7 @@ class AmplifyShifts:
         )
 
         # Print preliminary status message
-        message = 'Removing any duplicate shifts...'
+        message = 'Removing duplicate shifts...'
         print_message(
             message=message,
             end=''
@@ -279,6 +279,17 @@ class AmplifyShifts:
             axis=1
         )
 
+        # Print preliminary status message
+        message = 'Formatting shift start values for Amplify compatibility...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        message = "done."
+        print_message(message=message)
+
         return None
 
     def _drop_unused_columns(self) -> None:
@@ -302,6 +313,17 @@ class AmplifyShifts:
             inplace=True
         )
 
+        # Print preliminary status message
+        message = 'Removing unused column data...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        message = "done."
+        print_message(message=message)
+
         return None
 
     def _group_shift_data(self) -> None:
@@ -323,6 +345,21 @@ class AmplifyShifts:
         self._grouped_shift_data = self._shift_data.groupby(
             # [KEEP_COLUMNS] excludes the 'need_id' column
             by=[GROUP_BY_COLUMN])[KEEP_COLUMNS]
+
+        # Print preliminary status message
+        message = 'Grouping shift data by opportunity...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        if self._grouped_shift_data is not None:
+            message = "done."
+            print_message(message=message)
+
+        else:
+            message = '\n\n** Error grouping shift data **\n'
 
         return None
 
@@ -352,6 +389,21 @@ class AmplifyShifts:
                 )
             }
         )
+
+        # Print preliminary status message
+        message = 'Organizing shift data for Amplify API compatibility...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        if self._grouped_series is not None:
+            message = "done."
+            print_message(message=message)
+
+        else:
+            message = '\n\n** Error organizing shift data **\n'
 
         return None
 
@@ -392,6 +444,21 @@ class AmplifyShifts:
 
         # Store grouped series data in a dictionary
         self._shift_data = self._grouped_series.to_dict()
+
+        # Print preliminary status message
+        message = 'Converting shift data to JSON...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        if self._shift_data is not None:
+            message = "done."
+            print_message(message=message)
+
+        else:
+            message = '\n\n** Error converting shift data to JSON **\n'
 
         return None
 
@@ -434,6 +501,21 @@ class AmplifyShifts:
         except ValidationError:
             # Set self._shift_data_valid to False
             self._shift_data_valid = False
+
+        # Print preliminary status message
+        message = 'Validating shift data compliance with JSON Schema...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        if self._shift_data_valid is True:
+            message = "done."
+            print_message(message=message)
+
+        else:
+            message = '\n\n** Error validating shift data **\n'
 
         return None
 
