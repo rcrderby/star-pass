@@ -3,6 +3,7 @@
         "dtype",
         "Hadolint",
         "jsonschema",
+        "mechatroner",
         "nosborn",
         "pylint"
     ]
