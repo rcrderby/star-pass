@@ -26,7 +26,7 @@ def main() -> None:
 
     # Create AmplifyShifts object
     shifts = AmplifyShifts(
-        dry_run=True
+        check_mode=True
     )
 
     # Create shifts

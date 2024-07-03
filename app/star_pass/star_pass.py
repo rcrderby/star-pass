@@ -71,12 +71,12 @@ class AmplifyShifts:
 
     def __init__(
             self,
-            dry_run: bool = False
+            check_mode: bool = False
     ) -> None:
         """ AmplifyShifts initialization method.
 
             Args:
-                dry_run (bool):
+                check_mode (bool):
                     Prepare HTTP API requests without sending the
                     requests.  Default value is False.
 
@@ -84,8 +84,8 @@ class AmplifyShifts:
                 None.
         """
 
-        # Set the value of self._dry_run
-        self._dry_run = dry_run
+        # Set the value of self._check_mode
+        self._check_mode = check_mode
 
         # Placeholder variables for data transformation methods
         self._shift_data: frame.DataFrame = None
@@ -136,8 +136,8 @@ class AmplifyShifts:
                 None.
         """
 
-        # Check for a dry run
-        if self._dry_run is False:
+        # Determine the status of check_mode
+        if self._check_mode is False:
             # Send API request
             response = request(
                 method=method,
@@ -158,9 +158,9 @@ class AmplifyShifts:
             )
 
         else:
-            # Set dry run output message
+            # Set check mode output message
             output_msg = (
-                '** HTTP API Dry Run **'
+                '** HTTP API Check Mode Run **'
             )
 
         # Display output message
