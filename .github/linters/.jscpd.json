@@ -1,18 +1,13 @@
-// jscpd copy/paste detection configuration customization file
-// Configuration file customization reference:
-// https://github.com/kucherenko/jscpd/tree/master/apps/jscpd
-
 {
     "threshold": 0,
     "reporters": [
       "consoleFull"
     ],
     "ignore": [
-      // Default ignore values
       "**/__snapshots__/**",
       "**/node_modules/**",
-      // Ignore generated JSON files
-      "**/data/json/**"
+      "**/data/json/**",
+      "**/bandit.yml"
     ],
     "absolute": true
 }
