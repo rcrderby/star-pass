@@ -101,6 +101,8 @@ class AmplifyShifts:
         self._create_shift_json_data()
         self._validate_shift_json_data()
 
+        return None
+
     def _send_api_request(
             self,
             method: str,
