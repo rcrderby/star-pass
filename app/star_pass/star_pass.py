@@ -15,6 +15,9 @@ from pandas.core import frame, series
 from pandas.core.groupby.generic import DataFrameGroupBy
 from requests import request
 
+# Imports - Local
+from .helpers import print_message
+
 # Load environment variables
 load_dotenv(
     dotenv_path='./.env',
@@ -63,17 +66,17 @@ START_TIME_COLUMN = getenv('START_TIME_COLUMN')
 
 
 # Class definitions
-class AmplifyShifts():
+class AmplifyShifts:
     """ AmplifyShifts base class object. """
 
     def __init__(
             self,
-            dry_run: bool = False
+            check_mode: bool = False
     ) -> None:
         """ AmplifyShifts initialization method.
 
             Args:
-                dry_run (bool):
+                check_mode (bool):
                     Prepare HTTP API requests without sending the
                     requests.  Default value is False.
 
@@ -81,8 +84,8 @@ class AmplifyShifts():
                 None.
         """
 
-        # Set the value of self._dry_run
-        self._dry_run = dry_run
+        # Set the value of self._check_mode
+        self._check_mode = check_mode
 
         # Placeholder variables for data transformation methods
         self._shift_data: frame.DataFrame = None
@@ -100,6 +103,8 @@ class AmplifyShifts():
         self._create_grouped_series()
         self._create_shift_json_data()
         self._validate_shift_json_data()
+
+        return None
 
     def _send_api_request(
             self,
@@ -131,8 +136,8 @@ class AmplifyShifts():
                 None.
         """
 
-        # Check for a dry run
-        if self._dry_run is False:
+        # Determine the status of check_mode
+        if self._check_mode is False:
             # Send API request
             response = request(
                 method=method,
@@ -153,9 +158,9 @@ class AmplifyShifts():
             )
 
         else:
-            # Set dry run output message
+            # Set check mode output message
             output_msg = (
-                '** HTTP API Dry Run **'
+                '** HTTP API Check Mode Run **'
             )
 
         # Display output message
@@ -195,6 +200,21 @@ class AmplifyShifts():
         # Update self._shift_data
         self._shift_data = shift_data
 
+        # Print preliminary status message
+        message = f'\nReading shift data from "{input_file}"...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        if self._shift_data is not None:
+            message = "done."
+            print_message(message=message)
+
+        else:
+            message = f'\n\n** Error reading data from "{input_file}" **\n'
+
         return None
 
     def _remove_duplicate_shifts(self) -> None:
@@ -217,6 +237,17 @@ class AmplifyShifts():
             inplace=True,
             keep='first'
         )
+
+        # Print preliminary status message
+        message = 'Removing duplicate shifts...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        message = "done."
+        print_message(message=message)
 
         return None
 
@@ -248,6 +279,17 @@ class AmplifyShifts():
             axis=1
         )
 
+        # Print preliminary status message
+        message = 'Formatting shift start values for Amplify compatibility...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        message = "done."
+        print_message(message=message)
+
         return None
 
     def _drop_unused_columns(self) -> None:
@@ -271,6 +313,17 @@ class AmplifyShifts():
             inplace=True
         )
 
+        # Print preliminary status message
+        message = 'Removing unused column data...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        message = "done."
+        print_message(message=message)
+
         return None
 
     def _group_shift_data(self) -> None:
@@ -292,6 +345,21 @@ class AmplifyShifts():
         self._grouped_shift_data = self._shift_data.groupby(
             # [KEEP_COLUMNS] excludes the 'need_id' column
             by=[GROUP_BY_COLUMN])[KEEP_COLUMNS]
+
+        # Print preliminary status message
+        message = 'Grouping shift data by opportunity...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        if self._grouped_shift_data is not None:
+            message = "done."
+            print_message(message=message)
+
+        else:
+            message = '\n\n** Error grouping shift data **\n'
 
         return None
 
@@ -321,6 +389,21 @@ class AmplifyShifts():
                 )
             }
         )
+
+        # Print preliminary status message
+        message = 'Organizing shift data for Amplify API compatibility...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        if self._grouped_series is not None:
+            message = "done."
+            print_message(message=message)
+
+        else:
+            message = '\n\n** Error organizing shift data **\n'
 
         return None
 
@@ -361,6 +444,21 @@ class AmplifyShifts():
 
         # Store grouped series data in a dictionary
         self._shift_data = self._grouped_series.to_dict()
+
+        # Print preliminary status message
+        message = 'Converting shift data to JSON...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        if self._shift_data is not None:
+            message = "done."
+            print_message(message=message)
+
+        else:
+            message = '\n\n** Error converting shift data to JSON **\n'
 
         return None
 
@@ -403,6 +501,21 @@ class AmplifyShifts():
         except ValidationError:
             # Set self._shift_data_valid to False
             self._shift_data_valid = False
+
+        # Print preliminary status message
+        message = 'Validating shift data compliance with JSON Schema...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        if self._shift_data_valid is True:
+            message = "done."
+            print_message(message=message)
+
+        else:
+            message = '\n\n** Error validating shift data **\n'
 
         return None
 
