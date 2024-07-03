@@ -7,7 +7,6 @@ from pprint import pprint as pp
 
 
 def print_message(
-        self,
         message: Any,
         end: str = '\n',
         pretty_print: bool = False
