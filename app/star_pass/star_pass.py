@@ -15,6 +15,9 @@ from pandas.core import frame, series
 from pandas.core.groupby.generic import DataFrameGroupBy
 from requests import request
 
+# Imports - Local
+from helpers import print_message
+
 # Load environment variables
 load_dotenv(
     dotenv_path='./.env',
@@ -197,6 +200,21 @@ class AmplifyShifts:
         # Update self._shift_data
         self._shift_data = shift_data
 
+        # Print preliminary status message
+        message = f'Reading shift data from "{input_file}"...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        if self._shift_data is not None:
+            message = "done."
+            print_message(message=message)
+
+        else:
+            message = f'\n\n** Error reading data from "{input_file}" **\n'
+
         return None
 
     def _remove_duplicate_shifts(self) -> None:
@@ -219,6 +237,17 @@ class AmplifyShifts:
             inplace=True,
             keep='first'
         )
+
+        # Print preliminary status message
+        message = 'Removing any duplicate shifts...'
+        print_message(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        message = "done."
+        print_message(message=message)
 
         return None
 
