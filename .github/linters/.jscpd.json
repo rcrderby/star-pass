@@ -7,7 +7,7 @@
       "**/__snapshots__/**",
       "**/node_modules/**",
       "**/data/json/**",
-      "**/bandit.yml"
+      "**bandit.yml"
     ],
     "absolute": true
 }
