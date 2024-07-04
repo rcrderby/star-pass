@@ -6,51 +6,66 @@ from typing import Any
 from pprint import pprint as pp
 
 
-def print_message(
-        message: Any,
-        end: str = '\n',
-        pretty_print: bool = False
-) -> None:
-    """ Print messages.
+class Helpers:
+    """ star_pass helper methods. """
 
-        Args:
-            message (Any):
-                Pre-formatted content to print.
+    def __init__(self) -> None:
+        """ Helpers initialization method.
 
-            end (str):
-                String appended at the end of the message.  Default
-                is a new line.  Ignored when pretty_print is True.
+            Args:
+                None.
 
-            pretty_print (bool):
-                Display the output using pprint.pprint.  Default is
-                False.
+            Returns:
+                None.
+        """
 
-        Returns:
-            None.
-    """
+        return None
 
-    # Print formatted output
-    if pretty_print is False:
-        # Standard print
-        print(
-            message,
-            end=end
-        )
-    else:
-        # Pretty Print
-        pp(message)
+    def printer(
+            self,
+            message: Any,
+            end: str = '\n',
+            pretty_print: bool = False
+    ) -> None:
+        """ Message printer.
 
-    return None
+            Args:
+                message (Any):
+                    Pre-formatted content to print.
 
+                end (str):
+                    String appended at the end of the message.  Default
+                    is a new line.  Ignored when pretty_print is True.
 
-def shift_lookup() -> None:
-    """ Print messages.
+                pretty_print (bool):
+                    Display the output using pprint.pprint.  Default is
+                    False.
 
-        Args:
-            None.
+            Returns:
+                None.
+        """
 
-        Returns:
-            None.
-    """
+        # Print formatted output
+        if pretty_print is False:
+            # Standard print
+            print(
+                message,
+                end=end
+            )
+        else:
+            # Pretty Print
+            pp(message)
 
-    return None
+        return None
+
+    def shift_lookup(self) -> None:
+        """ Print messages.
+
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        return None
