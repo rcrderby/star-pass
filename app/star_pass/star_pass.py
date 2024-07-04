@@ -498,10 +498,6 @@ class AmplifyShifts:
                     timeout=timeout
                 )
 
-                # Check for HTTP errors
-                if response.ok is not True:
-                    response.raise_for_status()
-
                 # Set HTTP response output message
                 output_heading = (
                     '** HTTP API Response **\n'
