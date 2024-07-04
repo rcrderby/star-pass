@@ -517,7 +517,7 @@ class AmplifyShifts:
             # Create output message
             output_message = (
                 f'\n{output_heading}\n'
-                f'URL: {response.url}\n'
+                f'URL: {url}\n'
                 f'Shift Count: {len(json.get("shifts"))}\n'
                 f'Payload:\n{dumps(json, indent=2)}'
             )
