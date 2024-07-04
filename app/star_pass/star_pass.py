@@ -87,7 +87,7 @@ class AmplifyShifts:
         self.helpers = Helpers()
 
         # Set the value of self._check_mode
-        self._check_mode = check_mode
+        self.check_mode = check_mode
 
         # Placeholder variables for data transformation methods
         self._shift_data: frame.DataFrame = None
