@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 from jsonschema import validate, ValidationError
 from pandas.core import frame, series
 from pandas.core.groupby.generic import DataFrameGroupBy
-from requests import request
 
 # Imports - Local
 from helpers import Helpers
@@ -106,73 +105,6 @@ class AmplifyShifts:
         self._create_grouped_series()
         self._create_shift_json_data()
         self._validate_shift_json_data()
-
-        return None
-
-    def _send_api_request(
-            self,
-            method: str,
-            url: str,
-            headers: Dict[str, str],
-            json: Any,
-            timeout: int
-    ) -> None:
-        """ Create base API request.
-
-            Args:
-                method (str):
-                    HTTP method (GET, POST, PUT, PATCH, DELETE).
-
-                url (str):
-                    Fully-qualified API endpoint URI.
-
-                headers (Dict[str, str]):
-                    HTTP headers.
-
-                json (Any):
-                    JSON body.
-
-                timeout (int):
-                    HTTP timeout.
-
-            Returns:
-                None.
-        """
-
-        # Determine the status of check_mode
-        if self._check_mode is False:
-            # Send API request
-            response = request(
-                method=method,
-                url=url,
-                headers=headers,
-                json=json,
-                timeout=timeout
-            )
-
-            # Check for HTTP errors
-            if response.ok is not True:
-                response.raise_for_status()
-
-            # Set HTTP response output message
-            output_msg = (
-                '** HTTP API Response **\n'
-                f'Response: HTTP {response.status_code} {response.reason}'
-            )
-
-        else:
-            # Set check mode output message
-            output_msg = (
-                '** HTTP API Check Mode Run **'
-            )
-
-        # Display output message
-        print(
-            f'\n{output_msg}\n'
-            f'URL: {url}\n'
-            f'Shift Count: {len(json.get("shifts"))}\n'
-            f'Payload:\n{dumps(json, indent=2)}'
-        )
 
         return None
 
@@ -555,13 +487,44 @@ class AmplifyShifts:
             url = f'{BASE_URL}/needs/{need_id}/shifts'
             json = shifts
 
-            # Send request
-            self._send_api_request(
-                method=method,
-                url=url,
-                headers=headers,
-                json=json,
-                timeout=timeout
+            # Determine the status of check_mode
+            if self._check_mode is False:
+                # Send API request
+                response = self.helpers.send_api_request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    json=json,
+                    timeout=timeout
+                )
+
+                # Check for HTTP errors
+                if response.ok is not True:
+                    response.raise_for_status()
+
+                # Set HTTP response output message
+                output_heading = (
+                    '** HTTP API Response **\n'
+                    f'Response: HTTP {response.status_code} {response.reason}'
+                )
+
+            else:
+                # Set check_mode output message
+                output_heading = (
+                    '** HTTP API Check Mode Run **'
+                )
+
+            # Create output message
+            output_message = (
+                f'\n{output_heading}\n'
+                f'URL: {response.url}\n'
+                f'Shift Count: {len(json.get("shifts"))}\n'
+                f'Payload:\n{dumps(json, indent=2)}'
+            )
+
+            # Display output message
+            self.helpers.printer(
+                message=output_message
             )
 
         return None
