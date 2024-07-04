@@ -86,7 +86,7 @@ class AmplifyShifts:
         # Initialize helper methods
         self.helpers = Helpers()
 
-        # Set the value of self._check_mode
+        # Set the value of self.check_mode
         self.check_mode = check_mode
 
         # Placeholder variables for data transformation methods
@@ -488,7 +488,7 @@ class AmplifyShifts:
             json = shifts
 
             # Determine the status of check_mode
-            if self._check_mode is False:
+            if self.check_mode is False:
                 # Send API request
                 response = self.helpers.send_api_request(
                     method=method,
