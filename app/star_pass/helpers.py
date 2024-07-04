@@ -41,3 +41,16 @@ def print_message(
         pp(message)
 
     return None
+
+
+def shift_lookup() -> None:
+    """ Print messages.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+    """
+
+    return None
