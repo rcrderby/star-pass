@@ -16,7 +16,7 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 from requests import request
 
 # Imports - Local
-from .helpers import print_message
+from helpers import Helpers
 
 # Load environment variables
 load_dotenv(
@@ -83,6 +83,9 @@ class AmplifyShifts:
             Returns:
                 None.
         """
+
+        # Initialize helper methods
+        self.helpers = Helpers()
 
         # Set the value of self._check_mode
         self._check_mode = check_mode
@@ -202,7 +205,7 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = f'\nReading shift data from "{input_file}"...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
@@ -210,7 +213,7 @@ class AmplifyShifts:
         # Print final status message
         if self._shift_data is not None:
             message = "done."
-            print_message(message=message)
+            self.helpers.printer(message=message)
 
         else:
             message = f'\n\n** Error reading data from "{input_file}" **\n'
@@ -240,14 +243,14 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Removing duplicate shifts...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
 
         # Print final status message
         message = "done."
-        print_message(message=message)
+        self.helpers.printer(message=message)
 
         return None
 
@@ -281,14 +284,14 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Formatting shift start values for Amplify compatibility...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
 
         # Print final status message
         message = "done."
-        print_message(message=message)
+        self.helpers.printer(message=message)
 
         return None
 
@@ -315,14 +318,14 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Removing unused column data...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
 
         # Print final status message
         message = "done."
-        print_message(message=message)
+        self.helpers.printer(message=message)
 
         return None
 
@@ -348,7 +351,7 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Grouping shift data by opportunity...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
@@ -356,7 +359,7 @@ class AmplifyShifts:
         # Print final status message
         if self._grouped_shift_data is not None:
             message = "done."
-            print_message(message=message)
+            self.helpers.printer(message=message)
 
         else:
             message = '\n\n** Error grouping shift data **\n'
@@ -392,7 +395,7 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Organizing shift data for Amplify API compatibility...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
@@ -400,7 +403,7 @@ class AmplifyShifts:
         # Print final status message
         if self._grouped_series is not None:
             message = "done."
-            print_message(message=message)
+            self.helpers.printer(message=message)
 
         else:
             message = '\n\n** Error organizing shift data **\n'
@@ -447,7 +450,7 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Converting shift data to JSON...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
@@ -455,7 +458,7 @@ class AmplifyShifts:
         # Print final status message
         if self._shift_data is not None:
             message = "done."
-            print_message(message=message)
+            self.helpers.printer(message=message)
 
         else:
             message = '\n\n** Error converting shift data to JSON **\n'
@@ -504,7 +507,7 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Validating shift data compliance with JSON Schema...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
@@ -512,7 +515,7 @@ class AmplifyShifts:
         # Print final status message
         if self._shift_data_valid is True:
             message = "done."
-            print_message(message=message)
+            self.helpers.printer(message=message)
 
         else:
             message = '\n\n** Error validating shift data **\n'
