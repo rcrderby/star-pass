@@ -15,7 +15,7 @@ from pandas.core import frame, series
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 # Imports - Local
-from helpers import Helpers
+from .helpers import Helpers
 
 # Load environment variables
 load_dotenv(
