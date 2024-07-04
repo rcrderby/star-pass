@@ -26,29 +26,28 @@ class Helpers:
 
     def send_api_request(
             self,
-            method: str,
-            url: str,
-            headers: Dict[str, str],
-            json: Any,
-            timeout: int
+            api_request_data: Dict
     ) -> Response:
         """ Send API request.
 
             Args:
-                method (str):
-                    HTTP method (GET, POST, PUT, PATCH, DELETE).
+                api_request_data (Dict):
+                    Dictionary of key, value pairs for API request.
 
-                url (str):
-                    Fully-qualified API endpoint URI.
+                    method (str):
+                        HTTP method (GET, POST, PUT, PATCH, DELETE).
 
-                headers (Dict[str, str]):
-                    HTTP headers.
+                    url (str):
+                        Fully-qualified API endpoint URI.
 
-                json (Any):
-                    JSON body.
+                    headers (Dict[str, str]):
+                        HTTP headers.
 
-                timeout (int):
-                    HTTP timeout.
+                    json (Any):
+                        JSON body.
+
+                    timeout (int):
+                        HTTP timeout.
 
             Returns:
                 response (requests.Response):
@@ -56,13 +55,7 @@ class Helpers:
         """
 
         # Send API request
-        response = request(
-            method=method,
-            url=url,
-            headers=headers,
-            json=json,
-            timeout=timeout
-        )
+        response = request(**api_request_data)
 
         # Check for HTTP errors
         if response.ok is not True:

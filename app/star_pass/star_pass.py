@@ -487,15 +487,20 @@ class AmplifyShifts:
             url = f'{BASE_URL}/needs/{need_id}/shifts'
             json = shifts
 
+            # Construct API request data
+            api_request_data = {
+                "method": method,
+                "url": url,
+                "headers": headers,
+                "json": json,
+                "timeout": timeout
+            }
+
             # Determine the status of check_mode
             if self.check_mode is False:
                 # Send API request
                 response = self.helpers.send_api_request(
-                    method=method,
-                    url=url,
-                    headers=headers,
-                    json=json,
-                    timeout=timeout
+                    api_request_data=api_request_data
                 )
 
                 # Set HTTP response output message
