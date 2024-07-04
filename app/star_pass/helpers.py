@@ -2,8 +2,11 @@
 """ Helper methods for star_pass.py """
 
 # Imports - Python Standard Library
-from typing import Any
+from typing import Any, Dict
 from pprint import pprint as pp
+
+# Imports - Third-Party
+from requests import request, Response
 
 
 class Helpers:
@@ -11,6 +14,64 @@ class Helpers:
 
     def __init__(self) -> None:
         """ Helpers initialization method.
+
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        return None
+
+    def send_api_request(
+            self,
+            method: str,
+            url: str,
+            headers: Dict[str, str],
+            json: Any,
+            timeout: int
+    ) -> Response:
+        """ Send API request.
+
+            Args:
+                method (str):
+                    HTTP method (GET, POST, PUT, PATCH, DELETE).
+
+                url (str):
+                    Fully-qualified API endpoint URI.
+
+                headers (Dict[str, str]):
+                    HTTP headers.
+
+                json (Any):
+                    JSON body.
+
+                timeout (int):
+                    HTTP timeout.
+
+            Returns:
+                response (requests.Response):
+                    HTTP server response object.
+        """
+
+        # Send API request
+        response = request(
+            method=method,
+            url=url,
+            headers=headers,
+            json=json,
+            timeout=timeout
+        )
+
+        # Check for HTTP errors
+        if response.ok is not True:
+            response.raise_for_status()
+
+        return response
+
+    def shift_lookup(self) -> None:
+        """ Print messages.
 
             Args:
                 None.
@@ -55,17 +116,5 @@ class Helpers:
         else:
             # Pretty Print
             pp(message)
-
-        return None
-
-    def shift_lookup(self) -> None:
-        """ Print messages.
-
-            Args:
-                None.
-
-            Returns:
-                None.
-        """
 
         return None
