@@ -70,14 +70,14 @@ class AmplifyShifts:
 
     def __init__(
             self,
-            check_mode: bool = False
+            check_mode: bool = True
     ) -> None:
         """ AmplifyShifts initialization method.
 
             Args:
                 check_mode (bool):
                     Prepare HTTP API requests without sending the
-                    requests.  Default value is False.
+                    requests.  Default value is True.
 
             Returns:
                 None.
