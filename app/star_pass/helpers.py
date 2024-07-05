@@ -43,8 +43,8 @@ class Helpers:
                     headers (Dict[str, str]):
                         HTTP headers.
 
-                    json (Any):
-                        JSON body.
+                    json (Any | None):
+                        JSON body, or None.
 
                     timeout (int):
                         HTTP timeout.
@@ -62,18 +62,6 @@ class Helpers:
             response.raise_for_status()
 
         return response
-
-    def shift_lookup(self) -> None:
-        """ Print messages.
-
-            Args:
-                None.
-
-            Returns:
-                None.
-        """
-
-        return None
 
     def printer(
             self,
