@@ -454,6 +454,51 @@ class AmplifyShifts:
 
         return None
 
+    def _lookup_opportunity_title(
+            self,
+            need_id: str | int,
+            timeout: int = HTTP_TIMEOUT,
+    ) -> str:
+        """ Lookup an opportunity title with a need ID.
+
+            Args:
+                need_id (str|int):
+                    Opportunity ID to look up.
+
+                timeout (int):
+                    HTTP timeout.  Default is HTTP_TIMEOUT.
+
+            Returns:
+                opp_title (str):
+                    Opportunity title.
+        """
+
+        # Set HTTP request variables
+        method = 'GET'
+        headers = BASE_HEADERS
+
+        # Construct URL and JSON payload
+        url = f'{BASE_URL}/needs/{need_id}'
+
+        # Construct API request data
+        api_request_data = {
+            "method": method,
+            "url": url,
+            "headers": headers,
+            "json": None,
+            "timeout": timeout
+        }
+
+        # Send API request
+        response = self.helpers.send_api_request(
+            api_request_data=api_request_data
+        )
+
+        # Parse opportunity title from response
+        opp_title = response.json()['data'].get("need_title", "Unknown")
+
+        return opp_title
+
     def create_new_shifts(
             self,
             json: Any = None,
@@ -515,10 +560,16 @@ class AmplifyShifts:
                     '** HTTP API Check Mode Run **'
                 )
 
+            # Lookup opportunity title
+            opp_title = self._lookup_opportunity_title(
+                need_id=need_id
+            )
+
             # Create output message
             output_message = (
                 f'\n{output_heading}\n'
                 f'URL: {url}\n'
+                f'Opportunity Title: {opp_title}\n'
                 f'Shift Count: {len(json.get("shifts"))}\n'
                 f'Payload:\n{dumps(json, indent=2)}'
             )
