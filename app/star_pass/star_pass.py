@@ -13,10 +13,9 @@ from dotenv import load_dotenv
 from jsonschema import validate, ValidationError
 from pandas.core import frame, series
 from pandas.core.groupby.generic import DataFrameGroupBy
-from requests import request
 
 # Imports - Local
-from .helpers import print_message
+from .helpers import Helpers
 
 # Load environment variables
 load_dotenv(
@@ -71,21 +70,24 @@ class AmplifyShifts:
 
     def __init__(
             self,
-            check_mode: bool = False
+            check_mode: bool = True
     ) -> None:
         """ AmplifyShifts initialization method.
 
             Args:
                 check_mode (bool):
                     Prepare HTTP API requests without sending the
-                    requests.  Default value is False.
+                    requests.  Default value is True.
 
             Returns:
                 None.
         """
 
-        # Set the value of self._check_mode
-        self._check_mode = check_mode
+        # Initialize helper methods
+        self.helpers = Helpers()
+
+        # Set the value of self.check_mode
+        self.check_mode = check_mode
 
         # Placeholder variables for data transformation methods
         self._shift_data: frame.DataFrame = None
@@ -103,73 +105,6 @@ class AmplifyShifts:
         self._create_grouped_series()
         self._create_shift_json_data()
         self._validate_shift_json_data()
-
-        return None
-
-    def _send_api_request(
-            self,
-            method: str,
-            url: str,
-            headers: Dict[str, str],
-            json: Any,
-            timeout: int
-    ) -> None:
-        """ Create base API request.
-
-            Args:
-                method (str):
-                    HTTP method (GET, POST, PUT, PATCH, DELETE).
-
-                url (str):
-                    Fully-qualified API endpoint URI.
-
-                headers (Dict[str, str]):
-                    HTTP headers.
-
-                json (Any):
-                    JSON body.
-
-                timeout (int):
-                    HTTP timeout.
-
-            Returns:
-                None.
-        """
-
-        # Determine the status of check_mode
-        if self._check_mode is False:
-            # Send API request
-            response = request(
-                method=method,
-                url=url,
-                headers=headers,
-                json=json,
-                timeout=timeout
-            )
-
-            # Check for HTTP errors
-            if response.ok is not True:
-                response.raise_for_status()
-
-            # Set HTTP response output message
-            output_msg = (
-                '** HTTP API Response **\n'
-                f'Response: HTTP {response.status_code} {response.reason}'
-            )
-
-        else:
-            # Set check mode output message
-            output_msg = (
-                '** HTTP API Check Mode Run **'
-            )
-
-        # Display output message
-        print(
-            f'\n{output_msg}\n'
-            f'URL: {url}\n'
-            f'Shift Count: {len(json.get("shifts"))}\n'
-            f'Payload:\n{dumps(json, indent=2)}'
-        )
 
         return None
 
@@ -202,7 +137,7 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = f'\nReading shift data from "{input_file}"...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
@@ -210,7 +145,7 @@ class AmplifyShifts:
         # Print final status message
         if self._shift_data is not None:
             message = "done."
-            print_message(message=message)
+            self.helpers.printer(message=message)
 
         else:
             message = f'\n\n** Error reading data from "{input_file}" **\n'
@@ -240,14 +175,14 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Removing duplicate shifts...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
 
         # Print final status message
         message = "done."
-        print_message(message=message)
+        self.helpers.printer(message=message)
 
         return None
 
@@ -281,14 +216,14 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Formatting shift start values for Amplify compatibility...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
 
         # Print final status message
         message = "done."
-        print_message(message=message)
+        self.helpers.printer(message=message)
 
         return None
 
@@ -315,14 +250,14 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Removing unused column data...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
 
         # Print final status message
         message = "done."
-        print_message(message=message)
+        self.helpers.printer(message=message)
 
         return None
 
@@ -348,7 +283,7 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Grouping shift data by opportunity...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
@@ -356,7 +291,7 @@ class AmplifyShifts:
         # Print final status message
         if self._grouped_shift_data is not None:
             message = "done."
-            print_message(message=message)
+            self.helpers.printer(message=message)
 
         else:
             message = '\n\n** Error grouping shift data **\n'
@@ -392,7 +327,7 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Organizing shift data for Amplify API compatibility...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
@@ -400,7 +335,7 @@ class AmplifyShifts:
         # Print final status message
         if self._grouped_series is not None:
             message = "done."
-            print_message(message=message)
+            self.helpers.printer(message=message)
 
         else:
             message = '\n\n** Error organizing shift data **\n'
@@ -447,7 +382,7 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Converting shift data to JSON...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
@@ -455,7 +390,7 @@ class AmplifyShifts:
         # Print final status message
         if self._shift_data is not None:
             message = "done."
-            print_message(message=message)
+            self.helpers.printer(message=message)
 
         else:
             message = '\n\n** Error converting shift data to JSON **\n'
@@ -504,7 +439,7 @@ class AmplifyShifts:
 
         # Print preliminary status message
         message = 'Validating shift data compliance with JSON Schema...'
-        print_message(
+        self.helpers.printer(
             message=message,
             end=''
         )
@@ -512,12 +447,57 @@ class AmplifyShifts:
         # Print final status message
         if self._shift_data_valid is True:
             message = "done."
-            print_message(message=message)
+            self.helpers.printer(message=message)
 
         else:
             message = '\n\n** Error validating shift data **\n'
 
         return None
+
+    def _lookup_opportunity_title(
+            self,
+            need_id: str | int,
+            timeout: int = HTTP_TIMEOUT,
+    ) -> str:
+        """ Lookup an opportunity title with a need ID.
+
+            Args:
+                need_id (str|int):
+                    Opportunity ID to look up.
+
+                timeout (int):
+                    HTTP timeout.  Default is HTTP_TIMEOUT.
+
+            Returns:
+                opp_title (str):
+                    Opportunity title.
+        """
+
+        # Set HTTP request variables
+        method = 'GET'
+        headers = BASE_HEADERS
+
+        # Construct URL and JSON payload
+        url = f'{BASE_URL}/needs/{need_id}'
+
+        # Construct API request data
+        api_request_data = {
+            "method": method,
+            "url": url,
+            "headers": headers,
+            "json": None,
+            "timeout": timeout
+        }
+
+        # Send API request
+        response = self.helpers.send_api_request(
+            api_request_data=api_request_data
+        )
+
+        # Parse opportunity title from response
+        opp_title = response.json()['data'].get("need_title", "Unknown")
+
+        return opp_title
 
     def create_new_shifts(
             self,
@@ -552,13 +532,51 @@ class AmplifyShifts:
             url = f'{BASE_URL}/needs/{need_id}/shifts'
             json = shifts
 
-            # Send request
-            self._send_api_request(
-                method=method,
-                url=url,
-                headers=headers,
-                json=json,
-                timeout=timeout
+            # Construct API request data
+            api_request_data = {
+                "method": method,
+                "url": url,
+                "headers": headers,
+                "json": json,
+                "timeout": timeout
+            }
+
+            # Determine the status of check_mode
+            if self.check_mode is False:
+                # Send API request
+                response = self.helpers.send_api_request(
+                    api_request_data=api_request_data
+                )
+
+                # Set HTTP response output message
+                output_heading = (
+                    '** HTTP API Response **\n'
+                    f'Response: HTTP {response.status_code} {response.reason}'
+                )
+
+            else:
+                # Set check_mode output message
+                output_heading = (
+                    '** HTTP API Check Mode Run **'
+                )
+
+            # Lookup opportunity title
+            opp_title = self._lookup_opportunity_title(
+                need_id=need_id
+            )
+
+            # Create output message
+            output_message = (
+                f'\n{output_heading}\n'
+                f'URL: {url}\n'
+                f'Opportunity Title: {opp_title}\n'
+                f'Shift Count: {len(json.get("shifts"))}\n'
+                f'Payload:\n{dumps(json, indent=2)}'
+            )
+
+            # Display output message
+            self.helpers.printer(
+                message=output_message
             )
 
         return None
