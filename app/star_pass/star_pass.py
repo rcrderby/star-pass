@@ -70,7 +70,8 @@ class AmplifyShifts:
 
     def __init__(
             self,
-            check_mode: bool = True
+            check_mode: bool = True,
+            auto_prep_data: bool = True
     ) -> None:
         """ AmplifyShifts initialization method.
 
@@ -79,6 +80,27 @@ class AmplifyShifts:
                     Prepare HTTP API requests without sending the
                     requests.  Default value is True.
 
+                auto_prep_data (bool):
+                    Automatically run non-public methods that import,
+                    validate, and prepare CSV data for upload via the
+                    Amplify API. When auto_prep_data is True, creating
+                    an instance of the AmplifyShifts Class will
+                    automatically attempt to prepare data.  When
+                    auto_prep_data is False, you may manually run the
+                    non-public functions to prepare the data.
+                    Non-public functions that prepare data include:
+
+                        _read_shift_csv_data()
+                        _remove_duplicate_shifts()
+                        _format_shift_start()
+                        _drop_unused_columns()
+                        _group_shift_data()
+                        _create_grouped_series()
+                        _create_shift_json_data()
+                        _validate_shift_json_data()
+
+                    Default value is True.
+
             Returns:
                 None.
         """
@@ -86,8 +108,9 @@ class AmplifyShifts:
         # Initialize helper methods
         self.helpers = Helpers()
 
-        # Set the value of self.check_mode
+        # Set Class initialization values
         self.check_mode = check_mode
+        self.auto_prep_data = auto_prep_data
 
         # Placeholder variables for data transformation methods
         self._shift_data: frame.DataFrame = None
@@ -96,15 +119,16 @@ class AmplifyShifts:
         self._shift_data: Dict = None
         self._shift_data_valid: bool = None
 
-        # Call non-public functions to initialize workflow
-        self._read_shift_csv_data()
-        self._remove_duplicate_shifts()
-        self._format_shift_start()
-        self._drop_unused_columns()
-        self._group_shift_data()
-        self._create_grouped_series()
-        self._create_shift_json_data()
-        self._validate_shift_json_data()
+        # Call non-public methods to initialize workflow
+        if self.auto_prep_data is True:
+            self._read_shift_csv_data()
+            self._remove_duplicate_shifts()
+            self._format_shift_start()
+            self._drop_unused_columns()
+            self._group_shift_data()
+            self._create_grouped_series()
+            self._create_shift_json_data()
+            self._validate_shift_json_data()
 
         return None
 
