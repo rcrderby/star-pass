@@ -9,7 +9,7 @@
 
         # .env file contents
         HTTP_TIMEOUT=5
-    
+
     The application (star_pass.py) will attempt to load environment
     variable values as constants before importing the default values
     in this file by using the 'default' parameter of the os.getenv
