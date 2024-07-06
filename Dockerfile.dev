@@ -22,8 +22,5 @@ RUN python -m pip install --no-cache-dir --upgrade pip && \
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/workspaces/star-pass
 
-# Add other environment variables
-ENV BASE_URL=https://api.galaxydigital.com/api
-
 # Start the bash prompt
 CMD ["/bin/bash"]

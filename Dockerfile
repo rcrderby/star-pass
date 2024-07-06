@@ -21,9 +21,6 @@ RUN python -m pip install --no-cache-dir --upgrade pip && \
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app
 
-# Add other environment variables
-ENV BASE_URL=https://api.galaxydigital.com/api
-
 # Copy the /app directory to the image
 COPY /app /app
 

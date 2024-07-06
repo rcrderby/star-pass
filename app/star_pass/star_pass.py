@@ -15,6 +15,7 @@ from pandas.core import frame, series
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 # Imports - Local
+from . import _defaults
 from .helpers import Helpers
 
 # Load environment variables
@@ -24,44 +25,115 @@ load_dotenv(
 )
 
 # Constants
-GC_TOKEN = getenv(key='GC_TOKEN')
-BASE_HEADERS = {
-    'Accept': 'application/json',
-    'Authorization': f'Bearer {GC_TOKEN}',
-    'Content-Type': 'application/json'
-}
-BASE_URL = getenv(key='BASE_URL')
-DROP_COLUMNS = getenv('DROP_COLUMNS').split(
-    sep=', '
+# Authentication
+GC_TOKEN = getenv(
+    key='GC_TOKEN'
 )
-GROUP_BY_COLUMN = getenv('GROUP_BY_COLUMN')
-HTTP_TIMEOUT = 3
-INPUT_FILE_EXTENSION = getenv('INPUT_FILE_EXTENSION')
+
+# HTTP request configuration
+BASE_HEADERS = _defaults.BASE_HEADERS
+BASE_HEADERS.update(
+    {'Authorization': f'Bearer {GC_TOKEN}'}
+)
+BASE_URL = getenv(
+    key='BASE_URL',
+    default=_defaults.BASE_URL
+)
+HTTP_TIMEOUT = int(
+    getenv(
+        key='HTTP_TIMEOUT',
+        default=_defaults.HTTP_TIMEOUT
+    )
+)
+
+# Data file name and location
+BASE_FILE_NAME = getenv(
+    key='BASE_FILE_NAME',
+    default=_defaults.BASE_FILE_NAME
+)
+BASE_FILE_PATH = getenv(
+    key='BASE_FILE_PATH',
+    default=_defaults.BASE_FILE_PATH
+)
+
+# Input data file
+INPUT_FILE_DIR = getenv(
+    key='INPUT_FILE_DIR',
+    default=_defaults.INPUT_FILE_DIR
+)
+INPUT_FILE_EXTENSION = getenv(
+    key='INPUT_FILE_EXTENSION',
+    default=_defaults.INPUT_FILE_EXTENSION
+)
 INPUT_FILE_PATH = path.join(
-    getenv('BASE_FILE_PATH'),
-    getenv('INPUT_FILE_DIR'),
-    getenv('BASE_FILE_NAME')
+    BASE_FILE_PATH,
+    INPUT_FILE_DIR,
+    BASE_FILE_NAME
 )
 INPUT_FILE = f'{INPUT_FILE_PATH}{INPUT_FILE_EXTENSION}'
-JSON_SCHEMA_DIR = getenv('JSON_SCHEMA_DIR')
+
+# Data file management
+DROP_COLUMNS = getenv(
+    key='DROP_COLUMNS',
+    default=_defaults.DROP_COLUMNS
+).split(sep=', ')
+GROUP_BY_COLUMN = getenv(
+    key='GROUP_BY_COLUMN',
+    default=_defaults.GROUP_BY_COLUMN
+)
+SHIFTS_DICT_KEY_NAME = getenv(
+    key='SHIFTS_DICT_KEY_NAME',
+    default=_defaults.SHIFTS_DICT_KEY_NAME
+)
+START_COLUMN = getenv(
+    key='START_COLUMN',
+    default=_defaults.START_COLUMN
+)
+START_DATE_COLUMN = getenv(
+    key='START_DATE_COLUMN',
+    default=_defaults.START_DATE_COLUMN
+)
+START_TIME_COLUMN = getenv(
+    key='START_TIME_COLUMN',
+    default=_defaults.START_TIME_COLUMN
+)
+KEEP_COLUMNS = getenv(
+    key='KEEP_COLUMNS',
+    default=_defaults.KEEP_COLUMNS
+).split(sep=', ')
+
+# JSON Schema
+JSON_SCHEMA_DIR = getenv(
+    key='JSON_SCHEMA_DIR',
+    default=_defaults.JSON_SCHEMA_DIR
+)
+JSON_SCHEMA_SHIFT_FILE = getenv(
+    key='JSON_SCHEMA_SHIFT_FILE',
+    default=_defaults.JSON_SCHEMA_SHIFT_FILE
+)
 JSON_SCHEMA_SHIFT_FILE = path.join(
     JSON_SCHEMA_DIR,
-    getenv('JSON_SCHEMA_SHIFT_FILE')
+    getenv(
+        key='JSON_SCHEMA_SHIFT_FILE',
+        default=_defaults.JSON_SCHEMA_SHIFT_FILE
+    )
 )
-KEEP_COLUMNS = getenv('KEEP_COLUMNS').split(
-    sep=', '
+
+# Output data file
+OUTPUT_FILE_DIR = getenv(
+    key='OUTPUT_FILE_DIR',
+    default=_defaults.OUTPUT_FILE_DIR
 )
-OUTPUT_FILE_EXTENSION = getenv('OUTPUT_FILE_EXTENSION')
+OUTPUT_FILE_EXTENSION = getenv(
+    key='OUTPUT_FILE_EXTENSION',
+    default=_defaults.OUTPUT_FILE_EXTENSION
+)
 OUTPUT_FILE_PATH = path.join(
-    getenv('BASE_FILE_PATH'),
-    getenv('OUTPUT_FILE_DIR'),
-    getenv('BASE_FILE_NAME')
+    BASE_FILE_PATH,
+    OUTPUT_FILE_DIR,
+    BASE_FILE_NAME
 )
 OUTPUT_FILE = f'{OUTPUT_FILE_PATH}{OUTPUT_FILE_EXTENSION}'
-SHIFTS_DICT_KEY_NAME = getenv('SHIFTS_DICT_KEY_NAME')
-START_COLUMN = getenv('START_COLUMN')
-START_DATE_COLUMN = getenv('START_DATE_COLUMN')
-START_TIME_COLUMN = getenv('START_TIME_COLUMN')
 
 
 # Class definitions
@@ -70,16 +142,13 @@ class AmplifyShifts:
 
     def __init__(
             self,
-            check_mode: bool = True,
-            auto_prep_data: bool = True
+            auto_prep_data: bool = True,
+            input_file: str = INPUT_FILE,
+            check_mode: bool = True
     ) -> None:
         """ AmplifyShifts initialization method.
 
             Args:
-                check_mode (bool):
-                    Prepare HTTP API requests without sending the
-                    requests.  Default value is True.
-
                 auto_prep_data (bool):
                     Automatically run non-public methods that import,
                     validate, and prepare CSV data for upload via the
@@ -101,6 +170,20 @@ class AmplifyShifts:
 
                     Default value is True.
 
+                check_mode (bool):
+                    Prepare HTTP API requests without sending the
+                    requests.  Default value is True.
+
+                input_file (str):
+                    Absolute path to non-default input data file. For
+                    example:
+
+                        shifts = AmplifyShifts(
+                            input_file='data/csv/data_file.csv'
+                        )
+
+                    Default value is INPUT_FILE
+
             Returns:
                 None.
         """
@@ -109,8 +192,9 @@ class AmplifyShifts:
         self.helpers = Helpers()
 
         # Set Class initialization values
-        self.check_mode = check_mode
         self.auto_prep_data = auto_prep_data
+        self.check_mode = check_mode
+        self.input_file = input_file
 
         # Placeholder variables for data transformation methods
         self._shift_data: frame.DataFrame = None
@@ -134,14 +218,12 @@ class AmplifyShifts:
 
     def _read_shift_csv_data(
         self,
-        input_file: str = INPUT_FILE
     ) -> None:
-        """ Read shifts data from a CSV file and convert fields to
-            strings for Amplify API compatibility.
+        """ Read shifts data from a CSV file.
+
+            Convert fields to strings for Amplify API compatibility.
 
             Args:
-                input_file (str):
-                    CSV file or path to CSV file.
 
             Modifies:
                 self._shift_data (frame.DataFrame):
@@ -152,7 +234,7 @@ class AmplifyShifts:
         """
         # Read CSV file
         shift_data = pd.read_csv(
-            filepath_or_buffer=input_file,
+            filepath_or_buffer=self.input_file,
             dtype='string'
         )
 
@@ -160,7 +242,7 @@ class AmplifyShifts:
         self._shift_data = shift_data
 
         # Print preliminary status message
-        message = f'\nReading shift data from "{input_file}"...'
+        message = f'\nReading shift data from "{self.input_file}"...'
         self.helpers.printer(
             message=message,
             end=''
@@ -172,7 +254,7 @@ class AmplifyShifts:
             self.helpers.printer(message=message)
 
         else:
-            message = f'\n\n** Error reading data from "{input_file}" **\n'
+            message = f'\n\n** Error reading data in "{self.input_file}" **\n'
 
         return None
 
