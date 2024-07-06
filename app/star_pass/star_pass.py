@@ -108,8 +108,9 @@ class AmplifyShifts:
         # Initialize helper methods
         self.helpers = Helpers()
 
-        # Set the value of self.check_mode
+        # Set Class initialization values
         self.check_mode = check_mode
+        self.auto_prep_data = auto_prep_data
 
         # Placeholder variables for data transformation methods
         self._shift_data: frame.DataFrame = None
@@ -119,14 +120,15 @@ class AmplifyShifts:
         self._shift_data_valid: bool = None
 
         # Call non-public methods to initialize workflow
-        self._read_shift_csv_data()
-        self._remove_duplicate_shifts()
-        self._format_shift_start()
-        self._drop_unused_columns()
-        self._group_shift_data()
-        self._create_grouped_series()
-        self._create_shift_json_data()
-        self._validate_shift_json_data()
+        if self.auto_prep_data is True:
+            self._read_shift_csv_data()
+            self._remove_duplicate_shifts()
+            self._format_shift_start()
+            self._drop_unused_columns()
+            self._group_shift_data()
+            self._create_grouped_series()
+            self._create_shift_json_data()
+            self._validate_shift_json_data()
 
         return None
 
