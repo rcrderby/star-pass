@@ -32,7 +32,7 @@ BASE_HEADERS = {
     'Content-Type': 'application/json'
 }
 BASE_URL = 'https://api.galaxydigital.com/api'
-HTTP_TIMEOUT = 3
+HTTP_TIMEOUT = '3'
 
 # Data file name and location
 BASE_FILE_NAME = 'amplify_shifts'
