@@ -1,5 +1,29 @@
 #!/usr/bin/env python3
-""" star_pass default values. """
+""" star_pass default values.
+
+    Default constant values for star_pass.py. Override these values by
+    setting environment variables either in the host OS or in a .env
+    file at the root folder of the application.  For example, to
+    override the value for HTTP_TIMEOUT, add the following line to a
+    .env file located in the root directory of the application:
+
+        # .env file contents
+        HTTP_TIMEOUT=5
+    
+    The application (star_pass.py) will attempt to load environment
+    variable values as constants before importing the default values
+    in this file by using the 'default' parameter of the os.getenv
+    method:
+
+        # star_pass.py contents
+        from os import getenv
+        import ._defaults
+
+        HTTP_TIMEOUT = getenv(
+            key='HTTP_TIMEOUT',
+            default=_defaults.HTTP_TIMEOUT
+        )
+"""
 
 # Imports - Python Standard Library
 from os import path
