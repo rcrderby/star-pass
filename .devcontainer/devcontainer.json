@@ -25,8 +25,11 @@
             ],
             // Visual Studio Code environment configuration
             "settings": {
+                "markdownlint.config": {
+                    "extends": "/workspaces/star-pass/.github/linters/.markdown-lint.yml"
+                },
                 // Set the default terminal application to bash
-                "#terminal.integrated.defaultProfile.linux#": "/bin/bash",
+                "terminal.integrated.defaultProfile.linux": "bash",
                 // Customize YAML formatting
                 "[yaml]": {
                     "editor.insertSpaces": true,
