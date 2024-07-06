@@ -15,7 +15,7 @@ from pandas.core import frame, series
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 # Imports - Local
-import _defaults
+from . import _defaults
 from .helpers import Helpers
 
 # Load environment variables
@@ -31,18 +31,17 @@ GC_TOKEN = getenv(
 )
 
 # HTTP request configuration
-BASE_HEADERS = _defaults.BASE_HEADERS.update(
-    'Authorization', f'Bearer {GC_TOKEN}'
+BASE_HEADERS = _defaults.BASE_HEADERS
+BASE_HEADERS.update(
+    {'Authorization': f'Bearer {GC_TOKEN}'}
 )
 BASE_URL = getenv(
     key='BASE_URL',
     default=_defaults.BASE_URL
 )
 HTTP_TIMEOUT = getenv(
-    getenv(
-        key='HTTP_TIMEOUT',
-        default=_defaults.HTTP_TIMEOUT
-    )
+    key='HTTP_TIMEOUT',
+    default=_defaults.HTTP_TIMEOUT
 )
 
 # Data file name and location
@@ -65,9 +64,9 @@ INPUT_FILE_EXTENSION = getenv(
     default=_defaults.INPUT_FILE_EXTENSION
 )
 INPUT_FILE_PATH = path.join(
-    'BASE_FILE_PATH',
-    'INPUT_FILE_DIR',
-    'BASE_FILE_NAME'
+    BASE_FILE_PATH,
+    INPUT_FILE_DIR,
+    BASE_FILE_NAME
 )
 INPUT_FILE = f'{INPUT_FILE_PATH}{INPUT_FILE_EXTENSION}'
 
@@ -110,6 +109,13 @@ JSON_SCHEMA_SHIFT_FILE = getenv(
     key='JSON_SCHEMA_SHIFT_FILE',
     default=_defaults.JSON_SCHEMA_SHIFT_FILE
 )
+JSON_SCHEMA_SHIFT_FILE = path.join(
+    JSON_SCHEMA_DIR,
+    getenv(
+        key='JSON_SCHEMA_SHIFT_FILE',
+        default=_defaults.JSON_SCHEMA_SHIFT_FILE
+    )
+)
 
 # Output data file
 OUTPUT_FILE_DIR = getenv(
@@ -121,9 +127,9 @@ OUTPUT_FILE_EXTENSION = getenv(
     default=_defaults.OUTPUT_FILE_EXTENSION
 )
 OUTPUT_FILE_PATH = path.join(
-    'BASE_FILE_PATH',
-    'OUTPUT_FILE_DIR',
-    'BASE_FILE_NAME'
+    BASE_FILE_PATH,
+    OUTPUT_FILE_DIR,
+    BASE_FILE_NAME
 )
 OUTPUT_FILE = f'{OUTPUT_FILE_PATH}{OUTPUT_FILE_EXTENSION}'
 
