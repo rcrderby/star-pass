@@ -16,7 +16,7 @@ from star_pass.star_pass import AmplifyShifts
 
 
 # Check for CLI arguments
-def check_cli_args() -> Dict[str, str]:
+def get_cli_args() -> Dict[str, str]:
     """ Check for CLI arguments.
 
         Args:
@@ -29,9 +29,27 @@ def check_cli_args() -> Dict[str, str]:
     """
 
     if len(argv) > 1:
-        pass
+        # Slice the file name from the list of arguments
+        arg_list = argv[1:]
 
-    return None
+        # Create a Dict to store args
+        cli_args = {}
+
+        # Parse keys and values from arg_list to add to the 'args' Dict
+        for arg in arg_list:
+            # Split the argument and its value to separate variables
+            arg_key, arg_value = arg.split('=')
+
+            # Remove leading '-' chars and strip outer spaces from 'arg_key'
+            arg_key = arg_key.lstrip('-').strip()
+
+            # Strip outer spaces from 'arg_value'
+            arg_value = arg_value.strip()
+
+            # Add `arg_key` and `arg_value` to the `args` Dict
+            cli_args.update({arg_key: arg_value})
+
+    return cli_args
 
 
 # Main application function definition
@@ -45,9 +63,13 @@ def main() -> None:
 
     """
 
+    # Get CLI arguments
+    cli_args = get_cli_args()
+
     # Create AmplifyShifts object
     shifts = AmplifyShifts(
-        check_mode=True
+        # check_mode=True
+        **cli_args
     )
 
     # Create shifts
