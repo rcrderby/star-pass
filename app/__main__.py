@@ -68,7 +68,6 @@ def main() -> None:
 
     # Create AmplifyShifts object
     shifts = AmplifyShifts(
-        # check_mode=True
         **cli_args
     )
 
