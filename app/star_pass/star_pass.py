@@ -193,7 +193,7 @@ class AmplifyShifts:
 
         # Set Class initialization values
         self.auto_prep_data = auto_prep_data
-        self.check_mode = check_mode
+        self.check_mode = self.helpers.convert_to_bool(check_mode)
         self.input_file = input_file
 
         # Placeholder variables for data transformation methods
@@ -608,7 +608,7 @@ class AmplifyShifts:
     def create_new_shifts(
             self,
             json: Any = None,
-            timeout: int = HTTP_TIMEOUT,
+            timeout: int = HTTP_TIMEOUT
     ) -> None:
         """ Upload shift data to create new Amplify shifts.
 

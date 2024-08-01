@@ -2,6 +2,7 @@
 """ Helper methods for star_pass.py """
 
 # Imports - Python Standard Library
+from ast import literal_eval
 from typing import Any, Dict
 from pprint import pprint as pp
 
@@ -62,6 +63,29 @@ class Helpers:
             response.raise_for_status()
 
         return response
+
+    def convert_to_bool(
+            self,
+            arg_value: str
+    ) -> str:
+        """ Convert a string representation of a boolean to a bool.
+
+            Args:
+                arg_value (str):
+                    String representation of a boolean.
+
+            Returns:
+                arg_bool (bool):
+                    bool object converted from a string.
+        """
+
+        # Normalize the string capitalization of 'bool_dict_value'
+        arg_value = arg_value.lower().capitalize()
+
+        # Convert `bool_dict_value` to a boolean
+        arg_bool = literal_eval(arg_value)
+
+        return arg_bool
 
     def printer(
             self,
