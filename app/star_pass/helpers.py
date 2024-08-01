@@ -67,15 +67,24 @@ class Helpers:
             self,
             arg_value: str
     ) -> str:
-        """ TODO """
+        """ Convert a string representation of a boolean to a bool.
+
+            Args:
+                arg_value (str):
+                    String representation of a boolean.
+
+            Returns:
+                arg_bool (bool):
+                    bool object converted from a string.
+        """
 
         # Normalize the string capitalization of 'bool_dict_value'
         arg_value = arg_value.lower().capitalize()
 
         # Convert `bool_dict_value` to a boolean
-        arg_value = eval(arg_value)
+        arg_bool = eval(arg_value)
 
-        return arg_value
+        return arg_bool
 
     def printer(
             self,
