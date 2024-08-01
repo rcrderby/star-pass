@@ -63,6 +63,20 @@ class Helpers:
 
         return response
 
+    def convert_to_bool(
+            self,
+            arg_value: str
+    ) -> str:
+        """ TODO """
+
+        # Normalize the string capitalization of 'bool_dict_value'
+        arg_value = arg_value.lower().capitalize()
+
+        # Convert `bool_dict_value` to a boolean
+        arg_value = eval(arg_value)
+
+        return arg_value
+
     def printer(
             self,
             message: Any,
