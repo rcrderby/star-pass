@@ -2,6 +2,7 @@
 """ Helper methods for star_pass.py """
 
 # Imports - Python Standard Library
+from ast import literal_eval
 from typing import Any, Dict
 from pprint import pprint as pp
 
@@ -82,7 +83,7 @@ class Helpers:
         arg_value = arg_value.lower().capitalize()
 
         # Convert `bool_dict_value` to a boolean
-        arg_bool = eval(arg_value)
+        arg_bool = literal_eval(arg_value)
 
         return arg_bool
 
