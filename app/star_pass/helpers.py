@@ -3,7 +3,6 @@
 
 # Imports - Python Standard Library
 from ast import literal_eval
-from datetime import datetime as dt
 from typing import Any, Dict
 from pprint import pprint as pp
 import sys
@@ -11,6 +10,9 @@ import sys
 # Imports - Third-Party
 from dateparser import parse
 from requests import exceptions, request, Response
+
+# Constants
+AMPLIFY_DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
 
 
 class Helpers:
@@ -81,11 +83,16 @@ class Helpers:
         """
 
         # Parse date/time string into datetime.datetime object
-        parse(
+        dt_object = parse(
             date_string=date_time_string
         )
 
-        return None
+        # Convert 'dt_object' to a formatted string
+        formatted_date_time_string = dt_object.strftime(
+            format=AMPLIFY_DATE_TIME_FORMAT
+        )
+
+        return formatted_date_time_string
 
     def printer(
             self,
