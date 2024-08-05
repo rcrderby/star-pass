@@ -137,8 +137,8 @@ OUTPUT_FILE = f'{OUTPUT_FILE_PATH}{OUTPUT_FILE_EXTENSION}'
 
 
 # Class definitions
-class AmplifyShifts:
-    """ AmplifyShifts base class object. """
+class CreateShifts:
+    """ CreateShifts base class object. """
 
     def __init__(
             self,
@@ -147,14 +147,14 @@ class AmplifyShifts:
             input_file: str = INPUT_FILE,
             input_file_override: str = None
     ) -> None:
-        """ AmplifyShifts initialization method.
+        """ CreateShifts initialization method.
 
             Args:
                 auto_prep_data (bool):
                     Automatically run non-public methods that import,
                     validate, and prepare CSV data for upload via the
                     Amplify API. When auto_prep_data is True, creating
-                    an instance of the AmplifyShifts Class will
+                    an instance of the CreateShifts Class will
                     automatically attempt to prepare data.  When
                     auto_prep_data is False, you may manually run the
                     non-public functions to prepare the data.
@@ -179,7 +179,7 @@ class AmplifyShifts:
                     Absolute path to non-default input data file. For
                     example:
 
-                        shifts = AmplifyShifts(
+                        shifts = CreateShifts(
                             input_file='data/csv/data_file.csv'
                         )
 
