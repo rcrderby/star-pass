@@ -194,7 +194,11 @@ class CreateShifts:
 
         # Set Class initialization values
         self.auto_prep_data = auto_prep_data
-        self.check_mode = self.helpers.convert_to_bool(check_mode)
+        # Determine if the value of 'check_mode' is a boolean
+        if isinstance(check_mode, bool):
+            self.check_mode = check_mode
+        else:
+            self.check_mode = self.helpers.convert_to_bool(check_mode)
         self.input_file = input_file
         # Override input file if input_file_override argument is not None
         if input_file_override is not None:
