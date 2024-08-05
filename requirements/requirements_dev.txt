@@ -4,6 +4,9 @@ python_dotenv
 # Data formats
 pyyaml
 
+# Date parsing
+dateparser
+
 # HTTP requests
 requests
 
