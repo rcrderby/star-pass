@@ -215,6 +215,7 @@ class CreateShifts:
         if self.auto_prep_data is True:
             self._read_shift_csv_data()
             self._remove_duplicate_shifts()
+            self._combine_date_time_columns()
             self._format_shift_start()
             self._drop_unused_columns()
             self._group_shift_data()
@@ -300,8 +301,8 @@ class CreateShifts:
 
         return None
 
-    def _format_shift_start(self) -> None:
-        """ Merge the 'start_date' and 'start_time' columns to a
+    def _combine_date_time_columns(self) -> None:
+        """ Combine the 'start_date' and 'start_time' columns to a
             'start_date' column.
 
             Args:
@@ -341,7 +342,7 @@ class CreateShifts:
 
         return None
 
-    def _format_shift_dates(self) -> None:
+    def _format_shift_start(self) -> None:
         """ Format START_COLUMN dates/times for Amplify compatibility. """
 
         # Print preliminary status message
