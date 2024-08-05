@@ -236,6 +236,13 @@ class CreateShifts:
             Returns:
                 None.
         """
+        # Print preliminary status message
+        message = f'\nReading shift data from "{self.input_file}"...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
+
         # Read CSV file
         shift_data = pd.read_csv(
             filepath_or_buffer=self.input_file,
@@ -244,13 +251,6 @@ class CreateShifts:
 
         # Update self._shift_data
         self._shift_data = shift_data
-
-        # Print preliminary status message
-        message = f'\nReading shift data from "{self.input_file}"...'
-        self.helpers.printer(
-            message=message,
-            end=''
-        )
 
         # Print final status message
         if self._shift_data is not None:
@@ -277,17 +277,17 @@ class CreateShifts:
             Returns:
                 None.
         """
-        # Drop duplicate rows in self._shift_data
-        self._shift_data.drop_duplicates(
-            inplace=True,
-            keep='first'
-        )
-
         # Print preliminary status message
         message = 'Removing duplicate shifts...'
         self.helpers.printer(
             message=message,
             end=''
+        )
+
+        # Drop duplicate rows in self._shift_data
+        self._shift_data.drop_duplicates(
+            inplace=True,
+            keep='first'
         )
 
         # Print final status message
@@ -312,6 +312,13 @@ class CreateShifts:
             Returns:
                 None.
         """
+        # Print preliminary status message
+        message = 'Merging shift dates and times to combined values...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
+
         # Add 'start' column with data from 'start_date' and 'start_time'
         self._shift_data[START_COLUMN] = self._shift_data[
             [
@@ -322,13 +329,6 @@ class CreateShifts:
             # Join data with a blank space separator
             ' '.join,
             axis=1
-        )
-
-        # Print preliminary status message
-        message = 'Merging shift dates and times to combined values...'
-        self.helpers.printer(
-            message=message,
-            end=''
         )
 
         # Print final status message
@@ -368,17 +368,17 @@ class CreateShifts:
             Returns:
                 None.
         """
-        # Drop informational columns not required for an API POST request body
-        self._shift_data.drop(
-            columns=DROP_COLUMNS,
-            inplace=True
-        )
-
         # Print preliminary status message
         message = 'Removing unused column data...'
         self.helpers.printer(
             message=message,
             end=''
+        )
+
+        # Drop informational columns not required for an API POST request body
+        self._shift_data.drop(
+            columns=DROP_COLUMNS,
+            inplace=True
         )
 
         # Print final status message
@@ -402,17 +402,17 @@ class CreateShifts:
             Returns:
                 None.
         """
-        # Group shifts by 'need_id' and remove other columns from the POST body
-        self._grouped_shift_data = self._shift_data.groupby(
-            # [KEEP_COLUMNS] excludes the 'need_id' column
-            by=[GROUP_BY_COLUMN])[KEEP_COLUMNS]
-
         # Print preliminary status message
         message = 'Grouping shift data by opportunity...'
         self.helpers.printer(
             message=message,
             end=''
         )
+
+        # Group shifts by 'need_id' and remove other columns from the POST body
+        self._grouped_shift_data = self._shift_data.groupby(
+            # [KEEP_COLUMNS] excludes the 'need_id' column
+            by=[GROUP_BY_COLUMN])[KEEP_COLUMNS]
 
         # Print final status message
         if self._grouped_shift_data is not None:
@@ -442,6 +442,13 @@ class CreateShifts:
             Returns:
                 None.
         """
+        # Print preliminary status message
+        message = 'Organizing shift data for Amplify API compatibility...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
+
         # Insert a 'shifts' dict between the 'need_id' and the shift data
         self._grouped_series = self._grouped_shift_data.apply(
             func=lambda x: {
@@ -449,13 +456,6 @@ class CreateShifts:
                     orient='records'
                 )
             }
-        )
-
-        # Print preliminary status message
-        message = 'Organizing shift data for Amplify API compatibility...'
-        self.helpers.printer(
-            message=message,
-            end=''
         )
 
         # Print final status message
@@ -493,6 +493,12 @@ class CreateShifts:
             Returns:
                 None.
         """
+        # Print preliminary status message
+        message = 'Converting shift data to JSON...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
 
         if write_to_file is True:
             # Save grouped series to JSON data to a file
@@ -505,13 +511,6 @@ class CreateShifts:
 
         # Store grouped series data in a dictionary
         self._shift_data = self._grouped_series.to_dict()
-
-        # Print preliminary status message
-        message = 'Converting shift data to JSON...'
-        self.helpers.printer(
-            message=message,
-            end=''
-        )
 
         # Print final status message
         if self._shift_data is not None:
@@ -538,6 +537,12 @@ class CreateShifts:
             Returns:
                 None.
         """
+        # Print preliminary status message
+        message = 'Validating shift data compliance with JSON Schema...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
 
         # Load JSON Schema file for shift data
         with open(
@@ -562,13 +567,6 @@ class CreateShifts:
         except ValidationError:
             # Set self._shift_data_valid to False
             self._shift_data_valid = False
-
-        # Print preliminary status message
-        message = 'Validating shift data compliance with JSON Schema...'
-        self.helpers.printer(
-            message=message,
-            end=''
-        )
 
         # Print final status message
         if self._shift_data_valid is True:
