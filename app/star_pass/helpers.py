@@ -26,54 +26,6 @@ class Helpers:
 
         return None
 
-    def send_api_request(
-            self,
-            api_request_data: Dict
-    ) -> Response:
-        """ Send API request.
-
-            Args:
-                api_request_data (Dict):
-                    Dictionary of key, value pairs for API request.
-
-                    method (str):
-                        HTTP method (GET, POST, PUT, PATCH, DELETE).
-
-                    url (str):
-                        Fully-qualified API endpoint URI.
-
-                    headers (Dict[str, str]):
-                        HTTP headers.
-
-                    json (Any | None):
-                        JSON body, or None.
-
-                    timeout (int):
-                        HTTP timeout.
-
-            Returns:
-                response (requests.Response):
-                    HTTP server response object.
-        """
-
-        # Send API request
-        try:
-            response = request(**api_request_data)
-
-        # Handle TCP Connection Errors
-        except exceptions.ConnectionError as error:
-            # Display error text and exit
-            self.printer(
-                message=repr(f'{error!r}')
-            )
-            sys.exit(1)
-
-        # Check for HTTP errors
-        if response.ok is not True:
-            response.raise_for_status()
-
-        return response
-
     def convert_to_bool(
             self,
             arg_value: str
@@ -133,3 +85,51 @@ class Helpers:
             pp(message)
 
         return None
+
+    def send_api_request(
+            self,
+            api_request_data: Dict
+    ) -> Response:
+        """ Send API request.
+
+            Args:
+                api_request_data (Dict):
+                    Dictionary of key, value pairs for API request.
+
+                    method (str):
+                        HTTP method (GET, POST, PUT, PATCH, DELETE).
+
+                    url (str):
+                        Fully-qualified API endpoint URI.
+
+                    headers (Dict[str, str]):
+                        HTTP headers.
+
+                    json (Any | None):
+                        JSON body, or None.
+
+                    timeout (int):
+                        HTTP timeout.
+
+            Returns:
+                response (requests.Response):
+                    HTTP server response object.
+        """
+
+        # Send API request
+        try:
+            response = request(**api_request_data)
+
+        # Handle TCP Connection Errors
+        except exceptions.ConnectionError as error:
+            # Display error text and exit
+            self.printer(
+                message=repr(f'{error!r}')
+            )
+            sys.exit(1)
+
+        # Check for HTTP errors
+        if response.ok is not True:
+            response.raise_for_status()
+
+        return response
