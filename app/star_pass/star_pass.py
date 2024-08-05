@@ -195,7 +195,7 @@ class CreateShifts:
         # Set Class initialization values
         self.auto_prep_data = auto_prep_data
         # Determine if the value of 'check_mode' is a boolean
-        if isinstance(check_mode, bool):
+        if isinstance(check_mode, bool) is True:
             self.check_mode = check_mode
         else:
             self.check_mode = self.helpers.convert_to_bool(check_mode)
