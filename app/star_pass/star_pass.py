@@ -352,6 +352,11 @@ class CreateShifts:
             end=''
         )
 
+        # Format the 'start' column for Amplify compatibility
+        self._shift_data[START_COLUMN] = self._shift_data[START_COLUMN].apply(
+            lambda x: self.helpers.format_date_time(x)
+        )
+
         # Print final status message
         message = "done."
         self.helpers.printer(message=message)
