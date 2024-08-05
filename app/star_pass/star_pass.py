@@ -325,6 +325,22 @@ class CreateShifts:
         )
 
         # Print preliminary status message
+        message = 'Merging shift dates and times to combined values...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
+
+        # Print final status message
+        message = "done."
+        self.helpers.printer(message=message)
+
+        return None
+
+    def _format_shift_dates(self) -> None:
+        """ Format START_COLUMN dates/times for Amplify compatibility. """
+
+        # Print preliminary status message
         message = 'Formatting shift start values for Amplify compatibility...'
         self.helpers.printer(
             message=message,
