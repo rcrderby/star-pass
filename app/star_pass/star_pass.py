@@ -143,8 +143,9 @@ class AmplifyShifts:
     def __init__(
             self,
             auto_prep_data: bool = True,
+            check_mode: bool = True,
             input_file: str = INPUT_FILE,
-            check_mode: bool = True
+            input_file_override: str = None
     ) -> None:
         """ AmplifyShifts initialization method.
 
@@ -195,6 +196,9 @@ class AmplifyShifts:
         self.auto_prep_data = auto_prep_data
         self.check_mode = self.helpers.convert_to_bool(check_mode)
         self.input_file = input_file
+        # Override input file if input_file_override argument is not None
+        if input_file_override is not None:
+            self.input_file = input_file_override
 
         # Placeholder variables for data transformation methods
         self._shift_data: frame.DataFrame = None
