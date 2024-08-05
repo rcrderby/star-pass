@@ -143,8 +143,8 @@ class AmplifyShifts:
     def __init__(
             self,
             auto_prep_data: bool = True,
-            input_file: str = INPUT_FILE,
-            check_mode: bool = True
+            check_mode: bool = True,
+            input_file: str = INPUT_FILE
     ) -> None:
         """ AmplifyShifts initialization method.
 
