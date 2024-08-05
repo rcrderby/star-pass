@@ -8,6 +8,7 @@ from pprint import pprint as pp
 
 # Imports - Third-Party
 from requests import request, Response
+from requests.exceptions import ConnectionError
 
 
 class Helpers:
@@ -56,7 +57,14 @@ class Helpers:
         """
 
         # Send API request
-        response = request(**api_request_data)
+        try:
+            response = request(**api_request_data)
+
+        # Handle TCP Connection Errors
+        except ConnectionError as error:
+            # Display error text and exit
+            self.printer(repr(f'{error!r}'))
+            exit(code=1)
 
         # Check for HTTP errors
         if response.ok is not True:
