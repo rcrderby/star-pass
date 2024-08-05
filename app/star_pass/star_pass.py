@@ -318,7 +318,7 @@ class CreateShifts:
                 None.
         """
         # Print preliminary status message
-        message = 'Merging shift dates and times to combined values...'
+        message = 'Combining shift dates and times to combined values...'
         self.helpers.printer(
             message=message,
             end=''
