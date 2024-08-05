@@ -3,11 +3,13 @@
 
 # Imports - Python Standard Library
 from ast import literal_eval
+from datetime import datetime as dt
 from typing import Any, Dict
 from pprint import pprint as pp
 import sys
 
 # Imports - Third-Party
+from dateparser import parse
 from requests import exceptions, request, Response
 
 
@@ -48,6 +50,23 @@ class Helpers:
         arg_bool = literal_eval(arg_value)
 
         return arg_bool
+
+    def format_date_time(
+            self,
+            date_time_string: str
+    ) -> str:
+        """ Format a date and time for Amplify compatibility.
+
+            Args:
+                date_time_string (str):
+                    Raw date/time string.
+
+            Returns:
+                formatted_date_time_string (str):
+                    Date/time string.
+        """
+
+        return None
 
     def printer(
             self,
