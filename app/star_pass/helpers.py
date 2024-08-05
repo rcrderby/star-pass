@@ -57,14 +57,33 @@ class Helpers:
     ) -> str:
         """ Format a date and time for Amplify compatibility.
 
+            Examples:
+                '5/6/24 11:30' --------------> '2024-05-06 11:30'
+                '6 may 2024 11:30 am' -------> '2024-05-06 11:30'
+                'may 6th, 2024 11:30 a.m.' --> '2024-05-06 11:30'
+
+                See https://dateparser.readthedocs.io/en/latest
+                for more information.
+
             Args:
                 date_time_string (str):
-                    Raw date/time string.
+                    Space-separated concatenation of a common date
+                    format and a common time format.
 
             Returns:
                 formatted_date_time_string (str):
-                    Date/time string.
+                    Date/time string in the Amplify-specified format.
+
+                    Example:
+                        '2024-05-06 11:30'
+
+                    See https://api.galaxydigital.com/docs/#/Need/needAddShifts
         """
+
+        # Parse date/time string into datetime.datetime object
+        parse(
+            date_string=date_time_string
+        )
 
         return None
 
