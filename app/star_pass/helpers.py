@@ -5,10 +5,10 @@
 from ast import literal_eval
 from typing import Any, Dict
 from pprint import pprint as pp
+import sys
 
 # Imports - Third-Party
-from requests import request, Response
-from requests.exceptions import ConnectionError
+from requests import exceptions, request, Response
 
 
 class Helpers:
@@ -61,10 +61,12 @@ class Helpers:
             response = request(**api_request_data)
 
         # Handle TCP Connection Errors
-        except ConnectionError as error:
+        except exceptions.ConnectionError as error:
             # Display error text and exit
-            self.printer(repr(f'{error!r}'))
-            exit(code=1)
+            self.printer(
+                message=repr(f'{error!r}')
+            )
+            sys.exit(1)
 
         # Check for HTTP errors
         if response.ok is not True:
