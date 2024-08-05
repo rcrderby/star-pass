@@ -8,7 +8,7 @@ from typing import Dict
 # Imports - Third-Party
 
 # Imports - Local
-from star_pass.star_pass import AmplifyShifts
+from star_pass.star_pass import CreateShifts
 
 # Load environment variables
 
@@ -66,8 +66,8 @@ def main() -> None:
     # Get CLI arguments
     cli_args = get_cli_args()
 
-    # Create AmplifyShifts object
-    shifts = AmplifyShifts(
+    # Create CreateShifts object
+    shifts = CreateShifts(
         **cli_args
     )
 
