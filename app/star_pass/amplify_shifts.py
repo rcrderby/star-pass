@@ -35,9 +35,9 @@ BASE_HEADERS = _defaults.BASE_HEADERS
 BASE_HEADERS.update(
     {'Authorization': f'Bearer {GC_TOKEN}'}
 )
-BASE_URL = getenv(
-    key='BASE_URL',
-    default=_defaults.BASE_URL
+BASE_AMPLIFY_URL = getenv(
+    key='BASE_AMPLIFY_URL',
+    default=_defaults.BASE_AMPLIFY_URL
 )
 HTTP_TIMEOUT = int(
     getenv(
@@ -612,7 +612,7 @@ class CreateShifts:
         headers = BASE_HEADERS
 
         # Construct URL and JSON payload
-        url = f'{BASE_URL}/needs/{need_id}'
+        url = f'{BASE_AMPLIFY_URL}/needs/{need_id}'
 
         # Construct API request data
         api_request_data = {
@@ -663,7 +663,7 @@ class CreateShifts:
         for need_id, shifts in self._shift_data.items():
 
             # Construct URL and JSON payload
-            url = f'{BASE_URL}/needs/{need_id}/shifts'
+            url = f'{BASE_AMPLIFY_URL}/needs/{need_id}/shifts'
             json = shifts
 
             # Construct API request data
