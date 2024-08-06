@@ -47,6 +47,7 @@ class GcalData:
         return None
 
     def get_shift_length(
+            self,
             shift_start: datetime,
             shift_end: datetime
     ) -> int:
@@ -74,8 +75,8 @@ class GcalData:
 
         return shift_length
 
-
     def datetime_to_string(
+            self,
             datetime_object: str,
             datetime_string_format: str = DATE_TIME_FORMAT
     ) -> str:
@@ -105,8 +106,8 @@ class GcalData:
 
         return datetime_string
 
-
     def read_shift_data(
+            self,
             json_file: str = JSON_FILE
     ) -> List[Dict[str, str]]:
         """Read shift data from a JSON file and produce a list of shifts.
@@ -152,13 +153,13 @@ class GcalData:
             shift_end = shift['end']['dateTime']
 
             # Get the shift duration
-            shift_duration = get_shift_length(
+            shift_duration = self.get_shift_length(
                         shift_start=datetime.fromisoformat(shift_start),
                         shift_end=datetime.fromisoformat(shift_end)
                     )
 
             # Format the shift start as a string
-            shift_start_string = datetime_to_string(
+            shift_start_string = self.datetime_to_string(
                 datetime_object=shift_start
             )
 
@@ -172,10 +173,19 @@ class GcalData:
 
         return shifts
 
-    def generate_shift_data() -> None:
-        """ Main application. """
+    def generate_shift_data(
+            self
+    ) -> None:
+        """ Generate shift data.
 
-        shifts = read_shift_data()
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        shifts = self.read_shift_data()
 
         for shift in shifts:
             # Split the start date and time into separate variables
