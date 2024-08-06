@@ -31,7 +31,7 @@ BASE_HEADERS = {
     'Accept': 'application/json',
     'Content-Type': 'application/json'
 }
-BASE_URL = 'https://api.galaxydigital.com/api'
+BASE_AMPLIFY_URL = 'https://api.galaxydigital.com/api'
 HTTP_TIMEOUT = '3'
 
 # Data file name and location
