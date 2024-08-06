@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-""" Star Pass Classes and Methods """
+#!/usr/local/bin/python3
+""" Amplify shift management classes and methods. """
 
 # Imports - Python Standard Library
 from json import dumps, load
