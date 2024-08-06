@@ -32,10 +32,11 @@ BASE_HEADERS = {
     'Content-Type': 'application/json'
 }
 BASE_AMPLIFY_URL = 'https://api.galaxydigital.com/api'
-BASE_GCAL_URL = 'https://www.googleapis.com/calendar/v3/calendars/'
+BASE_GCAL_URL = 'https://www.googleapis.com/calendar/v3/calendars'
 HTTP_TIMEOUT = '3'
 
 # Google Calendar...
+GCAL_BASE_ENDPOINT = '/events'
 GCAL_PRACTICE_CAL_ID = (
     'rosecityrollers.com_313938323232323331%40resource.calendar.google.com'
 )
