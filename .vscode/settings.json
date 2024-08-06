@@ -7,6 +7,7 @@
         "jsonschema",
         "mechatroner",
         "nosborn",
-        "pylint"
+        "pylint",
+        "rosecityrollers"
     ]
 }
