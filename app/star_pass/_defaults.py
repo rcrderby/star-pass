@@ -32,7 +32,19 @@ BASE_HEADERS = {
     'Content-Type': 'application/json'
 }
 BASE_AMPLIFY_URL = 'https://api.galaxydigital.com/api'
+BASE_GCAL_URL = 'https://www.googleapis.com/calendar/v3/calendars/'
 HTTP_TIMEOUT = '3'
+
+# Google Calendar...
+GCAL_PRACTICE_CAL_ID = (
+    'rosecityrollers.com_313938323232323331%40resource.calendar.google.com'
+)
+GCAL_ORDER_BY = 'startTime'
+GCAL_SHOW_DELETED = False
+GCAL_SINGLE_EVENTS = True
+GCAL_TIME_MIN = '2024-09-01T00:00:00-00:00'
+GCAL_TIME_MAX = '2024-10-10T00:00:00-00:00'
+GCAL_TEXT_QUERY = 'scrimmage'
 
 # Data file name and location
 BASE_FILE_NAME = 'amplify_shifts'
