@@ -10,7 +10,9 @@ from typing import Dict, List
 
 # Constants
 DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
-DURATION = 20
+DEFAULT_DURATION = 60
+
+# Data file name and location
 FILE_PATH = '/workspaces/star-pass/_gitignore/_example_responses/gcal/'
 FILE_NAME = 'scrimmages.json'
 JSON_FILE = join(FILE_PATH, FILE_NAME)
@@ -30,7 +32,7 @@ SCRIMMAGES_JUNIOR = [
 ]
 
 
-class GcalData:
+class GCALData:
     """ Collect and manage Google Calendar data. """
     def __init__(
             self,
@@ -105,6 +107,84 @@ class GcalData:
         datetime_string = datetime_object.strftime(datetime_string_format)
 
         return datetime_string
+
+    def get_gcal_shift_data(
+            self,
+            query_string: str
+    ) -> Dict:  # TODO - expand type casting
+        """ Get shift date from the Google Calendar.
+
+            Args:
+                query_string (str):
+                    Query string to pass to the Google Calendar service
+                    in order to limit results to specific events.
+
+                    Example:
+                        Use 'scrimmage' to get scrimmage events and use
+                        'officials' to get officiating practice events.
+
+            Returns:
+                gcal_data (Dict[TODO]):
+                    Data returned by the Google Calendar service.
+        """
+
+        # Set HTTP request variables
+        method = 'POST'
+        headers = BASE_HEADERS
+
+        # Create and send request
+        for need_id, shifts in self._shift_data.items():
+
+            # Construct URL and JSON payload
+            url = f'{BASE_AMPLIFY_URL}/needs/{need_id}/shifts'
+            json = shifts
+
+            # Construct API request data
+            api_request_data = {
+                "method": method,
+                "url": url,
+                "headers": headers,
+                "json": json,
+                "timeout": timeout
+            }
+
+            # Determine the status of check_mode
+            if self.check_mode is False:
+                # Send API request
+                response = self.helpers.send_api_request(
+                    api_request_data=api_request_data
+                )
+
+                # Set HTTP response output message
+                output_heading = (
+                    '** HTTP API Response **\n'
+                    f'Response: HTTP {response.status_code} {response.reason}'
+                )
+
+            else:
+                # Set check_mode output message
+                output_heading = (
+                    '** HTTP API Check Mode Run **'
+                )
+
+            # Lookup opportunity title
+            opp_title = self._lookup_opportunity_title(
+                need_id=need_id
+            )
+
+            # Create output message
+            output_message = (
+                f'\n{output_heading}\n'
+                f'URL: {url}\n'
+                f'Opportunity Title: {opp_title}\n'
+                f'Shift Count: {len(json.get("shifts"))}\n'
+                f'Payload:\n{dumps(json, indent=2)}'
+            )
+
+            # Display output message
+            self.helpers.printer(
+                message=output_message
+            )
 
     def read_shift_data(
             self,
@@ -207,7 +287,7 @@ class GcalData:
                             f'{shift_id},'
                             f'{start_date},'
                             f'{start_time},'
-                            f'{DURATION}'
+                            f'{DEFAULT_DURATION}'
                         )
 
             # Set the shift ID for junior scrimmages
@@ -220,5 +300,5 @@ class GcalData:
                             f'{shift_id},'
                             f'{start_date},'
                             f'{start_time},'
-                            f'{DURATION}'
+                            f'{DEFAULT_DURATION}'
                         )
