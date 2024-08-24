@@ -35,8 +35,16 @@ BASE_AMPLIFY_URL = 'https://api.galaxydigital.com/api'
 BASE_GCAL_URL = 'https://www.googleapis.com/calendar/v3/calendars'
 HTTP_TIMEOUT = '3'
 
-# Google Calendar...
-GCAL_BASE_ENDPOINT = '/events'
+# Google Calendar values
+BASE_GCAL_ENDPOINT = '/events'
+BASE_GCAL_PARAMS = {
+    'orderBy': 'startTime',
+    'q': '',
+    'showDeleted': 'false',
+    'singleEvents': 'true',
+    'timeMin': '',
+    'timeMax': '',
+}
 GCAL_PRACTICE_CAL_ID = (
     'rosecityrollers.com_313938323232323331%40resource.calendar.google.com'
 )
