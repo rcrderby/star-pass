@@ -46,7 +46,7 @@ BASE_GCAL_PARAMS = {
     'timeMax': '',
 }
 GCAL_PRACTICE_CAL_ID = (
-    'rosecityrollers.com_313938323232323331%40resource.calendar.google.com'
+    '/rosecityrollers.com_313938323232323331%40resource.calendar.google.com'
 )
 GCAL_ORDER_BY = 'startTime'
 GCAL_SHOW_DELETED = False
