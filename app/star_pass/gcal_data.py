@@ -153,8 +153,8 @@ class GCALData:
     def get_gcal_shift_data(
             self,
             query_string: str,
-            timeMin: datetime,
-            timeMax: datetime,
+            timeMin: datetime,  # pylint: disable=invalid-name
+            timeMax: datetime,  # pylint: disable=invalid-name
             timeout: int = HTTP_TIMEOUT
     ) -> Dict:  # TODO - expand type casting
         """ Get shift date from the Google Calendar.
