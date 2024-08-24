@@ -110,7 +110,9 @@ class GcalData:
             self,
             json_file: str = JSON_FILE
     ) -> List[Dict[str, str]]:
-        """Read shift data from a JSON file and produce a list of shifts.
+        """ Read shift data from a JSON file.
+
+            Produce a list of shifts from the JSON data.
 
             Args:
                 json_file (str):
