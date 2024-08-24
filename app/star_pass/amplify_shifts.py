@@ -26,14 +26,14 @@ load_dotenv(
 
 # Constants
 # Authentication
-GC_TOKEN = getenv(
-    key='GC_TOKEN'
+AMPLIFY_TOKEN = getenv(
+    key='AMPLIFY_TOKEN'
 )
 
 # HTTP request configuration
 BASE_HEADERS = _defaults.BASE_HEADERS
 BASE_HEADERS.update(
-    {'Authorization': f'Bearer {GC_TOKEN}'}
+    {'Authorization': f'Bearer {AMPLIFY_TOKEN}'}
 )
 BASE_AMPLIFY_URL = getenv(
     key='BASE_AMPLIFY_URL',
