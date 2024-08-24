@@ -215,22 +215,22 @@ class GCALData:
             api_request_data=api_request_data
         )
 
-        # Set HTTP response output message
-        output_heading = (
-            '** HTTP API Response **\n'
-            f'Response: HTTP {response.status_code} {response.reason}'
-        )
+        # # Set HTTP response output message
+        # output_heading = (
+        #     '** HTTP API Response **\n'
+        #     f'Response: HTTP {response.status_code} {response.reason}'
+        # )
 
-        # Create output message
-        output_message = (
-            f'\n{output_heading}\n'
-            f'URL: {url}\n'
-        )
+        # # Create output message
+        # output_message = (
+        #     f'\n{output_heading}\n'
+        #     f'URL: {url}\n'
+        # )
 
-        # Display output message
-        self.helpers.printer(
-            message=output_message
-        )
+        # # Display output message
+        # self.helpers.printer(
+        #     message=output_message
+        # )
 
         return response.json()
 
