@@ -283,22 +283,32 @@ class GCALData:
         return gcal_shifts
 
     def generate_shift_data(
-            self
+            self,
+            gcal_shifts: List[Dict[str, str]]
     ) -> None:
         """ Generate shift data.
 
             Args:
-                None.
+                gcal_shifts (List[Dict[str, str]]:
+                    List of shift dictionaries in the format:
+                    [
+                        {
+                            name: <summary>,
+                            start: <start[dateTime]>,
+                            end: <end[dateTime]>
+                        },
+                        {
+                            name: <summary>,
+                            start: <start[dateTime]>,
+                            end: <end[dateTime]>
+                        }
+                    ]
 
             Returns:
                 None.
         """
 
-        shifts = self.process_gcal_data(
-            gcal_data=None  # Placeholder
-        )
-
-        for shift in shifts:
+        for shift in gcal_shifts:
             # Split the start date and time into separate variables
             start_date, start_time = shift['start'].split(sep=' ')
 
