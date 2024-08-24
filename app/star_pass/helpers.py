@@ -133,7 +133,8 @@ class Helpers:
 
     def send_api_request(
             self,
-            api_request_data: Dict
+            api_request_data: Dict,
+            display_request_status: bool = True
     ) -> Response:
         """ Send API request.
 
@@ -156,6 +157,10 @@ class Helpers:
                     timeout (int):
                         HTTP timeout.
 
+                display_request_status (bool, optional):
+                    Print a message to display the result of the HTTP
+                    request.  Default is 'True'.
+
             Returns:
                 response (requests.Response):
                     HTTP server response object.
@@ -176,5 +181,23 @@ class Helpers:
         # Check for HTTP errors
         if response.ok is not True:
             response.raise_for_status()
+
+        # Display the HTTP request status
+        if display_request_status is True:
+            # Set HTTP response output message
+            output_heading = (
+                '** HTTP API Response **\n'
+                f'Response: HTTP {response.status_code} {response.reason}'
+            )
+
+            # Create output message
+            output_message = (
+                f'\n{output_heading}\n'
+            )
+
+            # Display output message
+            self.printer(
+                message=output_message
+            )
 
         return response

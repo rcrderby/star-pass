@@ -678,14 +678,8 @@ class CreateShifts:
             # Determine the status of check_mode
             if self.check_mode is False:
                 # Send API request
-                response = self.helpers.send_api_request(
+                self.helpers.send_api_request(
                     api_request_data=api_request_data
-                )
-
-                # Set HTTP response output message
-                output_heading = (
-                    '** HTTP API Response **\n'
-                    f'Response: HTTP {response.status_code} {response.reason}'
                 )
 
             else:
@@ -701,12 +695,15 @@ class CreateShifts:
 
             # Create output message
             output_message = (
-                f'\n{output_heading}\n'
                 f'URL: {url}\n'
                 f'Opportunity Title: {opp_title}\n'
                 f'Shift Count: {len(json.get("shifts"))}\n'
                 f'Payload:\n{dumps(json, indent=2)}'
             )
+
+            # Add a heading if it exists
+            if output_heading:
+                output_message = f'{output_heading}{output_message}'
 
             # Display output message
             self.helpers.printer(
