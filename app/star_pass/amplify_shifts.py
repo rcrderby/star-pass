@@ -616,11 +616,11 @@ class CreateShifts:
 
         # Construct API request data
         api_request_data = {
-            "method": method,
-            "url": url,
-            "headers": headers,
-            "json": None,
-            "timeout": timeout
+            'method': method,
+            'url': url,
+            'headers': headers,
+            'json': None,
+            'timeout': timeout
         }
 
         # Send API request
@@ -668,11 +668,11 @@ class CreateShifts:
 
             # Construct API request data
             api_request_data = {
-                "method": method,
-                "url": url,
-                "headers": headers,
-                "json": json,
-                "timeout": timeout
+                'method': method,
+                'url': url,
+                'headers': headers,
+                'json': json,
+                'timeout': timeout
             }
 
             # Determine the status of check_mode
