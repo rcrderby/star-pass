@@ -193,7 +193,7 @@ class GCALData:
         """
 
         # Set HTTP request variables
-        method = 'POST'
+        method = 'GET'
         headers = BASE_HEADERS
 
         # Construct URL
