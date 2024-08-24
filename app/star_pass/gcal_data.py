@@ -6,7 +6,6 @@ from datetime import datetime
 from json import load
 from math import floor
 from os import getenv
-from os.path import join
 from pathlib import Path
 from typing import Dict, List
 
@@ -60,7 +59,7 @@ DATA_DIR_PATH = Path.joinpath(
 )
 
 GCAL_DATA_FILE_NAME = 'gcal.json'
-GCAL_DATA_FILE_PATH = join(
+GCAL_DATA_FILE_PATH = Path.joinpath(
     DATA_DIR_PATH,
     GCAL_DATA_FILE_NAME
 )
