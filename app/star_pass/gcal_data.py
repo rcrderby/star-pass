@@ -294,7 +294,9 @@ class GCALData:
                 None.
         """
 
-        shifts = self.read_shift_data()
+        shifts = self.process_gcal_data(
+            gcal_data=None  # Placeholder
+        )
 
         for shift in shifts:
             # Split the start date and time into separate variables
