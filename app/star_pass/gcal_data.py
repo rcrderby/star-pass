@@ -5,10 +5,44 @@
 from datetime import datetime
 from json import load
 from math import floor
+from os import getenv
 from os.path import join
 from typing import Dict, List
 
+# Imports - Third-Party
+from dotenv import load_dotenv
+
+# Imports - Local
+from . import _defaults
+from .helpers import Helpers
+
+# Load environment variables
+load_dotenv(
+    dotenv_path='./.env',
+    encoding='utf-8'
+)
+
 # Constants
+# Authentication
+GC_TOKEN = getenv(
+    key='GC_TOKEN'
+)
+
+# HTTP request configuration
+BASE_HEADERS = _defaults.BASE_HEADERS
+
+BASE_GCAL_URL = getenv(
+    key='BASE_GCAL_URL',
+    default=_defaults.BASE_GCAL_URL
+)
+HTTP_TIMEOUT = int(
+    getenv(
+        key='HTTP_TIMEOUT',
+        default=_defaults.HTTP_TIMEOUT
+    )
+)
+
+# Date and time management
 DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
 DEFAULT_DURATION = 60
 
@@ -16,6 +50,8 @@ DEFAULT_DURATION = 60
 FILE_PATH = '/workspaces/star-pass/_gitignore/_example_responses/gcal/'
 FILE_NAME = 'scrimmages.json'
 JSON_FILE = join(FILE_PATH, FILE_NAME)
+
+# Scrimmage keywords
 SCRIMMAGE_ADULT_KEYWORDS = ['adult', 'wreckers']
 SCRIMMAGE_ADULT_NSO_ID = 628861
 SCRIMMAGE_ADULT_SO_ID = 607934
