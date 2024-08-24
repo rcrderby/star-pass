@@ -7,7 +7,7 @@ from json import load
 from math import floor
 from os import getenv
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 # Imports - Third-Party
 from dotenv import load_dotenv
@@ -166,7 +166,7 @@ class GCALData:
             timeMin: datetime,  # pylint: disable=invalid-name
             timeMax: datetime,  # pylint: disable=invalid-name
             timeout: int = HTTP_TIMEOUT
-    ) -> Dict:  # TODO - expand type casting
+    ) -> Dict[Any, Any]:
         """ Get shift date from the Google Calendar.
 
             Args:
@@ -188,7 +188,7 @@ class GCALData:
                     HTTP timeout.  Default is HTTP_TIMEOUT.
 
             Returns:
-                gcal_data (Dict[TODO]):
+                gcal_data (Dict[Any, Any]):
                     Data returned by the Google Calendar service.
         """
 
