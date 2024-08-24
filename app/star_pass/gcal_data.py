@@ -225,7 +225,9 @@ class GCALData:
             api_request_data=api_request_data
         )
 
-        return response.json()
+        gcal_data = response.json()
+
+        return gcal_data
 
     def read_shift_data(
             self,
