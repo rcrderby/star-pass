@@ -24,12 +24,15 @@ load_dotenv(
 
 # Constants
 # Authentication
-GC_TOKEN = getenv(
-    key='GC_TOKEN'
+GCAL_TOKEN = getenv(
+    key='GCAL_TOKEN'
 )
 
 # HTTP request configuration
 BASE_HEADERS = _defaults.BASE_HEADERS
+GCAL_PRACTICE_CAL_ID = _defaults.GCAL_PRACTICE_CAL_ID
+BASE_GCAL_ENDPOINT = _defaults.BASE_GCAL_ENDPOINT
+BASE_GCAL_PARAMS = _defaults.BASE_GCAL_PARAMS
 
 BASE_GCAL_URL = getenv(
     key='BASE_GCAL_URL',
@@ -81,6 +84,9 @@ class GCALData:
             Return:
                 None.
         """
+
+        # Initialize helper methods
+        self.helpers = Helpers()
 
         return None
 
@@ -146,7 +152,10 @@ class GCALData:
 
     def get_gcal_shift_data(
             self,
-            query_string: str
+            query_string: str,
+            timeMin: datetime,
+            timeMax: datetime,
+            timeout: int = HTTP_TIMEOUT
     ) -> Dict:  # TODO - expand type casting
         """ Get shift date from the Google Calendar.
 
@@ -159,6 +168,15 @@ class GCALData:
                         Use 'scrimmage' to get scrimmage events and use
                         'officials' to get officiating practice events.
 
+                timeMin (datetime):
+                    Start date/time for shifts in calendar query.
+
+                timeMax (datetime):
+                    End date/time for shifts in calendar query.
+
+                timeout (int):
+                    HTTP timeout.  Default is HTTP_TIMEOUT.
+
             Returns:
                 gcal_data (Dict[TODO]):
                     Data returned by the Google Calendar service.
@@ -168,59 +186,53 @@ class GCALData:
         method = 'POST'
         headers = BASE_HEADERS
 
-        # Create and send request
-        for need_id, shifts in self._shift_data.items():
+        # Construct URL
+        url = (
+            f'{BASE_GCAL_URL}'
+            f'{GCAL_PRACTICE_CAL_ID}'
+            f'{BASE_GCAL_ENDPOINT}'
+        )
 
-            # Construct URL and JSON payload
-            url = f'{BASE_AMPLIFY_URL}/needs/{need_id}/shifts'
-            json = shifts
+        # Construct URL parameters
+        params = {}
+        params.update(**BASE_GCAL_PARAMS)
+        params.update({'q': query_string})
+        params.update({'timeMin': timeMin})
+        params.update({'timeMax': timeMax})
+        params.update({'key': GCAL_TOKEN})
 
-            # Construct API request data
-            api_request_data = {
-                "method": method,
-                "url": url,
-                "headers": headers,
-                "json": json,
-                "timeout": timeout
-            }
+        # Construct API request data
+        api_request_data = {
+            'method': method,
+            'url': url,
+            'headers': headers,
+            'params': params,
+            'timeout': timeout
+        }
 
-            # Determine the status of check_mode
-            if self.check_mode is False:
-                # Send API request
-                response = self.helpers.send_api_request(
-                    api_request_data=api_request_data
-                )
+        # Send API request
+        response = self.helpers.send_api_request(
+            api_request_data=api_request_data
+        )
 
-                # Set HTTP response output message
-                output_heading = (
-                    '** HTTP API Response **\n'
-                    f'Response: HTTP {response.status_code} {response.reason}'
-                )
+        # Set HTTP response output message
+        output_heading = (
+            '** HTTP API Response **\n'
+            f'Response: HTTP {response.status_code} {response.reason}'
+        )
 
-            else:
-                # Set check_mode output message
-                output_heading = (
-                    '** HTTP API Check Mode Run **'
-                )
+        # Create output message
+        output_message = (
+            f'\n{output_heading}\n'
+            f'URL: {url}\n'
+        )
 
-            # Lookup opportunity title
-            opp_title = self._lookup_opportunity_title(
-                need_id=need_id
-            )
+        # Display output message
+        self.helpers.printer(
+            message=output_message
+        )
 
-            # Create output message
-            output_message = (
-                f'\n{output_heading}\n'
-                f'URL: {url}\n'
-                f'Opportunity Title: {opp_title}\n'
-                f'Shift Count: {len(json.get("shifts"))}\n'
-                f'Payload:\n{dumps(json, indent=2)}'
-            )
-
-            # Display output message
-            self.helpers.printer(
-                message=output_message
-            )
+        return response.json()
 
     def read_shift_data(
             self,
