@@ -655,6 +655,9 @@ class CreateShifts:
                 None.
         """
 
+        # Set a default value for 'output_heading'
+        output_heading = None
+
         # Set HTTP request variables
         method = 'POST'
         headers = BASE_HEADERS
@@ -702,7 +705,7 @@ class CreateShifts:
             )
 
             # Add a heading if it exists
-            if output_heading:
+            if output_heading is not None:
                 output_message = f'{output_heading}{output_message}'
 
             # Display output message
