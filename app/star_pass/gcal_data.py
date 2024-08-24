@@ -7,6 +7,7 @@ from json import load
 from math import floor
 from os import getenv
 from os.path import join
+from pathlib import Path
 from typing import Dict, List
 
 # Imports - Third-Party
@@ -50,9 +51,19 @@ DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
 DEFAULT_DURATION = 60
 
 # Data file name and location
-FILE_PATH = '/workspaces/star-pass/_gitignore/_example_responses/gcal/'
-FILE_NAME = 'scrimmages.json'
-JSON_FILE = join(FILE_PATH, FILE_NAME)
+# Path relative to this file
+CURRENT_FILE_PATH = Path(__file__).parent
+APP_DIR_PATH = CURRENT_FILE_PATH.parent
+DATA_DIR_PATH = Path.joinpath(
+    APP_DIR_PATH.parent,
+    'data'
+)
+
+GCAL_DATA_FILE_NAME = 'gcal.json'
+GCAL_DATA_FILE_PATH = join(
+    DATA_DIR_PATH,
+    GCAL_DATA_FILE_NAME
+)
 
 # Scrimmage keywords
 SCRIMMAGE_ADULT_KEYWORDS = ['adult', 'wreckers']
@@ -236,7 +247,7 @@ class GCALData:
 
     def read_shift_data(
             self,
-            json_file: str = JSON_FILE
+            json_file: str = GCAL_DATA_FILE_PATH
     ) -> List[Dict[str, str]]:
         """ Read shift data from a JSON file.
 
