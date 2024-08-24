@@ -3,7 +3,6 @@
 
 # Imports - Python Standard Library
 from datetime import datetime
-from json import load
 from math import floor
 from os import getenv
 from pathlib import Path
@@ -56,12 +55,6 @@ APP_DIR_PATH = CURRENT_FILE_PATH.parent
 DATA_DIR_PATH = Path.joinpath(
     APP_DIR_PATH.parent,
     'data'
-)
-
-GCAL_DATA_FILE_NAME = 'gcal.json'
-GCAL_DATA_FILE_PATH = Path.joinpath(
-    DATA_DIR_PATH,
-    GCAL_DATA_FILE_NAME
 )
 
 # Scrimmage keywords
@@ -229,20 +222,20 @@ class GCALData:
 
         return gcal_data
 
-    def read_shift_data(
+    def process_gcal_data(
             self,
-            json_file: str = GCAL_DATA_FILE_PATH
+            gcal_data: Dict[Any, Any]
     ) -> List[Dict[str, str]]:
-        """ Read shift data from a JSON file.
+        """ Read and process Google Calendar data JSON.
 
-            Produce a list of shifts from the JSON data.
+            Produce a list of shifts from the Google Calendar JSON.
 
             Args:
-                json_file (str):
-                    Path to JSON file with Google Calendar shift data.
+                gcal_data (Dict[Any, Any]):
+                    Google Calendar JSON data.
 
             Returns:
-                shifts (List[Dict[str, str]]:
+                gcal_shifts (List[Dict[str, str]]:
                     List of shift dictionaries in the format:
                     [
                         {
@@ -258,37 +251,28 @@ class GCALData:
                     ]
         """
 
-        # Read JSON file
-        with open(
-            file=json_file,
-            mode='rt',
-            encoding='utf-8'
-        ) as json_data:
-            # Convert JSON data to a Python dictionary
-            file_data = load(json_data)
+        # Create a list of gcal_shifts
+        gcal_shifts = []
 
-        # Create a shifts List
-        shifts = []
-
-        # Add calendar data to 'shifts'
-        for shift in file_data['items']:
+        # Add Google Calendar data to 'gcal_shifts'
+        for item in gcal_data['items']:
             # Get the shift name, start, and end values
-            shift_name = shift['summary']
-            shift_start = shift['start']['dateTime']
-            shift_end = shift['end']['dateTime']
+            shift_name = item['summary']
+            shift_start = item['start']['dateTime']
+            shift_end = item['end']['dateTime']
 
             # Get the shift duration
             shift_duration = self.get_shift_length(
-                        shift_start=datetime.fromisoformat(shift_start),
-                        shift_end=datetime.fromisoformat(shift_end)
-                    )
+                shift_start=datetime.fromisoformat(shift_start),
+                shift_end=datetime.fromisoformat(shift_end)
+            )
 
             # Format the shift start as a string
             shift_start_string = self.datetime_to_string(
                 datetime_object=shift_start
             )
 
-            shifts.append(
+            gcal_shifts.append(
                 {
                     'name': shift_name,
                     'duration': shift_duration,
@@ -296,7 +280,7 @@ class GCALData:
                 }
             )
 
-        return shifts
+        return gcal_shifts
 
     def generate_shift_data(
             self
