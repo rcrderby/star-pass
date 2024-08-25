@@ -11,8 +11,11 @@ import sys
 from dateparser import parse
 from requests import exceptions, request, Response
 
+# Imports - Local
+from . import _defaults
+
 # Constants
-AMPLIFY_DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
+DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 
 
 class Helpers:
@@ -89,7 +92,7 @@ class Helpers:
 
         # Convert 'dt_object' to a formatted string
         formatted_date_time_string = dt_object.strftime(
-            format=AMPLIFY_DATE_TIME_FORMAT
+            format=DATE_TIME_FORMAT
         )
 
         return formatted_date_time_string
