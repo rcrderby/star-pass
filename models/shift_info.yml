@@ -1,29 +1,29 @@
 # Shift information model for looking up shift IDs based on  keywords
 
 ---
-- adult:
-    practice:
-      keywords:
-        - officials
-      need_ids:
-        - so: 000000
-    scrimmage:
-      keywords:
-        - adult
-        - wreckers
-      need_ids:
-        - 628861  # NSO
-        - 607934  # SO
-- junior:
-    practice:
-      keywords:
-        - junior officials
-      need_ids:
-        - so: 000000
-    scrimmage:
-      keywords:
-        - buds
-        - petals
-      need_ids:
-        - 628862  # NSO
-        - 607810  # SO
+adult:
+  practice:
+    keywords:
+      - officials
+    need_ids:
+      - so: 000000
+  scrimmage:
+    keywords:
+      - adult
+      - wreckers
+    need_ids:
+      - 628861  # NSO
+      - 607934  # SO
+junior:
+  practice:
+    keywords:
+      - junior officials
+    need_ids:
+      - so: 000000
+  scrimmage:
+    keywords:
+      - buds
+      - petals
+    need_ids:
+      - 628862  # NSO
+      - 607810  # SO
