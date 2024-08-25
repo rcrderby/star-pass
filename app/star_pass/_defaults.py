@@ -124,6 +124,12 @@ with open(
         stream=yaml_data.read()
     )
 
+# Shift data objects
+ADULT_PRACTICE = SHIFT_INFO['adult']['practice']
+ADULT_SCRIMMAGE = SHIFT_INFO['adult']['scrimmage']
+JUNIOR_PRACTICE = SHIFT_INFO['junior']['practice']
+JUNIOR_SCRIMMAGE = SHIFT_INFO['junior']['scrimmage']
+
 # Miscellaneous
 DEFAULT_SLOTS = 20
 DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
