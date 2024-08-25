@@ -2,6 +2,7 @@
 """ Google Calendar shift management classes and methods. """
 
 # Imports - Python Standard Library
+from copy import copy
 from datetime import datetime
 from math import floor
 from os import getenv
@@ -321,10 +322,12 @@ class GCALData:
                 if need_name.find(keyword) == 0:
                     # Loop over the list of 'need_ids'
                     for need_id in SHIFT_INFO[keyword]['need_ids']:
-                        # Assign a 'need_id' to the shift
-                        shift.update({'need_id': need_id})
-                        # Add a new item to the 'amplify_shifts' list
-                        amplify_shifts.append(shift)
+                        # Create a copy of the current 'shift'
+                        new_shift = copy(shift)
+                        # Assign a 'need_id' to the new shift
+                        new_shift.update({'need_id': need_id})
+                        # Add a new shift to the 'amplify_shifts' list
+                        amplify_shifts.append(new_shift)
 
         # Convert the shift data to a Pandas DataFrame for CSV export
         amplify_shifts_data_frame = df(amplify_shifts)
