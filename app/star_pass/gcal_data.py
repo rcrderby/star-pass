@@ -48,11 +48,8 @@ HTTP_TIMEOUT = int(
 DEFAULT_SLOTS = _defaults.DEFAULT_SLOTS
 DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 
-# Shift keywords and IDs
-ADULT_PRACTICE = _defaults.ADULT_PRACTICE
-ADULT_SCRIMMAGE = _defaults.ADULT_SCRIMMAGE
-JUNIOR_PRACTICE = _defaults.JUNIOR_PRACTICE
-JUNIOR_SCRIMMAGE = _defaults.JUNIOR_SCRIMMAGE
+# Shift lookup data
+SHIFT_INFO = _defaults.SHIFT_INFO
 
 
 class GCALData:
@@ -313,33 +310,17 @@ class GCALData:
         # Create a list of shifts for Amplify
         amplify_shifts = []
 
-        # Loop up Amplify need IDs for adult scrimmage Google Calendar shifts
-        # Loop over all Google Calendar shifts
+        # Loop up Amplify need IDs for Google Calendar shifts
         for shift in gcal_shifts:
-            # Loop over adult scrimmage keywords
-            for keyword in ADULT_SCRIMMAGE['keywords']:
-                # Convert 'need_name' to lowercase for searching
-                need_name = shift.get('need_name').lower()
-                # Search 'need_name' for a matching keyword
+            # Perform keyword lookup
+            # Convert 'need_name' to lowercase for searching
+            need_name = shift.get('need_name').lower()
+            # Loop over keywords to search for a shift match
+            for keyword, info in SHIFT_INFO.items():
+                # Search for 'SHIFT_INFO' keywords in 'need_name'
                 if need_name.find(keyword) == 0:
-                    # Loop over the list of need IDs
-                    for need_id in ADULT_SCRIMMAGE['need_ids']:
-                        # Assign a 'need_id' to the shift
-                        shift.update({'need_id': need_id})
-                        # Add a new item to the 'amplify_shifts' list
-                        amplify_shifts.append(shift)
-
-        # Loop up Amplify need IDs for junior scrimmage Google Calendar shifts
-        # Loop over all Google Calendar shifts
-        for shift in gcal_shifts:
-            # Loop over junior scrimmage keywords
-            for keyword in JUNIOR_SCRIMMAGE['keywords']:
-                # Convert 'need_name' to lowercase for searching
-                need_name = shift.get('need_name').lower()
-                # Search 'need_name' for a matching keyword
-                if need_name.find(keyword) == 0:
-                    # Loop over the list of need IDs
-                    for need_id in JUNIOR_SCRIMMAGE['need_ids']:
+                    # Loop over the list of 'need_ids'
+                    for need_id in SHIFT_INFO[keyword]['need_ids']:
                         # Assign a 'need_id' to the shift
                         shift.update({'need_id': need_id})
                         # Add a new item to the 'amplify_shifts' list
