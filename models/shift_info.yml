@@ -2,31 +2,31 @@
 
 ---
 type:
-  - practice:
-      group:
-        - adult:
-            keywords:
-              - officials
-            need_ids:
-              - so: 000000
-        - junior:
-            keywords:
-              - junior officials
-            need_ids:
-              - so: 000000
-  - scrimmage:
-      group:
-        - adult:
-            keywords:
-              - adult
-              - wreckers
-            need_ids:
-              - nso: 628861
-              - so: 607934
-        - junior:
-            keywords:
-              - buds
-              - petals
-            need_ids:
-              - nso: 628862
-              - so: 607810
+  practice:
+    group:
+      - adult:
+          keywords:
+            - officials
+          need_ids:
+            - so: 000000
+      - junior:
+          keywords:
+            - junior officials
+          need_ids:
+            - so: 000000
+  scrimmage:
+    group:
+      - adult:
+          keywords:
+            - adult
+            - wreckers
+          need_ids:
+            - 628861  # NSO
+            - 607934  # SO
+      - junior:
+          keywords:
+            - buds
+            - petals
+          need_ids:
+            - 628862  # NSO
+            - 607810  # SO
