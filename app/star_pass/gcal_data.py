@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 
 # Imports - Third-Party
 from dotenv import load_dotenv
+from pandas import DataFrame as df
 
 # Imports - Local
 from . import _defaults
@@ -46,7 +47,7 @@ HTTP_TIMEOUT = int(
 
 # Date and time management
 DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
-DEFAULT_DURATION = 60
+DEFAULT_SLOTS = 20
 
 # Data file name and location
 # Path relative to this file
@@ -243,14 +244,16 @@ class GCALData:
                             need_id: ''
                             start_date: split of <start[dateTime]>,
                             start_time: split of <start[dateTime]>
-                            duration: <end[dateTime]>-<start[dateTime]>
+                            duration: <end[dateTime]>-<start[dateTime]>,
+                            slots: ''
                         },
                         {
                             need_name: <summary>,
                             need_id: ''
                             start_date: split of <start[dateTime]>,
                             start_time: split of <start[dateTime]>
-                            duration: <end[dateTime]>-<start[dateTime]>
+                            duration: <end[dateTime]>-<start[dateTime]>,
+                            slots: ''
                         }
                     ]
         """
@@ -287,7 +290,7 @@ class GCALData:
                     'start_date': start_date,
                     'start_time': start_time,
                     'duration': shift_duration,
-                    'slots': ''
+                    'slots': DEFAULT_SLOTS
                 }
             )
 
@@ -308,14 +311,16 @@ class GCALData:
                             need_id: ''
                             start_date: split of <start[dateTime]>,
                             start_time: split of <start[dateTime]>
-                            duration: <end[dateTime]>-<start[dateTime]>
+                            duration: <end[dateTime]>-<start[dateTime]>,
+                            slots: ''
                         },
                         {
                             need_name: <summary>,
                             need_id: ''
                             start_date: split of <start[dateTime]>,
                             start_time: split of <start[dateTime]>
-                            duration: <end[dateTime]>-<start[dateTime]>
+                            duration: <end[dateTime]>-<start[dateTime]>,
+                            slots: ''
                         }
                     ]
 
@@ -326,18 +331,40 @@ class GCALData:
 
         for shift in gcal_shifts:
 
-            # Set the shift ID for adult scrimmages
+            # Lookup and set the shift ID for adult scrimmages
+            # TODO
             for keyword in SCRIMMAGE_ADULT_KEYWORDS:
+                # TODO
                 need_name = shift.get('need_name').lower()
+                # TODO
                 if need_name.find(keyword) == 0:
+                    # TODO
                     for scrimmage in SCRIMMAGES_ADULT:
+                        # TODO
                         need_id = scrimmage
+                        # TODO
                         shift.update({'need_id': need_id})
 
-            # Set the shift ID for junior scrimmages
+            # Lookup and set the shift ID for junior scrimmages
+            # TODO
             for keyword in SCRIMMAGE_JUNIOR_KEYWORDS:
+                # TODO
                 need_name = shift.get('need_name').lower()
+                # TODO
                 if need_name.find(keyword) == 0:
+                    # TODO
                     for scrimmage in SCRIMMAGES_JUNIOR:
+                        # TODO
                         need_id = scrimmage
+                        # TODO
                         shift.update({'need_id': need_id})
+
+        # Convert the shift data to a Pandas DataFrame for CSV export
+        gcal_shifts_data_frame = df(gcal_shifts)
+
+        # Convert the Pandas DataFrame to CSV data
+        csv_data = gcal_shifts_data_frame.to_csv(
+            index=False
+        )
+
+        return csv_data
