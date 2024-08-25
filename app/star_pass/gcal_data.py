@@ -239,14 +239,18 @@ class GCALData:
                     List of shift dictionaries in the format:
                     [
                         {
-                            name: <summary>,
-                            start: <start[dateTime]>,
-                            end: <end[dateTime]>
+                            need_name: <summary>,
+                            need_id: ''
+                            start_date: split of <start[dateTime]>,
+                            start_time: split of <start[dateTime]>
+                            duration: <end[dateTime]>-<start[dateTime]>
                         },
                         {
-                            name: <summary>,
-                            start: <start[dateTime]>,
-                            end: <end[dateTime]>
+                            need_name: <summary>,
+                            need_id: ''
+                            start_date: split of <start[dateTime]>,
+                            start_time: split of <start[dateTime]>
+                            duration: <end[dateTime]>-<start[dateTime]>
                         }
                     ]
         """
@@ -267,77 +271,73 @@ class GCALData:
                 shift_end=datetime.fromisoformat(shift_end)
             )
 
-            # Format the shift start as a string
+            # Format the shift start values as strings
             shift_start_string = self.datetime_to_string(
                 datetime_object=shift_start
             )
 
+            start_date, start_time = shift_start_string.split(
+                sep=' '
+            )
+
             gcal_shifts.append(
                 {
-                    'name': shift_name,
+                    'need_name': shift_name,
+                    'need_id': '',
+                    'start_date': start_date,
+                    'start_time': start_time,
                     'duration': shift_duration,
-                    'start': shift_start_string
+                    'slots': ''
                 }
             )
 
         return gcal_shifts
 
-    def generate_shift_data(
+    def generate_shift_csv(
             self,
             gcal_shifts: List[Dict[str, str]]
-    ) -> None:
-        """ Generate shift data.
+    ) -> str:
+        """ Generate CSV file from shift data.
 
             Args:
                 gcal_shifts (List[Dict[str, str]]:
                     List of shift dictionaries in the format:
                     [
                         {
-                            name: <summary>,
-                            start: <start[dateTime]>,
-                            end: <end[dateTime]>
+                            need_name: <summary>,
+                            need_id: ''
+                            start_date: split of <start[dateTime]>,
+                            start_time: split of <start[dateTime]>
+                            duration: <end[dateTime]>-<start[dateTime]>
                         },
                         {
-                            name: <summary>,
-                            start: <start[dateTime]>,
-                            end: <end[dateTime]>
+                            need_name: <summary>,
+                            need_id: ''
+                            start_date: split of <start[dateTime]>,
+                            start_time: split of <start[dateTime]>
+                            duration: <end[dateTime]>-<start[dateTime]>
                         }
                     ]
 
             Returns:
-                None.
+                csv_shift_data (str):
+                    String of shift data in CSV format.
         """
 
         for shift in gcal_shifts:
-            # Split the start date and time into separate variables
-            start_date, start_time = shift['start'].split(sep=' ')
-
-            # Set the shift name and ID
-            shift_name = shift['name']
-            shift_id = ''
 
             # Set the shift ID for adult scrimmages
             for keyword in SCRIMMAGE_ADULT_KEYWORDS:
-                if shift_name.lower().find(keyword) == 0:
+                need_name = shift.get('need_name').lower()
+                if need_name.find(keyword) == 0:
                     for scrimmage in SCRIMMAGES_ADULT:
-                        shift_id = scrimmage
-                        print(
-                            f'{shift_name},'
-                            f'{shift_id},'
-                            f'{start_date},'
-                            f'{start_time},'
-                            f'{DEFAULT_DURATION}'
-                        )
+                        need_id = scrimmage
+                        shift.update({'need_id': need_id})
 
             # Set the shift ID for junior scrimmages
             for keyword in SCRIMMAGE_JUNIOR_KEYWORDS:
-                if shift_name.lower().find(keyword) == 0:
+                need_name = shift.get('need_name').lower()
+                if need_name.find(keyword) == 0:
                     for scrimmage in SCRIMMAGES_JUNIOR:
-                        shift_id = scrimmage
-                        print(
-                            f'{shift_name},'
-                            f'{shift_id},'
-                            f'{start_date},'
-                            f'{start_time},'
-                            f'{DEFAULT_DURATION}'
-                        )
+                        need_id = scrimmage
+                        shift.update({'need_id': need_id})
