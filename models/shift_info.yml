@@ -24,12 +24,13 @@ petals:
   need_ids:
     - 628862  # NSO
     - 607810  # SO
-scrimmage:
-  type: unspecified
-  need_ids:
-    - null
 wreckers:
   type: adult
   need_ids:
     - 628861  # NSO
     - 607934  # SO
+scrimmage:
+  type: default
+  need_ids:
+    - ''
+    - ''
