@@ -25,7 +25,34 @@
         )
 """
 
+# Imports - Python Standard Library
+from pathlib import Path
+
+# Imports - Third-Party
+from yaml import safe_load
+
 # Constants
+
+# Data file management
+# Path relative to this file
+CURRENT_FILE_PATH = Path(__file__).parent
+# 'app' directory path
+APP_DIR_PATH = CURRENT_FILE_PATH.parent
+# 'data' directory path
+DATA_DIR_PATH = Path.joinpath(
+    APP_DIR_PATH.parent,
+    'data'
+)
+# 'models' directory path
+MODELS_DIR_PATH = Path.joinpath(
+    APP_DIR_PATH.parent,
+    'models'
+)
+# 'schema' directory path
+SCHEMA_DIR_PATH = Path.joinpath(
+    APP_DIR_PATH,
+    'schema'
+)
 # HTTP request configuration
 BASE_HEADERS = {
     'Accept': 'application/json',
@@ -63,7 +90,7 @@ BASE_FILE_PATH = 'data'
 INPUT_FILE_DIR = 'csv'
 INPUT_FILE_EXTENSION = '.csv'
 
-# Data file management
+# Amplify CSV input file management
 DROP_COLUMNS = 'need_name, start_date, start_time'
 GROUP_BY_COLUMN = 'need_id'
 SHIFTS_DICT_KEY_NAME = 'shifts'
@@ -79,6 +106,23 @@ JSON_SCHEMA_SHIFT_FILE = 'amplify.shifts.schema.json'
 # Output data file
 OUTPUT_FILE_DIR = 'json'
 OUTPUT_FILE_EXTENSION = '.json'
+
+# Shift lookup data model
+SHIFT_INFO_FILE_NAME = 'shift_info.yml'
+SHIFT_INFO_FILE = Path.joinpath(
+    MODELS_DIR_PATH,
+    SHIFT_INFO_FILE_NAME
+)
+
+# Read the shift info model to set SHIFT_INFO
+with open(
+    file=SHIFT_INFO_FILE,
+    mode='rt',
+    encoding='utf-8'
+) as yaml_data:
+    SHIFT_INFO = safe_load(
+        stream=yaml_data.read()
+    )
 
 # Miscellaneous
 DEFAULT_SLOTS = 20
