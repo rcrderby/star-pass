@@ -8,7 +8,7 @@
     .env file located in the root directory of the application:
 
         # .env file contents
-        HTTP_TIMEOUT=5
+        HTTP_TIMEOUT=3
 
     The application will attempt to load environment
     variable values as constants before importing the default values
@@ -79,3 +79,7 @@ JSON_SCHEMA_SHIFT_FILE = 'amplify.shifts.schema.json'
 # Output data file
 OUTPUT_FILE_DIR = 'json'
 OUTPUT_FILE_EXTENSION = '.json'
+
+# Miscellaneous
+DEFAULT_SLOTS = 20
+DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
