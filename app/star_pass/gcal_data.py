@@ -317,17 +317,19 @@ class GCALData:
             # Convert 'need_name' to lowercase for searching
             need_name = shift.get('need_name').lower()
             # Loop over keywords to search for a shift match
-            for keyword, info in SHIFT_INFO.items():
+            for keyword, shift_info in SHIFT_INFO.items():
                 # Search for 'SHIFT_INFO' keywords in 'need_name'
-                if need_name.find(keyword) == 0:
-                    # Loop over the list of 'need_ids'
-                    for need_id in SHIFT_INFO[keyword]['need_ids']:
+                if need_name.find(keyword) != -1:
+                    # Loop over the list of 'need_ids' to add shifts for each
+                    for need_id in shift_info['need_ids']:
                         # Create a copy of the current 'shift'
                         new_shift = copy(shift)
                         # Assign a 'need_id' to the new shift
                         new_shift.update({'need_id': need_id})
                         # Add a new shift to the 'amplify_shifts' list
                         amplify_shifts.append(new_shift)
+                    # Exit the loop after a successful match
+                    break
 
         # Convert the shift data to a Pandas DataFrame for CSV export
         amplify_shifts_data_frame = df(amplify_shifts)
