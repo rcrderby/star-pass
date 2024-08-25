@@ -5,7 +5,6 @@
 from datetime import datetime
 from math import floor
 from os import getenv
-from pathlib import Path
 from typing import Any, Dict, List
 
 # Imports - Third-Party
@@ -46,33 +45,14 @@ HTTP_TIMEOUT = int(
 )
 
 # Date and time management
-DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
-DEFAULT_SLOTS = 20
+DEFAULT_SLOTS = _defaults.DEFAULT_SLOTS
+DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 
-# Data file name and location
-# Path relative to this file
-CURRENT_FILE_PATH = Path(__file__).parent
-APP_DIR_PATH = CURRENT_FILE_PATH.parent
-DATA_DIR_PATH = Path.joinpath(
-    APP_DIR_PATH.parent,
-    'data'
-)
-
-# Scrimmage keywords
-SCRIMMAGE_ADULT_KEYWORDS = ['adult', 'wreckers']
-SCRIMMAGE_ADULT_NSO_ID = 628861
-SCRIMMAGE_ADULT_SO_ID = 607934
-SCRIMMAGES_ADULT = [
-    SCRIMMAGE_ADULT_NSO_ID,
-    SCRIMMAGE_ADULT_SO_ID
-]
-SCRIMMAGE_JUNIOR_KEYWORDS = ['buds', 'petals']
-SCRIMMAGE_JUNIOR_NSO_ID = 628862
-SCRIMMAGE_JUNIOR_SO_ID = 607810
-SCRIMMAGES_JUNIOR = [
-    SCRIMMAGE_JUNIOR_NSO_ID,
-    SCRIMMAGE_JUNIOR_SO_ID
-]
+# Shift keywords and IDs
+ADULT_PRACTICE = _defaults.ADULT_PRACTICE
+ADULT_SCRIMMAGE = _defaults.ADULT_SCRIMMAGE
+JUNIOR_PRACTICE = _defaults.JUNIOR_PRACTICE
+JUNIOR_SCRIMMAGE = _defaults.JUNIOR_SCRIMMAGE
 
 
 class GCALData:
@@ -258,7 +238,7 @@ class GCALData:
                     ]
         """
 
-        # Create a list of gcal_shifts
+        # Create a list of shifts from Google Calendar
         gcal_shifts = []
 
         # Add Google Calendar data to 'gcal_shifts'
@@ -283,6 +263,7 @@ class GCALData:
                 sep=' '
             )
 
+            # Split the start date and start time values to separate variables
             gcal_shifts.append(
                 {
                     'need_name': shift_name,
@@ -329,41 +310,46 @@ class GCALData:
                     String of shift data in CSV format.
         """
 
+        # Create a list of shifts for Amplify
+        amplify_shifts = []
+
+        # Loop up Amplify need IDs for adult scrimmage Google Calendar shifts
+        # Loop over all Google Calendar shifts
         for shift in gcal_shifts:
-
-            # Lookup and set the shift ID for adult scrimmages
-            # TODO
-            for keyword in SCRIMMAGE_ADULT_KEYWORDS:
-                # TODO
+            # Loop over adult scrimmage keywords
+            for keyword in ADULT_SCRIMMAGE['keywords']:
+                # Convert 'need_name' to lowercase for searching
                 need_name = shift.get('need_name').lower()
-                # TODO
+                # Search 'need_name' for a matching keyword
                 if need_name.find(keyword) == 0:
-                    # TODO
-                    for scrimmage in SCRIMMAGES_ADULT:
-                        # TODO
-                        need_id = scrimmage
-                        # TODO
+                    # Loop over the list of need IDs
+                    for need_id in ADULT_SCRIMMAGE['need_ids']:
+                        # Assign a 'need_id' to the shift
                         shift.update({'need_id': need_id})
+                        # Add a new item to the 'amplify_shifts' list
+                        amplify_shifts.append(shift)
 
-            # Lookup and set the shift ID for junior scrimmages
-            # TODO
-            for keyword in SCRIMMAGE_JUNIOR_KEYWORDS:
-                # TODO
+        # Loop up Amplify need IDs for junior scrimmage Google Calendar shifts
+        # Loop over all Google Calendar shifts
+        for shift in gcal_shifts:
+            # Loop over junior scrimmage keywords
+            for keyword in JUNIOR_SCRIMMAGE['keywords']:
+                # Convert 'need_name' to lowercase for searching
                 need_name = shift.get('need_name').lower()
-                # TODO
+                # Search 'need_name' for a matching keyword
                 if need_name.find(keyword) == 0:
-                    # TODO
-                    for scrimmage in SCRIMMAGES_JUNIOR:
-                        # TODO
-                        need_id = scrimmage
-                        # TODO
+                    # Loop over the list of need IDs
+                    for need_id in JUNIOR_SCRIMMAGE['need_ids']:
+                        # Assign a 'need_id' to the shift
                         shift.update({'need_id': need_id})
+                        # Add a new item to the 'amplify_shifts' list
+                        amplify_shifts.append(shift)
 
         # Convert the shift data to a Pandas DataFrame for CSV export
-        gcal_shifts_data_frame = df(gcal_shifts)
+        amplify_shifts_data_frame = df(amplify_shifts)
 
         # Convert the Pandas DataFrame to CSV data
-        csv_data = gcal_shifts_data_frame.to_csv(
+        csv_data = amplify_shifts_data_frame.to_csv(
             index=False
         )
 
