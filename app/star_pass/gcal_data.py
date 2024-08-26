@@ -6,7 +6,7 @@ from copy import copy
 from datetime import datetime
 from math import floor
 from os import getenv
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List
 
 # Imports - Third-Party
 from dotenv import load_dotenv
@@ -134,7 +134,7 @@ class GCALData:
 
     def get_gcal_shift_data(
             self,
-            query_string: List[str] | str,
+            query_string: Iterable[str] | str,
             timeMin: datetime,  # pylint: disable=invalid-name
             timeMax: datetime,  # pylint: disable=invalid-name
             timeout: int = HTTP_TIMEOUT
@@ -142,8 +142,8 @@ class GCALData:
         """ Get shift date from the Google Calendar.
 
             Args:
-                query_string (List[str] | str):
-                    List of query strings or single query string
+                query_string (Iterable[str] | str):
+                    Iterable of query strings or single query string
                     to pass to the Google Calendar service in order to
                     filter results for specific events.
 
