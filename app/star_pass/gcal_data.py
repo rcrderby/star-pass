@@ -72,7 +72,7 @@ class GCALData:
 
         return None
 
-    def get_shift_length(
+    def _get_shift_length(
             self,
             shift_start: datetime,
             shift_end: datetime
@@ -101,7 +101,7 @@ class GCALData:
 
         return shift_length
 
-    def datetime_to_string(
+    def _datetime_to_string(
             self,
             datetime_object: str,
             datetime_string_format: str = DATE_TIME_FORMAT
@@ -258,13 +258,13 @@ class GCALData:
             shift_end = item['end']['dateTime']
 
             # Get the shift duration
-            shift_duration = self.get_shift_length(
+            shift_duration = self._get_shift_length(
                 shift_start=datetime.fromisoformat(shift_start),
                 shift_end=datetime.fromisoformat(shift_end)
             )
 
             # Format the shift start values as strings
-            shift_start_string = self.datetime_to_string(
+            shift_start_string = self._datetime_to_string(
                 datetime_object=shift_start
             )
 
