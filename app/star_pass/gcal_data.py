@@ -359,3 +359,19 @@ class GCALData:
         )
 
         return csv_data
+
+    def write_shift_csv_file(
+            self,
+            csv_data: str
+    ) -> None:
+        """ Write CSV file of shift data.
+
+            Args:
+                csv_data (str):
+                    String of shift data in CSV format.
+
+            Returns:
+                None.
+        """
+
+        return None
