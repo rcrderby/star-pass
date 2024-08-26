@@ -43,6 +43,11 @@ DATA_DIR_PATH = Path.joinpath(
     APP_DIR_PATH.parent,
     'data'
 )
+# 'input' directory path
+INPUT_CSV_DIR_PATH = Path.joinpath(
+    DATA_DIR_PATH,
+    'csv'
+)
 # 'models' directory path
 MODELS_DIR_PATH = Path.joinpath(
     APP_DIR_PATH.parent,
@@ -80,7 +85,7 @@ GCAL_SHOW_DELETED = False
 GCAL_SINGLE_EVENTS = True
 GCAL_TIME_MIN = '2024-09-01T00:00:00-00:00'
 GCAL_TIME_MAX = '2024-10-10T00:00:00-00:00'
-GCAL_TEXT_QUERY = [
+GCAL_DEFAULT_QUERY_STRINGS = [
     'officials',
     'scrimmage'
 ]
@@ -103,7 +108,7 @@ START_TIME_COLUMN = 'start_time'
 KEEP_COLUMNS = f'{START_COLUMN}, duration, slots'
 
 # JSON Schema
-JSON_SCHEMA_DIR = 'app/schema'
+JSON_SCHEMA_DIR = SCHEMA_DIR_PATH
 JSON_SCHEMA_SHIFT_FILE = 'amplify.shifts.schema.json'
 
 # Output data file
