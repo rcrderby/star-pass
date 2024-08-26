@@ -369,7 +369,7 @@ class GCALData:
             self,
             csv_data: str
     ) -> None:
-        """ Write CSV file of shift data.
+        """ Write a CSV file of shift data.
 
             Args:
                 csv_data (str):
@@ -382,10 +382,25 @@ class GCALData:
         # Create timestamped file name
         timestamp = datetime.now().isoformat()
         file_path = INPUT_CSV_DIR_PATH
-        file_name = f'gcal_shifts_{timestamp}.{INPUT_FILE_EXTENSION}'
+        file_name = f'gcal_shifts_{timestamp}{INPUT_FILE_EXTENSION}'
         file = Path.joinpath(
             file_path,
             file_name
+        )
+
+        # Write a CSV file of shift data
+        with open(
+            file=file,
+            mode='wt',
+            encoding='utf-8'
+        ) as csv_file:
+            csv_file.write(csv_data)
+
+        # Print file information
+        message = f'\nWrote CSV data to "{file}"'
+        self.helpers.printer(
+            message=message,
+            end=''
         )
 
         return None
