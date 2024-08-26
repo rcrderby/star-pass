@@ -134,7 +134,7 @@ class GCALData:
 
     def get_gcal_shift_data(
             self,
-            query_string: str,
+            query_string: List[str] | str,
             timeMin: datetime,  # pylint: disable=invalid-name
             timeMax: datetime,  # pylint: disable=invalid-name
             timeout: int = HTTP_TIMEOUT
@@ -142,9 +142,10 @@ class GCALData:
         """ Get shift date from the Google Calendar.
 
             Args:
-                query_string (str):
-                    Query string to pass to the Google Calendar service
-                    in order to limit results to specific events.
+                query_string (List[str] | str):
+                    List of query strings or single query string
+                    to pass to the Google Calendar service in order to
+                    filter results for specific events.
 
                     Example:
                         Use 'scrimmage' to get scrimmage events and use
