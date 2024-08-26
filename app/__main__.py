@@ -9,6 +9,7 @@ from typing import Dict
 
 # Imports - Local
 from star_pass.amplify_shifts import CreateShifts
+from star_pass.gcal_data import GCALData
 
 # Load environment variables
 
