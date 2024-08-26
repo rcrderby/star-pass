@@ -135,8 +135,8 @@ class GCALData:
     def get_gcal_shift_data(
             self,
             query_strings: Iterable[str] | str,
-            timeMin: datetime,  # pylint: disable=invalid-name
-            timeMax: datetime,  # pylint: disable=invalid-name
+            timeMin: str,  # pylint: disable=invalid-name
+            timeMax: str,  # pylint: disable=invalid-name
             timeout: int = HTTP_TIMEOUT
     ) -> Dict[Any, Any]:
         """ Get shift date from the Google Calendar.
@@ -151,11 +151,19 @@ class GCALData:
                         Use 'scrimmage' to get scrimmage events and use
                         'officials' to get officiating practice events.
 
-                timeMin (datetime):
-                    Start date/time for shifts in calendar query.
+                timeMin (str):
+                    ISO-formatted string start date/time for shifts in
+                    calendar query
 
-                timeMax (datetime):
-                    End date/time for shifts in calendar query.
+                    Example:
+                        '2024-09-01T00:00:00-00:00'
+
+                timeMax (str):
+                    ISO-formatted string end date/time for shifts in
+                    calendar query.
+
+                    Example:
+                        '2024-10-10T00:00:00-00:00'
 
                 timeout (int):
                     HTTP timeout.  Default is HTTP_TIMEOUT.
@@ -208,20 +216,20 @@ class GCALData:
             )
 
             # Add matching results to `gcal_data`
-            gcal_data.append(response.json().get('items'))
+            gcal_data += response.json().get('items')
 
         return gcal_data
 
     def process_gcal_data(
             self,
-            gcal_data: Dict[Any, Any]
+            gcal_data: List[Dict[str, str]]
     ) -> List[Dict[str, str]]:
         """ Read and process Google Calendar data JSON.
 
             Produce a list of shifts from the Google Calendar JSON.
 
             Args:
-                gcal_data (Dict[Any, Any]):
+                gcal_data List[Dict[str, str]]):
                     Google Calendar JSON data.
 
             Returns:
