@@ -134,7 +134,7 @@ class GCALData:
 
     def get_gcal_shift_data(
             self,
-            query_string: Iterable[str] | str,
+            query_strings: Iterable[str] | str,
             timeMin: datetime,  # pylint: disable=invalid-name
             timeMax: datetime,  # pylint: disable=invalid-name
             timeout: int = HTTP_TIMEOUT
@@ -142,7 +142,7 @@ class GCALData:
         """ Get shift date from the Google Calendar.
 
             Args:
-                query_string (Iterable[str] | str):
+                query_strings (Iterable[str] | str):
                     Iterable of query strings or single query string
                     to pass to the Google Calendar service in order to
                     filter results for specific events.
@@ -165,6 +165,9 @@ class GCALData:
                     Data returned by the Google Calendar service.
         """
 
+        # Create a list of shifts for Google Calendar data
+        gcal_data = []
+
         # Set HTTP request variables
         method = 'GET'
         headers = BASE_HEADERS
@@ -176,29 +179,36 @@ class GCALData:
             f'{BASE_GCAL_ENDPOINT}'
         )
 
-        # Construct URL parameters
+        # Construct base URL parameters
         params = {}
         params.update(**BASE_GCAL_PARAMS)
-        params.update({'q': query_string})
+        params.update({'q': ''})
         params.update({'timeMin': timeMin})
         params.update({'timeMax': timeMax})
         params.update({'key': GCAL_TOKEN})
 
-        # Construct API request data
-        api_request_data = {
-            'method': method,
-            'url': url,
-            'headers': headers,
-            'params': params,
-            'timeout': timeout
-        }
+        # Loop over keywords to construct consolidated results
+        for query_string in query_strings:
 
-        # Send API request
-        response = self.helpers.send_api_request(
-            api_request_data=api_request_data
-        )
+            # Update the 'q' query string parameter
+            params.update({'q': query_string})
 
-        gcal_data = response.json()
+            # Construct API request data
+            api_request_data = {
+                'method': method,
+                'url': url,
+                'headers': headers,
+                'params': params,
+                'timeout': timeout
+            }
+
+            # Send API request
+            response = self.helpers.send_api_request(
+                api_request_data=api_request_data
+            )
+
+            # Add matching results to `gcal_data`
+            gcal_data.append(response.json().get('items'))
 
         return gcal_data
 
@@ -241,7 +251,7 @@ class GCALData:
         gcal_shifts = []
 
         # Add Google Calendar data to 'gcal_shifts'
-        for item in gcal_data['items']:
+        for item in gcal_data:
             # Get the shift name, start, and end values
             shift_name = item['summary']
             shift_start = item['start']['dateTime']
