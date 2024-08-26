@@ -323,7 +323,7 @@ class GCALData:
                     ]
 
             Returns:
-                csv_shift_data (str):
+                csv_data (str):
                     String of shift data in CSV format.
         """
 
