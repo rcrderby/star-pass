@@ -103,21 +103,8 @@ KEEP_COLUMNS = getenv(
 ).split(sep=', ')
 
 # JSON Schema
-JSON_SCHEMA_DIR = getenv(
-    key='JSON_SCHEMA_DIR',
-    default=_defaults.JSON_SCHEMA_DIR
-)
-JSON_SCHEMA_SHIFT_FILE = getenv(
-    key='JSON_SCHEMA_SHIFT_FILE',
-    default=_defaults.JSON_SCHEMA_SHIFT_FILE
-)
-JSON_SCHEMA_SHIFT_FILE = path.join(
-    JSON_SCHEMA_DIR,
-    getenv(
-        key='JSON_SCHEMA_SHIFT_FILE',
-        default=_defaults.JSON_SCHEMA_SHIFT_FILE
-    )
-)
+JSON_SCHEMA_DIR = _defaults.JSON_SCHEMA_DIR
+JSON_SCHEMA_SHIFT_FILE = _defaults.JSON_SCHEMA_SHIFT_FILE
 
 # Output data file
 OUTPUT_FILE_DIR = getenv(
