@@ -6,7 +6,7 @@ from copy import copy
 from datetime import datetime
 from math import floor
 from os import getenv
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List
 
 # Imports - Third-Party
 from dotenv import load_dotenv
@@ -72,7 +72,7 @@ class GCALData:
 
         return None
 
-    def get_shift_length(
+    def _get_shift_length(
             self,
             shift_start: datetime,
             shift_end: datetime
@@ -101,7 +101,7 @@ class GCALData:
 
         return shift_length
 
-    def datetime_to_string(
+    def _datetime_to_string(
             self,
             datetime_object: str,
             datetime_string_format: str = DATE_TIME_FORMAT
@@ -134,27 +134,36 @@ class GCALData:
 
     def get_gcal_shift_data(
             self,
-            query_string: str,
-            timeMin: datetime,  # pylint: disable=invalid-name
-            timeMax: datetime,  # pylint: disable=invalid-name
+            query_strings: Iterable[str] | str,
+            timeMin: str,  # pylint: disable=invalid-name
+            timeMax: str,  # pylint: disable=invalid-name
             timeout: int = HTTP_TIMEOUT
     ) -> Dict[Any, Any]:
         """ Get shift date from the Google Calendar.
 
             Args:
-                query_string (str):
-                    Query string to pass to the Google Calendar service
-                    in order to limit results to specific events.
+                query_strings (Iterable[str] | str):
+                    Iterable of query strings or single query string
+                    to pass to the Google Calendar service in order to
+                    filter results for specific events.
 
                     Example:
                         Use 'scrimmage' to get scrimmage events and use
                         'officials' to get officiating practice events.
 
-                timeMin (datetime):
-                    Start date/time for shifts in calendar query.
+                timeMin (str):
+                    ISO-formatted string start date/time for shifts in
+                    calendar query
 
-                timeMax (datetime):
-                    End date/time for shifts in calendar query.
+                    Example:
+                        '2024-09-01T00:00:00-00:00'
+
+                timeMax (str):
+                    ISO-formatted string end date/time for shifts in
+                    calendar query.
+
+                    Example:
+                        '2024-10-10T00:00:00-00:00'
 
                 timeout (int):
                     HTTP timeout.  Default is HTTP_TIMEOUT.
@@ -163,6 +172,9 @@ class GCALData:
                 gcal_data (Dict[Any, Any]):
                     Data returned by the Google Calendar service.
         """
+
+        # Create a list of shifts for Google Calendar data
+        gcal_data = []
 
         # Set HTTP request variables
         method = 'GET'
@@ -175,42 +187,49 @@ class GCALData:
             f'{BASE_GCAL_ENDPOINT}'
         )
 
-        # Construct URL parameters
+        # Construct base URL parameters
         params = {}
         params.update(**BASE_GCAL_PARAMS)
-        params.update({'q': query_string})
+        params.update({'q': ''})
         params.update({'timeMin': timeMin})
         params.update({'timeMax': timeMax})
         params.update({'key': GCAL_TOKEN})
 
-        # Construct API request data
-        api_request_data = {
-            'method': method,
-            'url': url,
-            'headers': headers,
-            'params': params,
-            'timeout': timeout
-        }
+        # Loop over keywords to construct consolidated results
+        for query_string in query_strings:
 
-        # Send API request
-        response = self.helpers.send_api_request(
-            api_request_data=api_request_data
-        )
+            # Update the 'q' query string parameter
+            params.update({'q': query_string})
 
-        gcal_data = response.json()
+            # Construct API request data
+            api_request_data = {
+                'method': method,
+                'url': url,
+                'headers': headers,
+                'params': params,
+                'timeout': timeout
+            }
+
+            # Send API request
+            response = self.helpers.send_api_request(
+                api_request_data=api_request_data
+            )
+
+            # Add matching results to `gcal_data`
+            gcal_data += response.json().get('items')
 
         return gcal_data
 
     def process_gcal_data(
             self,
-            gcal_data: Dict[Any, Any]
+            gcal_data: List[Dict[str, str]]
     ) -> List[Dict[str, str]]:
         """ Read and process Google Calendar data JSON.
 
             Produce a list of shifts from the Google Calendar JSON.
 
             Args:
-                gcal_data (Dict[Any, Any]):
+                gcal_data List[Dict[str, str]]):
                     Google Calendar JSON data.
 
             Returns:
@@ -240,20 +259,20 @@ class GCALData:
         gcal_shifts = []
 
         # Add Google Calendar data to 'gcal_shifts'
-        for item in gcal_data['items']:
+        for item in gcal_data:
             # Get the shift name, start, and end values
             shift_name = item['summary']
             shift_start = item['start']['dateTime']
             shift_end = item['end']['dateTime']
 
             # Get the shift duration
-            shift_duration = self.get_shift_length(
+            shift_duration = self._get_shift_length(
                 shift_start=datetime.fromisoformat(shift_start),
                 shift_end=datetime.fromisoformat(shift_end)
             )
 
             # Format the shift start values as strings
-            shift_start_string = self.datetime_to_string(
+            shift_start_string = self._datetime_to_string(
                 datetime_object=shift_start
             )
 
@@ -304,7 +323,7 @@ class GCALData:
                     ]
 
             Returns:
-                csv_shift_data (str):
+                csv_data (str):
                     String of shift data in CSV format.
         """
 

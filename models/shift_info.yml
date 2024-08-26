@@ -1,36 +1,40 @@
-# Shift information model for looking up shift IDs based on  keywords
+# Shift information model for looking up shift IDs based on keywords
 
 ---
 adult:
   type: adult
   need_ids:
-    - 628861  # NSO
-    - 607934  # SO
+    - 628861  # NSOs
+    - 607934  # SOs
 buds:
   type: junior
   need_ids:
-    - 628862  # NSO
-    - 607810  # SO
+    - 628862  # NSOs
+    - 607810  # SOs
 junior officials:
   type: junior
   need_ids:
-    - 000001
+    - 868881  # Attendees
+    - 968727  # Coaches
 officials:
   type: adult
   need_ids:
-    - 000000
+    - 773454  # Attendees
+    - 892230  # Coaches
 petals:
   type: junior
   need_ids:
-    - 628862  # NSO
-    - 607810  # SO
+    - 628862  # NSOs
+    - 607810  # SOs
 wreckers:
   type: adult
   need_ids:
-    - 628861  # NSO
-    - 607934  # SO
+    - 628861  # NSOs
+    - 607934  # SOs
+
+# Default keywords to search after not matching standard keywords
 scrimmage:
   type: default
   need_ids:
-    - ''
-    - ''
+    - ''  # NSOs
+    - ''  # SOs

@@ -80,7 +80,10 @@ GCAL_SHOW_DELETED = False
 GCAL_SINGLE_EVENTS = True
 GCAL_TIME_MIN = '2024-09-01T00:00:00-00:00'
 GCAL_TIME_MAX = '2024-10-10T00:00:00-00:00'
-GCAL_TEXT_QUERY = 'scrimmage'
+GCAL_TEXT_QUERY = [
+    'officials',
+    'scrimmage'
+]
 
 # Data file name and location
 BASE_FILE_NAME = 'amplify_shifts'
