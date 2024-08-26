@@ -137,6 +137,7 @@ class GCALData:
 
         return datetime_string
 
+    # pylint: disable-next=dangerous-default-value
     def get_gcal_shift_data(
             self,
             timeMin: str,  # pylint: disable=invalid-name
