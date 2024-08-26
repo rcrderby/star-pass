@@ -6,6 +6,7 @@ from copy import copy
 from datetime import datetime
 from math import floor
 from os import getenv
+from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 # Imports - Third-Party
@@ -377,5 +378,14 @@ class GCALData:
             Returns:
                 None.
         """
+
+        # Create timestamped file name
+        timestamp = datetime.now().isoformat()
+        file_path = INPUT_CSV_DIR_PATH
+        file_name = f'gcal_shifts_{timestamp}.{INPUT_FILE_EXTENSION}'
+        file = Path.joinpath(
+            file_path,
+            file_name
+        )
 
         return None
