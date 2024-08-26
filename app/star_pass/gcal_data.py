@@ -33,7 +33,7 @@ BASE_HEADERS = _defaults.BASE_HEADERS
 GCAL_PRACTICE_CAL_ID = _defaults.GCAL_PRACTICE_CAL_ID
 BASE_GCAL_ENDPOINT = _defaults.BASE_GCAL_ENDPOINT
 BASE_GCAL_PARAMS = _defaults.BASE_GCAL_PARAMS
-
+GCAL_DEFAULT_QUERY_STRINGS = _defaults.GCAL_DEFAULT_QUERY_STRINGS
 BASE_GCAL_URL = getenv(
     key='BASE_GCAL_URL',
     default=_defaults.BASE_GCAL_URL
@@ -51,6 +51,10 @@ DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 
 # Shift lookup data
 SHIFT_INFO = _defaults.SHIFT_INFO
+
+# File management data
+INPUT_CSV_DIR_PATH = _defaults.INPUT_CSV_DIR_PATH
+INPUT_FILE_EXTENSION = '.csv'
 
 
 class GCALData:
@@ -134,9 +138,9 @@ class GCALData:
 
     def get_gcal_shift_data(
             self,
-            query_strings: Iterable[str] | str,
             timeMin: str,  # pylint: disable=invalid-name
             timeMax: str,  # pylint: disable=invalid-name
+            query_strings: Iterable[str] | str = GCAL_DEFAULT_QUERY_STRINGS,
             timeout: int = HTTP_TIMEOUT
     ) -> Dict[Any, Any]:
         """ Get shift date from the Google Calendar.
