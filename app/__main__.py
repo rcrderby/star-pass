@@ -8,7 +8,7 @@ from typing import Dict
 # Imports - Third-Party
 
 # Imports - Local
-from star_pass.star_pass import CreateShifts
+from star_pass.amplify_shifts import CreateShifts
 
 # Load environment variables
 

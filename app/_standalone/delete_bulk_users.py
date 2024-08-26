@@ -13,9 +13,9 @@ import requests
 load_dotenv()
 
 # Constants - GetConnected
-GC_TOKEN = getenv(key='GC_TOKEN')
+AMPLIFY_TOKEN = getenv(key='AMPLIFY_TOKEN')
 DEFAULT_HEADERS = {
-    'Authorization': f'Bearer {GC_TOKEN}',
+    'Authorization': f'Bearer {AMPLIFY_TOKEN}',
     'Accept': 'application/json'
 }
 BASE_URL = getenv(key='BASE_URL')

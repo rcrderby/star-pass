@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-""" Star Pass Classes and Methods """
+#!/usr/local/bin/python3
+""" Amplify shift management classes and methods. """
 
 # Imports - Python Standard Library
 from json import dumps, load
@@ -26,18 +26,18 @@ load_dotenv(
 
 # Constants
 # Authentication
-GC_TOKEN = getenv(
-    key='GC_TOKEN'
+AMPLIFY_TOKEN = getenv(
+    key='AMPLIFY_TOKEN'
 )
 
 # HTTP request configuration
 BASE_HEADERS = _defaults.BASE_HEADERS
 BASE_HEADERS.update(
-    {'Authorization': f'Bearer {GC_TOKEN}'}
+    {'Authorization': f'Bearer {AMPLIFY_TOKEN}'}
 )
-BASE_URL = getenv(
-    key='BASE_URL',
-    default=_defaults.BASE_URL
+BASE_AMPLIFY_URL = getenv(
+    key='BASE_AMPLIFY_URL',
+    default=_defaults.BASE_AMPLIFY_URL
 )
 HTTP_TIMEOUT = int(
     getenv(
@@ -612,15 +612,15 @@ class CreateShifts:
         headers = BASE_HEADERS
 
         # Construct URL and JSON payload
-        url = f'{BASE_URL}/needs/{need_id}'
+        url = f'{BASE_AMPLIFY_URL}/needs/{need_id}'
 
         # Construct API request data
         api_request_data = {
-            "method": method,
-            "url": url,
-            "headers": headers,
-            "json": None,
-            "timeout": timeout
+            'method': method,
+            'url': url,
+            'headers': headers,
+            'json': None,
+            'timeout': timeout
         }
 
         # Send API request
@@ -655,6 +655,9 @@ class CreateShifts:
                 None.
         """
 
+        # Set a default value for 'output_heading'
+        output_heading = None
+
         # Set HTTP request variables
         method = 'POST'
         headers = BASE_HEADERS
@@ -663,29 +666,23 @@ class CreateShifts:
         for need_id, shifts in self._shift_data.items():
 
             # Construct URL and JSON payload
-            url = f'{BASE_URL}/needs/{need_id}/shifts'
+            url = f'{BASE_AMPLIFY_URL}/needs/{need_id}/shifts'
             json = shifts
 
             # Construct API request data
             api_request_data = {
-                "method": method,
-                "url": url,
-                "headers": headers,
-                "json": json,
-                "timeout": timeout
+                'method': method,
+                'url': url,
+                'headers': headers,
+                'json': json,
+                'timeout': timeout
             }
 
             # Determine the status of check_mode
             if self.check_mode is False:
                 # Send API request
-                response = self.helpers.send_api_request(
+                self.helpers.send_api_request(
                     api_request_data=api_request_data
-                )
-
-                # Set HTTP response output message
-                output_heading = (
-                    '** HTTP API Response **\n'
-                    f'Response: HTTP {response.status_code} {response.reason}'
                 )
 
             else:
@@ -701,12 +698,15 @@ class CreateShifts:
 
             # Create output message
             output_message = (
-                f'\n{output_heading}\n'
                 f'URL: {url}\n'
                 f'Opportunity Title: {opp_title}\n'
                 f'Shift Count: {len(json.get("shifts"))}\n'
                 f'Payload:\n{dumps(json, indent=2)}'
             )
+
+            # Add a heading if it exists
+            if output_heading is not None:
+                output_message = f'{output_heading}{output_message}'
 
             # Display output message
             self.helpers.printer(

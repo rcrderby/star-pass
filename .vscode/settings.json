@@ -2,10 +2,12 @@
     "cSpell.words": [
         "dateparser",
         "dtype",
+        "Gcal",
         "Hadolint",
         "jsonschema",
         "mechatroner",
         "nosborn",
-        "pylint"
+        "pylint",
+        "rosecityrollers"
     ]
 }
