@@ -31,6 +31,11 @@ from pathlib import Path
 # Imports - Third-Party
 from yaml import safe_load
 
+RUN_MODES = (
+    'create_amplify_shifts',
+    'get_gcal_events'
+)
+
 # Data file management
 # Path relative to this file
 CURRENT_FILE_PATH = Path(__file__).parent
