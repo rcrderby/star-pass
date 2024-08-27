@@ -1,5 +1,5 @@
 # star-pass Container
-FROM python:3.11-slim-buster
+FROM python:3.12-slim
 
 # Set the working directory
 WORKDIR /app
