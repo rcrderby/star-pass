@@ -31,9 +31,12 @@ from pathlib import Path
 # Imports - Third-Party
 from yaml import safe_load
 
+# Application run modes
 RUN_MODES = (
     'create_amplify_shifts',
-    'get_gcal_events'
+    'c',  # Alias for 'create_amplify_shifts
+    'get_gcal_events',
+    'g'  # Alias for 'get_gcal_events'
 )
 
 # Data file management
