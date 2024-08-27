@@ -132,7 +132,8 @@ class CreateShifts:
             auto_prep_data: bool = True,
             check_mode: bool = True,
             input_file: str = INPUT_FILE,
-            input_file_override: str = None
+            # input_file_override: str = None,
+            **kwargs: Any
     ) -> None:
         """ CreateShifts initialization method.
 
@@ -172,6 +173,12 @@ class CreateShifts:
 
                     Default value is INPUT_FILE
 
+                input_file_override (str):
+                    Default value is None.
+
+                **kwargs (Any):
+                    Unspecified keyword arguments.
+
             Returns:
                 None.
         """
@@ -181,15 +188,19 @@ class CreateShifts:
 
         # Set Class initialization values
         self.auto_prep_data = auto_prep_data
+
         # Determine if the value of 'check_mode' is a boolean
         if isinstance(check_mode, bool) is True:
             self.check_mode = check_mode
         else:
             self.check_mode = self.helpers.convert_to_bool(check_mode)
+
+        # Set the `self.input_value` argument
         self.input_file = input_file
-        # Override input file if input_file_override argument is not None
-        if input_file_override is not None:
-            self.input_file = input_file_override
+
+        # # Override input file if input_file_override argument is not None
+        # if input_file_override is not None:
+        #     self.input_file = input_file_override
 
         # Placeholder variables for data transformation methods
         self._shift_data: frame.DataFrame = None
