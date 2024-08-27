@@ -62,11 +62,13 @@ class GCALData:
     """ Collect and manage Google Calendar data. """
     def __init__(
             self,
+            **kwargs: Any
     ) -> None:
         """ Class initialization method.
 
             Args:
-                None.
+                **kwargs (Any):
+                    Unspecified keyword arguments.
 
             Return:
                 None.
