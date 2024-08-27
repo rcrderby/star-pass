@@ -5,15 +5,17 @@
 from sys import argv
 from typing import Dict
 
-# Imports - Third-Party
-
 # Imports - Local
 from star_pass.amplify_shifts import CreateShifts
 from star_pass.gcal_data import GCALData
-
-# Load environment variables
+from star_pass.helpers import Helpers
+from star_pass import _defaults
 
 # Constants
+RUN_MODES = _defaults.RUN_MODES
+
+# Initialize helper methods
+helpers = Helpers()
 
 
 # Check for CLI arguments
@@ -67,13 +69,56 @@ def main() -> None:
     # Get CLI arguments
     cli_args = get_cli_args()
 
-    # Create CreateShifts object
-    shifts = CreateShifts(
-        **cli_args
-    )
+    # Display help
+    # Add app usage instructions
 
-    # Create shifts
-    shifts.create_new_shifts()
+    # Initially set the run mode to invalid
+    run_mode_valid = False
+
+    # Determine the validity of the 'mode' argument
+    run_mode = cli_args.get('mode', None).lower()
+    if run_mode in RUN_MODES:
+        # Set the run mode to valid
+        run_mode_valid = True
+
+    # Run the application in the specified mode
+    if run_mode_valid is True:
+
+        # Run the application in 'create_amplify_shifts' mode
+        if run_mode in ('create_amplify_shifts', 'c'):
+            # Create output message
+            output_message = (
+                '\n\n** Run mode is "Create Amplify Shifts" **\n'
+            )
+            # Create CreateShifts object
+            shifts = CreateShifts(
+                **cli_args
+            )
+            # Create shifts
+            shifts.create_new_shifts()
+
+        # Run the application in 'get_gcal_events' mode
+        if run_mode in ('get_gcal_events', 'g'):
+            # Create output message
+            output_message = (
+                '\n\n** Run mode is "Get Google Calendar Events" **\n'
+            )
+            # Create CreateShifts object
+            GCALData(
+                **cli_args
+            )
+
+    # Display usage instructions and exit if the mode is unset or invalid
+    else:
+        # Create output message
+        output_message = (
+            '\n\n** Invalid or unset "mode" argument **\n'
+        )
+
+        # Display output message
+        helpers.printer(
+            message=output_message
+        )
 
     return None
 
