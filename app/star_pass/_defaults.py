@@ -31,8 +31,6 @@ from pathlib import Path
 # Imports - Third-Party
 from yaml import safe_load
 
-# Constants
-
 # Data file management
 # Path relative to this file
 CURRENT_FILE_PATH = Path(__file__).parent
@@ -85,10 +83,10 @@ GCAL_SHOW_DELETED = False
 GCAL_SINGLE_EVENTS = True
 GCAL_TIME_MIN = '2024-09-01T00:00:00-00:00'
 GCAL_TIME_MAX = '2024-10-10T00:00:00-00:00'
-GCAL_DEFAULT_QUERY_STRINGS = [
+GCAL_DEFAULT_QUERY_STRINGS = (
     'officials',
     'scrimmage'
-]
+)
 
 # Data file name and location
 BASE_FILE_NAME = 'amplify_shifts'
