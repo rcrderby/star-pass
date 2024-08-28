@@ -44,6 +44,7 @@ HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 # Date and time management
 DEFAULT_SLOTS = _defaults.DEFAULT_SLOTS
 DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
+FILE_NAME_DATE_TIME_FORMAT = _defaults.FILE_NAME_DATE_TIME_FORMAT
 
 # Shift lookup data
 SHIFT_INFO = _defaults.SHIFT_INFO
@@ -425,7 +426,9 @@ class GCALData:
         """
 
         # Create timestamped file name
-        timestamp = datetime.now().isoformat()
+        timestamp = datetime.now().strftime(
+            format=FILE_NAME_DATE_TIME_FORMAT
+        )
         file_path = INPUT_DIR_PATH
         file_name = f'gcal_shifts_{timestamp}{INPUT_FILE_EXTENSION}'
         file = Path.joinpath(

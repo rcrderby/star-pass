@@ -143,3 +143,4 @@ with open(
 # Miscellaneous
 DEFAULT_SLOTS = 20
 DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
+FILE_NAME_DATE_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S:%f'
