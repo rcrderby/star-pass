@@ -292,7 +292,7 @@ class GCALData:
             )
 
             # Format the shift start values as strings
-            shift_start_string = self.helpers._iso_datetime_to_string(
+            shift_start_string = self.helpers.iso_datetime_to_string(
                 datetime_object=shift_start
             )
 

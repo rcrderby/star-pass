@@ -98,7 +98,7 @@ class Helpers:
 
         return formatted_date_time_string
 
-    def _iso_datetime_to_string(
+    def iso_datetime_to_string(
             self,
             datetime_object: str,
             datetime_string_format: str = DATE_TIME_FORMAT
