@@ -62,11 +62,34 @@ class GCALData:
     """ Collect and manage Google Calendar data. """
     def __init__(
             self,
+            auto_prep_data: bool = True,
             **kwargs: Any
     ) -> None:
         """ Class initialization method.
 
             Args:
+                auto_prep_data (bool):
+                    Automatically run methods that:
+
+                    1. Collects shift data from the Google Calendar
+                       service.
+                    2. Formats the Google Calendar shift data to
+                       comply with the Amplify API shift format.
+                    3. Converts the shift data to a CSV format.
+                    4. Writes the CSV shift data to a file.
+
+                    When auto_prep_data is False, you may manually run
+                    the these functions.
+
+                    Functions that prepare data include:
+
+                        get_gcal_shift_data()
+                        process_gcal_data()
+                        generate_shift_csv()
+                        write_shift_csv_file()
+
+                    Default value is True.
+
                 **kwargs (Any):
                     Unspecified keyword arguments.
 
@@ -146,7 +169,7 @@ class GCALData:
             query_strings: Iterable[str] | str = GCAL_DEFAULT_QUERY_STRINGS,
             timeout: int = HTTP_TIMEOUT
     ) -> Dict[Any, Any]:
-        """ Get shift date from the Google Calendar.
+        """ Get shift data from the Google Calendar.
 
             Args:
                 query_strings (Iterable[str] | str):
