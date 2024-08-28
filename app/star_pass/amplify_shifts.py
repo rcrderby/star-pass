@@ -191,7 +191,6 @@ class CreateShifts:
                     Pandas Data Frame of raw shift data.
 
             Example data structure:
-
                 need_name need_id start_date start_time duration slots
             0   Need 1    000001  1/1/99     12:00      60       20
             1   Need 2    000002  1/1/99     12:00      90       20
@@ -242,7 +241,6 @@ class CreateShifts:
                     removed.
 
             Example data structure:
-
                 need_name need_id start_date start_time duration slots
             0   Need 1    000001  1/1/99     12:00      60       20
             1   Need 2    000002  1/1/99     12:00      90       20
@@ -288,7 +286,6 @@ class CreateShifts:
                     column.
 
             Example data structure:
-
                 need_name need_id start_date start_time ... start
             0   Need 1    000001  1/1/99     12:00      ... 1/1/99 12:00
             1   Need 2    000002  1/1/99     12:00      ... 1/1/99 12:00
@@ -339,7 +336,6 @@ class CreateShifts:
                     Amplify-formatted dates in the 'start' column.
 
             Example data structure:
-
                 need_name need_id start_date start_time ... start
             0   Need 1    000001  1/1/99     12:00      ... 2099-01-01 12:00
             1   Need 2    000002  1/1/99     12:00      ... 2099-01-01 12:00
@@ -383,7 +379,6 @@ class CreateShifts:
                     informational columns.
 
             Example data structure:
-
                 need_id duration slots start
             0   000001  60       20    2099-01-01 12:00
             1   000002  90       20    2099-01-01 12:00
@@ -427,7 +422,6 @@ class CreateShifts:
                     each shift's 'need_id'.
 
             Example data structure:
-
             {
                 '000001': [
                         need_id duration slots start
@@ -492,7 +486,6 @@ class CreateShifts:
                     'shifts' dict key.
 
             Example data structure:
-
             need_id
             000001  {'shifts': [{'start': '2099-01-01 12:00', 'dur...
             000002  {'shifts': [{'start': '2099-01-01 12:00', 'dur...
@@ -550,6 +543,9 @@ class CreateShifts:
                     Dictionary of shifts grouped by 'need_id' with all
                     shifts for each 'need_id' contained within in a
                     'shifts' dict key.
+
+            Example data structure:
+
 
             Returns:
                 None.
