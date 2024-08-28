@@ -58,8 +58,8 @@ INPUT_CSV_DIR_PATH = _defaults.INPUT_CSV_DIR_PATH
 INPUT_FILE_EXTENSION = '.csv'
 
 # Default date and time values
-GCAL_TIME_MIN = _defaults.GCAL_TIME_MIN
-GCAL_TIME_MAX = _defaults.GCAL_TIME_MAX
+DEFAULT_GCAL_TIME_MIN = _defaults.GCAL_TIME_MIN
+DEFAULT_GCAL_TIME_MAX = _defaults.GCAL_TIME_MAX
 
 
 class GCALData:
@@ -112,8 +112,8 @@ class GCALData:
         # Call methods to initialize the workflow
         if self.auto_prep_data is True:
             self.gcal_data = self.get_gcal_shift_data(
-                timeMin=GCAL_TIME_MIN,
-                timeMax=GCAL_TIME_MAX
+                timeMin=DEFAULT_GCAL_TIME_MIN,
+                timeMax=DEFAULT_GCAL_TIME_MAX
             )
             self.gcal_shifts = self.process_gcal_data(
                 gcal_data=self.gcal_data
