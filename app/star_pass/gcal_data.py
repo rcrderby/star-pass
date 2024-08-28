@@ -39,12 +39,7 @@ BASE_GCAL_URL = getenv(
     key='BASE_GCAL_URL',
     default=_defaults.BASE_GCAL_URL
 )
-HTTP_TIMEOUT = int(
-    getenv(
-        key='HTTP_TIMEOUT',
-        default=_defaults.HTTP_TIMEOUT
-    )
-)
+HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
 # Date and time management
 DEFAULT_SLOTS = _defaults.DEFAULT_SLOTS
