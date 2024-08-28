@@ -31,12 +31,12 @@ def get_cli_args() -> Dict[str, str]:
                 keys and values, respectively.
     """
 
+    # Create a Dict to store args
+    cli_args = {}
+
     if len(argv) > 1:
         # Slice the file name from the list of arguments
         arg_list = argv[1:]
-
-        # Create a Dict to store args
-        cli_args = {}
 
         # Parse keys and values from arg_list to add to the 'args' Dict
         for arg in arg_list:
@@ -76,7 +76,7 @@ def main() -> None:
     run_mode_valid = False
 
     # Determine the validity of the 'mode' argument
-    run_mode = cli_args.get('mode', None).lower()
+    run_mode = cli_args.get('mode', '').lower()
     if run_mode in RUN_MODES:
         # Set the run mode to valid
         run_mode_valid = True
