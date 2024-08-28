@@ -193,11 +193,11 @@ class CreateShifts:
             Example data structure:
 
                 need_name need_id start_date start_time duration slots
-            0   Need 1    000001  9/14/24    12:00      60       20
-            1   Need 2    000002  9/14/24    12:00      90       20
-            2   Need 3    000003  9/14/24    12:00      60       20
-            3   Need 4    000004  9/14/24    12:00      120      20
-            4   Need 5    000005  9/14/24    12:00      90       20
+            0   Need 1    000001  1/1/99     12:00      60       20
+            1   Need 2    000002  1/1/99     12:00      90       20
+            2   Need 3    000003  1/1/99     12:00      60       20
+            3   Need 4    000004  1/1/99     12:00      120      20
+            4   Need 5    000005  1/1/99     12:00      90       20
 
             Returns:
                 None.
@@ -243,11 +243,11 @@ class CreateShifts:
             Example data structure:
 
                 need_name need_id start_date start_time duration slots
-            0   Need 1    000001  9/14/24    12:00      60       20
-            1   Need 2    000002  9/14/24    12:00      90       20
-            2   Need 3    000003  9/14/24    12:00      60       20
-            3   Need 4    000004  9/14/24    12:00      120      20
-            4   Need 5    000005  9/14/24    12:00      90       20
+            0   Need 1    000001  1/1/99     12:00      60       20
+            1   Need 2    000002  1/1/99     12:00      90       20
+            2   Need 3    000003  1/1/99     12:00      60       20
+            3   Need 4    000004  1/1/99     12:00      120      20
+            4   Need 5    000005  1/1/99     12:00      90       20
 
             Returns:
                 None.
@@ -283,6 +283,15 @@ class CreateShifts:
             Modifies:
                 self._shift_data (frame.DataFrame):
                     Pandas Data Frame with shift data in a new 'start' column.
+
+            Example data structure:
+
+            need_name need_id start_date start_time duration slots start
+            Need 1    000001  1/1/99     12:00      60       20    1/1/24 12:00
+            Need 2    000002  1/1/99     12:00      90       20    1/1/24 12:00
+            Need 3    000003  1/1/99     12:00      60       20    1/1/24 12:00
+            Need 4    000004  1/1/99     12:00      120      20    1/1/24 12:00
+            Need 5    000005  1/1/99     12:00      90       20    1/1/24 12:00
 
             Returns:
                 None.
