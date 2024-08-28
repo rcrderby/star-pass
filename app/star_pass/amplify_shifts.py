@@ -593,8 +593,9 @@ class CreateShifts:
 
             Modifies:
                 self._shift_data_valid (bool):
-                    True if self._shift_data complies with JSON Schema.
-                    False if self._shift_data does not comply with JSON Schema.
+                    True if self._json_shift_data complies with JSON
+                    Schema.  False if self._json_shift_data does not
+                    comply with JSON Schema.
 
             Returns:
                 None.
