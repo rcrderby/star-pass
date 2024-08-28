@@ -240,6 +240,15 @@ class CreateShifts:
                     Pandas Data Frame of shift data with duplicates
                     removed.
 
+            Example data structure:
+
+                need_name need_id start_date start_time duration slots
+            0   Need 1    000001  9/14/24    12:00      60       20
+            1   Need 2    000002  9/14/24    12:00      90       20
+            2   Need 3    000003  9/14/24    12:00      60       20
+            3   Need 4    000004  9/14/24    12:00      120      20
+            4   Need 5    000005  9/14/24    12:00      90       20
+
             Returns:
                 None.
         """
