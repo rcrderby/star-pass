@@ -13,6 +13,9 @@ requests
 # JSON Schema validation
 jsonschema
 
+# Pandas data structures
+pandas
+
 # Python formatting
 autopep8
 flake8
@@ -21,8 +24,8 @@ pylint
 # Python interpreter
 ipython
 
-# Pandas data structures
-pandas
+# Python package versioning
+bump
 
 # Python testing
 pytest
