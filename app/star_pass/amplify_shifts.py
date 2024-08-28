@@ -418,12 +418,13 @@ class CreateShifts:
 
             Args:
                 self._shift_data (frame.DataFrame):
-                    Pandas Data Frame of shift data without extra columns.
+                    Pandas Data Frame of shift data without
+                    informational columns.
 
             Modifies:
                 self._grouped_shift_data (DataFrameGroupBy):
-                    Pandas Grouped Data Frame of shift data, grouped by each
-                    shift's 'need_id'.
+                    Pandas Grouped Data Frame of shift data, grouped by
+                    each shift's 'need_id'.
 
             Example data structure:
 
@@ -469,19 +470,21 @@ class CreateShifts:
         return None
 
     def _create_grouped_series(self) -> None:
-        """ Insert a 'shifts' dict under each 'need_id' dict to comply with the
-            required API POST body request format.  Automatically converts the
+        """ Insert a 'shifts' dict under each 'need_id' dict group.
+
+            Modifies the grouped shift data to comply with the required
+            API POST body request format.  Automatically converts the
             grouped data frame to a Pandas Series
 
             Args:
                 self._grouped_shift_data (DataFrameGroupBy):
-                    Pandas Grouped Data Frame of shift data, grouped by each
-                    shift's 'need_id'.
+                    Pandas Grouped Data Frame of shift data, grouped by
+                    each shift's 'need_id'.
 
             Modifies:
                 self._grouped_series (series.Series):
-                    Pandas Series of shifts grouped by 'need_id' with all
-                    shifts contained in a 'shifts' dict key.
+                    Pandas Series of shifts grouped by 'need_id' with
+                    all shifts contained within in a 'shifts' dict key.
 
             Returns:
                 None.
