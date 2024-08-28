@@ -140,7 +140,7 @@ class CreateShifts:
             Args:
                 auto_prep_data (bool):
                     Automatically run non-public methods that:
-                    
+
                     1. Imports shift data from a CSV file.
                     2. Removes any duplicate shifts.
                     3. Formats the shift start date and time to comply
@@ -154,7 +154,7 @@ class CreateShifts:
                        to send to the Amplify API.
                     8. Validates the JSON-formatted object using a JSON
                        Schema object.
-                    
+
                     When 'auto_prep_data' is True, creating
                     an instance of the 'CreateShifts' class will
                     automatically attempt to prepare data.  When
@@ -224,7 +224,7 @@ class CreateShifts:
         self._shift_data: Dict = None
         self._shift_data_valid: bool = None
 
-        # Call non-public methods to initialize workflow
+        # Call non-public methods to initialize the workflow
         if self.auto_prep_data is True:
             self._read_shift_csv_data()
             self._remove_duplicate_shifts()
