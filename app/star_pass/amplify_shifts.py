@@ -159,7 +159,7 @@ class CreateShifts:
         self._shift_data: frame.DataFrame = None
         self._grouped_shift_data: DataFrameGroupBy = None
         self._grouped_series: series.Series = None
-        self._shift_data: Dict = None
+        self._json_shift_data: Dict = None
         self._shift_data_valid: bool = None
 
         # Call non-public methods to initialize the workflow
@@ -544,7 +544,7 @@ class CreateShifts:
                     is False.
 
             Modifies:
-                self._shift_data (Dict):
+                self._json_shift_data (Dict):
                     Dictionary of shifts grouped by 'need_id' with all
                     shifts for each 'need_id' contained in a 'shifts'
                     dict key.
