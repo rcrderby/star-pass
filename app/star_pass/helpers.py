@@ -144,6 +144,7 @@ class Helpers:
             Args:
                 api_request_data (Dict):
                     Dictionary of key, value pairs for API request.
+                    Common values include:
 
                     method (str):
                         HTTP method (GET, POST, PUT, PATCH, DELETE).
@@ -182,8 +183,18 @@ class Helpers:
             sys.exit(1)
 
         # Check for HTTP errors
-        if response.ok is not True:
-            response.raise_for_status()
+        try:
+            if response.ok is not True:
+                print(f'\n{response.request.url}\n')
+                response.raise_for_status()
+
+        # Handle non-ok HTTP responses
+        except exceptions.HTTPError as error:
+            # Display error text and exit
+            self.printer(
+                message=repr(f'{error!r}')
+            )
+            sys.exit(1)
 
         # Display the HTTP request status
         if display_request_status is True:
