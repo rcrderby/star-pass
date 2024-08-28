@@ -31,8 +31,8 @@ AMPLIFY_TOKEN = getenv(
 )
 
 # HTTP request configuration
-BASE_HEADERS = _defaults.BASE_HEADERS
-BASE_HEADERS.update(
+BASE_AMPLIFY_HEADERS = _defaults.BASE_HEADERS
+BASE_AMPLIFY_HEADERS.update(
     {'Authorization': f'Bearer {AMPLIFY_TOKEN}'}
 )
 BASE_AMPLIFY_URL = getenv(
@@ -622,7 +622,7 @@ class CreateShifts:
 
         # Set HTTP request variables
         method = 'GET'
-        headers = BASE_HEADERS
+        headers = BASE_AMPLIFY_HEADERS
 
         # Construct URL and JSON payload
         url = f'{BASE_AMPLIFY_URL}/needs/{need_id}'
@@ -673,7 +673,7 @@ class CreateShifts:
 
         # Set HTTP request variables
         method = 'POST'
-        headers = BASE_HEADERS
+        headers = BASE_AMPLIFY_HEADERS
 
         # Create and send request
         for need_id, shifts in self._shift_data.items():

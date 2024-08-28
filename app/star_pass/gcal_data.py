@@ -30,7 +30,7 @@ GCAL_TOKEN = getenv(
 )
 
 # HTTP request configuration
-BASE_HEADERS = _defaults.BASE_HEADERS
+BASE_GCAL_HEADERS = _defaults.BASE_HEADERS
 GCAL_PRACTICE_CAL_ID = _defaults.GCAL_PRACTICE_CAL_ID
 BASE_GCAL_ENDPOINT = _defaults.BASE_GCAL_ENDPOINT
 BASE_GCAL_PARAMS = _defaults.BASE_GCAL_PARAMS
@@ -228,7 +228,7 @@ class GCALData:
 
         # Set HTTP request variables
         method = 'GET'
-        headers = BASE_HEADERS
+        headers = BASE_GCAL_HEADERS
 
         # Construct URL
         url = (
