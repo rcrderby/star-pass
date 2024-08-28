@@ -5,7 +5,7 @@
 from copy import copy
 from json import dumps, load
 from os import getenv
-from os import path
+from pathlib import Path
 from typing import Any, Dict
 
 # Imports - Third-Party
@@ -36,87 +36,26 @@ BASE_AMPLIFY_HEADERS = copy(_defaults.BASE_HEADERS)
 BASE_AMPLIFY_HEADERS.update(
     {'Authorization': f'Bearer {AMPLIFY_TOKEN}'}
 )
-BASE_AMPLIFY_URL = getenv(
-    key='BASE_AMPLIFY_URL',
-    default=_defaults.BASE_AMPLIFY_URL
-)
+BASE_AMPLIFY_URL = _defaults.BASE_AMPLIFY_URL
 HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
-# Data file name and location
-BASE_FILE_NAME = getenv(
-    key='BASE_FILE_NAME',
-    default=_defaults.BASE_FILE_NAME
-)
-BASE_FILE_PATH = getenv(
-    key='BASE_FILE_PATH',
-    default=_defaults.BASE_FILE_PATH
-)
+# Input and output data file paths
+INPUT_DIR_PATH = _defaults.INPUT_DIR_PATH
+INPUT_FILE_EXTENSION = _defaults.INPUT_FILE_EXTENSION
+OUTPUT_DIR_PATH = _defaults.OUTPUT_DIR_PATH
+OUTPUT_FILE_EXTENSION = _defaults.OUTPUT_FILE_EXTENSION
 
-# Input data file
-INPUT_FILE_DIR = getenv(
-    key='INPUT_FILE_DIR',
-    default=_defaults.INPUT_FILE_DIR
-)
-INPUT_FILE_EXTENSION = getenv(
-    key='INPUT_FILE_EXTENSION',
-    default=_defaults.INPUT_FILE_EXTENSION
-)
-INPUT_FILE_PATH = path.join(
-    BASE_FILE_PATH,
-    INPUT_FILE_DIR,
-    BASE_FILE_NAME
-)
-INPUT_FILE = f'{INPUT_FILE_PATH}{INPUT_FILE_EXTENSION}'
-
-# Data file management
-DROP_COLUMNS = getenv(
-    key='DROP_COLUMNS',
-    default=_defaults.DROP_COLUMNS
-).split(sep=', ')
-GROUP_BY_COLUMN = getenv(
-    key='GROUP_BY_COLUMN',
-    default=_defaults.GROUP_BY_COLUMN
-)
-SHIFTS_DICT_KEY_NAME = getenv(
-    key='SHIFTS_DICT_KEY_NAME',
-    default=_defaults.SHIFTS_DICT_KEY_NAME
-)
-START_COLUMN = getenv(
-    key='START_COLUMN',
-    default=_defaults.START_COLUMN
-)
-START_DATE_COLUMN = getenv(
-    key='START_DATE_COLUMN',
-    default=_defaults.START_DATE_COLUMN
-)
-START_TIME_COLUMN = getenv(
-    key='START_TIME_COLUMN',
-    default=_defaults.START_TIME_COLUMN
-)
-KEEP_COLUMNS = getenv(
-    key='KEEP_COLUMNS',
-    default=_defaults.KEEP_COLUMNS
-).split(sep=', ')
-
-# JSON Schema
-JSON_SCHEMA_DIR = _defaults.JSON_SCHEMA_DIR
+# JSON Schema file
 JSON_SCHEMA_SHIFT_FILE = _defaults.JSON_SCHEMA_SHIFT_FILE
 
-# Output data file
-OUTPUT_FILE_DIR = getenv(
-    key='OUTPUT_FILE_DIR',
-    default=_defaults.OUTPUT_FILE_DIR
-)
-OUTPUT_FILE_EXTENSION = getenv(
-    key='OUTPUT_FILE_EXTENSION',
-    default=_defaults.OUTPUT_FILE_EXTENSION
-)
-OUTPUT_FILE_PATH = path.join(
-    BASE_FILE_PATH,
-    OUTPUT_FILE_DIR,
-    BASE_FILE_NAME
-)
-OUTPUT_FILE = f'{OUTPUT_FILE_PATH}{OUTPUT_FILE_EXTENSION}'
+# CSV data file management
+DROP_COLUMNS = _defaults.DROP_COLUMNS.split(sep=', ')
+GROUP_BY_COLUMN = _defaults.GROUP_BY_COLUMN
+SHIFTS_DICT_KEY_NAME = _defaults.SHIFTS_DICT_KEY_NAME
+START_COLUMN = _defaults.START_COLUMN
+START_DATE_COLUMN = _defaults.START_DATE_COLUMN
+START_TIME_COLUMN = _defaults.START_TIME_COLUMN
+KEEP_COLUMNS = _defaults.KEEP_COLUMNS.split(sep=', ')
 
 
 # Class definitions
@@ -125,16 +64,23 @@ class CreateShifts:
 
     def __init__(
             self,
+            input_file: str,
             auto_prep_data: bool = True,
             check_mode: bool = True,
-            input_file: str = INPUT_FILE,
-            # input_file_override: str = None,
             **kwargs: Any
     ) -> None:
         """ CreateShifts initialization method.
 
             Args:
-                auto_prep_data (bool):
+                input_file (str):
+                    Name for an input data file. For
+                    example:
+
+                    shifts = CreateShifts(
+                        input_file='data_file.csv'
+                    )
+
+                auto_prep_data (bool, optional):
                     Automatically run non-public methods that:
 
                     1. Imports shift data from a CSV file.
@@ -170,24 +116,11 @@ class CreateShifts:
 
                     The default value is True.
 
-                check_mode (bool):
+                check_mode (bool, optional):
                     Prepare HTTP API requests without sending the
                     requests.  Default value is True.
 
-                input_file (str):
-                    Absolute path to non-default input data file. For
-                    example:
-
-                        shifts = CreateShifts(
-                            input_file='data/csv/data_file.csv'
-                        )
-
-                    Default value is INPUT_FILE
-
-                input_file_override (str):
-                    Default value is None.
-
-                **kwargs (Any):
+                **kwargs (Any, optional):
                     Unspecified keyword arguments.
 
             Returns:
@@ -206,12 +139,21 @@ class CreateShifts:
         else:
             self.check_mode = self.helpers.convert_to_bool(check_mode)
 
-        # Set the `self.input_value` argument
-        self.input_file = input_file
+        # Set the base file name
+        self.base_file_name = input_file.rstrip(INPUT_FILE_EXTENSION)
 
-        # # Override input file if input_file_override argument is not None
-        # if input_file_override is not None:
-        #     self.input_file = input_file_override
+        # Set the input file path
+        self.input_file = Path.joinpath(
+            INPUT_DIR_PATH,
+            input_file
+        )
+
+        # Set the output file path
+        output_file = f'{self.base_file_name}{OUTPUT_FILE_EXTENSION}'
+        self.output_file = Path.joinpath(
+            OUTPUT_DIR_PATH,
+            output_file
+        )
 
         # Placeholder variables for data transformation methods
         self._shift_data: frame.DataFrame = None
@@ -259,7 +201,7 @@ class CreateShifts:
 
         # Read CSV file
         shift_data = pd.read_csv(
-            filepath_or_buffer=self.input_file,
+            filepath_or_buffer=f'{self.input_file}',
             dtype='string'
         )
 
@@ -525,7 +467,7 @@ class CreateShifts:
                 indent=2,
                 mode='w',
                 orient='index',
-                path_or_buf=OUTPUT_FILE
+                path_or_buf=self.output_file
             )
 
         # Store grouped series data in a dictionary
