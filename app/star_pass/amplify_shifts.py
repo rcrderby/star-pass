@@ -440,7 +440,11 @@ class CreateShifts:
                 ],
                 '000003': [
                         need_id duration slots start
-                    3   000002  60       20    2099-01-01 12:00
+                    3   000003  60       20    2099-01-01 12:00
+                ],
+                '00004': [
+                        need_id duration slots start
+                    4   000003  60       20    2099-01-01 12:00
                 ]
             }
 
@@ -485,6 +489,14 @@ class CreateShifts:
                 self._grouped_series (series.Series):
                     Pandas Series of shifts grouped by 'need_id' with
                     all shifts contained within in a 'shifts' dict key.
+
+            Example data structure:
+
+            need_id
+            000001  {'shifts': [{'start': '2099-01-01 12:00', 'dur...
+            000002  {'shifts': [{'start': '2099-01-01 12:00', 'dur...
+            000003  {'shifts': [{'start': '2099-01-01 12:00', 'dur...
+            000004  {'shifts': [{'start': '2099-01-01 12:00', 'dur...
 
             Returns:
                 None.
