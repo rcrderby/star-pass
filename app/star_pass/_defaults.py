@@ -71,7 +71,7 @@ BASE_HEADERS = {
 }
 BASE_AMPLIFY_URL = 'https://api.galaxydigital.com/api'
 BASE_GCAL_URL = 'https://www.googleapis.com/calendar/v3/calendars'
-HTTP_TIMEOUT = '3'
+HTTP_TIMEOUT = 3
 
 # Google Calendar values
 BASE_GCAL_ENDPOINT = '/events'
