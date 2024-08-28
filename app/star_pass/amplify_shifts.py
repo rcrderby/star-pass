@@ -571,10 +571,10 @@ class CreateShifts:
             )
 
         # Store grouped series data in a dictionary
-        self._shift_data = self._grouped_series.to_dict()
+        self._json_shift_data = self._grouped_series.to_dict()
 
         # Print final status message
-        if self._shift_data is not None:
+        if self._json_shift_data is not None:
             message = "done."
             self.helpers.printer(message=message)
 
