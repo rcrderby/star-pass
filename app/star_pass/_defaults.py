@@ -50,7 +50,7 @@ DATA_DIR_PATH = Path.joinpath(
     'data'
 )
 # 'input' directory path
-INPUT_CSV_DIR_PATH = Path.joinpath(
+INPUT_DIR_PATH = Path.joinpath(
     DATA_DIR_PATH,
     'csv'
 )
@@ -59,11 +59,29 @@ MODELS_DIR_PATH = Path.joinpath(
     APP_DIR_PATH.parent,
     'models'
 )
+# 'output' directory path
+OUTPUT_DIR_PATH = Path.joinpath(
+    DATA_DIR_PATH,
+    'json'
+)
 # 'schema' directory path
 SCHEMA_DIR_PATH = Path.joinpath(
     APP_DIR_PATH,
     'schema'
 )
+# JSON Schema file path
+JSON_SCHEMA_DIR = SCHEMA_DIR_PATH
+JSON_SCHEMA_SHIFT_FILE_NAME = 'amplify.shifts.schema.json'
+JSON_SCHEMA_SHIFT_FILE = Path.joinpath(
+    JSON_SCHEMA_DIR,
+    JSON_SCHEMA_SHIFT_FILE_NAME
+)
+
+# Input and output data file extensions
+INPUT_FILE_EXTENSION = '.csv'
+OUTPUT_FILE_EXTENSION = '.json'
+
+
 # HTTP request configuration
 BASE_HEADERS = {
     'Accept': 'application/json',
@@ -96,14 +114,6 @@ GCAL_DEFAULT_QUERY_STRINGS = (
     'scrimmage'
 )
 
-# Data file name and location
-BASE_FILE_NAME = 'amplify_shifts'
-BASE_FILE_PATH = 'data'
-
-# Input data file
-INPUT_FILE_DIR = 'csv'
-INPUT_FILE_EXTENSION = '.csv'
-
 # Amplify CSV input file management
 DROP_COLUMNS = 'need_name, start_date, start_time'
 GROUP_BY_COLUMN = 'need_id'
@@ -112,14 +122,6 @@ START_COLUMN = 'start'
 START_DATE_COLUMN = 'start_date'
 START_TIME_COLUMN = 'start_time'
 KEEP_COLUMNS = f'{START_COLUMN}, duration, slots'
-
-# JSON Schema
-JSON_SCHEMA_DIR = SCHEMA_DIR_PATH
-JSON_SCHEMA_SHIFT_FILE = 'amplify.shifts.schema.json'
-
-# Output data file
-OUTPUT_FILE_DIR = 'json'
-OUTPUT_FILE_EXTENSION = '.json'
 
 # Shift lookup data model
 SHIFT_INFO_FILE_NAME = 'shift_info.yml'
