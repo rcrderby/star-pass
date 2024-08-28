@@ -488,7 +488,8 @@ class CreateShifts:
             Modifies:
                 self._grouped_series (series.Series):
                     Pandas Series of shifts grouped by 'need_id' with
-                    all shifts contained within in a 'shifts' dict key.
+                    all shifts for each 'need_id' contained within in a
+                    'shifts' dict key.
 
             Example data structure:
 
@@ -535,19 +536,20 @@ class CreateShifts:
 
             Args:
                 self._grouped_series (series.Series):
-                    Pandas Series of shifts grouped by 'need_id' with all
-                    shifts contained in a 'shifts' dict key.
+                    Pandas Series of shifts grouped by 'need_id' with
+                    all shifts for each 'need_id' contained within in a
+                    'shifts' dict key.
 
                 write_to_file (bool):
-                    Write the resulting JSON data to a file in addition to
-                    storing the data in self._shift_data. Default value
-                    is False.
+                    Write the resulting JSON data to a file in addition
+                    to storing the data in self._json_shift_data.
+                    Default value is False.
 
             Modifies:
                 self._json_shift_data (Dict):
                     Dictionary of shifts grouped by 'need_id' with all
-                    shifts for each 'need_id' contained in a 'shifts'
-                    dict key.
+                    shifts for each 'need_id' contained within in a
+                    'shifts' dict key.
 
             Returns:
                 None.
