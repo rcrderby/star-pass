@@ -156,11 +156,14 @@ class CreateShifts:
         )
 
         # Placeholder variables for data transformation methods
-        self._shift_data: frame.DataFrame = None
-        self._grouped_shift_data: DataFrameGroupBy = None
-        self._grouped_series: series.Series = None
-        self._shift_data: Dict = None
-        self._shift_data_valid: bool = None
+        self._shift_data: frame.DataFrame | None = None
+        self._grouped_shift_data: DataFrameGroupBy | None = None
+        self._grouped_series: series.Series | None = None
+        self._json_shift_data: Dict = {
+            'data': None,
+            'valid': None,
+            'error': None
+        }
 
         # Call non-public methods to initialize the workflow
         if self.auto_prep_data is True:
@@ -184,14 +187,24 @@ class CreateShifts:
             Convert fields to strings for Amplify API compatibility.
 
             Args:
+                None.
 
             Modifies:
                 self._shift_data (frame.DataFrame):
                     Pandas Data Frame of raw shift data.
 
+            Example data structure:
+                need_name need_id start_date start_time duration slots
+            0   Need 1    000001  1/1/99     12:00      60       20
+            1   Need 2    000002  1/1/99     12:00      90       20
+            2   Need 3    000002  1/1/99     12:00      60       20
+            3   Need 4    000003  1/1/99     12:00      120      20
+            4   Need 5    000004  1/1/99     12:00      90       20
+
             Returns:
                 None.
         """
+
         # Print preliminary status message
         message = f'\nReading shift data from "{self.input_file}"...'
         self.helpers.printer(
@@ -230,9 +243,18 @@ class CreateShifts:
                     Pandas Data Frame of shift data with duplicates
                     removed.
 
+            Example data structure:
+                need_name need_id start_date start_time duration slots
+            0   Need 1    000001  1/1/99     12:00      60       20
+            1   Need 2    000002  1/1/99     12:00      90       20
+            2   Need 3    000002  1/1/99     12:00      60       20
+            3   Need 4    000003  1/1/99     12:00      120      20
+            4   Need 5    000004  1/1/99     12:00      90       20
+
             Returns:
                 None.
         """
+
         # Print preliminary status message
         message = 'Removing duplicate shifts...'
         self.helpers.printer(
@@ -263,11 +285,21 @@ class CreateShifts:
 
             Modifies:
                 self._shift_data (frame.DataFrame):
-                    Pandas Data Frame with shift data in a new 'start' column.
+                    Pandas Data Frame with shift data in a new 'start'
+                    column.
+
+            Example data structure:
+                need_name need_id start_date start_time ... start
+            0   Need 1    000001  1/1/99     12:00      ... 1/1/99 12:00
+            1   Need 2    000002  1/1/99     12:00      ... 1/1/99 12:00
+            2   Need 3    000002  1/1/99     12:00      ... 1/1/99 12:00
+            3   Need 4    000003  1/1/99     12:00      ... 1/1/99 12:00
+            4   Need 5    000004  1/1/99     12:00      ... 1/1/99 12:00
 
             Returns:
                 None.
         """
+
         # Print preliminary status message
         message = 'Combining shift dates and times to combined values...'
         self.helpers.printer(
@@ -294,7 +326,29 @@ class CreateShifts:
         return None
 
     def _format_shift_start(self) -> None:
-        """ Format START_COLUMN dates/times for Amplify compatibility. """
+        """ Format the 'start' column for Amplify compatibility.
+
+            Args:
+                self._shift_data (frame.DataFrame):
+                    Pandas Data Frame with shift data in a new 'start'
+                    column.
+
+            Modifies:
+                self._shift_data (frame.DataFrame):
+                    Pandas Data Frame of shift data with
+                    Amplify-formatted dates in the 'start' column.
+
+            Example data structure:
+                need_name need_id start_date start_time ... start
+            0   Need 1    000001  1/1/99     12:00      ... 2099-01-01 12:00
+            1   Need 2    000002  1/1/99     12:00      ... 2099-01-01 12:00
+            2   Need 3    000002  1/1/99     12:00      ... 2099-01-01 12:00
+            3   Need 4    000003  1/1/99     12:00      ... 2099-01-01 12:00
+            4   Need 5    000004  1/1/99     12:00      ... 2099-01-01 12:00
+
+            Returns:
+                None.
+        """
 
         # Print preliminary status message
         message = 'Formatting shift start values for Amplify compatibility...'
@@ -319,12 +373,21 @@ class CreateShifts:
 
             Args:
                 self._shift_data (frame.DataFrame):
-                    Pandas Data Frame with shift data in a new 'start' column.
+                    Pandas Data Frame of shift data with
+                    Amplify-formatted dates in the 'start' column.
 
             Modifies:
                 self._shift_data (frame.DataFrame):
-                    Pandas Data Frame of shift data without informational
-                    columns.
+                    Pandas Data Frame of shift data without
+                    informational columns.
+
+            Example data structure:
+                need_id duration slots start
+            0   000001  60       20    2099-01-01 12:00
+            1   000002  90       20    2099-01-01 12:00
+            2   000002  60       20    2099-01-01 12:00
+            3   000003  120      20    2099-01-01 12:00
+            4   000004  90       20    2099-01-01 12:00
 
             Returns:
                 None.
@@ -353,12 +416,34 @@ class CreateShifts:
 
             Args:
                 self._shift_data (frame.DataFrame):
-                    Pandas Data Frame of shift data without extra columns.
+                    Pandas Data Frame of shift data without
+                    informational columns.
 
             Modifies:
                 self._grouped_shift_data (DataFrameGroupBy):
-                    Pandas Grouped Data Frame of shift data, grouped by each
-                    shift's 'need_id'.
+                    Pandas Grouped Data Frame of shift data, grouped by
+                    each shift's 'need_id'.
+
+            Example data structure:
+            {
+                '000001': [
+                        need_id duration slots start
+                    0   000001  60       20    2099-01-01 12:00
+                ],
+                '000002': [
+                        need_id duration slots start
+                    1   000002  60       20    2099-01-01 12:00,
+                    2   000002  60       20    2099-01-01 12:00,
+                ],
+                '000003': [
+                        need_id duration slots start
+                    3   000003  60       20    2099-01-01 12:00
+                ],
+                '00004': [
+                        need_id duration slots start
+                    4   000003  60       20    2099-01-01 12:00
+                ]
+            }
 
             Returns:
                 None.
@@ -386,19 +471,30 @@ class CreateShifts:
         return None
 
     def _create_grouped_series(self) -> None:
-        """ Insert a 'shifts' dict under each 'need_id' dict to comply with the
-            required API POST body request format.  Automatically converts the
+        """ Insert a 'shifts' dict under each 'need_id' dict group.
+
+            Modifies the grouped shift data to comply with the required
+            API POST body request format.  Automatically converts the
             grouped data frame to a Pandas Series
 
             Args:
                 self._grouped_shift_data (DataFrameGroupBy):
-                    Pandas Grouped Data Frame of shift data, grouped by each
-                    shift's 'need_id'.
+                    Pandas Grouped Data Frame of shift data, grouped by
+                    each shift's 'need_id'.
 
             Modifies:
                 self._grouped_series (series.Series):
-                    Pandas Series of shifts grouped by 'need_id' with all
-                    shifts contained in a 'shifts' dict key.
+                    Pandas Series of shifts grouped by 'need_id' with
+                    all shifts for each 'need_id' contained within in a
+                    'shifts' dict key.
+
+            Example data structure:
+            need_id
+            000001  {'shifts': [{'start': '2099-01-01 12:00', 'dur...']},
+            000002  {'shifts': [{'start': '2099-01-01 12:00', 'dur...'},
+                                {'start': '2099-01-01 12:00', 'dur...']},
+            000003  {'shifts': [{'start': '2099-01-01 12:00', 'dur...']},
+            000004  {'shifts': [{'start': '2099-01-01 12:00', 'dur...']}
 
             Returns:
                 None.
@@ -437,19 +533,27 @@ class CreateShifts:
 
             Args:
                 self._grouped_series (series.Series):
-                    Pandas Series of shifts grouped by 'need_id' with all
-                    shifts contained in a 'shifts' dict key.
+                    Pandas Series of shifts grouped by 'need_id' with
+                    all shifts for each 'need_id' contained within in a
+                    'shifts' dict key.
 
                 write_to_file (bool):
-                    Write the resulting JSON data to a file in addition to
-                    storing the data in self._shift_data. Default value
-                    is False.
+                    Write the resulting JSON data to a file in addition
+                    to storing data in self._json_shift_data['data'].
+                    Default value is False.
 
             Modifies:
-                self._shift_data (Dict):
+                self._json_shift_data['data'] (Dict):
                     Dictionary of shifts grouped by 'need_id' with all
-                    shifts for each 'need_id' contained in a 'shifts'
-                    dict key.
+                    shifts for each 'need_id' contained within in a
+                    'shifts' dict key.
+
+            Example data structure:
+            {'000001':  {'shifts': [{'start': '2099-01-01 12:00', 'dur...']},
+            {'000002':  {'shifts': [{'start': '2099-01-01 12:00', 'dur...'},
+                                    {'start': '2099-01-01 12:00', 'dur...']},
+            {'000003':  {'shifts': [{'start': '2099-01-01 12:00', 'dur...']},
+            {'000004':  {'shifts': [{'start': '2099-01-01 12:00', 'dur...']}
 
             Returns:
                 None.
@@ -471,10 +575,12 @@ class CreateShifts:
             )
 
         # Store grouped series data in a dictionary
-        self._shift_data = self._grouped_series.to_dict()
+        self._json_shift_data.update(
+            {'data': self._grouped_series.to_dict()}
+        )
 
         # Print final status message
-        if self._shift_data is not None:
+        if self._json_shift_data.get('data') is not None:
             message = "done."
             self.helpers.printer(message=message)
 
@@ -487,13 +593,14 @@ class CreateShifts:
         """ Validate shift JSON data against JSON Schema.
 
             Args:
-                self._shift_data (Dict):
+                self._json_shift_data['data'] (Dict):
                     Dict of formatted shift data.
 
             Modifies:
-                self._shift_data_valid (bool):
-                    True if self._shift_data complies with JSON Schema.
-                    False if self._shift_data does not comply with JSON Schema.
+                self._json_shift_data['valid'] (bool):
+                    True if self._json_shift_data['data'] complies with
+                    JSON Schema. False if self._json_shift_data['data']
+                    does not comply with JSON Schema.
 
             Returns:
                 None.
@@ -517,25 +624,32 @@ class CreateShifts:
         try:
             # Attempt to validate shift data against JSON Schema
             validate(
-                instance=self._shift_data,
+                instance=self._json_shift_data.get('data'),
                 schema=json_schema_shifts
             )
 
-            # Set self._shift_data_valid to True
-            self._shift_data_valid = True
+            # Set self._json_shift_data['valid'] to True
+            self._json_shift_data.update(
+                {'valid': True}
+            )
 
         # Indicate invalidate JSON shift data
-        except ValidationError:
-            # Set self._shift_data_valid to False
-            self._shift_data_valid = False
+        except ValidationError as error:
+            # Update self._json_shift_data['valid'] and ['error'] to False
+            self._json_shift_data.update(
+                {
+                    'valid': False,
+                    'error': error
+                }
+            )
 
         # Print final status message
-        if self._shift_data_valid is True:
+        if self._json_shift_data.get('valid') is True:
             message = "done."
-            self.helpers.printer(message=message)
 
         else:
             message = '\n\n** Error validating shift data **\n'
+            self.helpers.printer(message=message)
 
         return None
 
@@ -606,62 +720,80 @@ class CreateShifts:
                 None.
         """
 
-        # Set a default value for 'output_heading'
-        output_heading = None
+        # Only send the request if self._json_shift_data['valid'] is True
+        if self._json_shift_data.get('valid') is True:
 
-        # Set HTTP request variables
-        method = 'POST'
-        headers = BASE_AMPLIFY_HEADERS
+            # Set a default value for 'output_heading'
+            output_heading = None
 
-        # Create and send request
-        for need_id, shifts in self._shift_data.items():
+            # Set HTTP request variables
+            method = 'POST'
+            headers = BASE_AMPLIFY_HEADERS
 
-            # Construct URL and JSON payload
-            url = f'{BASE_AMPLIFY_URL}/needs/{need_id}/shifts'
-            json = shifts
+            # Create and send request
+            for need_id, shifts in self._json_shift_data.get('data').items():
 
-            # Construct API request data
-            api_request_data = {
-                'method': method,
-                'url': url,
-                'headers': headers,
-                'json': json,
-                'timeout': timeout
-            }
+                # Construct URL and JSON payload
+                url = f'{BASE_AMPLIFY_URL}/needs/{need_id}/shifts'
+                json = shifts
 
-            # Determine the status of check_mode
-            if self.check_mode is False:
-                # Send API request
-                self.helpers.send_api_request(
-                    api_request_data=api_request_data
+                # Construct API request data
+                api_request_data = {
+                    'method': method,
+                    'url': url,
+                    'headers': headers,
+                    'json': json,
+                    'timeout': timeout
+                }
+
+                # Determine the status of check_mode
+                if self.check_mode is False:
+                    # Send API request
+                    self.helpers.send_api_request(
+                        api_request_data=api_request_data
+                    )
+
+                else:
+                    # Set check_mode output message
+                    output_heading = (
+                        '** HTTP API Check Mode Run **\n'
+                    )
+
+                # Lookup opportunity title
+                opp_title = self._lookup_opportunity_title(
+                    need_id=need_id
                 )
 
-            else:
-                # Set check_mode output message
-                output_heading = (
-                    '** HTTP API Check Mode Run **\n'
+                # Create output message
+                output_message = (
+                    f'URL: {url}\n'
+                    f'Opportunity Title: {opp_title}\n'
+                    f'Shift Count: {len(json.get("shifts"))}\n'
+                    f'Payload:\n{dumps(json, indent=2)}'
                 )
 
-            # Lookup opportunity title
-            opp_title = self._lookup_opportunity_title(
-                need_id=need_id
-            )
+                # Add a heading if it exists
+                if output_heading is not None:
+                    output_message = f'{output_heading}{output_message}'
 
+                # Display output message
+                self.helpers.printer(
+                    message=output_message
+                )
+
+        # Display a message if self._json_shift_data['valid'] is not True
+        else:
             # Create output message
             output_message = (
-                f'URL: {url}\n'
-                f'Opportunity Title: {opp_title}\n'
-                f'Shift Count: {len(json.get("shifts"))}\n'
-                f'Payload:\n{dumps(json, indent=2)}'
+                '** Unable to create shifts while shift data is invalid **\n'
             )
+            if self._json_shift_data.get('error') is not None:
+                # Update output message
+                output_message += f'\n{self._json_shift_data.get("error")}\n'
 
-            # Add a heading if it exists
-            if output_heading is not None:
-                output_message = f'{output_heading}{output_message}'
-
-            # Display output message
-            self.helpers.printer(
-                message=output_message
-            )
+                # Display output message
+                self.helpers.printer(
+                    message=output_message
+                )
 
         return None

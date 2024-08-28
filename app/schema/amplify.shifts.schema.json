@@ -22,7 +22,7 @@
                 "start": {
                   "description": "Date and 24 hour time in the format YYYY-MM-DD HH:MM",
                   "minLength": 1,
-                  "pattern": "^20[2-9]\\d-(0[1-9]|1[1-2])-(0[1-9]|[12]\\d|3[01]) (0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$",
+                  "pattern": "^20[2-9]\\d-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01]) (0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$",
                   "type": "string"
                 },
                 "duration": {
