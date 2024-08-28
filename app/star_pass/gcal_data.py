@@ -78,8 +78,10 @@ class GCALData:
                     3. Converts the shift data to a CSV format.
                     4. Writes the CSV shift data to a file.
 
-                    When auto_prep_data is False, you may manually run
-                    the these functions.
+                    When 'auto_prep_data' is True, creating an instance
+                    of the 'GCALData' class will automatically attempt
+                    to prepare data.  When 'auto_prep_data' is False,
+                    you may manually run the these functions.
 
                     Functions that prepare data include:
 
@@ -88,7 +90,7 @@ class GCALData:
                         generate_shift_csv()
                         write_shift_csv_file()
 
-                    Default value is True.
+                    The default value is True.
 
                 **kwargs (Any):
                     Unspecified keyword arguments.

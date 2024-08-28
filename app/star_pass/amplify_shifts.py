@@ -139,13 +139,28 @@ class CreateShifts:
 
             Args:
                 auto_prep_data (bool):
-                    Automatically run non-public methods that import,
-                    validate, and prepare CSV data for upload via the
-                    Amplify API. When auto_prep_data is True, creating
-                    an instance of the CreateShifts Class will
+                    Automatically run non-public methods that:
+                    
+                    1. Imports shift data from a CSV file.
+                    2. Removes any duplicate shifts.
+                    3. Formats the shift start date and time to comply
+                       with the Amplify API shift format.
+                    4. Removes any CSV file columns not used by the
+                       Amplify API.
+                    5. Groups shift data by need ID.
+                    6. Formats data to comply with the structure
+                       requirements of the Amplify API.
+                    7. Creates a JSON-formatted object of shift data
+                       to send to the Amplify API.
+                    8. Validates the JSON-formatted object using a JSON
+                       Schema object.
+                    
+                    When 'auto_prep_data' is True, creating
+                    an instance of the 'CreateShifts' class will
                     automatically attempt to prepare data.  When
-                    auto_prep_data is False, you may manually run the
+                    'auto_prep_data' is False, you may manually run the
                     non-public functions to prepare the data.
+
                     Non-public functions that prepare data include:
 
                         _read_shift_csv_data()
@@ -157,7 +172,7 @@ class CreateShifts:
                         _create_shift_json_data()
                         _validate_shift_json_data()
 
-                    Default value is True.
+                    The default value is True.
 
                 check_mode (bool):
                     Prepare HTTP API requests without sending the
