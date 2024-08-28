@@ -3,6 +3,7 @@
 
 # Imports - Python Standard Library
 from ast import literal_eval
+from datetime import datetime
 from typing import Any, Dict
 from pprint import pprint as pp
 import sys
@@ -96,6 +97,37 @@ class Helpers:
         )
 
         return formatted_date_time_string
+
+    def _iso_datetime_to_string(
+            self,
+            datetime_object: str,
+            datetime_string_format: str = DATE_TIME_FORMAT
+    ) -> str:
+        """ Convert an ISO-formatted datetime to a simplified format.
+
+            Args:
+                datetime_object (str[datetime]):
+                    String representation of a datetime.datetime object
+                    in ISO format:
+
+                    2024-10-06T12:00:00-07:00
+
+                datetime_string_format (str):
+                    Simplified date and time output format.
+
+            Returns:
+                datetime_string (str):
+                    Date and time as a string, formatted by
+                    datetime_string_format.
+        """
+
+        # Create a datetime object from the ISO-formatted string
+        datetime_object = datetime.fromisoformat(datetime_object)
+
+        # Format the datetime object as a string with `datetime_string_format'`
+        datetime_string = datetime_object.strftime(datetime_string_format)
+
+        return datetime_string
 
     def printer(
             self,
