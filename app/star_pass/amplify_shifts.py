@@ -731,7 +731,7 @@ class CreateShifts:
             headers = BASE_AMPLIFY_HEADERS
 
             # Create and send request
-            for need_id, shifts in self._shift_data.items():
+            for need_id, shifts in self._json_shift_data.get('data').items():
 
                 # Construct URL and JSON payload
                 url = f'{BASE_AMPLIFY_URL}/needs/{need_id}/shifts'
