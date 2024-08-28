@@ -173,7 +173,6 @@ class Helpers:
         # Send API request
         try:
             response = request(**api_request_data)
-
         # Handle TCP Connection Errors
         except exceptions.ConnectionError as error:
             # Display error text and exit
@@ -185,7 +184,6 @@ class Helpers:
         # Check for HTTP errors
         try:
             if response.ok is not True:
-                print(f'\n{response.request.url}\n')
                 response.raise_for_status()
 
         # Handle non-ok HTTP responses
