@@ -2,6 +2,7 @@
 """ Amplify shift management classes and methods. """
 
 # Imports - Python Standard Library
+from copy import copy
 from json import dumps, load
 from os import getenv
 from os import path
@@ -31,7 +32,7 @@ AMPLIFY_TOKEN = getenv(
 )
 
 # HTTP request configuration
-BASE_AMPLIFY_HEADERS = _defaults.BASE_HEADERS
+BASE_AMPLIFY_HEADERS = copy(_defaults.BASE_HEADERS)
 BASE_AMPLIFY_HEADERS.update(
     {'Authorization': f'Bearer {AMPLIFY_TOKEN}'}
 )
