@@ -93,25 +93,25 @@ HTTP_TIMEOUT = 3
 
 # Google Calendar values
 BASE_GCAL_ENDPOINT = '/events'
-BASE_GCAL_PARAMS = {
-    'orderBy': 'startTime',
-    'q': '',
-    'showDeleted': 'false',
-    'singleEvents': 'true',
-    'timeMin': '',
-    'timeMax': '',
-}
-GCAL_PRACTICE_CAL_ID = (
-    '/rosecityrollers.com_313938323232323331%40resource.calendar.google.com'
-)
 GCAL_ORDER_BY = 'startTime'
-GCAL_SHOW_DELETED = False
-GCAL_SINGLE_EVENTS = True
+GCAL_SHOW_DELETED = 'false'
+GCAL_SINGLE_EVENTS = 'true'
 GCAL_TIME_MIN = '2024-09-08T00:00:00-00:00'
 GCAL_TIME_MAX = '2024-10-10T00:00:00-00:00'
 GCAL_DEFAULT_QUERY_STRINGS = (
     'officials',
     'scrimmage'
+)
+BASE_GCAL_PARAMS = {
+    'orderBy': GCAL_ORDER_BY,
+    'q': '',
+    'showDeleted': GCAL_SHOW_DELETED,
+    'singleEvents': GCAL_SINGLE_EVENTS,
+    'timeMin': '',
+    'timeMax': '',
+}
+GCAL_PRACTICE_CAL_ID = (
+    '/rosecityrollers.com_313938323232323331%40resource.calendar.google.com'
 )
 
 # Amplify CSV input file management
