@@ -444,8 +444,7 @@ class GCALData:
         # Print file information
         message = f'\nWrote CSV data to "{file}"'
         self.helpers.printer(
-            message=message,
-            end=''
+            message=message
         )
 
         return None
