@@ -57,6 +57,10 @@ SHIFT_INFO = _defaults.SHIFT_INFO
 INPUT_CSV_DIR_PATH = _defaults.INPUT_CSV_DIR_PATH
 INPUT_FILE_EXTENSION = '.csv'
 
+# Default date and time values
+GCAL_TIME_MIN = _defaults.GCAL_TIME_MIN
+GCAL_TIME_MAX = _defaults.GCAL_TIME_MAX
+
 
 class GCALData:
     """ Collect and manage Google Calendar data. """
