@@ -49,8 +49,8 @@ DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 SHIFT_INFO = _defaults.SHIFT_INFO
 
 # File management data
-INPUT_CSV_DIR_PATH = _defaults.INPUT_CSV_DIR_PATH
-INPUT_FILE_EXTENSION = '.csv'
+INPUT_DIR_PATH = _defaults.INPUT_DIR_PATH
+INPUT_FILE_EXTENSION = _defaults.INPUT_FILE_EXTENSION
 
 # Default date and time values
 DEFAULT_GCAL_TIME_MIN = _defaults.GCAL_TIME_MIN
@@ -67,7 +67,7 @@ class GCALData:
         """ Class initialization method.
 
             Args:
-                auto_prep_data (bool):
+                auto_prep_data (bool, optional):
                     Automatically run methods that:
 
                     1. Collects shift data from the Google Calendar
@@ -91,7 +91,7 @@ class GCALData:
 
                     The default value is True.
 
-                **kwargs (Any):
+                **kwargs (Any, optional):
                     Unspecified keyword arguments.
 
             Return:
@@ -426,7 +426,7 @@ class GCALData:
 
         # Create timestamped file name
         timestamp = datetime.now().isoformat()
-        file_path = INPUT_CSV_DIR_PATH
+        file_path = INPUT_DIR_PATH
         file_name = f'gcal_shifts_{timestamp}{INPUT_FILE_EXTENSION}'
         file = Path.joinpath(
             file_path,
