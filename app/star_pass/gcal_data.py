@@ -106,6 +106,25 @@ class GCALData:
         # Initialize helper methods
         self.helpers = Helpers()
 
+        # Set Class initialization values
+        self.auto_prep_data = auto_prep_data
+
+        # Call methods to initialize the workflow
+        if self.auto_prep_data is True:
+            self.gcal_data = self.get_gcal_shift_data(
+                timeMin=GCAL_TIME_MIN,
+                timeMax=GCAL_TIME_MAX
+            )
+            self.gcal_shifts = self.process_gcal_data(
+                gcal_data=self.gcal_data
+            )
+            self.csv_data = self.generate_shift_csv(
+                gcal_shifts=self.gcal_shifts
+            )
+            self.write_shift_csv_file(
+                csv_data=self.csv_data
+            )
+
         return None
 
     def _get_shift_length(
