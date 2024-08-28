@@ -487,10 +487,11 @@ class CreateShifts:
 
             Example data structure:
             need_id
-            000001  {'shifts': [{'start': '2099-01-01 12:00', 'dur...
-            000002  {'shifts': [{'start': '2099-01-01 12:00', 'dur...
-            000003  {'shifts': [{'start': '2099-01-01 12:00', 'dur...
-            000004  {'shifts': [{'start': '2099-01-01 12:00', 'dur...
+            000001  {'shifts': [{'start': '2099-01-01 12:00', 'dur...']},
+            000002  {'shifts': [{'start': '2099-01-01 12:00', 'dur...'},
+                                {'start': '2099-01-01 12:00', 'dur...']},
+            000003  {'shifts': [{'start': '2099-01-01 12:00', 'dur...']},
+            000004  {'shifts': [{'start': '2099-01-01 12:00', 'dur...']}
 
             Returns:
                 None.
@@ -545,7 +546,11 @@ class CreateShifts:
                     'shifts' dict key.
 
             Example data structure:
-
+            {'000001':  {'shifts': [{'start': '2099-01-01 12:00', 'dur...']},
+            {'000002':  {'shifts': [{'start': '2099-01-01 12:00', 'dur...'},
+                                    {'start': '2099-01-01 12:00', 'dur...']},
+            {'000003':  {'shifts': [{'start': '2099-01-01 12:00', 'dur...']},
+            {'000004':  {'shifts': [{'start': '2099-01-01 12:00', 'dur...']}
 
             Returns:
                 None.
