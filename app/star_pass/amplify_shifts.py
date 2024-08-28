@@ -156,11 +156,14 @@ class CreateShifts:
         )
 
         # Placeholder variables for data transformation methods
-        self._shift_data: frame.DataFrame = None
-        self._grouped_shift_data: DataFrameGroupBy = None
-        self._grouped_series: series.Series = None
-        self._json_shift_data: Dict = None
-        self._json_shift_data_valid: bool = None
+        self._shift_data: frame.DataFrame | None = None
+        self._grouped_shift_data: DataFrameGroupBy | None = None
+        self._grouped_series: series.Series | None = None
+        self._json_shift_data: Dict = {
+            'data': None,
+            'valid': None,
+            'error': None
+        }
 
         # Call non-public methods to initialize the workflow
         if self.auto_prep_data is True:
@@ -536,11 +539,11 @@ class CreateShifts:
 
                 write_to_file (bool):
                     Write the resulting JSON data to a file in addition
-                    to storing the data in self._json_shift_data.
+                    to storing data in self._json_shift_data['data'].
                     Default value is False.
 
             Modifies:
-                self._json_shift_data (Dict):
+                self._json_shift_data['data'] (Dict):
                     Dictionary of shifts grouped by 'need_id' with all
                     shifts for each 'need_id' contained within in a
                     'shifts' dict key.
@@ -572,10 +575,12 @@ class CreateShifts:
             )
 
         # Store grouped series data in a dictionary
-        self._json_shift_data = self._grouped_series.to_dict()
+        self._json_shift_data.update(
+            {'data': self._grouped_series.to_dict()}
+        )
 
         # Print final status message
-        if self._json_shift_data is not None:
+        if self._json_shift_data.get('data') is not None:
             message = "done."
             self.helpers.printer(message=message)
 
@@ -588,14 +593,14 @@ class CreateShifts:
         """ Validate shift JSON data against JSON Schema.
 
             Args:
-                self._json_shift_data (Dict):
+                self._json_shift_data['data'] (Dict):
                     Dict of formatted shift data.
 
             Modifies:
-                self._json_shift_data_valid (bool):
-                    True if self._json_shift_data complies with JSON
-                    Schema.  False if self._json_shift_data does not
-                    comply with JSON Schema.
+                self._json_shift_data['valid'] (bool):
+                    True if self._json_shift_data['data'] complies with
+                    JSON Schema. False if self._json_shift_data['data']
+                    does not comply with JSON Schema.
 
             Returns:
                 None.
@@ -619,25 +624,32 @@ class CreateShifts:
         try:
             # Attempt to validate shift data against JSON Schema
             validate(
-                instance=self._json_shift_data,
+                instance=self._json_shift_data.get('data'),
                 schema=json_schema_shifts
             )
 
-            # Set self._json_shift_data_valid to True
-            self._json_shift_data_valid = True
+            # Set self._json_shift_data['valid'] to True
+            self._json_shift_data.update(
+                {'valid': True}
+            )
 
         # Indicate invalidate JSON shift data
-        except ValidationError:
-            # Set self._json_shift_data_valid to False
-            self._json_shift_data_valid = False
+        except ValidationError as error:
+            # Update self._json_shift_data['valid'] and ['error'] to False
+            self._json_shift_data.update(
+                {
+                    'valid': False,
+                    'error': error
+                }
+            )
 
         # Print final status message
-        if self._json_shift_data_valid is True:
+        if self._json_shift_data.get('valid') is True:
             message = "done."
-            self.helpers.printer(message=message)
 
         else:
             message = '\n\n** Error validating shift data **\n'
+            self.helpers.printer(message=message)
 
         return None
 
@@ -708,62 +720,80 @@ class CreateShifts:
                 None.
         """
 
-        # Set a default value for 'output_heading'
-        output_heading = None
+        # Only send the request if self._json_shift_data['valid'] is True
+        if self._json_shift_data.get('valid') is True:
 
-        # Set HTTP request variables
-        method = 'POST'
-        headers = BASE_AMPLIFY_HEADERS
+            # Set a default value for 'output_heading'
+            output_heading = None
 
-        # Create and send request
-        for need_id, shifts in self._shift_data.items():
+            # Set HTTP request variables
+            method = 'POST'
+            headers = BASE_AMPLIFY_HEADERS
 
-            # Construct URL and JSON payload
-            url = f'{BASE_AMPLIFY_URL}/needs/{need_id}/shifts'
-            json = shifts
+            # Create and send request
+            for need_id, shifts in self._shift_data.items():
 
-            # Construct API request data
-            api_request_data = {
-                'method': method,
-                'url': url,
-                'headers': headers,
-                'json': json,
-                'timeout': timeout
-            }
+                # Construct URL and JSON payload
+                url = f'{BASE_AMPLIFY_URL}/needs/{need_id}/shifts'
+                json = shifts
 
-            # Determine the status of check_mode
-            if self.check_mode is False:
-                # Send API request
-                self.helpers.send_api_request(
-                    api_request_data=api_request_data
+                # Construct API request data
+                api_request_data = {
+                    'method': method,
+                    'url': url,
+                    'headers': headers,
+                    'json': json,
+                    'timeout': timeout
+                }
+
+                # Determine the status of check_mode
+                if self.check_mode is False:
+                    # Send API request
+                    self.helpers.send_api_request(
+                        api_request_data=api_request_data
+                    )
+
+                else:
+                    # Set check_mode output message
+                    output_heading = (
+                        '** HTTP API Check Mode Run **\n'
+                    )
+
+                # Lookup opportunity title
+                opp_title = self._lookup_opportunity_title(
+                    need_id=need_id
                 )
 
-            else:
-                # Set check_mode output message
-                output_heading = (
-                    '** HTTP API Check Mode Run **\n'
+                # Create output message
+                output_message = (
+                    f'URL: {url}\n'
+                    f'Opportunity Title: {opp_title}\n'
+                    f'Shift Count: {len(json.get("shifts"))}\n'
+                    f'Payload:\n{dumps(json, indent=2)}'
                 )
 
-            # Lookup opportunity title
-            opp_title = self._lookup_opportunity_title(
-                need_id=need_id
-            )
+                # Add a heading if it exists
+                if output_heading is not None:
+                    output_message = f'{output_heading}{output_message}'
 
+                # Display output message
+                self.helpers.printer(
+                    message=output_message
+                )
+
+        # Display a message if self._json_shift_data['valid'] is not True
+        else:
             # Create output message
             output_message = (
-                f'URL: {url}\n'
-                f'Opportunity Title: {opp_title}\n'
-                f'Shift Count: {len(json.get("shifts"))}\n'
-                f'Payload:\n{dumps(json, indent=2)}'
+                '** Unable to create shifts while shift data is invalid **\n'
             )
+            if self._json_shift_data.get('error') is not None:
+                # Update output message
+                output_message += f'\n{self._json_shift_data.get("error")}\n'
 
-            # Add a heading if it exists
-            if output_heading is not None:
-                output_message = f'{output_heading}{output_message}'
-
-            # Display output message
-            self.helpers.printer(
-                message=output_message
-            )
+                # Display output message
+                self.helpers.printer(
+                    message=output_message
+                )
 
         return None
