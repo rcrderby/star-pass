@@ -160,7 +160,7 @@ class CreateShifts:
         self._grouped_shift_data: DataFrameGroupBy = None
         self._grouped_series: series.Series = None
         self._json_shift_data: Dict = None
-        self._shift_data_valid: bool = None
+        self._json_shift_data_valid: bool = None
 
         # Call non-public methods to initialize the workflow
         if self.auto_prep_data is True:
@@ -592,7 +592,7 @@ class CreateShifts:
                     Dict of formatted shift data.
 
             Modifies:
-                self._shift_data_valid (bool):
+                self._json_shift_data_valid (bool):
                     True if self._json_shift_data complies with JSON
                     Schema.  False if self._json_shift_data does not
                     comply with JSON Schema.
@@ -619,20 +619,20 @@ class CreateShifts:
         try:
             # Attempt to validate shift data against JSON Schema
             validate(
-                instance=self._shift_data,
+                instance=self._json_shift_data,
                 schema=json_schema_shifts
             )
 
-            # Set self._shift_data_valid to True
-            self._shift_data_valid = True
+            # Set self._json_shift_data_valid to True
+            self._json_shift_data_valid = True
 
         # Indicate invalidate JSON shift data
         except ValidationError:
-            # Set self._shift_data_valid to False
-            self._shift_data_valid = False
+            # Set self._json_shift_data_valid to False
+            self._json_shift_data_valid = False
 
         # Print final status message
-        if self._shift_data_valid is True:
+        if self._json_shift_data_valid is True:
             message = "done."
             self.helpers.printer(message=message)
 
