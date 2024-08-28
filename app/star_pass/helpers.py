@@ -196,9 +196,16 @@ class Helpers:
 
         # Display the HTTP request status
         if display_request_status is True:
+            # Create display URL that does not expose any paths or parameters
+            display_url = response.request.url.replace(
+                response.request.path_url,
+                ''
+            )
+
             # Set HTTP response output message
             output_heading = (
                 '** HTTP API Response **\n'
+                f'URL: {display_url}\n'
                 f'Response: HTTP {response.status_code} {response.reason}'
             )
 
