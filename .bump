@@ -2,7 +2,7 @@
 ## https://pypi.org/project/bump/
 
 [bump]
-input = app/star_pass/__version__.py
+input = app/__version__.py
 major = false
 minor = false
 patch = true
