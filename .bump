@@ -1,0 +1,9 @@
+# bump configuration file
+## https://pypi.org/project/bump/
+
+[bump]
+input = app/__version__.py
+major = false
+minor = false
+patch = true
+reset = false

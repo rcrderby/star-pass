@@ -30,7 +30,7 @@ GCAL_TOKEN = getenv(
 )
 
 # HTTP request configuration
-BASE_HEADERS = _defaults.BASE_HEADERS
+BASE_GCAL_HEADERS = copy(_defaults.BASE_HEADERS)
 GCAL_PRACTICE_CAL_ID = _defaults.GCAL_PRACTICE_CAL_ID
 BASE_GCAL_ENDPOINT = _defaults.BASE_GCAL_ENDPOINT
 BASE_GCAL_PARAMS = _defaults.BASE_GCAL_PARAMS
@@ -39,12 +39,7 @@ BASE_GCAL_URL = getenv(
     key='BASE_GCAL_URL',
     default=_defaults.BASE_GCAL_URL
 )
-HTTP_TIMEOUT = int(
-    getenv(
-        key='HTTP_TIMEOUT',
-        default=_defaults.HTTP_TIMEOUT
-    )
-)
+HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
 # Date and time management
 DEFAULT_SLOTS = _defaults.DEFAULT_SLOTS
@@ -54,19 +49,50 @@ DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 SHIFT_INFO = _defaults.SHIFT_INFO
 
 # File management data
-INPUT_CSV_DIR_PATH = _defaults.INPUT_CSV_DIR_PATH
-INPUT_FILE_EXTENSION = '.csv'
+INPUT_DIR_PATH = _defaults.INPUT_DIR_PATH
+INPUT_FILE_EXTENSION = _defaults.INPUT_FILE_EXTENSION
+
+# Default date and time values
+DEFAULT_GCAL_TIME_MIN = _defaults.GCAL_TIME_MIN
+DEFAULT_GCAL_TIME_MAX = _defaults.GCAL_TIME_MAX
 
 
 class GCALData:
     """ Collect and manage Google Calendar data. """
     def __init__(
             self,
+            auto_prep_data: bool = True,
+            **kwargs: Any
     ) -> None:
         """ Class initialization method.
 
             Args:
-                None.
+                auto_prep_data (bool, optional):
+                    Automatically run methods that:
+
+                    1. Collects shift data from the Google Calendar
+                       service.
+                    2. Formats the Google Calendar shift data to
+                       comply with the Amplify API shift format.
+                    3. Converts the shift data to a CSV format.
+                    4. Writes the CSV shift data to a file.
+
+                    When 'auto_prep_data' is True, creating an instance
+                    of the 'GCALData' class will automatically attempt
+                    to prepare data.  When 'auto_prep_data' is False,
+                    you may manually run the these functions.
+
+                    Functions that prepare data include:
+
+                        get_gcal_shift_data()
+                        process_gcal_data()
+                        generate_shift_csv()
+                        write_shift_csv_file()
+
+                    The default value is True.
+
+                **kwargs (Any, optional):
+                    Unspecified keyword arguments.
 
             Return:
                 None.
@@ -74,6 +100,25 @@ class GCALData:
 
         # Initialize helper methods
         self.helpers = Helpers()
+
+        # Set Class initialization values
+        self.auto_prep_data = auto_prep_data
+
+        # Call methods to initialize the workflow
+        if self.auto_prep_data is True:
+            self.gcal_data = self.get_gcal_shift_data(
+                timeMin=DEFAULT_GCAL_TIME_MIN,
+                timeMax=DEFAULT_GCAL_TIME_MAX
+            )
+            self.gcal_shifts = self.process_gcal_data(
+                gcal_data=self.gcal_data
+            )
+            self.csv_data = self.generate_shift_csv(
+                gcal_shifts=self.gcal_shifts
+            )
+            self.write_shift_csv_file(
+                csv_data=self.csv_data
+            )
 
         return None
 
@@ -137,7 +182,6 @@ class GCALData:
 
         return datetime_string
 
-    # pylint: disable-next=dangerous-default-value
     def get_gcal_shift_data(
             self,
             timeMin: str,  # pylint: disable=invalid-name
@@ -145,7 +189,7 @@ class GCALData:
             query_strings: Iterable[str] | str = GCAL_DEFAULT_QUERY_STRINGS,
             timeout: int = HTTP_TIMEOUT
     ) -> Dict[Any, Any]:
-        """ Get shift date from the Google Calendar.
+        """ Get shift data from the Google Calendar.
 
             Args:
                 query_strings (Iterable[str] | str):
@@ -184,7 +228,7 @@ class GCALData:
 
         # Set HTTP request variables
         method = 'GET'
-        headers = BASE_HEADERS
+        headers = BASE_GCAL_HEADERS
 
         # Construct URL
         url = (
@@ -382,7 +426,7 @@ class GCALData:
 
         # Create timestamped file name
         timestamp = datetime.now().isoformat()
-        file_path = INPUT_CSV_DIR_PATH
+        file_path = INPUT_DIR_PATH
         file_name = f'gcal_shifts_{timestamp}{INPUT_FILE_EXTENSION}'
         file = Path.joinpath(
             file_path,
@@ -400,8 +444,7 @@ class GCALData:
         # Print file information
         message = f'\nWrote CSV data to "{file}"'
         self.helpers.printer(
-            message=message,
-            end=''
+            message=message
         )
 
         return None

@@ -144,6 +144,7 @@ class Helpers:
             Args:
                 api_request_data (Dict):
                     Dictionary of key, value pairs for API request.
+                    Common values include:
 
                     method (str):
                         HTTP method (GET, POST, PUT, PATCH, DELETE).
@@ -172,7 +173,6 @@ class Helpers:
         # Send API request
         try:
             response = request(**api_request_data)
-
         # Handle TCP Connection Errors
         except exceptions.ConnectionError as error:
             # Display error text and exit
@@ -182,14 +182,30 @@ class Helpers:
             sys.exit(1)
 
         # Check for HTTP errors
-        if response.ok is not True:
-            response.raise_for_status()
+        try:
+            if response.ok is not True:
+                response.raise_for_status()
+
+        # Handle non-ok HTTP responses
+        except exceptions.HTTPError as error:
+            # Display error text and exit
+            self.printer(
+                message=repr(f'{error!r}')
+            )
+            sys.exit(1)
 
         # Display the HTTP request status
         if display_request_status is True:
+            # Create display URL that does not expose any paths or parameters
+            display_url = response.request.url.replace(
+                response.request.path_url,
+                ''
+            )
+
             # Set HTTP response output message
             output_heading = (
                 '** HTTP API Response **\n'
+                f'URL: {display_url}\n'
                 f'Response: HTTP {response.status_code} {response.reason}'
             )
 
