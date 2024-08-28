@@ -639,7 +639,7 @@ class CreateShifts:
             else:
                 # Set check_mode output message
                 output_heading = (
-                    '** HTTP API Check Mode Run **'
+                    '** HTTP API Check Mode Run **\n'
                 )
 
             # Lookup opportunity title
