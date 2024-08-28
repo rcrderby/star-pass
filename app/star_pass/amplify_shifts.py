@@ -40,12 +40,7 @@ BASE_AMPLIFY_URL = getenv(
     key='BASE_AMPLIFY_URL',
     default=_defaults.BASE_AMPLIFY_URL
 )
-HTTP_TIMEOUT = int(
-    getenv(
-        key='HTTP_TIMEOUT',
-        default=_defaults.HTTP_TIMEOUT
-    )
-)
+HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
 # Data file name and location
 BASE_FILE_NAME = getenv(
