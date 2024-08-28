@@ -202,6 +202,7 @@ class CreateShifts:
             Returns:
                 None.
         """
+
         # Print preliminary status message
         message = f'\nReading shift data from "{self.input_file}"...'
         self.helpers.printer(
@@ -252,6 +253,7 @@ class CreateShifts:
             Returns:
                 None.
         """
+
         # Print preliminary status message
         message = 'Removing duplicate shifts...'
         self.helpers.printer(
@@ -282,20 +284,22 @@ class CreateShifts:
 
             Modifies:
                 self._shift_data (frame.DataFrame):
-                    Pandas Data Frame with shift data in a new 'start' column.
+                    Pandas Data Frame with shift data in a new 'start'
+                    column.
 
             Example data structure:
 
-            need_name need_id start_date start_time duration slots start
-            Need 1    000001  1/1/99     12:00      60       20    1/1/24 12:00
-            Need 2    000002  1/1/99     12:00      90       20    1/1/24 12:00
-            Need 3    000003  1/1/99     12:00      60       20    1/1/24 12:00
-            Need 4    000004  1/1/99     12:00      120      20    1/1/24 12:00
-            Need 5    000005  1/1/99     12:00      90       20    1/1/24 12:00
+                need_name need_id start_date start_time ... start
+            0   Need 1    000001  1/1/99     12:00      ... 1/1/99 12:00
+            1   Need 2    000002  1/1/99     12:00      ... 1/1/99 12:00
+            2   Need 3    000003  1/1/99     12:00      ... 1/1/99 12:00
+            3   Need 4    000004  1/1/99     12:00      ... 1/1/99 12:00
+            4   Need 5    000005  1/1/99     12:00      ... 1/1/99 12:00
 
             Returns:
                 None.
         """
+
         # Print preliminary status message
         message = 'Combining shift dates and times to combined values...'
         self.helpers.printer(
@@ -322,7 +326,30 @@ class CreateShifts:
         return None
 
     def _format_shift_start(self) -> None:
-        """ Format START_COLUMN dates/times for Amplify compatibility. """
+        """ Format the 'start' column for Amplify compatibility.
+
+            Args:
+                self._shift_data (frame.DataFrame):
+                    Pandas Data Frame with shift data in a new 'start'
+                    column.
+
+            Modifies:
+                self._shift_data (frame.DataFrame):
+                    Pandas Data Frame of shift data with
+                    Amplify-formatted dates in the 'start' column.
+
+            Example data structure:
+
+                need_name need_id start_date start_time ... start
+            0   Need 1    000001  1/1/99     12:00      ... 2099-01-01 12:00
+            1   Need 2    000002  1/1/99     12:00      ... 2099-01-01 12:00
+            2   Need 3    000003  1/1/99     12:00      ... 2099-01-01 12:00
+            3   Need 4    000004  1/1/99     12:00      ... 2099-01-01 12:00
+            4   Need 5    000005  1/1/99     12:00      ... 2099-01-01 12:00
+
+            Returns:
+                None.
+        """
 
         # Print preliminary status message
         message = 'Formatting shift start values for Amplify compatibility...'
