@@ -588,7 +588,7 @@ class CreateShifts:
         """ Validate shift JSON data against JSON Schema.
 
             Args:
-                self._shift_data (Dict):
+                self._json_shift_data (Dict):
                     Dict of formatted shift data.
 
             Modifies:
