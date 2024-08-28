@@ -8,7 +8,7 @@ from typing import Dict
 # Imports - Local
 from star_pass.amplify_shifts import CreateShifts
 from star_pass.gcal_data import GCALData
-from star_pass.helpers import Helpers
+from star_pass._helpers import Helpers
 from star_pass import _defaults
 
 # Constants

@@ -15,7 +15,7 @@ from pandas import DataFrame as df
 
 # Imports - Local
 from . import _defaults
-from .helpers import Helpers
+from ._helpers import Helpers
 
 # Load environment variables
 load_dotenv(
@@ -151,37 +151,6 @@ class GCALData:
         shift_length = floor(delta.seconds / 60)
 
         return shift_length
-
-    def _datetime_to_string(
-            self,
-            datetime_object: str,
-            datetime_string_format: str = DATE_TIME_FORMAT
-    ) -> str:
-        """ Format an ISO datetime object as a string.
-
-            Args:
-                datetime_object (str[datetime]):
-                    String representation of a datetime.datetime object
-                    in ISO format:
-
-                    2024-10-06T12:00:00-07:00
-
-                datetime_string_format (str):
-                    Output string format for datetime object.
-
-            Returns:
-                datetime_string (str):
-                    Date and time as a string, formatted by
-                    datetime_string_format.
-        """
-
-        # Create a datetime object from the ISO-formatted string
-        datetime_object = datetime.fromisoformat(datetime_object)
-
-        # Format the datetime object as a string with `datetime_string_format'`
-        datetime_string = datetime_object.strftime(datetime_string_format)
-
-        return datetime_string
 
     def get_gcal_shift_data(
             self,
@@ -323,7 +292,7 @@ class GCALData:
             )
 
             # Format the shift start values as strings
-            shift_start_string = self._datetime_to_string(
+            shift_start_string = self.helpers.iso_datetime_to_string(
                 datetime_object=shift_start
             )
 
