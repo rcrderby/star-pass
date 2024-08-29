@@ -10,20 +10,14 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 # Imports - Third-Party
-from dotenv import load_dotenv
 from pandas import DataFrame as df
 
 # Imports - Local
 from . import _defaults
-from ._helpers import Helpers
+from ._helpers import Helpers, load_env_file
 
 # Load environment variables
-ENV_FILE_PATH = _defaults.ENV_FILE_PATH
-FILE_ENCODING = _defaults.FILE_ENCODING
-load_dotenv(
-    dotenv_path=ENV_FILE_PATH,
-    encoding=FILE_ENCODING
-)
+load_env_file()
 
 # Constants
 # Authentication
@@ -52,6 +46,7 @@ FILE_NAME_DATE_TIME_FORMAT = _defaults.FILE_NAME_DATE_TIME_FORMAT
 SHIFT_INFO = _defaults.SHIFT_INFO
 
 # File management data
+FILE_ENCODING = _defaults.FILE_ENCODING
 INPUT_DIR_PATH = _defaults.INPUT_DIR_PATH
 INPUT_FILE_EXTENSION = _defaults.INPUT_FILE_EXTENSION
 

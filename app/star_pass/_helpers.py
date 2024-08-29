@@ -10,6 +10,7 @@ import sys
 
 # Imports - Third-Party
 from dateparser import parse
+from dotenv import load_dotenv
 from requests import exceptions, request, Response
 
 # Imports - Local
@@ -17,8 +18,11 @@ from . import _defaults
 
 # Constants
 DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
+ENV_FILE_PATH = _defaults.ENV_FILE_PATH
+FILE_ENCODING = _defaults.FILE_ENCODING
 
 
+# Class definitions
 class Helpers:
     """ star_pass helper methods. """
 
@@ -252,3 +256,26 @@ class Helpers:
             )
 
         return response
+
+
+# Standalone functions
+def load_env_file() -> bool:
+    """ Load environment variables from an .env file.
+
+        Args:
+            None.
+
+        Returns:
+            load_env_status (bool):
+                Boolean value indicating whether or not the
+                'load_dotenv' function reads environment variables
+                from the specified file.
+    """
+
+    # Load environment variables
+    load_env_status = load_dotenv(
+        dotenv_path=ENV_FILE_PATH,
+        encoding=FILE_ENCODING
+    )
+
+    return load_env_status

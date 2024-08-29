@@ -10,22 +10,16 @@ from typing import Any, Dict
 
 # Imports - Third-Party
 import pandas as pd
-from dotenv import load_dotenv
 from jsonschema import validate, ValidationError
 from pandas.core import frame, series
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 # Imports - Local
 from . import _defaults
-from ._helpers import Helpers
+from ._helpers import Helpers, load_env_file
 
 # Load environment variables
-ENV_FILE_PATH = _defaults.ENV_FILE_PATH
-FILE_ENCODING = _defaults.FILE_ENCODING
-load_dotenv(
-    dotenv_path=ENV_FILE_PATH,
-    encoding=FILE_ENCODING
-)
+load_env_file()
 
 # Constants
 # Authentication
@@ -42,6 +36,7 @@ BASE_AMPLIFY_URL = _defaults.BASE_AMPLIFY_URL
 HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
 # Input and output data file paths
+FILE_ENCODING = _defaults.FILE_ENCODING
 INPUT_DIR_PATH = _defaults.INPUT_DIR_PATH
 INPUT_FILE_EXTENSION = _defaults.INPUT_FILE_EXTENSION
 OUTPUT_DIR_PATH = _defaults.OUTPUT_DIR_PATH
