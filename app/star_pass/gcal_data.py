@@ -193,6 +193,13 @@ class GCALData:
                     Data returned by the Google Calendar service.
         """
 
+        # Display preliminary status message
+        message = '\nReading data from the Google Calendar service...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
+
         # Create a list of shifts for Google Calendar data
         gcal_data = []
 
@@ -238,6 +245,10 @@ class GCALData:
             # Add matching results to `gcal_data`
             gcal_data += response.json().get('items')
 
+        # Display status message
+        message = "done."
+        self.helpers.printer(message=message)
+
         return gcal_data
 
     def process_gcal_data(
@@ -274,6 +285,13 @@ class GCALData:
                         }
                     ]
         """
+
+        # Display preliminary status message
+        message = 'Processing Google Calendar event data...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
 
         # Create a list of shifts from Google Calendar
         gcal_shifts = []
@@ -312,6 +330,10 @@ class GCALData:
                 }
             )
 
+        # Display status message
+        message = "done."
+        self.helpers.printer(message=message)
+
         return gcal_shifts
 
     def generate_shift_csv(
@@ -347,6 +369,13 @@ class GCALData:
                     String of shift data in CSV format.
         """
 
+        # Display preliminary status message
+        message = 'Converting Google Calendar events to Amplify shifts...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
+
         # Create a list of shifts for Amplify
         amplify_shifts = []
 
@@ -378,6 +407,10 @@ class GCALData:
             index=False
         )
 
+        # Display status message
+        message = "done."
+        self.helpers.printer(message=message)
+
         return csv_data
 
     def write_shift_csv_file(
@@ -393,6 +426,13 @@ class GCALData:
             Returns:
                 None.
         """
+
+        # Display preliminary status message
+        message = 'Writing Amplify shift data to a CSV file...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
 
         # Create timestamped file name
         timestamp = datetime.now().strftime(
@@ -414,7 +454,10 @@ class GCALData:
             csv_file.write(csv_data)
 
         # Print file information
-        message = f'\nWrote CSV data to "{file}"'
+        message = (
+            'done.'
+            f'\n\nWrote CSV data to "{file}"'
+        )
         self.helpers.printer(
             message=message
         )
