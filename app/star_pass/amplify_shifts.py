@@ -20,9 +20,10 @@ from . import _defaults
 from ._helpers import Helpers
 
 # Load environment variables
+FILE_ENCODING = _defaults.FILE_ENCODING
 load_dotenv(
     dotenv_path='./.env',
-    encoding='utf-8'
+    encoding=FILE_ENCODING
 )
 
 # Constants
@@ -626,7 +627,7 @@ class CreateShifts:
         with open(
             file=JSON_SCHEMA_SHIFT_FILE,
             mode='rt',
-            encoding='utf-8'
+            encoding=FILE_ENCODING
         ) as json_schema_shifts:
             json_schema_shifts = load(json_schema_shifts)
 

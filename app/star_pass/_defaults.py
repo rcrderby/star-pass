@@ -112,7 +112,7 @@ SHIFT_INFO_FILE = Path.joinpath(
 with open(
     file=SHIFT_INFO_FILE,
     mode='rt',
-    encoding='utf-8'
+    encoding=FILE_ENCODING
 ) as yaml_data:
     SHIFT_INFO = safe_load(
         stream=yaml_data.read()

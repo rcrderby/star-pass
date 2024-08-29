@@ -18,9 +18,10 @@ from . import _defaults
 from ._helpers import Helpers
 
 # Load environment variables
+FILE_ENCODING = _defaults.FILE_ENCODING
 load_dotenv(
     dotenv_path='./.env',
-    encoding='utf-8'
+    encoding=FILE_ENCODING
 )
 
 # Constants
@@ -444,7 +445,7 @@ class GCALData:
         with open(
             file=file,
             mode='wt',
-            encoding='utf-8'
+            encoding=FILE_ENCODING
         ) as csv_file:
             csv_file.write(csv_data)
 
