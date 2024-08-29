@@ -205,7 +205,7 @@ class CreateShifts:
                 None.
         """
 
-        # Print preliminary status message
+        # Display preliminary status message
         message = f'\nReading shift data from "{self.input_file}"...'
         self.helpers.printer(
             message=message,
@@ -256,7 +256,7 @@ class CreateShifts:
                 None.
         """
 
-        # Print preliminary status message
+        # Display preliminary status message
         message = 'Removing duplicate shifts...'
         self.helpers.printer(
             message=message,
@@ -301,7 +301,7 @@ class CreateShifts:
                 None.
         """
 
-        # Print preliminary status message
+        # Display preliminary status message
         message = 'Combining shift start dates and times...'
         self.helpers.printer(
             message=message,
@@ -351,7 +351,7 @@ class CreateShifts:
                 None.
         """
 
-        # Print preliminary status message
+        # Display preliminary status message
         message = 'Formatting shift start values for Amplify compatibility...'
         self.helpers.printer(
             message=message,
@@ -394,7 +394,7 @@ class CreateShifts:
                 None.
         """
 
-        # Print preliminary status message
+        # Display preliminary status message
         message = 'Removing unused column data...'
         self.helpers.printer(
             message=message,
@@ -451,7 +451,7 @@ class CreateShifts:
                 None.
         """
 
-        # Print preliminary status message
+        # Display preliminary status message
         message = 'Grouping shift data by opportunity...'
         self.helpers.printer(
             message=message,
@@ -504,7 +504,7 @@ class CreateShifts:
                 None.
         """
 
-        # Print preliminary status message
+        # Display preliminary status message
         message = 'Organizing shift data for Amplify API compatibility...'
         self.helpers.printer(
             message=message,
@@ -566,7 +566,7 @@ class CreateShifts:
                 None.
         """
 
-        # Print preliminary status message
+        # Display preliminary status message
         message = 'Converting shift data to JSON...'
         self.helpers.printer(
             message=message,
@@ -615,7 +615,7 @@ class CreateShifts:
                 None.
         """
 
-        # Print preliminary status message
+        # Display preliminary status message
         message = 'Validating shift data compliance with JSON Schema...'
         self.helpers.printer(
             message=message,
