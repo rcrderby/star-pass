@@ -3,6 +3,7 @@
 
 # Imports - Python Standard Library
 from pathlib import Path
+import sys
 
 # Imports - Third-Party
 from yaml import safe_load
@@ -16,6 +17,7 @@ RUN_MODES = (
 )
 
 # Data file management
+FILE_ENCODING = sys.getfilesystemencoding()
 # Path relative to this file
 CURRENT_FILE_PATH = Path(__file__).parent
 # 'app' directory path
