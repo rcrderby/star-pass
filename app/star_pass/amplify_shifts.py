@@ -393,6 +393,7 @@ class CreateShifts:
             Returns:
                 None.
         """
+
         # Print preliminary status message
         message = 'Removing unused column data...'
         self.helpers.printer(
@@ -449,6 +450,7 @@ class CreateShifts:
             Returns:
                 None.
         """
+
         # Print preliminary status message
         message = 'Grouping shift data by opportunity...'
         self.helpers.printer(
@@ -501,6 +503,7 @@ class CreateShifts:
             Returns:
                 None.
         """
+
         # Print preliminary status message
         message = 'Organizing shift data for Amplify API compatibility...'
         self.helpers.printer(
@@ -562,6 +565,7 @@ class CreateShifts:
             Returns:
                 None.
         """
+
         # Print preliminary status message
         message = 'Converting shift data to JSON...'
         self.helpers.printer(
@@ -610,6 +614,7 @@ class CreateShifts:
             Returns:
                 None.
         """
+
         # Print preliminary status message
         message = 'Validating shift data compliance with JSON Schema...'
         self.helpers.printer(
