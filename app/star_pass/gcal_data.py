@@ -196,8 +196,7 @@ class GCALData:
         # Display preliminary status message
         message = '\nReading data from the Google Calendar service...'
         self.helpers.printer(
-            message=message,
-            end=''
+            message=message
         )
 
         # Create a list of shifts for Google Calendar data
@@ -244,10 +243,6 @@ class GCALData:
 
             # Add matching results to `gcal_data`
             gcal_data += response.json().get('items')
-
-        # Display status message
-        message = "done."
-        self.helpers.printer(message=message)
 
         return gcal_data
 
@@ -456,7 +451,7 @@ class GCALData:
         # Print file information
         message = (
             'done.'
-            f'\n\nWrote CSV data to "{file}"'
+            f'\n\nWrote CSV data to "{file}"\n'
         )
         self.helpers.printer(
             message=message
