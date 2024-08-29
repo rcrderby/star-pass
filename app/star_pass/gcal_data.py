@@ -10,18 +10,14 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 # Imports - Third-Party
-from dotenv import load_dotenv
 from pandas import DataFrame as df
 
 # Imports - Local
 from . import _defaults
-from ._helpers import Helpers
+from ._helpers import Helpers, load_env_file
 
 # Load environment variables
-load_dotenv(
-    dotenv_path='./.env',
-    encoding='utf-8'
-)
+load_env_file()
 
 # Constants
 # Authentication
@@ -50,6 +46,7 @@ FILE_NAME_DATE_TIME_FORMAT = _defaults.FILE_NAME_DATE_TIME_FORMAT
 SHIFT_INFO = _defaults.SHIFT_INFO
 
 # File management data
+FILE_ENCODING = _defaults.FILE_ENCODING
 INPUT_DIR_PATH = _defaults.INPUT_DIR_PATH
 INPUT_FILE_EXTENSION = _defaults.INPUT_FILE_EXTENSION
 
@@ -193,6 +190,12 @@ class GCALData:
                     Data returned by the Google Calendar service.
         """
 
+        # Display status message
+        message = '\nReading data from the Google Calendar service...'
+        self.helpers.printer(
+            message=message
+        )
+
         # Create a list of shifts for Google Calendar data
         gcal_data = []
 
@@ -275,6 +278,13 @@ class GCALData:
                     ]
         """
 
+        # Display preliminary status message
+        message = 'Processing Google Calendar event data...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
+
         # Create a list of shifts from Google Calendar
         gcal_shifts = []
 
@@ -312,6 +322,10 @@ class GCALData:
                 }
             )
 
+        # Display status message
+        message = "done."
+        self.helpers.printer(message=message)
+
         return gcal_shifts
 
     def generate_shift_csv(
@@ -347,6 +361,13 @@ class GCALData:
                     String of shift data in CSV format.
         """
 
+        # Display preliminary status message
+        message = 'Converting Google Calendar events to Amplify shifts...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
+
         # Create a list of shifts for Amplify
         amplify_shifts = []
 
@@ -378,6 +399,10 @@ class GCALData:
             index=False
         )
 
+        # Display status message
+        message = "done."
+        self.helpers.printer(message=message)
+
         return csv_data
 
     def write_shift_csv_file(
@@ -394,6 +419,13 @@ class GCALData:
                 None.
         """
 
+        # Display preliminary status message
+        message = 'Writing Amplify shift data to a CSV file...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
+
         # Create timestamped file name
         timestamp = datetime.now().strftime(
             format=FILE_NAME_DATE_TIME_FORMAT
@@ -409,12 +441,15 @@ class GCALData:
         with open(
             file=file,
             mode='wt',
-            encoding='utf-8'
+            encoding=FILE_ENCODING
         ) as csv_file:
             csv_file.write(csv_data)
 
         # Print file information
-        message = f'\nWrote CSV data to "{file}"'
+        message = (
+            'done.'
+            f'\n\nWrote CSV data to "{file}"\n'
+        )
         self.helpers.printer(
             message=message
         )

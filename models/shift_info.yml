@@ -26,6 +26,11 @@ petals:
   need_ids:
     - 628862  # NSOs
     - 607810  # SOs
+woj:
+  type: adult
+  need_ids:
+    - 628861  # NSOs
+    - 607934  # SOs
 wreckers:
   type: adult
   need_ids:
