@@ -190,7 +190,7 @@ class GCALData:
                     Data returned by the Google Calendar service.
         """
 
-        # Display preliminary status message
+        # Display status message
         message = '\nReading data from the Google Calendar service...'
         self.helpers.printer(
             message=message
