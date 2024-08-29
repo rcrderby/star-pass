@@ -4,6 +4,7 @@
         "dateparser",
         "dtype",
         "Gcal",
+        "getfilesystemencoding",
         "Hadolint",
         "jsonschema",
         "mechatroner",
