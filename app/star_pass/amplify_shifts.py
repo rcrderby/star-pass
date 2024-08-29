@@ -731,6 +731,12 @@ class CreateShifts:
         # Only send the request if self._json_shift_data['valid'] is True
         if self._json_shift_data.get('valid') is True:
 
+            # Display status message
+            message = '\nSending shift data to Amplify...'
+            self.helpers.printer(
+                message=message
+            )
+
             # Set a default value for 'output_heading'
             output_heading = None
 
