@@ -20,9 +20,10 @@ from . import _defaults
 from ._helpers import Helpers
 
 # Load environment variables
+ENV_FILE_PATH = _defaults.ENV_FILE_PATH
 FILE_ENCODING = _defaults.FILE_ENCODING
 load_dotenv(
-    dotenv_path='./.env',
+    dotenv_path=ENV_FILE_PATH,
     encoding=FILE_ENCODING
 )
 

@@ -18,6 +18,8 @@ RUN_MODES = (
 
 # Data file management
 FILE_ENCODING = sys.getfilesystemencoding()
+# .env file path
+ENV_FILE_PATH = './.env'
 # Path relative to this file
 CURRENT_FILE_PATH = Path(__file__).parent
 # 'app' directory path
