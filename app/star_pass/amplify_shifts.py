@@ -221,13 +221,14 @@ class CreateShifts:
         # Update self._shift_data
         self._shift_data = shift_data
 
-        # Print final status message
+        # Prepare status message
         if self._shift_data is not None:
             message = "done."
-            self.helpers.printer(message=message)
-
         else:
             message = f'\n\n** Error reading data in "{self.input_file}" **\n'
+
+        # Display status message
+        self.helpers.printer(message=message)
 
         return None
 
@@ -268,7 +269,7 @@ class CreateShifts:
             keep='first'
         )
 
-        # Print final status message
+        # Display status message
         message = "done."
         self.helpers.printer(message=message)
 
@@ -301,7 +302,7 @@ class CreateShifts:
         """
 
         # Print preliminary status message
-        message = 'Combining shift dates and times to combined values...'
+        message = 'Combining shift start dates and times...'
         self.helpers.printer(
             message=message,
             end=''
@@ -319,7 +320,7 @@ class CreateShifts:
             axis=1
         )
 
-        # Print final status message
+        # Display status message
         message = "done."
         self.helpers.printer(message=message)
 
@@ -362,7 +363,7 @@ class CreateShifts:
             lambda x: self.helpers.format_date_time(x)
         )
 
-        # Print final status message
+        # Display status message
         message = "done."
         self.helpers.printer(message=message)
 
@@ -405,7 +406,7 @@ class CreateShifts:
             inplace=True
         )
 
-        # Print final status message
+        # Display status message
         message = "done."
         self.helpers.printer(message=message)
 
@@ -460,13 +461,14 @@ class CreateShifts:
             # [KEEP_COLUMNS] excludes the 'need_id' column
             by=[GROUP_BY_COLUMN])[KEEP_COLUMNS]
 
-        # Print final status message
+        # Prepare status message
         if self._grouped_shift_data is not None:
             message = "done."
-            self.helpers.printer(message=message)
-
         else:
             message = '\n\n** Error grouping shift data **\n'
+
+        # Display status message
+        self.helpers.printer(message=message)
 
         return None
 
@@ -515,13 +517,15 @@ class CreateShifts:
             }
         )
 
-        # Print final status message
+        # Prepare status message
         if self._grouped_series is not None:
             message = "done."
-            self.helpers.printer(message=message)
 
         else:
             message = '\n\n** Error organizing shift data **\n'
+
+        # Display status message
+        self.helpers.printer(message=message)
 
         return None
 
@@ -579,13 +583,14 @@ class CreateShifts:
             {'data': self._grouped_series.to_dict()}
         )
 
-        # Print final status message
+        # Prepare status message
         if self._json_shift_data.get('data') is not None:
             message = "done."
-            self.helpers.printer(message=message)
-
         else:
             message = '\n\n** Error converting shift data to JSON **\n'
+
+        # Display status message
+        self.helpers.printer(message=message)
 
         return None
 
@@ -643,13 +648,14 @@ class CreateShifts:
                 }
             )
 
-        # Print final status message
+        # Prepare status message
         if self._json_shift_data.get('valid') is True:
             message = "done."
-
         else:
             message = '\n\n** Error validating shift data **\n'
-            self.helpers.printer(message=message)
+
+        # Display status message
+        self.helpers.printer(message=message)
 
         return None
 
