@@ -7,7 +7,7 @@ from datetime import datetime
 from math import floor
 from os import getenv
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, List
 
 # Imports - Third-Party
 from pandas import DataFrame as df
@@ -30,7 +30,6 @@ BASE_GCAL_HEADERS = copy(_defaults.BASE_HEADERS)
 GCAL_CALENDARS = _defaults.GCAL_CALENDARS
 BASE_GCAL_ENDPOINT = _defaults.BASE_GCAL_ENDPOINT
 BASE_GCAL_PARAMS = _defaults.BASE_GCAL_PARAMS
-GCAL_DEFAULT_QUERY_STRINGS = _defaults.GCAL_DEFAULT_QUERY_STRINGS
 BASE_GCAL_URL = _defaults.BASE_GCAL_URL
 HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
@@ -56,12 +55,17 @@ class GCALData:
     """ Collect and manage Google Calendar data. """
     def __init__(
             self,
+            gcal_name: str,
             auto_prep_data: bool = True,
             **kwargs: Any
     ) -> None:
         """ Class initialization method.
 
             Args:
+                gcal_name (str):
+                    Name of the Google Calendar to request data from.
+                    Example: 'Practices' or 'Events'
+
                 auto_prep_data (bool, optional):
                     Automatically run methods that:
 
@@ -98,6 +102,7 @@ class GCALData:
 
         # Set Class initialization values
         self.auto_prep_data = auto_prep_data
+        self.gcal_name = gcal_name.lower()
 
         # Call methods to initialize the workflow
         if self.auto_prep_data is True:
@@ -148,28 +153,13 @@ class GCALData:
 
     def get_gcal_shift_data(
             self,
-            gcal_name: str,
             timeMin: str,  # pylint: disable=invalid-name
             timeMax: str,  # pylint: disable=invalid-name
-            query_strings: Iterable[str] | str = GCAL_DEFAULT_QUERY_STRINGS,
             timeout: int = HTTP_TIMEOUT
     ) -> Dict[Any, Any]:
         """ Get shift data from the Google Calendar.
 
             Args:
-                gcal_name (str):
-                    Name of the Google Calendar to request data from.
-                    Example: 'Practices' or 'Events'
-
-                query_strings (Iterable[str] | str):
-                    Iterable of query strings or single query string
-                    to pass to the Google Calendar service in order to
-                    filter results for specific events.
-
-                    Example:
-                        Use 'scrimmage' to get scrimmage events and use
-                        'officials' to get officiating practice events.
-
                 timeMin (str):
                     ISO-formatted string start date/time for shifts in
                     calendar query
@@ -184,7 +174,7 @@ class GCALData:
                     Example:
                         '2024-10-10T00:00:00-00:00'
 
-                timeout (int):
+                timeout (int, optional):
                     HTTP timeout.  Default is HTTP_TIMEOUT.
 
             Returns:
@@ -205,10 +195,17 @@ class GCALData:
         method = 'GET'
         headers = BASE_GCAL_HEADERS
 
+        # Check the Google Calendar name for an available match
+        gcal_info = self.helpers.get_gcal_info(
+            gcal_name=self.gcal_name
+        )
+
+        print(f'GCAL_NAME: {self.gcal_name}')
+
         # Construct URL
         url = (
             f'{BASE_GCAL_URL}'
-            f'{gcal_name}'
+            f'{gcal_info.get('gcal_id')}'
             f'{BASE_GCAL_ENDPOINT}'
         )
 
@@ -221,7 +218,7 @@ class GCALData:
         params.update({'key': GCAL_TOKEN})
 
         # Loop over keywords to construct consolidated results
-        for query_string in query_strings:
+        for query_string in gcal_info.get('query_strings'):
 
             # Update the 'q' query string parameter
             params.update({'q': query_string})
