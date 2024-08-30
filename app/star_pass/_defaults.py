@@ -76,13 +76,15 @@ BASE_GCAL_ENDPOINT = '/events'
 GCAL_ORDER_BY = 'startTime'
 GCAL_SHOW_DELETED = 'false'
 GCAL_SINGLE_EVENTS = 'true'
-GCAL_TIME_MIN = '2024-09-08T00:00:00-00:00'
-GCAL_TIME_MAX = '2024-10-10T00:00:00-00:00'
-GCAL_EVENTS_QUERY_STRINGS = ()
-GCAL_PRACTICES_QUERY_STRINGS = (
+GCAL_TIME_MIN = '2024-09-01T00:00:00-00:00'
+GCAL_TIME_MAX = '2024-12-31T00:00:00-00:00'
+GCAL_EVENTS_QUERY_STRINGS = [
+    ''
+]
+GCAL_PRACTICES_QUERY_STRINGS = [
     'officials',
     'scrimmage'
-)
+]
 BASE_GCAL_PARAMS = {
     'orderBy': GCAL_ORDER_BY,
     'q': '',
@@ -95,7 +97,7 @@ GCAL_ID_PREFIX = '/rosecityrollers.com_'
 GCAL_EVENTS_CAL_ID = (
     (
         f'{GCAL_ID_PREFIX}'
-        '2d35383436363030372d363035%40resource.calendar.google.com'
+        '2d35383436363030372d363035@resource.calendar.google.com'
     )
 )
 GCAL_PRACTICES_CAL_ID = (
