@@ -151,7 +151,7 @@ class GCALData:
 
         return shift_length
 
-    def get_gcal_shift_data(
+    def get_gcal_shift_data(  # pylint: disable=too-many-locals
             self,
             timeMin: str,  # pylint: disable=invalid-name
             timeMax: str,  # pylint: disable=invalid-name
@@ -208,11 +208,11 @@ class GCALData:
         if gcal_id is None or query_strings is None:
             # Display an error message and exit
             message = '\n** Invalid Google Calendar Name **\n'
-            self.helpers.print(
+            self.helpers.printer(
                 message=message,
                 file=sys.stderr
             )
-            self.helpers.exit_program(exit_code=1)
+            self.helpers.exit_program(status_code=1)
 
         # Construct URL
         url = (
