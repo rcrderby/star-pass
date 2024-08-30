@@ -388,7 +388,9 @@ class GCALData:
             # Convert 'need_name' to lowercase for searching
             need_name = shift.get('need_name').lower()
             # Loop over keywords to search for a shift match
-            for keyword, shift_info in SHIFT_INFO.items():
+            for keyword, shift_info in SHIFT_INFO.get(
+                self.gcal_name
+            ).items():
                 # Search for 'SHIFT_INFO' keywords in 'need_name'
                 if need_name.find(keyword) != -1:
                     # Loop over the list of 'need_ids' to add shifts for each
