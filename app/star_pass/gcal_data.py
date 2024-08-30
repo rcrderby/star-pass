@@ -148,7 +148,7 @@ class GCALData:
 
     def get_gcal_shift_data(
             self,
-            calendar_name: str,
+            gcal_name: str,
             timeMin: str,  # pylint: disable=invalid-name
             timeMax: str,  # pylint: disable=invalid-name
             query_strings: Iterable[str] | str = GCAL_DEFAULT_QUERY_STRINGS,
@@ -157,8 +157,9 @@ class GCALData:
         """ Get shift data from the Google Calendar.
 
             Args:
-                calendar_name (str):
+                gcal_name (str):
                     Name of the Google Calendar to request data from.
+                    Example: 'Practices' or 'Events'
 
                 query_strings (Iterable[str] | str):
                     Iterable of query strings or single query string
@@ -207,7 +208,7 @@ class GCALData:
         # Construct URL
         url = (
             f'{BASE_GCAL_URL}'
-            f'{calendar_name}'
+            f'{gcal_name}'
             f'{BASE_GCAL_ENDPOINT}'
         )
 
