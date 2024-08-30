@@ -11,7 +11,7 @@ events:
         id: 879609
         slots: 12
       - description: SOs
-        id:  879610
+        id: 879610
         slots: 8
     slots: game
     type: game
@@ -23,7 +23,7 @@ events:
         id: 879609
         slots: 12
       - description: SOs
-        id:  879610
+        id: 879610
         slots: 8
     type: game
   gnr:
@@ -34,7 +34,7 @@ events:
         id: 879609
         slots: 12
       - description: SOs
-        id:  879610
+        id: 879610
         slots: 8
     type: game
   hh:
@@ -45,7 +45,7 @@ events:
         id: 879609
         slots: 12
       - description: SOs
-        id:  879610
+        id: 879610
         slots: 8
     type: game
   hr:
@@ -56,7 +56,7 @@ events:
         id: 879609
         slots: 12
       - description: SOs
-        id:  879610
+        id: 879610
         slots: 8
     type: game
   juniors:
@@ -67,7 +67,7 @@ events:
         id: 905196
         slots: 12
       - description: SOs
-        id:  905197
+        id: 905197
         slots: 8
     type: game
   woj:
@@ -78,7 +78,7 @@ events:
         id: 879609
         slots: 12
       - description: SOs
-        id:  879610
+        id: 879610
         slots: 8
     type: game
   wreckers:
@@ -89,7 +89,7 @@ events:
         id: 879609
         slots: 12
       - description: SOs
-        id:  879610
+        id: 879610
         slots: 8
     type: game
 
@@ -103,7 +103,7 @@ practices:
         id: 628861
         slots: 20
       - description: SOs
-        id:  607934
+        id: 607934
         slots: 20
     type: scrimmage
   buds:
@@ -114,7 +114,7 @@ practices:
         id: 628862
         slots: 20
       - description: SOs
-        id:  607810
+        id: 607810
         slots: 20
     type: scrimmage
   junior officials:
@@ -125,7 +125,7 @@ practices:
         id: 868881
         slots: 20
       - description: Coaches
-        id:  968727
+        id: 968727
         slots: 2
     type: practice
   officials:
@@ -136,7 +136,7 @@ practices:
         id: 773454
         slots: 20
       - description: Coaches
-        id:  892230
+        id: 892230
         slots: 2
     type: practice
   petals:
@@ -147,7 +147,7 @@ practices:
         id: 628862
         slots: 20
       - description: SOs
-        id:  607810
+        id: 607810
         slots: 20
     type: scrimmage
   woj:
@@ -158,7 +158,7 @@ practices:
         id: 628861
         slots: 20
       - description: SOs
-        id:  607934
+        id: 607934
         slots: 20
     type: scrimmage
   wreckers:
@@ -169,7 +169,7 @@ practices:
         id: 628861
         slots: 20
       - description: SOs
-        id:  607934
+        id: 607934
         slots: 20
     type: scrimmage
 
@@ -182,6 +182,6 @@ practices:
         id: ''
         slots: 20
       - description: SOs
-        id:  ''
+        id: ''
         slots: 20
     type: scrimmage
