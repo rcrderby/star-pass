@@ -27,14 +27,11 @@ GCAL_TOKEN = getenv(
 
 # HTTP request configuration
 BASE_GCAL_HEADERS = copy(_defaults.BASE_HEADERS)
-GCAL_PRACTICE_CAL_ID = _defaults.GCAL_PRACTICE_CAL_ID
+GCAL_CALENDARS = _defaults.GCAL_CALENDARS
 BASE_GCAL_ENDPOINT = _defaults.BASE_GCAL_ENDPOINT
 BASE_GCAL_PARAMS = _defaults.BASE_GCAL_PARAMS
 GCAL_DEFAULT_QUERY_STRINGS = _defaults.GCAL_DEFAULT_QUERY_STRINGS
-BASE_GCAL_URL = getenv(
-    key='BASE_GCAL_URL',
-    default=_defaults.BASE_GCAL_URL
-)
+BASE_GCAL_URL = _defaults.BASE_GCAL_URL
 HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
 # Date and time management
@@ -151,6 +148,7 @@ class GCALData:
 
     def get_gcal_shift_data(
             self,
+            calendar_name: str,
             timeMin: str,  # pylint: disable=invalid-name
             timeMax: str,  # pylint: disable=invalid-name
             query_strings: Iterable[str] | str = GCAL_DEFAULT_QUERY_STRINGS,
@@ -159,6 +157,9 @@ class GCALData:
         """ Get shift data from the Google Calendar.
 
             Args:
+                calendar_name (str):
+                    Name of the Google Calendar to request data from.
+
                 query_strings (Iterable[str] | str):
                     Iterable of query strings or single query string
                     to pass to the Google Calendar service in order to
@@ -206,7 +207,7 @@ class GCALData:
         # Construct URL
         url = (
             f'{BASE_GCAL_URL}'
-            f'{GCAL_PRACTICE_CAL_ID}'
+            f'{calendar_name}'
             f'{BASE_GCAL_ENDPOINT}'
         )
 

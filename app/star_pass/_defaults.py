@@ -90,9 +90,23 @@ BASE_GCAL_PARAMS = {
     'timeMin': '',
     'timeMax': '',
 }
-GCAL_PRACTICE_CAL_ID = (
-    '/rosecityrollers.com_313938323232323331%40resource.calendar.google.com'
+GCAL_ID_PREFIX = '/rosecityrollers.com_'
+GCAL_EVENTS_CAL_ID = (
+    (
+        f'{GCAL_ID_PREFIX}'
+        '2d35383436363030372d363035%40resource.calendar.google.com'
+    )
 )
+GCAL_PRACTICES_CAL_ID = (
+    (
+        f'{GCAL_ID_PREFIX}'
+        '313938323232323331%40resource.calendar.google.com'
+    )
+)
+GCAL_CALENDARS = {
+    'events': GCAL_EVENTS_CAL_ID,
+    'practices': GCAL_PRACTICES_CAL_ID
+}
 
 # Amplify CSV input file management
 DROP_COLUMNS = 'need_name, start_date, start_time'
