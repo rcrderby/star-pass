@@ -20,6 +20,7 @@ from . import _defaults
 DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 ENV_FILE_PATH = _defaults.ENV_FILE_PATH
 FILE_ENCODING = _defaults.FILE_ENCODING
+GCAL_CALENDARS = _defaults.GCAL_CALENDARS
 
 
 # Class definitions
@@ -37,6 +38,43 @@ class Helpers:
         """
 
         return None
+
+    def get_gcal_info(
+            self,
+            gcal_name: Dict[str, str]
+    ) -> str:
+        """ Check the validity of a Google Calendar name.
+
+        Display a message and exit if the calendar is not in the list
+        of valid Google Calendars.
+
+            Args:
+                gcal_name (str):
+                    Google Calendar name to check.
+
+            Returns:
+                Dict[str: str]:
+                    Dictionary with the ID of the named Google Calendar
+                    plus the corresponding URL query string(s).
+        """
+
+        # Check for a matching calendar ID
+        try:
+            gcal_id = GCAL_CALENDARS[gcal_name]
+
+        # Display an error and exit if the 'gcal_name' lookup fails
+        except KeyError:
+            message = (
+                f'\n** Error: "{gcal_name}" '
+                'is not a valid calendar name **\n'
+            )
+
+            self.printer(
+                message=message
+            )
+            sys.exit(1)
+
+        return gcal_id
 
     def convert_to_bool(
             self,
