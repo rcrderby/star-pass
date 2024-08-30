@@ -35,7 +35,6 @@ BASE_GCAL_URL = _defaults.BASE_GCAL_URL
 HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
 # Date and time management
-DEFAULT_SLOTS = _defaults.DEFAULT_SLOTS
 DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 FILE_NAME_DATE_TIME_FORMAT = _defaults.FILE_NAME_DATE_TIME_FORMAT
 
@@ -329,7 +328,7 @@ class GCALData:
                     'start_date': start_date,
                     'start_time': start_time,
                     'duration': shift_duration,
-                    'slots': DEFAULT_SLOTS
+                    'slots': ''
                 }
             )
 
@@ -398,7 +397,9 @@ class GCALData:
                         # Create a copy of the current 'shift'
                         new_shift = copy(shift)
                         # Assign a 'need_id' to the new shift
-                        new_shift.update({'need_id': need_id})
+                        new_shift.update({'need_id': need_id.get('id')})
+                        # Assign a number of 'slots' to the new shift
+                        new_shift.update({'slots': need_id.get('slots')})
                         # Add a new shift to the 'amplify_shifts' list
                         amplify_shifts.append(new_shift)
                     # Exit the loop after a successful match
