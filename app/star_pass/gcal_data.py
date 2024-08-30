@@ -8,6 +8,7 @@ from math import floor
 from os import getenv
 from pathlib import Path
 from typing import Any, Dict, List
+import sys
 
 # Imports - Third-Party
 from pandas import DataFrame as df
@@ -200,23 +201,36 @@ class GCALData:
             gcal_name=self.gcal_name
         )
 
+        # Set Google Calendar variables
+        gcal_id = gcal_info.get('gcal_id', None)
+        query_strings = gcal_info.get('query_strings', None)
+
+        # Confirm the Google calendar variables are not None
+        if gcal_id is None or query_strings is None:
+            # Display an error message and exit
+            message = '\n** Invalid Google Calendar Name **\n'
+            self.helpers.print(
+                message=message,
+                file=sys.stderr
+            )
+            self.helpers.exit_program(exit_code=1)
+
         # Construct URL
         url = (
             f'{BASE_GCAL_URL}'
-            f'{gcal_info.get('gcal_id')}'
+            f'{gcal_id}'
             f'{BASE_GCAL_ENDPOINT}'
         )
 
         # Construct base URL parameters
         params = {}
         params.update(**BASE_GCAL_PARAMS)
-        params.update({'q': ''})
         params.update({'timeMin': timeMin})
         params.update({'timeMax': timeMax})
         params.update({'key': GCAL_TOKEN})
 
         # Loop over keywords to construct consolidated results
-        for query_string in gcal_info.get('query_strings'):
+        for query_string in query_strings:
 
             # Update the 'q' query string parameter
             params.update({'q': query_string})
