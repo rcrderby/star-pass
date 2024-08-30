@@ -1,45 +1,122 @@
 # Shift information model for looking up shift IDs based on keywords
 
 ---
-adult:
-  type: adult
-  need_ids:
-    - 628861  # NSOs
-    - 607934  # SOs
-buds:
-  type: junior
-  need_ids:
-    - 628862  # NSOs
-    - 607810  # SOs
-junior officials:
-  type: junior
-  need_ids:
-    - 868881  # Attendees
-    - 968727  # Coaches
-officials:
-  type: adult
-  need_ids:
-    - 773454  # Attendees
-    - 892230  # Coaches
-petals:
-  type: junior
-  need_ids:
-    - 628862  # NSOs
-    - 607810  # SOs
-woj:
-  type: adult
-  need_ids:
-    - 628861  # NSOs
-    - 607934  # SOs
-wreckers:
-  type: adult
-  need_ids:
-    - 628861  # NSOs
-    - 607934  # SOs
+# 'Events' calendar keywords
+events:
+  aoa:
+    description: Axles of Annihilation (AoA) Games
+    group: adult
+    need_ids:
+      - 879609  # NSO
+      - 879610  # SO
+    type: game
+  bnb:
+    description: Break Neck Betties (BNB) Games
+    group: adult
+    need_ids:
+      - 879609  # NSO
+      - 879610  # SO
+    type: game
+  gnr:
+    description: Guns N Rollers (GNR) Games
+    group: adult
+    need_ids:
+      - 879609  # NSO
+      - 879610  # SO
+    type: game
+  hh:
+    description: Heartless Heathers (HH) Games
+    group: adult
+    need_ids:
+      - 879609  # NSO
+      - 879610  # SO
+    type: game
+  hr:
+    description: High Rollers (HR) Games
+    group: adult
+    need_ids:
+      - 879609  # NSO
+      - 879610  # SO
+    type: game
+  juniors:
+    description: Juniors Games
+    group: junior
+    need_ids:
+      - 905196  # NSO
+      - 905197  # SO
+    type: game
+  woj:
+    description: Wheels of Justice (WoJ) Games
+    group: adult
+    need_ids:
+      - 879609  # NSO
+      - 879610  # SO
+    type: game
+  wreckers:
+    description: Wreckers Games
+    group: adult
+    need_ids:
+      - 879609  # NSO
+      - 879610  # SO
+    type: game
 
-# Default keywords to search after not matching standard keywords
-scrimmage:
-  type: default
-  need_ids:
-    - ''  # NSOs
-    - ''  # SOs
+# 'Practices' calendar keywords
+practices:
+  adult:
+    description: Adult Scrimmages
+    group: adult
+    need_ids:
+      - 628861  # NSOs
+      - 607934  # SOs
+    type: scrimmage
+  buds:
+    description: Rose Buds Scrimmages
+    group: junior
+    need_ids:
+      - 628862  # NSOs
+      - 607810  # SOs
+    type: scrimmage
+  junior officials:
+    description: Junior Officiating Practices
+    group: junior
+    need_ids:
+      - 868881  # Attendees
+      - 968727  # Coaches
+    type: practice
+  officials:
+    description: Adult Officiating Practices
+    group: adult
+    need_ids:
+      - 773454  # Attendees
+      - 892230  # Coaches
+    type: practice
+  petals:
+    description: Petals Scrimmages
+    group: junior
+    need_ids:
+      - 628862  # NSOs
+      - 607810  # SOs
+    type: scrimmage
+  woj:
+    description: Wheels of Justice (WoJ) Scrimmages
+    group: adult
+    need_ids:
+      - 628861  # NSOs
+      - 607934  # SOs
+    type: scrimmage
+  wreckers:
+    description: Wreckers Scrimmages
+    group: adult
+    need_ids:
+      - 628861  # NSOs
+      - 607934  # SOs
+    type: scrimmage
+
+  # Default keywords to search after not matching standard keywords
+  scrimmage:
+    description: Unknown Scrimmage
+    group: null
+    need_ids:
+      - ''  # NSOs
+      - ''  # SOs
+    type: scrimmage
