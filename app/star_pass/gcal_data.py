@@ -55,22 +55,21 @@ class GCalShift:
     """ Object to store Google Calendar shift data. """
     def __init__(
             self,
-            need_name: str,
-            need_id: str,
-            start_date: str,
-            start_time: str,
-            duration: str,
-            slots: str,
+            gcal_item: Dict
     ) -> None:
         """ Class initialization method.
 
             Args:
-                need_name (str):
-                    Shift name used to look up shift start and end
-                    offset values.
+                gcal_item (Dict):
+                    Dictionary of raw Google Calendar event data.
 
-                need_id (str):
-                    Amplify Need ID associated with the shift.
+            Attributes:
+                need_name (str):
+                    Shift name used to look up need details.
+
+                need_details (Dict):
+                    Need details including need IDs, number of slots
+                    per need ID, and start and end times offset times.
 
                 start_date (str):
                     Shift start date string formatted as %Y-%m-%d.
@@ -81,23 +80,38 @@ class GCalShift:
                 duration (str):
                     Shift duration in minutes.
 
-                slots (str):
-                    Number of shift slots.
-
-
             Returns:
                 None.
         """
 
-        # Set argument values
-        self.need_name = need_name
-        self.need_id = need_id
-        self.start_date = start_date
-        self.start_time = start_time
-        self.duration = duration
-        self.slots = slots
+        # Set initial attribute values
+        self.need_name = gcal_item.get('summary')
+        self.need_details = None
+        self.start_date = gcal_item.get('start').get('datetime')
+        self.start_time = gcal_item.get('').get('datetime')
+        self.duration = None
 
         return None
+
+    def _lookup_shift(self):
+        """ Look up shift details.
+
+        Attempt to match the Google Calendar item name (summary) to
+        keywords in a data model.
+
+            Args:
+                None.
+
+            Returns.
+                None.
+        """
+        # Get shift details (value associated with the shift keyword)
+
+        # Parse the start date and time
+        # Calculate the shift duration with offset values
+
+        return None
+
 
 class GCALData:
     """ Collect and manage Google Calendar data. """
@@ -344,6 +358,10 @@ class GCALData:
 
         # Add Google Calendar data to 'gcal_shifts'
         for item in gcal_data:
+
+            # Convert each Google Calendar item to an GCalShift object
+            gcal_shift = GCalShift(**item)
+
             # Get the shift name, start, and end values
             shift_name = item['summary']
             shift_start = item['start']['dateTime']
