@@ -200,8 +200,6 @@ class GCALData:
             gcal_name=self.gcal_name
         )
 
-        print(f'GCAL_NAME: {self.gcal_name}')
-
         # Construct URL
         url = (
             f'{BASE_GCAL_URL}'
