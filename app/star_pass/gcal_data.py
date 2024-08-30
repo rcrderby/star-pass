@@ -39,7 +39,7 @@ DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 FILE_NAME_DATE_TIME_FORMAT = _defaults.FILE_NAME_DATE_TIME_FORMAT
 
 # Shift lookup data
-SHIFT_INFO = _defaults.SHIFT_INFO
+SHIFTS_INFO = _defaults.SHIFTS_INFO
 
 # File management data
 FILE_ENCODING = _defaults.FILE_ENCODING
@@ -85,10 +85,10 @@ class GCalShift:
         """
 
         # Set initial attribute values
-        self.need_name = gcal_item.get('summary')
+        self.need_name = gcal_item['summary']
         self.need_details = None
-        self.start_date = gcal_item.get('start').get('datetime')
-        self.start_time = gcal_item.get('').get('datetime')
+        self.item_start = gcal_item['start']['dataTime']
+        self.item_end = gcal_item['start']['dataTime']
         self.duration = None
 
         return None
@@ -449,7 +449,7 @@ class GCALData:
             # Convert 'need_name' to lowercase for searching
             need_name = shift.get('need_name').lower()
             # Loop over keywords to search for a shift match
-            for keyword, shift_info in SHIFT_INFO.get(
+            for keyword, shift_info in SHIFTS_INFO.get(
                 self.gcal_name
             ).items():
                 # Search for 'SHIFT_INFO' keywords in 'need_name'
