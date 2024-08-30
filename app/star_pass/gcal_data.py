@@ -51,6 +51,54 @@ DEFAULT_GCAL_TIME_MIN = _defaults.GCAL_TIME_MIN
 DEFAULT_GCAL_TIME_MAX = _defaults.GCAL_TIME_MAX
 
 
+class GCalShift:
+    """ Object to store Google Calendar shift data. """
+    def __init__(
+            self,
+            need_name: str,
+            need_id: str,
+            start_date: str,
+            start_time: str,
+            duration: str,
+            slots: str,
+    ) -> None:
+        """ Class initialization method.
+
+            Args:
+                need_name (str):
+                    Shift name used to look up shift start and end
+                    offset values.
+
+                need_id (str):
+                    Amplify Need ID associated with the shift.
+
+                start_date (str):
+                    Shift start date string formatted as %Y-%m-%d.
+
+                start_time (str):
+                    Shift start time string formatted as %H:%M.
+
+                duration (str):
+                    Shift duration in minutes.
+
+                slots (str):
+                    Number of shift slots.
+
+
+            Returns:
+                None.
+        """
+
+        # Set argument values
+        self.need_name = need_name
+        self.need_id = need_id
+        self.start_date = start_date
+        self.start_time = start_time
+        self.duration = duration
+        self.slots = slots
+
+        return None
+
 class GCALData:
     """ Collect and manage Google Calendar data. """
     def __init__(
@@ -122,28 +170,17 @@ class GCALData:
 
         return None
 
-    def _get_shift_length(
+    def _create_gcal_shift(
             self,
-            shift_name: str,
-            shift_start: datetime,
-            shift_end: datetime
+            gcal_item: Dict[Dict[str, str]]
     ) -> int:
         """ Determine the length of a shift.
 
             Offset the start and end times if necessary.
 
             Args:
-                shift_name (str):
-                    Shift name used to look up shift start and end
-                    offset values.
-
-                shift_start (datetime):
-                    datetime.datetime object with the shift start date
-                    and time.
-
-                shift_end (datetime):
-                    datetime.datetime object with the shift end date
-                    and time.
+                gcal_item (Dict[str, str]):
+                    Individual Google Calendar item with shift data.
 
             Returns:
                 shift_length (int):
