@@ -41,7 +41,7 @@ class Helpers:
 
     def exit_program(
             self,
-            exit_code: int = 0
+            status_code: int = 0
     ):
         """ Display a message and exit.
 
@@ -55,7 +55,7 @@ class Helpers:
         """
 
         # Exit the program
-        sys.exit(exit_code)
+        sys.exit(status_code)
 
     def get_gcal_info(
             self,
