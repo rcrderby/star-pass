@@ -78,7 +78,8 @@ GCAL_SHOW_DELETED = 'false'
 GCAL_SINGLE_EVENTS = 'true'
 GCAL_TIME_MIN = '2024-09-08T00:00:00-00:00'
 GCAL_TIME_MAX = '2024-10-10T00:00:00-00:00'
-GCAL_DEFAULT_QUERY_STRINGS = (
+GCAL_EVENTS_QUERY_STRINGS = ()
+GCAL_PRACTICES_QUERY_STRINGS = (
     'officials',
     'scrimmage'
 )
@@ -104,8 +105,14 @@ GCAL_PRACTICES_CAL_ID = (
     )
 )
 GCAL_CALENDARS = {
-    'events': GCAL_EVENTS_CAL_ID,
-    'practices': GCAL_PRACTICES_CAL_ID
+    'events': {
+        'gcal_id': GCAL_EVENTS_CAL_ID,
+        'query_strings': GCAL_EVENTS_QUERY_STRINGS
+    },
+    'practices': {
+        'gcal_id': GCAL_PRACTICES_CAL_ID,
+        'query_strings': GCAL_PRACTICES_QUERY_STRINGS
+    }
 }
 
 # Amplify CSV input file management
