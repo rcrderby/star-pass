@@ -20,6 +20,7 @@ from . import _defaults
 DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 ENV_FILE_PATH = _defaults.ENV_FILE_PATH
 FILE_ENCODING = _defaults.FILE_ENCODING
+GCAL_CALENDARS = _defaults.GCAL_CALENDARS
 
 
 # Class definitions
@@ -37,6 +38,63 @@ class Helpers:
         """
 
         return None
+
+    def exit_program(
+            self,
+            status_code: int = 0
+    ):
+        """ Display a message and exit.
+
+            Args:
+                status_code (int, optional):
+                    System exit code passed to the 'sys.exit' method.
+
+            Returns:
+                N/A, `sys.exit` occurs before the method returns a
+                value.
+        """
+
+        # Exit the program
+        sys.exit(status_code)
+
+    def get_gcal_info(
+            self,
+            gcal_name: Dict[str, str]
+    ) -> str:
+        """ Check the validity of a Google Calendar name.
+
+        Display a message and exit if the calendar is not in the list
+        of valid Google Calendars.
+
+            Args:
+                gcal_name (str):
+                    Google Calendar name to check.
+
+            Returns:
+                Dict[str: str]:
+                    Dictionary with the ID of the named Google Calendar
+                    plus the corresponding URL query string(s).
+        """
+
+        # Check for a matching calendar ID
+        try:
+            gcal_id = GCAL_CALENDARS[gcal_name]
+
+        # Display an error and exit if the 'gcal_name' lookup fails
+        except KeyError:
+            message = (
+                f'\n** Error: "{gcal_name}" '
+                'is not a valid calendar name **\n'
+            )
+
+            # Display the error message and exit
+            self.printer(
+                message=message,
+                file=sys.stderr
+            )
+            self.exit_program(status_code=1)
+
+        return gcal_id
 
     def convert_to_bool(
             self,
@@ -137,6 +195,7 @@ class Helpers:
             self,
             message: Any,
             end: str = '\n',
+            file=sys.stdout,
             pretty_print: bool = False
     ) -> None:
         """ Message printer.
@@ -147,11 +206,16 @@ class Helpers:
 
                 end (str):
                     String appended at the end of the message.  Default
-                    is a new line.  Ignored when pretty_print is True.
+                    is a new line.  Ignored when 'pretty_print' is
+                    'True'.
+
+                file (_io.TextIOWrapper, optional):
+                    Target for the output stream.  Default
+                    'sys.stdout'.
 
                 pretty_print (bool):
-                    Display the output using pprint.pprint.  Default is
-                    False.
+                    Display the output using 'pprint.pprint'.  Default
+                    is 'False'.
 
             Returns:
                 None.
@@ -162,7 +226,8 @@ class Helpers:
             # Standard print
             print(
                 message,
-                end=end
+                end=end,
+                file=file
             )
         else:
             # Pretty Print
@@ -211,11 +276,12 @@ class Helpers:
             response = request(**api_request_data)
         # Handle TCP Connection Errors
         except exceptions.ConnectionError as error:
-            # Display error text and exit
+            # Display the error text and exit
             self.printer(
-                message=repr(f'{error!r}')
+                message=repr(f'{error!r}'),
+                file=sys.stderr
             )
-            sys.exit(1)
+            self.exit_program(status_code=1)
 
         # Check for HTTP errors
         try:
@@ -224,11 +290,12 @@ class Helpers:
 
         # Handle non-ok HTTP responses
         except exceptions.HTTPError as error:
-            # Display error text and exit
+            # Display the error text and exit
             self.printer(
-                message=repr(f'{error!r}')
+                message=repr(f'{error!r}'),
+                file=sys.stderr
             )
-            sys.exit(1)
+            self.exit_program(status_code=1)
 
         # Display the HTTP request status
         if display_request_status is True:

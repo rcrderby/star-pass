@@ -56,7 +56,7 @@ KEEP_COLUMNS = _defaults.KEEP_COLUMNS.split(sep=', ')
 
 
 # Class definitions
-class CreateShifts:
+class CreateShifts:  # pylint: disable=too-many-instance-attributes
     """ CreateShifts base class object. """
 
     def __init__(

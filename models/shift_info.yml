@@ -1,45 +1,187 @@
 # Shift information model for looking up shift IDs based on keywords
 
 ---
-adult:
-  type: adult
-  need_ids:
-    - 628861  # NSOs
-    - 607934  # SOs
-buds:
-  type: junior
-  need_ids:
-    - 628862  # NSOs
-    - 607810  # SOs
-junior officials:
-  type: junior
-  need_ids:
-    - 868881  # Attendees
-    - 968727  # Coaches
-officials:
-  type: adult
-  need_ids:
-    - 773454  # Attendees
-    - 892230  # Coaches
-petals:
-  type: junior
-  need_ids:
-    - 628862  # NSOs
-    - 607810  # SOs
-woj:
-  type: adult
-  need_ids:
-    - 628861  # NSOs
-    - 607934  # SOs
-wreckers:
-  type: adult
-  need_ids:
-    - 628861  # NSOs
-    - 607934  # SOs
+# 'Events' calendar keywords
+events:
+  aoa:
+    description: Axles of Annihilation (AoA) Games
+    group: adult
+    need_ids:
+      - description: NSOs
+        id: 879609
+        slots: 12
+      - description: SOs
+        id: 879610
+        slots: 8
+    slots: game
+    type: game
+  bnb:
+    description: Break Neck Betties (BNB) Games
+    group: adult
+    need_ids:
+      - description: NSOs
+        id: 879609
+        slots: 12
+      - description: SOs
+        id: 879610
+        slots: 8
+    type: game
+  gnr:
+    description: Guns N Rollers (GNR) Games
+    group: adult
+    need_ids:
+      - description: NSOs
+        id: 879609
+        slots: 12
+      - description: SOs
+        id: 879610
+        slots: 8
+    type: game
+  hh:
+    description: Heartless Heathers (HH) Games
+    group: adult
+    need_ids:
+      - description: NSOs
+        id: 879609
+        slots: 12
+      - description: SOs
+        id: 879610
+        slots: 8
+    type: game
+  hr:
+    description: High Rollers (HR) Games
+    group: adult
+    need_ids:
+      - description: NSOs
+        id: 879609
+        slots: 12
+      - description: SOs
+        id: 879610
+        slots: 8
+    type: game
+  juniors:
+    description: Juniors Games
+    group: junior
+    need_ids:
+      - description: NSOs
+        id: 905196
+        slots: 12
+      - description: SOs
+        id: 905197
+        slots: 8
+    type: game
+  woj:
+    description: Wheels of Justice (WoJ) Games
+    group: adult
+    need_ids:
+      - description: NSOs
+        id: 879609
+        slots: 12
+      - description: SOs
+        id: 879610
+        slots: 8
+    type: game
+  wreckers:
+    description: Wreckers Games
+    group: adult
+    need_ids:
+      - description: NSOs
+        id: 879609
+        slots: 12
+      - description: SOs
+        id: 879610
+        slots: 8
+    type: game
 
-# Default keywords to search after not matching standard keywords
-scrimmage:
-  type: default
-  need_ids:
-    - ''  # NSOs
-    - ''  # SOs
+# 'Practices' calendar keywords
+practices:
+  adult:
+    description: Adult Scrimmages
+    group: adult
+    need_ids:
+      - description: NSOs
+        id: 628861
+        slots: 20
+      - description: SOs
+        id: 607934
+        slots: 20
+    type: scrimmage
+  buds:
+    description: Rose Buds Scrimmages
+    group: junior
+    need_ids:
+      - description: NSOs
+        id: 628862
+        slots: 20
+      - description: SOs
+        id: 607810
+        slots: 20
+    type: scrimmage
+  junior officials:
+    description: Junior Officiating Practices
+    group: junior
+    need_ids:
+      - description: Attendees
+        id: 868881
+        slots: 20
+      - description: Coaches
+        id: 968727
+        slots: 2
+    type: practice
+  officials:
+    description: Adult Officiating Practices
+    group: adult
+    need_ids:
+      - description: Attendees
+        id: 773454
+        slots: 20
+      - description: Coaches
+        id: 892230
+        slots: 2
+    type: practice
+  petals:
+    description: Petals Scrimmages
+    group: junior
+    need_ids:
+      - description: NSOs
+        id: 628862
+        slots: 20
+      - description: SOs
+        id: 607810
+        slots: 20
+    type: scrimmage
+  woj:
+    description: Wheels of Justice (WoJ) Scrimmages
+    group: adult
+    need_ids:
+      - description: NSOs
+        id: 628861
+        slots: 20
+      - description: SOs
+        id: 607934
+        slots: 20
+    type: scrimmage
+  wreckers:
+    description: Wreckers Scrimmages
+    group: adult
+    need_ids:
+      - description: NSOs
+        id: 628861
+        slots: 20
+      - description: SOs
+        id: 607934
+        slots: 20
+    type: scrimmage
+
+  # Default keywords to search after not matching standard keywords
+  scrimmage:
+    description: Unknown Scrimmage
+    group: null
+    need_ids:
+      - description: NSOs
+        id: ''
+        slots: 20
+      - description: SOs
+        id: ''
+        slots: 20
+    type: scrimmage

@@ -7,7 +7,8 @@ from datetime import datetime
 from math import floor
 from os import getenv
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, List
+import sys
 
 # Imports - Third-Party
 from pandas import DataFrame as df
@@ -27,18 +28,13 @@ GCAL_TOKEN = getenv(
 
 # HTTP request configuration
 BASE_GCAL_HEADERS = copy(_defaults.BASE_HEADERS)
-GCAL_PRACTICE_CAL_ID = _defaults.GCAL_PRACTICE_CAL_ID
+GCAL_CALENDARS = _defaults.GCAL_CALENDARS
 BASE_GCAL_ENDPOINT = _defaults.BASE_GCAL_ENDPOINT
 BASE_GCAL_PARAMS = _defaults.BASE_GCAL_PARAMS
-GCAL_DEFAULT_QUERY_STRINGS = _defaults.GCAL_DEFAULT_QUERY_STRINGS
-BASE_GCAL_URL = getenv(
-    key='BASE_GCAL_URL',
-    default=_defaults.BASE_GCAL_URL
-)
+BASE_GCAL_URL = _defaults.BASE_GCAL_URL
 HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
 # Date and time management
-DEFAULT_SLOTS = _defaults.DEFAULT_SLOTS
 DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 FILE_NAME_DATE_TIME_FORMAT = _defaults.FILE_NAME_DATE_TIME_FORMAT
 
@@ -59,12 +55,17 @@ class GCALData:
     """ Collect and manage Google Calendar data. """
     def __init__(
             self,
+            gcal_name: str,
             auto_prep_data: bool = True,
             **kwargs: Any
     ) -> None:
         """ Class initialization method.
 
             Args:
+                gcal_name (str):
+                    Name of the Google Calendar to request data from.
+                    Example: 'Practices' or 'Events'
+
                 auto_prep_data (bool, optional):
                     Automatically run methods that:
 
@@ -101,6 +102,7 @@ class GCALData:
 
         # Set Class initialization values
         self.auto_prep_data = auto_prep_data
+        self.gcal_name = gcal_name.lower()
 
         # Call methods to initialize the workflow
         if self.auto_prep_data is True:
@@ -149,25 +151,15 @@ class GCALData:
 
         return shift_length
 
-    def get_gcal_shift_data(
+    def get_gcal_shift_data(  # pylint: disable=too-many-locals
             self,
             timeMin: str,  # pylint: disable=invalid-name
             timeMax: str,  # pylint: disable=invalid-name
-            query_strings: Iterable[str] | str = GCAL_DEFAULT_QUERY_STRINGS,
             timeout: int = HTTP_TIMEOUT
     ) -> Dict[Any, Any]:
         """ Get shift data from the Google Calendar.
 
             Args:
-                query_strings (Iterable[str] | str):
-                    Iterable of query strings or single query string
-                    to pass to the Google Calendar service in order to
-                    filter results for specific events.
-
-                    Example:
-                        Use 'scrimmage' to get scrimmage events and use
-                        'officials' to get officiating practice events.
-
                 timeMin (str):
                     ISO-formatted string start date/time for shifts in
                     calendar query
@@ -182,7 +174,7 @@ class GCALData:
                     Example:
                         '2024-10-10T00:00:00-00:00'
 
-                timeout (int):
+                timeout (int, optional):
                     HTTP timeout.  Default is HTTP_TIMEOUT.
 
             Returns:
@@ -203,17 +195,35 @@ class GCALData:
         method = 'GET'
         headers = BASE_GCAL_HEADERS
 
+        # Check the Google Calendar name for an available match
+        gcal_info = self.helpers.get_gcal_info(
+            gcal_name=self.gcal_name
+        )
+
+        # Set Google Calendar variables
+        gcal_id = gcal_info.get('gcal_id', None)
+        query_strings = gcal_info.get('query_strings', None)
+
+        # Confirm the Google calendar variables are not None
+        if gcal_id is None or query_strings is None:
+            # Display an error message and exit
+            message = '\n** Invalid Google Calendar Name **\n'
+            self.helpers.printer(
+                message=message,
+                file=sys.stderr
+            )
+            self.helpers.exit_program(status_code=1)
+
         # Construct URL
         url = (
             f'{BASE_GCAL_URL}'
-            f'{GCAL_PRACTICE_CAL_ID}'
+            f'{gcal_id}'
             f'{BASE_GCAL_ENDPOINT}'
         )
 
         # Construct base URL parameters
         params = {}
         params.update(**BASE_GCAL_PARAMS)
-        params.update({'q': ''})
         params.update({'timeMin': timeMin})
         params.update({'timeMax': timeMax})
         params.update({'key': GCAL_TOKEN})
@@ -318,7 +328,7 @@ class GCALData:
                     'start_date': start_date,
                     'start_time': start_time,
                     'duration': shift_duration,
-                    'slots': DEFAULT_SLOTS
+                    'slots': ''
                 }
             )
 
@@ -377,7 +387,9 @@ class GCALData:
             # Convert 'need_name' to lowercase for searching
             need_name = shift.get('need_name').lower()
             # Loop over keywords to search for a shift match
-            for keyword, shift_info in SHIFT_INFO.items():
+            for keyword, shift_info in SHIFT_INFO.get(
+                self.gcal_name
+            ).items():
                 # Search for 'SHIFT_INFO' keywords in 'need_name'
                 if need_name.find(keyword) != -1:
                     # Loop over the list of 'need_ids' to add shifts for each
@@ -385,7 +397,9 @@ class GCALData:
                         # Create a copy of the current 'shift'
                         new_shift = copy(shift)
                         # Assign a 'need_id' to the new shift
-                        new_shift.update({'need_id': need_id})
+                        new_shift.update({'need_id': need_id.get('id')})
+                        # Assign a number of 'slots' to the new shift
+                        new_shift.update({'slots': need_id.get('slots')})
                         # Add a new shift to the 'amplify_shifts' list
                         amplify_shifts.append(new_shift)
                     # Exit the loop after a successful match
