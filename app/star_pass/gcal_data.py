@@ -124,19 +124,26 @@ class GCALData:
 
     def _get_shift_length(
             self,
+            shift_name: str,
             shift_start: datetime,
             shift_end: datetime
     ) -> int:
         """ Determine the length of a shift.
 
+            Offset the start and end times if necessary.
+
             Args:
+                shift_name (str):
+                    Shift name used to look up shift start and end
+                    offset values.
+
                 shift_start (datetime):
-                    datetime.datetime object with the shift start date and
-                    time.
+                    datetime.datetime object with the shift start date
+                    and time.
 
                 shift_end (datetime):
-                    datetime.datetime object with the shift end date and
-                    time.
+                    datetime.datetime object with the shift end date
+                    and time.
 
             Returns:
                 shift_length (int):
