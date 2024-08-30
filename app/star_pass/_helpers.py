@@ -39,6 +39,24 @@ class Helpers:
 
         return None
 
+    def exit_program(
+            self,
+            exit_code: int = 0
+    ):
+        """ Display a message and exit.
+
+            Args:
+                status_code (int, optional):
+                    System exit code passed to the 'sys.exit' method.
+
+            Returns:
+                N/A, `sys.exit` occurs before the method returns a
+                value.
+        """
+
+        # Exit the program
+        sys.exit(exit_code)
+
     def get_gcal_info(
             self,
             gcal_name: Dict[str, str]
@@ -69,10 +87,12 @@ class Helpers:
                 'is not a valid calendar name **\n'
             )
 
+            # Display the error message and exit
             self.printer(
-                message=message
+                message=message,
+                file=sys.stderr
             )
-            sys.exit(1)
+            self.exit_program(status_code=1)
 
         return gcal_id
 
@@ -175,6 +195,7 @@ class Helpers:
             self,
             message: Any,
             end: str = '\n',
+            file=sys.stdout,
             pretty_print: bool = False
     ) -> None:
         """ Message printer.
@@ -185,11 +206,16 @@ class Helpers:
 
                 end (str):
                     String appended at the end of the message.  Default
-                    is a new line.  Ignored when pretty_print is True.
+                    is a new line.  Ignored when 'pretty_print' is
+                    'True'.
+
+                file (_io.TextIOWrapper, optional):
+                    Target for the output stream.  Default
+                    'sys.stdout'.
 
                 pretty_print (bool):
-                    Display the output using pprint.pprint.  Default is
-                    False.
+                    Display the output using 'pprint.pprint'.  Default
+                    is 'False'.
 
             Returns:
                 None.
@@ -200,7 +226,8 @@ class Helpers:
             # Standard print
             print(
                 message,
-                end=end
+                end=end,
+                file=file
             )
         else:
             # Pretty Print
@@ -249,11 +276,12 @@ class Helpers:
             response = request(**api_request_data)
         # Handle TCP Connection Errors
         except exceptions.ConnectionError as error:
-            # Display error text and exit
+            # Display the error text and exit
             self.printer(
-                message=repr(f'{error!r}')
+                message=repr(f'{error!r}'),
+                file=sys.stderr
             )
-            sys.exit(1)
+            self.exit_program(status_code=1)
 
         # Check for HTTP errors
         try:
@@ -262,11 +290,12 @@ class Helpers:
 
         # Handle non-ok HTTP responses
         except exceptions.HTTPError as error:
-            # Display error text and exit
+            # Display the error text and exit
             self.printer(
-                message=repr(f'{error!r}')
+                message=repr(f'{error!r}'),
+                file=sys.stderr
             )
-            sys.exit(1)
+            self.exit_program(status_code=1)
 
         # Display the HTTP request status
         if display_request_status is True:
