@@ -78,7 +78,7 @@ class GCALShift:
                     start_time (str):
                         Shift start time string formatted as %H:%M.
 
-                    duration (str):
+                    duration (int):
                         Shift duration in minutes.
 
             Returns:
@@ -346,23 +346,7 @@ class GCALData:
 
             Returns:
                 gcal_shifts (List[GCALShift]:
-                    List of GCALShift objects in the format:
-                    [
-                        need_name: <summary>,
-                        need_id: ''
-                        start_date: split of <start[dateTime]>,
-                        start_time: split of <start[dateTime]>
-                        duration: <end[dateTime]>-<start[dateTime]>,
-                        slots: ''
-                        ,
-                        need_name: <summary>,
-                        need_id: ''
-                        start_date: split of <start[dateTime]>,
-                        start_time: split of <start[dateTime]>
-                        duration: <end[dateTime]>-<start[dateTime]>,
-                        slots: ''
-                    }
-                    ]
+                    List of GCALShift objects.
         """
 
         # Display preliminary status message
