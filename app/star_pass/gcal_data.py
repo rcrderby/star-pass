@@ -91,6 +91,24 @@ class GCALShift:
         return None
 
 
+class AmplifyShift:
+    """ TODO """
+    def __init__(
+            self,
+            gcal_shift: GCALShift
+    ) -> None:
+        """ TODO """
+
+        self.need_name = gcal_shift.need_name
+        self.need_id = None
+        self.start_date = None
+        self.start_time = None
+        self.duration = None
+        self.slots = None
+
+        return None
+
+
 class GCALData:
     """ Collect and manage Google Calendar data. """
     def __init__(
