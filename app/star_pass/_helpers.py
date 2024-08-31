@@ -22,6 +22,7 @@ DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 ENV_FILE_PATH = _defaults.ENV_FILE_PATH
 FILE_ENCODING = _defaults.FILE_ENCODING
 GCAL_CALENDARS = _defaults.GCAL_CALENDARS
+SHIFTS_INFO = _defaults.SHIFTS_INFO
 
 
 # Class definitions
@@ -237,18 +238,43 @@ class Helpers:
         return None
 
     def search_shift_info(
-            self
-    ) -> None:
+            self,
+            gcal_name: str,
+            need_name: str
+    ) -> Dict:
         """ Search the shift info data model.
 
             Args:
-                None.
+                gcal_name (str);
+                    Google Calendar name to search.  For example:
+                    'Events' or 'Practices'.
+
+                need_name (str);
+                    Google Calendar event name to search for.  For
+                    example: 'Adult Scrimmage' or 'Juniors Game'.
 
             Returns:
-                None.
+                need_details (Dict):
+                    Dictionary object with need details for the best
+                    keyword search result match.
         """
 
-        return None
+        # Create a list of keywords to search
+        keywords = list(
+            SHIFTS_INFO['calendar'][gcal_name]['keywords'].keys()
+        )
+
+        # Search for the best match of 'need_name'
+        best_match = process.extractOne(
+            query=need_name,
+            choices=keywords,
+            scorer=fuzz.token_sort_ratio
+        )
+
+        # Get need details for the best match
+        need_details = SHIFTS_INFO['calendar'][gcal_name][best_match]
+
+        return need_details
 
     def send_api_request(
             self,
