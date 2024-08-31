@@ -159,7 +159,7 @@ class GCALData:
                 timeMin=DEFAULT_GCAL_TIME_MIN,
                 timeMax=DEFAULT_GCAL_TIME_MAX
             )
-            self.gcal_shifts = self.process_gcal_data(
+            self.gcal_shifts = self.process_gcal_shift_data(
                 gcal_shift_data=self.gcal_shift_data
             )
             self.csv_data = self.generate_shift_csv(
