@@ -195,11 +195,6 @@ class GCALData:
             gcal_name=gcal_shift.need_name
         )
 
-        # Determine the number of shift minutes rounded to the nearest minute
-        gcal_shift.duration = self._calculate_shift_duration(
-            gcal_shift=gcal_shift
-        )
-
         return gcal_shift
 
     def _calculate_shift_duration(
@@ -218,6 +213,11 @@ class GCALData:
                 shift_duration (int):
                     Length of a shift in minutes
         """
+
+        # Determine the number of shift minutes rounded to the nearest minute
+        # gcal_shift.duration = self._calculate_shift_duration(
+        #     gcal_shift=gcal_shift
+        # )
 
         # Calculate shift start and end times with any specified offset(s)
         start = gcal_shift.item_start.minute + gcal_shift.need_details.get(
