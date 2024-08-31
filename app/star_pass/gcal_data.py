@@ -383,19 +383,21 @@ class GCALData:
             # start_date, start_time = shift_start_string.split(
             #     sep=' '
             # )
-            # TODO End
 
             # Split the start date and start time values to separate variables
-            gcal_shifts.append(
-                {
-                    'need_name': shift_name,
-                    'need_id': '',
-                    'start_date': start_date,
-                    'start_time': start_time,
-                    'duration': shift_duration,
-                    'slots': ''
-                }
-            )
+            # gcal_shifts.append(
+            #     {
+            #         'need_name': shift_name,
+            #         'need_id': '',
+            #         'start_date': start_date,
+            #         'start_time': start_time,
+            #         'duration': shift_duration,
+            #         'slots': ''
+            #     }
+            # )
+            # TODO End
+
+            gcal_shifts.append(gcal_shift)
 
         # Display status message
         message = "done."
