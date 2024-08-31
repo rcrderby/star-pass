@@ -235,6 +235,20 @@ class Helpers:
 
         return None
 
+    def search_shift_info(
+            self
+    ) -> None:
+        """ Search the shift info data model.
+
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        return None
+
     def send_api_request(
             self,
             api_request_data: Dict,
