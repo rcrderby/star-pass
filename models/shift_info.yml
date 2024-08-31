@@ -209,6 +209,24 @@ calendar:
             slots: 8
         type: game
 
+      # Default value if a keyword search fails
+      'default':
+        description: Unknown Game
+        group: null
+        initiative: officiating
+        need_ids:
+          - description: NSOs
+            id: ''
+            offset_start: 0
+            offset_end: 0
+            slots: 12
+          - description: SOs
+            id: ''
+            offset_start: 0
+            offset_end: 0
+            slots: 8
+        type: game
+
   # 'Practices' calendar keywords
   practices:
     description: Calendar with scrimmages and practices information
@@ -333,8 +351,8 @@ calendar:
             slots: 20
         type: scrimmage
 
-      # Default keywords to search after not matching standard keywords
-      'scrimmage':
+      # Default value if a keyword search fails
+      'default':
         description: Unknown Scrimmage
         group: null
         initiative: officiating
