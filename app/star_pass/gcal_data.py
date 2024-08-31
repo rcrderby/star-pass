@@ -63,22 +63,23 @@ class GCalShift:
                 gcal_item (Dict):
                     Dictionary of raw Google Calendar event data.
 
-            Attributes:
-                need_name (str):
-                    Shift name used to look up need details.
+                 Attributes:
+                    need_name (str):
+                        Shift name used to look up need details.
 
-                need_details (Dict):
-                    Need details including need IDs, number of slots
-                    per need ID, and start and end times offset times.
+                    need_details (Dict):
+                        Need details including need IDs, number of
+                        slots per need ID, and start and end times
+                        offset times.
 
-                start_date (str):
-                    Shift start date string formatted as %Y-%m-%d.
+                    start_date (str):
+                        Shift start date string formatted as %Y-%m-%d.
 
-                start_time (str):
-                    Shift start time string formatted as %H:%M.
+                    start_time (str):
+                        Shift start time string formatted as %H:%M.
 
-                duration (str):
-                    Shift duration in minutes.
+                    duration (str):
+                        Shift duration in minutes.
 
             Returns:
                 None.
@@ -90,25 +91,6 @@ class GCalShift:
         self.item_start = gcal_item['start']['dataTime']
         self.item_end = gcal_item['start']['dataTime']
         self.duration = None
-
-        return None
-
-    def _lookup_shift(self):
-        """ Look up shift details.
-
-        Attempt to match the Google Calendar item name (summary) to
-        keywords in a data model.
-
-            Args:
-                None.
-
-            Returns.
-                None.
-        """
-        # Get shift details (value associated with the shift keyword)
-
-        # Parse the start date and time
-        # Calculate the shift duration with offset values
 
         return None
 
@@ -164,7 +146,12 @@ class GCALData:
 
         # Set Class initialization values
         self.auto_prep_data = auto_prep_data
+
+        # Validate the 'gcal_name' argument value
         self.gcal_name = gcal_name.lower()
+        self.helpers.get_gcal_info(
+            gcal_name=gcal_name.lower()
+        )
 
         # Call methods to initialize the workflow
         if self.auto_prep_data is True:
@@ -187,27 +174,66 @@ class GCALData:
     def _create_gcal_shift(
             self,
             gcal_item: Dict[Dict[str, str]]
-    ) -> int:
-        """ Determine the length of a shift.
-
-            Offset the start and end times if necessary.
+    ) -> GCalShift:
+        """ Create a GCalData object with relevant shift data.
 
             Args:
                 gcal_item (Dict[str, str]):
                     Individual Google Calendar item with shift data.
 
             Returns:
-                shift_length (int):
-                    Integer of shift length in minutes.
+                gcal_shift (GCalShift):
+                    GCalShift object with relevant shift data.
         """
 
+        # Create 'GCalShift' object
+        gcal_shift = GCalShift(gcal_item)
+
+        # Get details for the closest 'need_name' match
+        gcal_shift.need_details = self.helpers.search_shift_info(
+            gcal_name=self.gcal_name,
+            gcal_name=gcal_shift.need_name
+        )
+
+        # Determine the number of shift minutes rounded to the nearest minute
+        gcal_shift.duration = self._calculate_shift_duration(
+            gcal_shift=gcal_shift
+        )
+
+        return gcal_shift
+
+    def _calculate_shift_duration(
+            self,
+            gcal_shift: GCalShift
+    ) -> int:
+        """ Calculate the duration of a shift
+
+            Offset the start and end times if necessary.
+
+            Args:
+                gcal_shift (GCalShift):
+                    GCalShift object with relevant shift data.
+
+            Returns:
+                shift_duration (int):
+                    Length of a shift in minutes
+        """
+
+        # Calculate shift start and end times with any specified offset(s)
+        start = gcal_shift.item_start.minute + gcal_shift.need_details.get(
+            'offset_start', 0
+        )
+        end = gcal_shift.item_end.minute + gcal_shift.need_details.get(
+            'offset_end', 0
+        )
+
         # Calculate the time delta between 'shift_start' and 'shift_end'
-        delta = shift_end - shift_start
+        start_end_delta = start - end
 
-        # Determine the number of minutes rounded down to the nearest minute
-        shift_length = floor(delta.seconds / 60)
+        # Determine the number of shift minutes rounded to the nearest minute
+        shift_duration = floor(start_end_delta.seconds / 60)
 
-        return shift_length
+        return shift_duration
 
     def get_gcal_shift_data(  # pylint: disable=too-many-locals
             self,
@@ -253,6 +279,7 @@ class GCALData:
         method = 'GET'
         headers = BASE_GCAL_HEADERS
 
+        # TODO review start
         # Check the Google Calendar name for an available match
         gcal_info = self.helpers.get_gcal_info(
             gcal_name=self.gcal_name
@@ -271,6 +298,7 @@ class GCALData:
                 file=sys.stderr
             )
             self.helpers.exit_program(status_code=1)
+        # TODO review end
 
         # Construct URL
         url = (
