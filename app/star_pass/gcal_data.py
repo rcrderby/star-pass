@@ -51,7 +51,7 @@ DEFAULT_GCAL_TIME_MIN = _defaults.GCAL_TIME_MIN
 DEFAULT_GCAL_TIME_MAX = _defaults.GCAL_TIME_MAX
 
 
-class GCalShift:
+class GCALShift:
     """ Object to store Google Calendar shift data. """
     def __init__(
             self,
@@ -173,41 +173,41 @@ class GCALData:
 
     def _create_gcal_shift(
             self,
-            gcal_item: Dict[Dict[str, str]]
-    ) -> GCalShift:
+            gcal_item: Dict[Dict, str]
+    ) -> GCALShift:
         """ Create a GCalData object with relevant shift data.
 
             Args:
-                gcal_item (Dict[str, str]):
+                gcal_item (Dict[Dict, str]):
                     Individual Google Calendar item with shift data.
 
             Returns:
-                gcal_shift (GCalShift):
-                    GCalShift object with relevant shift data.
+                gcal_shift (GCALShift):
+                    GCALShift object with relevant shift data.
         """
 
-        # Create 'GCalShift' object
-        gcal_shift = GCalShift(gcal_item)
+        # Create 'GCALShift' object
+        gcal_shift = GCALShift(gcal_item)
 
         # Get details for the closest 'need_name' match
         gcal_shift.need_details = self.helpers.search_shift_info(
             gcal_name=self.gcal_name,
-            gcal_name=gcal_shift.need_name
+            need_name=gcal_shift.need_name
         )
 
         return gcal_shift
 
     def _calculate_shift_duration(
             self,
-            gcal_shift: GCalShift
+            gcal_shift: GCALShift
     ) -> int:
         """ Calculate the duration of a shift
 
             Offset the start and end times if necessary.
 
             Args:
-                gcal_shift (GCalShift):
-                    GCalShift object with relevant shift data.
+                gcal_shift (GCALShift):
+                    GCALShift object with relevant shift data.
 
             Returns:
                 shift_duration (int):
@@ -262,7 +262,7 @@ class GCALData:
                     HTTP timeout.  Default is HTTP_TIMEOUT.
 
             Returns:
-                gcal_data (Dict[Any, Any]):
+                gcal_shift_data (Dict[Any, Any]):
                     Data returned by the Google Calendar service.
         """
 
@@ -273,32 +273,25 @@ class GCALData:
         )
 
         # Create a list of shifts for Google Calendar data
-        gcal_data = []
+        gcal_shift_data = []
 
         # Set HTTP request variables
         method = 'GET'
         headers = BASE_GCAL_HEADERS
 
-        # TODO review start
-        # Check the Google Calendar name for an available match
-        gcal_info = self.helpers.get_gcal_info(
-            gcal_name=self.gcal_name
-        )
-
         # Set Google Calendar variables
-        gcal_id = gcal_info.get('gcal_id', None)
-        query_strings = gcal_info.get('query_strings', None)
+        gcal_id = GCAL_CALENDARS[self.gcal_name].get('gcal_id')
+        query_strings = GCAL_CALENDARS[self.gcal_name].get('query_strings')
 
         # Confirm the Google calendar variables are not None
         if gcal_id is None or query_strings is None:
             # Display an error message and exit
-            message = '\n** Invalid Google Calendar Name **\n'
+            message = '\n** Invalid Google Calendar Data **\n'
             self.helpers.printer(
                 message=message,
                 file=sys.stderr
             )
             self.helpers.exit_program(status_code=1)
-        # TODO review end
 
         # Construct URL
         url = (
@@ -334,21 +327,21 @@ class GCALData:
                 api_request_data=api_request_data
             )
 
-            # Add matching results to `gcal_data`
-            gcal_data += response.json().get('items')
+            # Add matching results to `gcal_shift_data`
+            gcal_shift_data += response.json().get('items')
 
-        return gcal_data
+        return gcal_shift_data
 
-    def process_gcal_data(
+    def process_gcal_shift_data(
             self,
-            gcal_data: List[Dict[str, str]]
+            gcal_shift_data: List[Dict[str, str]]
     ) -> List[Dict[str, str]]:
         """ Read and process Google Calendar data JSON.
 
             Produce a list of shifts from the Google Calendar JSON.
 
             Args:
-                gcal_data List[Dict[str, str]]):
+                gcal_shift_data List[Dict[str, str]]):
                     Google Calendar JSON data.
 
             Returns:
@@ -385,10 +378,10 @@ class GCALData:
         gcal_shifts = []
 
         # Add Google Calendar data to 'gcal_shifts'
-        for item in gcal_data:
+        for item in gcal_shift_data:
 
-            # Convert each Google Calendar item to an GCalShift object
-            gcal_shift = GCalShift(**item)
+            # Convert each Google Calendar item to an GCALShift object
+            gcal_shift = GCALShift(**item)
 
             # Get the shift name, start, and end values
             shift_name = item['summary']
