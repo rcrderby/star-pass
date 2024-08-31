@@ -63,7 +63,7 @@ class GCALShift:
                 gcal_item (Dict):
                     Dictionary of raw Google Calendar event data.
 
-                 Attributes:
+                 Object Attributes:
                     need_name (str):
                         Shift name used to look up need details.
 
@@ -335,7 +335,7 @@ class GCALData:
     def process_gcal_shift_data(
             self,
             gcal_shift_data: List[Dict[str, str]]
-    ) -> List[Dict[str, str]]:
+    ) -> List[GCALShift]:
         """ Read and process Google Calendar data JSON.
 
             Produce a list of shifts from the Google Calendar JSON.
@@ -345,8 +345,8 @@ class GCALData:
                     Google Calendar JSON data.
 
             Returns:
-                gcal_shifts (List[Dict[str, str]]:
-                    List of shift dictionaries in the format:
+                gcal_shifts (List[GCALShift]:
+                    List of GCALShift objects in the format:
                     [
                         {
                             need_name: <summary>,
