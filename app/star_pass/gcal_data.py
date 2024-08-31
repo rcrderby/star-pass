@@ -78,9 +78,6 @@ class GCALShift:
                     start_time (str):
                         Shift start time string formatted as %H:%M.
 
-                    duration (int):
-                        Shift duration in minutes.
-
             Returns:
                 None.
         """
@@ -90,7 +87,6 @@ class GCALShift:
         self.need_details = None
         self.item_start = gcal_item['start']['dateTime']
         self.item_end = gcal_item['start']['dateTime']
-        self.duration = None
 
         return None
 
