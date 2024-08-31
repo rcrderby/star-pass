@@ -57,45 +57,6 @@ class Helpers:
         # Exit the program
         sys.exit(status_code)
 
-    def get_gcal_info(
-            self,
-            gcal_name: Dict[str, str]
-    ) -> str:
-        """ Check the validity of a Google Calendar name.
-
-        Display a message and exit if the calendar is not in the list
-        of valid Google Calendars.
-
-            Args:
-                gcal_name (str):
-                    Google Calendar name to check.
-
-            Returns:
-                Dict[str: str]:
-                    Dictionary with the ID of the named Google Calendar
-                    plus the corresponding URL query string(s).
-        """
-
-        # Check for a matching calendar ID
-        try:
-            gcal_id = GCAL_CALENDARS[gcal_name]
-
-        # Display an error and exit if the 'gcal_name' lookup fails
-        except KeyError:
-            message = (
-                f'\n** Error: "{gcal_name}" '
-                'is not a valid calendar name **\n'
-            )
-
-            # Display the error message and exit
-            self.printer(
-                message=message,
-                file=sys.stderr
-            )
-            self.exit_program(status_code=1)
-
-        return gcal_id
-
     def convert_to_bool(
             self,
             arg_value: str
@@ -159,6 +120,45 @@ class Helpers:
         )
 
         return formatted_date_time_string
+
+    def get_gcal_info(
+            self,
+            gcal_name: Dict[str, str]
+    ) -> str:
+        """ Check the validity of a Google Calendar name.
+
+        Display a message and exit if the calendar is not in the list
+        of valid Google Calendars.
+
+            Args:
+                gcal_name (str):
+                    Google Calendar name to check.
+
+            Returns:
+                Dict[str: str]:
+                    Dictionary with the ID of the named Google Calendar
+                    plus the corresponding URL query string(s).
+        """
+
+        # Check for a matching calendar ID
+        try:
+            gcal_id = GCAL_CALENDARS[gcal_name]
+
+        # Display an error and exit if the 'gcal_name' lookup fails
+        except KeyError:
+            message = (
+                f'\n** Error: "{gcal_name}" '
+                'is not a valid calendar name **\n'
+            )
+
+            # Display the error message and exit
+            self.printer(
+                message=message,
+                file=sys.stderr
+            )
+            self.exit_program(status_code=1)
+
+        return gcal_id
 
     def iso_datetime_to_string(
             self,
