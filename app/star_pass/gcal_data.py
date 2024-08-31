@@ -155,12 +155,12 @@ class GCALData:
 
         # Call methods to initialize the workflow
         if self.auto_prep_data is True:
-            self.gcal_data = self.get_gcal_shift_data(
+            self.gcal_shift_data = self.get_gcal_shift_data(
                 timeMin=DEFAULT_GCAL_TIME_MIN,
                 timeMax=DEFAULT_GCAL_TIME_MAX
             )
             self.gcal_shifts = self.process_gcal_data(
-                gcal_data=self.gcal_data
+                gcal_shift_data=self.gcal_shift_data
             )
             self.csv_data = self.generate_shift_csv(
                 gcal_shifts=self.gcal_shifts
