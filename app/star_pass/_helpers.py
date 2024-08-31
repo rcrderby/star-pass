@@ -259,20 +259,26 @@ class Helpers:
                     keyword search result match.
         """
 
+        # Create reference object to the applicable keywords
+        shifts_info = SHIFTS_INFO['calendar'][gcal_name]['keywords']
+
         # Create a list of keywords to search
-        keywords = list(
-            SHIFTS_INFO['calendar'][gcal_name]['keywords'].keys()
-        )
+        keywords = list(shifts_info.keys())
 
         # Search for the best match of 'need_name'
         best_match = process.extractOne(
             query=need_name,
             choices=keywords,
             scorer=fuzz.token_sort_ratio
-        )
+        )[0]
 
-        # Get need details for the best match
-        need_details = SHIFTS_INFO['calendar'][gcal_name][best_match]
+        try:
+            # Attempt to get need details for the best match
+            need_details = shifts_info[best_match]
+
+        except KeyError:
+            # Use the 'default' option if there is no match
+            need_details = shifts_info['default']
 
         return need_details
 
