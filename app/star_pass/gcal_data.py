@@ -88,8 +88,8 @@ class GCALShift:
         # Set initial attribute values
         self.need_name = gcal_item['summary']
         self.need_details = None
-        self.item_start = gcal_item['start']['dataTime']
-        self.item_end = gcal_item['start']['dataTime']
+        self.item_start = gcal_item['start']['dateTime']
+        self.item_end = gcal_item['start']['dateTime']
         self.duration = None
 
         return None
@@ -348,22 +348,20 @@ class GCALData:
                 gcal_shifts (List[GCALShift]:
                     List of GCALShift objects in the format:
                     [
-                        {
-                            need_name: <summary>,
-                            need_id: ''
-                            start_date: split of <start[dateTime]>,
-                            start_time: split of <start[dateTime]>
-                            duration: <end[dateTime]>-<start[dateTime]>,
-                            slots: ''
-                        },
-                        {
-                            need_name: <summary>,
-                            need_id: ''
-                            start_date: split of <start[dateTime]>,
-                            start_time: split of <start[dateTime]>
-                            duration: <end[dateTime]>-<start[dateTime]>,
-                            slots: ''
-                        }
+                        need_name: <summary>,
+                        need_id: ''
+                        start_date: split of <start[dateTime]>,
+                        start_time: split of <start[dateTime]>
+                        duration: <end[dateTime]>-<start[dateTime]>,
+                        slots: ''
+                        ,
+                        need_name: <summary>,
+                        need_id: ''
+                        start_date: split of <start[dateTime]>,
+                        start_time: split of <start[dateTime]>
+                        duration: <end[dateTime]>-<start[dateTime]>,
+                        slots: ''
+                    }
                     ]
         """
 
