@@ -214,6 +214,7 @@ class GCALData:
                     Length of a shift in minutes
         """
 
+        # TODO
         # Determine the number of shift minutes rounded to the nearest minute
         # gcal_shift.duration = self._calculate_shift_duration(
         #     gcal_shift=gcal_shift
@@ -360,30 +361,29 @@ class GCALData:
         gcal_shifts = []
 
         # Add Google Calendar data to 'gcal_shifts'
-        for item in gcal_shift_data:
+        for gcal_item in gcal_shift_data:
 
             # Convert each Google Calendar item to an GCALShift object
-            gcal_shift = GCALShift(**item)
-
-            # Get the shift name, start, and end values
-            shift_name = item['summary']
-            shift_start = item['start']['dateTime']
-            shift_end = item['end']['dateTime']
-
-            # Get the shift duration
-            shift_duration = self._get_shift_length(
-                shift_start=datetime.fromisoformat(shift_start),
-                shift_end=datetime.fromisoformat(shift_end)
+            gcal_shift = self._create_gcal_shift(
+                gcal_item=gcal_item
             )
+
+            # TODO Start
+            # Get the shift duration
+            # shift_duration = self._get_shift_length(
+            #     shift_start=datetime.fromisoformat(shift_start),
+            #     shift_end=datetime.fromisoformat(shift_end)
+            # )
 
             # Format the shift start values as strings
-            shift_start_string = self.helpers.iso_datetime_to_string(
-                datetime_object=shift_start
-            )
+            # shift_start_string = self.helpers.iso_datetime_to_string(
+            #     datetime_object=shift_start
+            # )
 
-            start_date, start_time = shift_start_string.split(
-                sep=' '
-            )
+            # start_date, start_time = shift_start_string.split(
+            #     sep=' '
+            # )
+            # TODO End
 
             # Split the start date and start time values to separate variables
             gcal_shifts.append(
