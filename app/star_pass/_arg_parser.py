@@ -6,5 +6,8 @@ import argparse
 
 # Constants
 
+# Create an ArgumentParser object
 parser = argparse.ArgumentParser()
+
+# Parse arguments
 parser.parse_args()
