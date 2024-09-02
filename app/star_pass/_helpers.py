@@ -275,7 +275,6 @@ class Helpers:
         try:
             # Attempt to get need details for the best match
             need_details = shifts_info[best_match]
-            print(best_match, need_details['need_ids'][0]['max_length'])
 
         except KeyError:
             # Use the 'default' option if there is no match
