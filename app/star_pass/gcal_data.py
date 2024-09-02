@@ -521,6 +521,9 @@ class GCALData:
                 amplify_shift.duration = duration
                 amplify_shift.slots = gcal_shift.need_details['slots']
 
+                # Add the shift to the `amplify_shifts` list as a dictionary
+                amplify_shifts.append(amplify_shift._to_dict())
+
         # Convert the shift data to a Pandas DataFrame for CSV export
         amplify_shifts_data_frame = df(amplify_shifts)
 
