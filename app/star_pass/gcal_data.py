@@ -145,6 +145,30 @@ class AmplifyShift:
 
         return None
 
+    def _to_dict(self) -> Dict:
+        """ Return instance attributes in a dictionary.
+
+            Args:
+                None.
+
+            Returns:
+                attributes_dict (Dict):
+                    Dictionary of instance attributes in the format:
+
+                    {
+                        'need_name': 'Need Name',
+                        'need_id': 000000,
+                        'start_date': '2099-01-01',
+                        'start_time': '12:00',
+                        'duration': 60,
+                        'slots': 20
+                    }
+        """
+
+        attributes_dict = self.__dict__
+
+        return attributes_dict
+
 
 class GCALData:
     """ Collect and manage Google Calendar data. """
