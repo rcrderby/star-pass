@@ -326,6 +326,11 @@ class GCALData:
         # Convert the time delta to minutes
         shift_duration = floor(start_end_delta.seconds / 60)
 
+        # Ensure `shift_duration` does note exceed the shift's `max_length`
+        max_length = need_id.get('max_length', None)
+        if max_length is not None:
+            shift_duration = min(shift_duration, max_length)
+
         # Convert the shift start time to a formatted string
         shift_start_string = shift_start_datetime.strftime(
             format=DATE_TIME_FORMAT
