@@ -3,7 +3,7 @@
 
 # Imports - Python Standard Library
 from copy import copy
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import floor
 from os import getenv
 from pathlib import Path
@@ -279,30 +279,33 @@ class GCALData:
         """
 
         # Get the shift offset start and end values
-        offset_start = need_id.get('offset_start', 0)
-        offset_end = need_id.get('offset_end', 0)
+        offset_start = timedelta(
+            minutes=need_id.get('offset_start', 0)
+        )
+        offset_end = timedelta(
+            minutes=need_id.get('offset_end', 0)
+        )
 
+        print(need_id.get('offset_start', 0), need_id.get('offset_end', 0))
+        print()
+        print(offset_start, offset_end)
         # Convert the shift start and end ISO strings to datetime objects
-        shift_start_datetime = datetime.fromisoformat(
-            date_string=start_time
-        )
-        shift_end_datetime = datetime.fromisoformat(
-            date_string=end_time
-        )
+        shift_start_datetime = datetime.fromisoformat(start_time)
+        shift_end_datetime = datetime.fromisoformat(end_time)
 
         # Adjust the shift start and end times based on the offset values
-        shift_start_datetime = shift_start_datetime.minute + offset_start
-        shift_end_datetime = shift_end_datetime.minute + offset_end
+        shift_start_datetime = shift_start_datetime + offset_start
+        shift_end_datetime = shift_end_datetime + offset_end
 
         # Calculate the time delta between the start and end of a shift
-        start_end_delta = shift_start_datetime - shift_end_datetime
+        start_end_delta = shift_end_datetime - shift_start_datetime
 
         # Convert the time delta to minutes
         shift_duration = floor(start_end_delta.seconds / 60)
 
         # Convert the shift start time to a formatted string
-        shift_start_string = self.helpers.iso_datetime_to_string(
-            datetime_object=shift_start_datetime
+        shift_start_string = shift_start_datetime.strftime(
+            format=DATE_TIME_FORMAT
         )
 
         # Split the `shift_start_string` values to separate variables
@@ -445,16 +448,6 @@ class GCALData:
             )
 
             # TODO Start
-
-            # Format the shift start values as strings
-            # shift_start_string = self.helpers.iso_datetime_to_string(
-            #     datetime_object=shift_start
-            # )
-
-            # start_date, start_time = shift_start_string.split(
-            #     sep=' '
-            # )
-
             # Split the start date and start time values to separate variables
             # gcal_shifts.append(
             #     {
@@ -519,7 +512,7 @@ class GCALData:
                 amplify_shift.start_date = start_date
                 amplify_shift.start_time = start_time
                 amplify_shift.duration = duration
-                amplify_shift.slots = gcal_shift['slots']
+                amplify_shift.slots = gcal_shift.need_details['slots']
 
         # Convert the shift data to a Pandas DataFrame for CSV export
         amplify_shifts_data_frame = df(amplify_shifts)
