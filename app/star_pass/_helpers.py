@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Helper methods for star_pass.py """
+""" Helper methods for the star_pass application. """
 
 # Imports - Python Standard Library
 from ast import literal_eval
