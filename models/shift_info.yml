@@ -14,11 +14,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 905196
+            max_length: 165
             slots: 12
             offset_start: 15
             offset_end: 30
           - description: SOs
             id: 905197
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 8
@@ -31,13 +33,15 @@ calendar:
         need_ids:
           - description: NSOs
             id: 905196
-            slots: 12
+            max_length: 165
             offset_start: 0
-            offset_end: 0
+            offset_end: 30
+            slots: 12
           - description: SOs
             id: 905197
+            max_length: 165
             offset_start: 0
-            offset_end: 0
+            offset_end: 30
             slots: 8
         type: game
 
@@ -48,11 +52,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 905196
+            max_length: 135
             slots: 12
             offset_start: -15
             offset_end: 30
           - description: SOs
             id: 905197
+            max_length: 135
             offset_start: -15
             offset_end: 30
             slots: 8
@@ -65,11 +71,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 905196
+            max_length: 165
             offset_start: 0
             offset_end: 45
             slots: 12
           - description: SOs
             id: 905197
+            max_length: 165
             offset_start: 0
             offset_end: 45
             slots: 8
@@ -82,11 +90,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 879609
+            max_length: 165
             offset_start: 0
             offset_end: 45
             slots: 12
           - description: SOs
             id: 879610
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 8
@@ -99,11 +109,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 879609
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 12
           - description: SOs
             id: 879610
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 8
@@ -116,11 +128,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 879609
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 12
           - description: SOs
             id: 879610
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 8
@@ -133,11 +147,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 879609
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 12
           - description: SOs
             id: 879610
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 8
@@ -150,9 +166,11 @@ calendar:
         need_ids:
           - description: NSOs
             id: 879609
+            max_length: 165
             slots: 12
           - description: SOs
             id: 879610
+            max_length: 165
             slots: 8
         offset_start: 15
         offset_end: 30
@@ -165,11 +183,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 905196
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 12
           - description: SOs
             id: 905197
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 8
@@ -182,11 +202,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 879609
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 12
           - description: SOs
             id: 879610
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 8
@@ -199,11 +221,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 879609
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 12
           - description: SOs
             id: 879610
+            max_length: 165
             offset_start: 15
             offset_end: 30
             slots: 8
@@ -217,11 +241,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: ''
+            max_length: 165
             offset_start: 0
             offset_end: 0
             slots: 12
           - description: SOs
             id: ''
+            max_length: 165
             offset_start: 0
             offset_end: 0
             slots: 8
@@ -239,11 +265,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 628861
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
           - description: SOs
             id: 607934
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
@@ -256,11 +284,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 628862
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
           - description: SOs
             id: 607810
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
@@ -273,11 +303,13 @@ calendar:
         need_ids:
           - description: Attendees
             id: 868881
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
           - description: Coaches
             id: 968727
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 2
@@ -290,11 +322,13 @@ calendar:
         need_ids:
           - description: Attendees
             id: 773454
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
           - description: Coaches
             id: 892230
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 2
@@ -307,11 +341,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 628862
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
           - description: SOs
             id: 607810
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
@@ -324,11 +360,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 628861
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
           - description: SOs
             id: 607934
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
@@ -341,11 +379,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: 628861
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
           - description: SOs
             id: 607934
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
@@ -359,11 +399,13 @@ calendar:
         need_ids:
           - description: NSOs
             id: ''
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
           - description: SOs
             id: ''
+            max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
