@@ -98,29 +98,37 @@ class GCALShift:
 
 class AmplifyShift:
     """ Object to store prepared Amplify shift data. """
-    def __init__(self) -> None:
+    def __init__(
+            self,
+            need_name: str | None = None,
+            need_id: int | str | None = None,
+            start_date: str | None = None,
+            start_time: str | None = None,
+            duration: int | str | None = None,
+            slots: int | str | None = None
+    ) -> None:
         """ Class initialization method.
 
             Args:
                 None.
 
                 Object Attributes:
-                    need_name (str):
+                    need_name (str | None, optional):
                         Google Calendar shift name.
 
-                    need_id (int | str):
+                    need_id (int | str | None, optional):
                         Amplify need ID.
 
-                    start_date (str):
+                    start_date (str | None, optional):
                         Shift start date string formatted as %Y-%m-%d.
 
-                    start_time (str):
+                    start_time (str | None, optional):
                         Shift start time string formatted as %H:%M.
 
-                    duration (str | int):
+                    duration (str | int | None, optional):
                         Shift duration in minutes.
 
-                    slots (str | int):
+                    slots (str | int | None, optional):
                         Number of available shift slots.
 
             Returns:
@@ -128,12 +136,12 @@ class AmplifyShift:
         """
 
         # Set initial attribute values
-        self.need_name = None
-        self.need_id = None
-        self.start_date = None
-        self.start_time = None
-        self.duration = None
-        self.slots = None
+        self.need_name = need_name
+        self.need_id = need_id
+        self.start_date = start_date
+        self.start_time = start_time
+        self.duration = duration
+        self.slots = slots
 
         return None
 
