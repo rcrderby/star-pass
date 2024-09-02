@@ -471,20 +471,6 @@ class GCALData:
                 gcal_item=gcal_item
             )
 
-            # TODO Start
-            # Split the start date and start time values to separate variables
-            # gcal_shifts.append(
-            #     {
-            #         'need_name': shift_name,
-            #         'need_id': '',
-            #         'start_date': start_date,
-            #         'start_time': start_time,
-            #         'duration': shift_duration,
-            #         'slots': ''
-            #     }
-            # )
-            # TODO End
-
             gcal_shifts.append(gcal_shift)
 
         # Display status message
