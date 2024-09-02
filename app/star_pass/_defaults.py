@@ -127,19 +127,19 @@ START_TIME_COLUMN = 'start_time'
 KEEP_COLUMNS = f'{START_COLUMN}, duration, slots'
 
 # Shift lookup data model
-SHIFT_INFO_FILE_NAME = 'shift_info.yml'
-SHIFT_INFO_FILE = Path.joinpath(
+SHIFTS_INFO_FILE_NAME = 'shift_info.yml'
+SHIFTS_INFO_FILE = Path.joinpath(
     MODELS_DIR_PATH,
-    SHIFT_INFO_FILE_NAME
+    SHIFTS_INFO_FILE_NAME
 )
 
 # Read the shift info model to set SHIFT_INFO
 with open(
-    file=SHIFT_INFO_FILE,
+    file=SHIFTS_INFO_FILE,
     mode='rt',
     encoding=FILE_ENCODING
 ) as yaml_data:
-    SHIFT_INFO = safe_load(
+    SHIFTS_INFO = safe_load(
         stream=yaml_data.read()
     )
 

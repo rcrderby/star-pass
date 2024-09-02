@@ -11,6 +11,7 @@ import sys
 # Imports - Third-Party
 from dateparser import parse
 from dotenv import load_dotenv
+from fuzzywuzzy import fuzz, process
 from requests import exceptions, request, Response
 
 # Imports - Local
@@ -21,6 +22,7 @@ DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 ENV_FILE_PATH = _defaults.ENV_FILE_PATH
 FILE_ENCODING = _defaults.FILE_ENCODING
 GCAL_CALENDARS = _defaults.GCAL_CALENDARS
+SHIFTS_INFO = _defaults.SHIFTS_INFO
 
 
 # Class definitions
@@ -56,45 +58,6 @@ class Helpers:
 
         # Exit the program
         sys.exit(status_code)
-
-    def get_gcal_info(
-            self,
-            gcal_name: Dict[str, str]
-    ) -> str:
-        """ Check the validity of a Google Calendar name.
-
-        Display a message and exit if the calendar is not in the list
-        of valid Google Calendars.
-
-            Args:
-                gcal_name (str):
-                    Google Calendar name to check.
-
-            Returns:
-                Dict[str: str]:
-                    Dictionary with the ID of the named Google Calendar
-                    plus the corresponding URL query string(s).
-        """
-
-        # Check for a matching calendar ID
-        try:
-            gcal_id = GCAL_CALENDARS[gcal_name]
-
-        # Display an error and exit if the 'gcal_name' lookup fails
-        except KeyError:
-            message = (
-                f'\n** Error: "{gcal_name}" '
-                'is not a valid calendar name **\n'
-            )
-
-            # Display the error message and exit
-            self.printer(
-                message=message,
-                file=sys.stderr
-            )
-            self.exit_program(status_code=1)
-
-        return gcal_id
 
     def convert_to_bool(
             self,
@@ -159,6 +122,45 @@ class Helpers:
         )
 
         return formatted_date_time_string
+
+    def get_gcal_info(
+            self,
+            gcal_name: Dict[str, str]
+    ) -> str:
+        """ Check the validity of a Google Calendar name.
+
+        Display a message and exit if the calendar is not in the list
+        of valid Google Calendars.
+
+            Args:
+                gcal_name (str):
+                    Google Calendar name to check.
+
+            Returns:
+                Dict[str: str]:
+                    Dictionary with the ID of the named Google Calendar
+                    plus the corresponding URL query string(s).
+        """
+
+        # Check for a matching calendar ID
+        try:
+            gcal_id = GCAL_CALENDARS[gcal_name]
+
+        # Display an error and exit if the 'gcal_name' lookup fails
+        except KeyError:
+            message = (
+                f'\n** Error: "{gcal_name}" '
+                'is not a valid calendar name **\n'
+            )
+
+            # Display the error message and exit
+            self.printer(
+                message=message,
+                file=sys.stderr
+            )
+            self.exit_program(status_code=1)
+
+        return gcal_id
 
     def iso_datetime_to_string(
             self,
@@ -235,6 +237,51 @@ class Helpers:
 
         return None
 
+    def search_shift_info(
+            self,
+            gcal_name: str,
+            need_name: str
+    ) -> Dict:
+        """ Search the shift info data model.
+
+            Args:
+                gcal_name (str);
+                    Google Calendar name to search.  For example:
+                    'Events' or 'Practices'.
+
+                need_name (str);
+                    Google Calendar event name to search for.  For
+                    example: 'Adult Scrimmage' or 'Juniors Game'.
+
+            Returns:
+                need_details (Dict):
+                    Dictionary object with need details for the best
+                    keyword search result match.
+        """
+
+        # Create reference object to the applicable keywords
+        shifts_info = SHIFTS_INFO['calendar'][gcal_name]['keywords']
+
+        # Create a list of keywords to search
+        keywords = list(shifts_info.keys())
+
+        # Search for the best match of 'need_name'
+        best_match = process.extractOne(
+            query=need_name,
+            choices=keywords,
+            scorer=fuzz.partial_ratio
+        )[0]
+
+        try:
+            # Attempt to get need details for the best match
+            need_details = shifts_info[best_match]
+
+        except KeyError:
+            # Use the 'default' option if there is no match
+            need_details = shifts_info['default']
+
+        return need_details
+
     def send_api_request(
             self,
             api_request_data: Dict,
@@ -275,10 +322,24 @@ class Helpers:
         try:
             response = request(**api_request_data)
         # Handle TCP Connection Errors
-        except exceptions.ConnectionError as error:
+        except (
+            exceptions.ConnectionError,
+            exceptions.ConnectTimeout,
+            exceptions.HTTPError,
+            exceptions.ReadTimeout,
+            exceptions.Timeout,
+            exceptions.TooManyRedirects,
+            exceptions.RequestException
+        ) as error:
             # Display the error text and exit
+            error_message = error.args[0].reason.args[0].rsplit(">: ")[1]
+            message = '\n\n** An HTTP Error Occurred **\n'
+            message += f'{len(message) * "_"}\n\n'
+            message += f'{error_message}\n\n'
+            message += repr(f'{error!r}')
+
             self.printer(
-                message=repr(f'{error!r}'),
+                message=message,
                 file=sys.stderr
             )
             self.exit_program(status_code=1)
@@ -291,8 +352,14 @@ class Helpers:
         # Handle non-ok HTTP responses
         except exceptions.HTTPError as error:
             # Display the error text and exit
+            message = (
+                '\n\n** The request returned a bad status code '
+                f'({response.status_code}) **\n'
+            )
+            message += f'{len(message) * "_"}\n\n'
+            message += repr(f'{error!r}')
             self.printer(
-                message=repr(f'{error!r}'),
+                message=message,
                 file=sys.stderr
             )
             self.exit_program(status_code=1)

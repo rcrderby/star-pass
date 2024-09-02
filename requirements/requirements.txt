@@ -6,3 +6,7 @@ requests
 
 # Pandas data structures
 pandas
+
+# Python fuzzy string matching
+python-Levenshtein
+fuzzywuzzy

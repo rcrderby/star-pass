@@ -3,11 +3,11 @@
 
 # Imports - Python Standard Library
 from copy import copy
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import floor
 from os import getenv
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 import sys
 
 # Imports - Third-Party
@@ -39,7 +39,7 @@ DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
 FILE_NAME_DATE_TIME_FORMAT = _defaults.FILE_NAME_DATE_TIME_FORMAT
 
 # Shift lookup data
-SHIFT_INFO = _defaults.SHIFT_INFO
+SHIFTS_INFO = _defaults.SHIFTS_INFO
 
 # File management data
 FILE_ENCODING = _defaults.FILE_ENCODING
@@ -49,6 +49,127 @@ INPUT_FILE_EXTENSION = _defaults.INPUT_FILE_EXTENSION
 # Default date and time values
 DEFAULT_GCAL_TIME_MIN = _defaults.GCAL_TIME_MIN
 DEFAULT_GCAL_TIME_MAX = _defaults.GCAL_TIME_MAX
+
+
+class GCALShift:
+    """ Object to store Google Calendar shift data. """
+    def __init__(
+            self,
+            gcal_item: Dict
+    ) -> None:
+        """ Class initialization method.
+
+            Args:
+                gcal_item (Dict):
+                    Dictionary of raw Google Calendar event data.
+
+                 Object Attributes:
+                    item_end (str):
+                        Google Shift end time in ISO format.
+
+                    item_start (str):
+                        Google Shift start time in ISO format.
+
+                    need_ids (List):
+                        List of need IDs extracted from the
+                        `need_details` attribute.
+
+                    need_details (Dict):
+                        Need details including need IDs, number of
+                        slots per need ID, and start and end times
+                        offset times.
+
+                    need_name (str):
+                        Shift name used to look up need details.
+
+            Returns:
+                None.
+        """
+
+        # Set initial attribute values
+        self.item_end = gcal_item['end']['dateTime']
+        self.item_start = gcal_item['start']['dateTime']
+        self.need_details = None
+        self.need_ids = None
+        self.need_name = gcal_item['summary']
+
+        return None
+
+
+# pylint: disable=too-many-arguments
+class AmplifyShift:
+    """ Object to store prepared Amplify shift data. """
+    def __init__(
+            self,
+            need_name: str | None = None,
+            need_id: int | str | None = None,
+            start_date: str | None = None,
+            start_time: str | None = None,
+            duration: int | str | None = None,
+            slots: int | str | None = None
+    ) -> None:
+        """ Class initialization method.
+
+            Args:
+                None.
+
+                Object Attributes:
+                    need_name (str | None, optional):
+                        Google Calendar shift name.
+
+                    need_id (int | str | None, optional):
+                        Amplify need ID.
+
+                    start_date (str | None, optional):
+                        Shift start date string formatted as %Y-%m-%d.
+
+                    start_time (str | None, optional):
+                        Shift start time string formatted as %H:%M.
+
+                    duration (str | int | None, optional):
+                        Shift duration in minutes.
+
+                    slots (str | int | None, optional):
+                        Number of available shift slots.
+
+            Returns:
+                None
+        """
+
+        # Set initial attribute values
+        self.need_name = need_name
+        self.need_id = need_id
+        self.start_date = start_date
+        self.start_time = start_time
+        self.duration = duration
+        self.slots = slots
+
+        return None
+
+    def args_to_dict(self) -> Dict:
+        """ Return instance attributes in a dictionary.
+
+            Args:
+                None.
+
+            Returns:
+                attributes_dict (Dict):
+                    Dictionary of instance attributes in the format:
+
+                    {
+                        'need_name': 'Need Name',
+                        'need_id': 000000,
+                        'start_date': '2099-01-01',
+                        'start_time': '12:00',
+                        'duration': 60,
+                        'slots': 20
+                    }
+        """
+
+        # Convert instance attributes to a dictionary
+        attributes_dict = vars(self)
+
+        return attributes_dict
 
 
 class GCALData:
@@ -102,16 +223,21 @@ class GCALData:
 
         # Set Class initialization values
         self.auto_prep_data = auto_prep_data
+
+        # Validate the 'gcal_name' argument value
         self.gcal_name = gcal_name.lower()
+        self.helpers.get_gcal_info(
+            gcal_name=gcal_name.lower()
+        )
 
         # Call methods to initialize the workflow
         if self.auto_prep_data is True:
-            self.gcal_data = self.get_gcal_shift_data(
+            self.gcal_shift_data = self.get_gcal_shift_data(
                 timeMin=DEFAULT_GCAL_TIME_MIN,
                 timeMax=DEFAULT_GCAL_TIME_MAX
             )
-            self.gcal_shifts = self.process_gcal_data(
-                gcal_data=self.gcal_data
+            self.gcal_shifts = self.process_gcal_shift_data(
+                gcal_shift_data=self.gcal_shift_data
             )
             self.csv_data = self.generate_shift_csv(
                 gcal_shifts=self.gcal_shifts
@@ -122,34 +248,100 @@ class GCALData:
 
         return None
 
-    def _get_shift_length(
+    def _create_gcal_shift(
             self,
-            shift_start: datetime,
-            shift_end: datetime
-    ) -> int:
-        """ Determine the length of a shift.
+            gcal_item: Dict[Dict, str]
+    ) -> GCALShift:
+        """ Create a GCalData object with relevant shift data.
 
             Args:
-                shift_start (datetime):
-                    datetime.datetime object with the shift start date and
-                    time.
-
-                shift_end (datetime):
-                    datetime.datetime object with the shift end date and
-                    time.
+                gcal_item (Dict[Dict, str]):
+                    Individual Google Calendar item with shift data.
 
             Returns:
-                shift_length (int):
-                    Integer of shift length in minutes.
+                gcal_shift (GCALShift):
+                    GCALShift object with relevant shift data.
         """
 
-        # Calculate the time delta between 'shift_start' and 'shift_end'
-        delta = shift_end - shift_start
+        # Create 'GCALShift' object
+        gcal_shift = GCALShift(gcal_item)
 
-        # Determine the number of minutes rounded down to the nearest minute
-        shift_length = floor(delta.seconds / 60)
+        # Get details for the closest 'need_name' match
+        gcal_shift.need_details = self.helpers.search_shift_info(
+            gcal_name=self.gcal_name,
+            need_name=gcal_shift.need_name
+        )
 
-        return shift_length
+        # Extract the 'need_ids' key from the `gcal_shift` object
+        gcal_shift.need_ids = gcal_shift.need_details['need_ids']
+
+        return gcal_shift
+
+    def _get_shift_time_data(
+            self,
+            need_id: Dict[str, int | str],
+            end_time: str,
+            start_time: str
+    ) -> Tuple[str, str, int | str]:
+        """ Calculate the date, time, and duration of a shift.
+
+            Offset the start and end times if necessary.
+
+            Args:
+                need_id (Dict[str, int | str]):
+                    Dictionary of data associated with a given need ID
+                    including offset start and end times.
+
+                end_time (str):
+                    Google Shift end time in ISO format.
+
+                start_time (str):
+                    Google Shift start time in ISO format.
+
+            Returns:
+                shift_timing (Tuple[str, str, int | str]):
+                    Tuple with formatted values for a shift's start
+                    date, start time, and duration.
+        """
+
+        # Get the shift offset start and end values
+        offset_start = timedelta(
+            minutes=need_id.get('offset_start', 0)
+        )
+        offset_end = timedelta(
+            minutes=need_id.get('offset_end', 0)
+        )
+
+        # Convert the shift start and end ISO strings to datetime objects
+        shift_start_datetime = datetime.fromisoformat(start_time)
+        shift_end_datetime = datetime.fromisoformat(end_time)
+
+        # Adjust the shift start and end times based on the offset values
+        shift_start_datetime = shift_start_datetime + offset_start
+        shift_end_datetime = shift_end_datetime + offset_end
+
+        # Calculate the time delta between the start and end of a shift
+        start_end_delta = shift_end_datetime - shift_start_datetime
+
+        # Convert the time delta to minutes
+        shift_duration = floor(start_end_delta.seconds / 60)
+
+        # Ensure `shift_duration` does note exceed the shift's `max_length`
+        max_length = need_id.get('max_length', None)
+        if max_length is not None:
+            shift_duration = min(shift_duration, max_length)
+
+        # Convert the shift start time to a formatted string
+        shift_start_string = shift_start_datetime.strftime(
+            format=DATE_TIME_FORMAT
+        )
+
+        # Split the `shift_start_string` values to separate variables
+        shift_start_date, shift_start_time = shift_start_string.split(
+            sep=' '
+        )
+
+        return shift_start_date, shift_start_time, shift_duration
 
     def get_gcal_shift_data(  # pylint: disable=too-many-locals
             self,
@@ -178,7 +370,7 @@ class GCALData:
                     HTTP timeout.  Default is HTTP_TIMEOUT.
 
             Returns:
-                gcal_data (Dict[Any, Any]):
+                gcal_shift_data (Dict[Any, Any]):
                     Data returned by the Google Calendar service.
         """
 
@@ -189,25 +381,20 @@ class GCALData:
         )
 
         # Create a list of shifts for Google Calendar data
-        gcal_data = []
+        gcal_shift_data = []
 
         # Set HTTP request variables
         method = 'GET'
         headers = BASE_GCAL_HEADERS
 
-        # Check the Google Calendar name for an available match
-        gcal_info = self.helpers.get_gcal_info(
-            gcal_name=self.gcal_name
-        )
-
         # Set Google Calendar variables
-        gcal_id = gcal_info.get('gcal_id', None)
-        query_strings = gcal_info.get('query_strings', None)
+        gcal_id = GCAL_CALENDARS[self.gcal_name].get('gcal_id')
+        query_strings = GCAL_CALENDARS[self.gcal_name].get('query_strings')
 
         # Confirm the Google calendar variables are not None
         if gcal_id is None or query_strings is None:
             # Display an error message and exit
-            message = '\n** Invalid Google Calendar Name **\n'
+            message = '\n** Invalid Google Calendar Data **\n'
             self.helpers.printer(
                 message=message,
                 file=sys.stderr
@@ -248,44 +435,26 @@ class GCALData:
                 api_request_data=api_request_data
             )
 
-            # Add matching results to `gcal_data`
-            gcal_data += response.json().get('items')
+            # Add matching results to `gcal_shift_data`
+            gcal_shift_data += response.json().get('items')
 
-        return gcal_data
+        return gcal_shift_data
 
-    def process_gcal_data(
+    def process_gcal_shift_data(
             self,
-            gcal_data: List[Dict[str, str]]
-    ) -> List[Dict[str, str]]:
+            gcal_shift_data: List[Dict[str, str]]
+    ) -> List[GCALShift]:
         """ Read and process Google Calendar data JSON.
 
             Produce a list of shifts from the Google Calendar JSON.
 
             Args:
-                gcal_data List[Dict[str, str]]):
+                gcal_shift_data List[Dict[str, str]]):
                     Google Calendar JSON data.
 
             Returns:
-                gcal_shifts (List[Dict[str, str]]:
-                    List of shift dictionaries in the format:
-                    [
-                        {
-                            need_name: <summary>,
-                            need_id: ''
-                            start_date: split of <start[dateTime]>,
-                            start_time: split of <start[dateTime]>
-                            duration: <end[dateTime]>-<start[dateTime]>,
-                            slots: ''
-                        },
-                        {
-                            need_name: <summary>,
-                            need_id: ''
-                            start_date: split of <start[dateTime]>,
-                            start_time: split of <start[dateTime]>
-                            duration: <end[dateTime]>-<start[dateTime]>,
-                            slots: ''
-                        }
-                    ]
+                gcal_shifts (List[GCALShift]:
+                    List of GCALShift objects.
         """
 
         # Display preliminary status message
@@ -299,38 +468,14 @@ class GCALData:
         gcal_shifts = []
 
         # Add Google Calendar data to 'gcal_shifts'
-        for item in gcal_data:
-            # Get the shift name, start, and end values
-            shift_name = item['summary']
-            shift_start = item['start']['dateTime']
-            shift_end = item['end']['dateTime']
+        for gcal_item in gcal_shift_data:
 
-            # Get the shift duration
-            shift_duration = self._get_shift_length(
-                shift_start=datetime.fromisoformat(shift_start),
-                shift_end=datetime.fromisoformat(shift_end)
+            # Convert each Google Calendar item to an GCALShift object
+            gcal_shift = self._create_gcal_shift(
+                gcal_item=gcal_item
             )
 
-            # Format the shift start values as strings
-            shift_start_string = self.helpers.iso_datetime_to_string(
-                datetime_object=shift_start
-            )
-
-            start_date, start_time = shift_start_string.split(
-                sep=' '
-            )
-
-            # Split the start date and start time values to separate variables
-            gcal_shifts.append(
-                {
-                    'need_name': shift_name,
-                    'need_id': '',
-                    'start_date': start_date,
-                    'start_time': start_time,
-                    'duration': shift_duration,
-                    'slots': ''
-                }
-            )
+            gcal_shifts.append(gcal_shift)
 
         # Display status message
         message = "done."
@@ -340,31 +485,13 @@ class GCALData:
 
     def generate_shift_csv(
             self,
-            gcal_shifts: List[Dict[str, str]]
+            gcal_shifts: List[GCALShift]
     ) -> str:
         """ Generate CSV file from shift data.
 
             Args:
-                gcal_shifts (List[Dict[str, str]]:
-                    List of shift dictionaries in the format:
-                    [
-                        {
-                            need_name: <summary>,
-                            need_id: ''
-                            start_date: split of <start[dateTime]>,
-                            start_time: split of <start[dateTime]>
-                            duration: <end[dateTime]>-<start[dateTime]>,
-                            slots: ''
-                        },
-                        {
-                            need_name: <summary>,
-                            need_id: ''
-                            start_date: split of <start[dateTime]>,
-                            start_time: split of <start[dateTime]>
-                            duration: <end[dateTime]>-<start[dateTime]>,
-                            slots: ''
-                        }
-                    ]
+                 gcal_shifts (List[GCALShift]:
+                    List of GCALShift objects.
 
             Returns:
                 csv_data (str):
@@ -381,29 +508,28 @@ class GCALData:
         # Create a list of shifts for Amplify
         amplify_shifts = []
 
-        # Loop up Amplify need IDs for Google Calendar shifts
-        for shift in gcal_shifts:
-            # Perform keyword lookup
-            # Convert 'need_name' to lowercase for searching
-            need_name = shift.get('need_name').lower()
-            # Loop over keywords to search for a shift match
-            for keyword, shift_info in SHIFT_INFO.get(
-                self.gcal_name
-            ).items():
-                # Search for 'SHIFT_INFO' keywords in 'need_name'
-                if need_name.find(keyword) != -1:
-                    # Loop over the list of 'need_ids' to add shifts for each
-                    for need_id in shift_info['need_ids']:
-                        # Create a copy of the current 'shift'
-                        new_shift = copy(shift)
-                        # Assign a 'need_id' to the new shift
-                        new_shift.update({'need_id': need_id.get('id')})
-                        # Assign a number of 'slots' to the new shift
-                        new_shift.update({'slots': need_id.get('slots')})
-                        # Add a new shift to the 'amplify_shifts' list
-                        amplify_shifts.append(new_shift)
-                    # Exit the loop after a successful match
-                    break
+        # Look up details for shift object
+        for gcal_shift in gcal_shifts:
+            # Loop over each need ID in the 'need_details' dict of a shift
+            for need_id in gcal_shift.need_ids:
+                # Calculate shift start date, time, and duration
+                start_date, start_time, duration = self._get_shift_time_data(
+                    need_id=need_id,
+                    end_time=gcal_shift.item_end,
+                    start_time=gcal_shift.item_start
+                )
+
+                # Create an AmplifyShift object for each shift
+                amplify_shift = AmplifyShift()
+                amplify_shift.need_id = need_id['id']
+                amplify_shift.need_name = gcal_shift.need_name
+                amplify_shift.start_date = start_date
+                amplify_shift.start_time = start_time
+                amplify_shift.duration = duration
+                amplify_shift.slots = need_id['slots']
+
+                # Add the shift to the `amplify_shifts` list as a dictionary
+                amplify_shifts.append(amplify_shift.args_to_dict())
 
         # Convert the shift data to a Pandas DataFrame for CSV export
         amplify_shifts_data_frame = df(amplify_shifts)

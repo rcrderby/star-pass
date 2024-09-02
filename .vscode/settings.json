@@ -4,6 +4,7 @@
         "brandonfowler",
         "dateparser",
         "dtype",
+        "fuzzywuzzy",
         "Gcal",
         "getfilesystemencoding",
         "Hadolint",

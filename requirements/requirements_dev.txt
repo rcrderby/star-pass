@@ -21,6 +21,10 @@ autopep8
 flake8
 pylint
 
+# Python fuzzy string matching
+python-Levenshtein
+fuzzywuzzy
+
 # Python interpreter
 ipython
 
