@@ -251,13 +251,13 @@ class GCALData:
 
         return gcal_shift
 
-    def _get_shift_timing(
+    def _get_shift_time_data(
             self,
             need_id: Dict[str, int | str],
             end_time: str,
             start_time: str
     ) -> Tuple[str, str, int | str]:
-        """ Calculate the duration of a shift
+        """ Calculate the date, time, and duration of a shift.
 
             Offset the start and end times if necessary.
 
@@ -278,22 +278,39 @@ class GCALData:
                     date, start time, and duration.
         """
 
-        # Calculate shift start and end times with any specified offset(s)
-        end_time = None  # TODO
-        start = gcal_shift.item_start.minute + gcal_shift.need_details.get(
-            need_id, 0
+        # Get the shift offset start and end values
+        offset_start = need_id.get('offset_start', 0)
+        offset_end = need_id.get('offset_end', 0)
+
+        # Convert the shift start and end ISO strings to datetime objects
+        shift_start_datetime = datetime.fromisoformat(
+            date_string=start_time
         )
-        end = gcal_shift.item_end.minute + gcal_shift.need_details.get(
-            'offset_end', 0
+        shift_end_datetime = datetime.fromisoformat(
+            date_string=end_time
         )
 
-        # Calculate the time delta between 'start' and 'end'
-        start_end_delta = start - end
+        # Adjust the shift start and end times based on the offset values
+        shift_start_datetime = shift_start_datetime.minute + offset_start
+        shift_end_datetime = shift_end_datetime.minute + offset_end
 
-        # Determine the number of shift minutes rounded to the nearest minute
+        # Calculate the time delta between the start and end of a shift
+        start_end_delta = shift_start_datetime - shift_end_datetime
+
+        # Convert the time delta to minutes
         shift_duration = floor(start_end_delta.seconds / 60)
 
-        return shift_duration
+        # Convert the shift start time to a formatted string
+        shift_start_string = self.helpers.iso_datetime_to_string(
+            datetime_object=shift_start_datetime
+        )
+
+        # Split the `shift_start_string` values to separate variables
+        shift_start_date, shift_start_time = shift_start_string.split(
+            sep=' '
+        )
+
+        return shift_start_date, shift_start_time, shift_duration
 
     def get_gcal_shift_data(  # pylint: disable=too-many-locals
             self,
@@ -489,7 +506,7 @@ class GCALData:
             # Loop over each need ID in the 'need_details' dict of a shift
             for need_id in gcal_shift.need_ids:
                 # Calculate shift start date, time, and duration
-                start_date, start_time, duration = self._get_shift_timing(
+                start_date, start_time, duration = self._get_shift_time_data(
                     need_id=need_id,
                     end_time=gcal_shift.item_end,
                     start_time=gcal_shift.item_start
