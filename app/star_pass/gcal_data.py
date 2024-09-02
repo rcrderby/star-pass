@@ -87,7 +87,7 @@ class GCALShift:
         """
 
         # Set initial attribute values
-        self.item_end = gcal_item['start']['dateTime']
+        self.item_end = gcal_item['end']['dateTime']
         self.item_start = gcal_item['start']['dateTime']
         self.need_details = None
         self.need_ids = None
@@ -310,9 +310,6 @@ class GCALData:
             minutes=need_id.get('offset_end', 0)
         )
 
-        print(need_id.get('offset_start', 0), need_id.get('offset_end', 0))
-        print()
-        print(offset_start, offset_end)
         # Convert the shift start and end ISO strings to datetime objects
         shift_start_datetime = datetime.fromisoformat(start_time)
         shift_end_datetime = datetime.fromisoformat(end_time)
