@@ -516,9 +516,9 @@ class GCALData:
                 amplify_shift = AmplifyShift()
                 amplify_shift.need_id = need_id['id']
                 amplify_shift.need_name = gcal_shift.need_name
-                amplify_shift.start_date,  = None  # _calculate_start_date
-                amplify_shift.start_time = None  # _calculate_start_date
-                amplify_shift.duration = None  # _calculate_duration
+                amplify_shift.start_date = start_date
+                amplify_shift.start_time = start_time
+                amplify_shift.duration = duration
                 amplify_shift.slots = gcal_shift['slots']
 
         # Convert the shift data to a Pandas DataFrame for CSV export
