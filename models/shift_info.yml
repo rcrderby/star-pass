@@ -27,7 +27,7 @@ calendar:
         type: game
 
       'dh: game 2':
-        description: Rose Buds HT Games
+        description: Adult Games
         group: juniors
         initiative: officiating
         need_ids:
