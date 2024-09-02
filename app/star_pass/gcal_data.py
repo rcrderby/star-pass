@@ -304,6 +304,7 @@ class GCALData:
                     date, start time, and duration.
         """
 
+        (print)
         # Get the shift offset start and end values
         offset_start = timedelta(
             minutes=need_id.get('offset_start', 0)
