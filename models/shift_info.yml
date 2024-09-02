@@ -73,13 +73,13 @@ calendar:
             id: 905196
             max_length: 165
             offset_start: 0
-            offset_end: 45
+            offset_end: 75
             slots: 12
           - description: SOs
             id: 905197
             max_length: 165
             offset_start: 0
-            offset_end: 45
+            offset_end: 75
             slots: 8
         type: game
 
