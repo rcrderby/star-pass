@@ -519,7 +519,7 @@ class GCALData:
                 amplify_shift.start_date = start_date
                 amplify_shift.start_time = start_time
                 amplify_shift.duration = duration
-                amplify_shift.slots = gcal_shift.need_details['slots']
+                amplify_shift.slots = need_id['slots']
 
                 # Add the shift to the `amplify_shifts` list as a dictionary
                 amplify_shifts.append(amplify_shift._to_dict())
