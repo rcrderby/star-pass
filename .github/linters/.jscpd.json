@@ -4,10 +4,11 @@
       "consoleFull"
     ],
     "ignore": [
+      "**/.bandit.yml",
       "**/__snapshots__/**",
-      "**/node_modules/**",
       "**/data/json/**",
-      "**/.bandit.yml"
+      "**/node_modules/**",
+      "**/models/shift_info.yml"
     ],
     "absolute": true
 }
