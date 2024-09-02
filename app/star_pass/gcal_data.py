@@ -96,6 +96,7 @@ class GCALShift:
         return None
 
 
+# pylint: disable=too-many-arguments
 class AmplifyShift:
     """ Object to store prepared Amplify shift data. """
     def __init__(
@@ -145,7 +146,7 @@ class AmplifyShift:
 
         return None
 
-    def _to_dict(self) -> Dict:
+    def args_to_dict(self) -> Dict:
         """ Return instance attributes in a dictionary.
 
             Args:
@@ -165,7 +166,8 @@ class AmplifyShift:
                     }
         """
 
-        attributes_dict = self.__dict__
+        # Convert instance attributes to a dictionary
+        attributes_dict = vars(self)
 
         return attributes_dict
 
@@ -522,7 +524,7 @@ class GCALData:
                 amplify_shift.slots = need_id['slots']
 
                 # Add the shift to the `amplify_shifts` list as a dictionary
-                amplify_shifts.append(amplify_shift._to_dict())
+                amplify_shifts.append(amplify_shift.args_to_dict())
 
         # Convert the shift data to a Pandas DataFrame for CSV export
         amplify_shifts_data_frame = df(amplify_shifts)
