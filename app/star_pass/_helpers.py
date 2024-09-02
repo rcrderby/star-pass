@@ -323,10 +323,24 @@ class Helpers:
         try:
             response = request(**api_request_data)
         # Handle TCP Connection Errors
-        except exceptions.ConnectionError as error:
+        except (
+            exceptions.ConnectionError,
+            exceptions.ConnectTimeout,
+            exceptions.HTTPError,
+            exceptions.ReadTimeout,
+            exceptions.Timeout,
+            exceptions.TooManyRedirects,
+            exceptions.RequestException
+        ) as error:
             # Display the error text and exit
+            error_message = error.args[0].reason.args[0].rsplit(">: ")[1]
+            message = '\n\n** An HTTP Error Occurred **\n'
+            message += f'{len(message) * "_"}\n\n'
+            message += f'{error_message}\n\n'
+            message += repr(f'{error!r}')
+
             self.printer(
-                message=repr(f'{error!r}'),
+                message=message,
                 file=sys.stderr
             )
             self.exit_program(status_code=1)
@@ -339,8 +353,14 @@ class Helpers:
         # Handle non-ok HTTP responses
         except exceptions.HTTPError as error:
             # Display the error text and exit
+            message = (
+                '\n\n** The request returned a bad status code '
+                f'({response.status_code}) **\n'
+            )
+            message += f'{len(message) * "_"}\n\n'
+            message += repr(f'{error!r}')
             self.printer(
-                message=repr(f'{error!r}'),
+                message=message,
                 file=sys.stderr
             )
             self.exit_program(status_code=1)
