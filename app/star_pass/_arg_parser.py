@@ -5,7 +5,7 @@
 import argparse
 
 # Imports - Local
-import _defaults
+from . import _defaults
 
 # Constants
 DESCRIPTION = '''
