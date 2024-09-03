@@ -15,7 +15,7 @@ from fuzzywuzzy import fuzz, process
 from requests import exceptions, request, Response
 
 # Imports - Local
-from . import _defaults
+import _defaults
 
 # Constants
 DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
