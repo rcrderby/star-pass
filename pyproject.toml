@@ -1,0 +1,46 @@
+# Python package configuration file
+## https://packaging.python.org/en/latest/
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools",
+  "setuptools-scm"
+]
+
+[project]
+authors = [
+  {name = "Breadpool", email = "breadpool@rosecityrollers.com"}
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Galaxy Digital Amplify volunteer management system administrators.",
+  "Topic :: Galaxy Digital Amplify :: Volunteer Management :: Automation",
+  "License :: OSI Approved :: Apache Software License",
+  "Private :: Do Not Upload",
+  "Programming Language :: Python :: 3.12"
+]
+dependencies = [
+  "python_dotenv",
+  "pandas",
+  "python-Levenshtein",
+  "fuzzywuzzy",
+  "requests"
+]
+description = "Tool to automate manual volunteer management in Galaxy Digital Amplify."
+dynamic = ["version"]
+name = "star-pass"
+readme = "README.md"
+requires-python = ">= 3.12"
+
+[project.scripts]
+oc-login-util = "app.star_pass.__main__:main"
+
+[project.urls]
+Repository = "https://github.com/rcrderby/star-pass.git"
+
+[tool.setuptools_scm]
+
+[tool.setuptools.dynamic]
+readme = {file = "README.md"}
+version = {attr = "app.__version__"}
