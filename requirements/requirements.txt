@@ -1,12 +1,12 @@
 # .env file support
 python_dotenv
 
-# HTTP requests
-requests
-
 # Pandas data structures
 pandas
 
 # Python fuzzy string matching
 python-Levenshtein
 fuzzywuzzy
+
+# Python HTTP requests
+requests
