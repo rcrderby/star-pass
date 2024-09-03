@@ -2,6 +2,7 @@
     "cSpell.words": [
         "Betties",
         "brandonfowler",
+        "Breadpool",
         "dateparser",
         "dtype",
         "fuzzywuzzy",
@@ -12,6 +13,7 @@
         "mechatroner",
         "nosborn",
         "pylint",
-        "rosecityrollers"
+        "rosecityrollers",
+        "setuptools"
     ]
 }
