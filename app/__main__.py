@@ -26,7 +26,7 @@ def main() -> None:
 
     """
 
-    return None  # TODO
+    return None
 
 
 def create_amplify_shifts():
