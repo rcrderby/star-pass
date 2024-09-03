@@ -8,14 +8,6 @@ import sys
 # Imports - Third-Party
 from yaml import safe_load
 
-# Application run modes
-RUN_MODES = (
-    'create_amplify_shifts',
-    'c',  # Alias for 'create_amplify_shifts
-    'get_gcal_events',
-    'g'  # Alias for 'get_gcal_events'
-)
-
 # Data file management
 FILE_ENCODING = sys.getfilesystemencoding()
 # .env file path
@@ -116,6 +108,7 @@ GCAL_CALENDARS = {
         'query_strings': GCAL_PRACTICES_QUERY_STRINGS
     }
 }
+GCAL_CALENDAR_NAMES = list(GCAL_CALENDARS.keys())
 
 # Amplify CSV input file management
 DROP_COLUMNS = 'need_name, start_date, start_time'
