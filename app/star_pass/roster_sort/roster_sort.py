@@ -40,6 +40,7 @@ def import_roster_data() -> DataFrame:
 
     roster_data = read_excel(
         io=INPUT_FILE,
+        dtype='str',
         sheet_name=INPUT_WORKSHEET,
     )
 
@@ -62,9 +63,6 @@ def sort_roster_data(
                 DataFrame sorted alphabetically by number.  A.K.A,
                 sorted by 'derby number order'.
     """
-
-    # Convert the 'number' column values to strings
-    roster_data[SORT_COLUMN] = roster_data[SORT_COLUMN].astype(str)
 
     # Sort the DataFrame by the 'number' column as string values
     sorted_roster_data = roster_data.sort_values(
