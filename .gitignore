@@ -7,6 +7,9 @@ _gitignore
 # _archive folders
 _archive
 
+# Excel spreadsheets
+*.xlsx
+
 # Byte-compiled / optimized / DLL files
 __pycache__
 __pycache__/
