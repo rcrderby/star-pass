@@ -14,7 +14,6 @@ INPUT_FILE = Path.joinpath(
     CURRENT_DIR,
     INPUT_FILE_NAME
 )
-# INPUT_FILE = '/workspaces/star-pass/roster_data.xlsx'
 INPUT_WORKSHEET = 'Sheet1'
 
 OUTPUT_FILE_NAME = 'sorted_roster_data.xlsx'
