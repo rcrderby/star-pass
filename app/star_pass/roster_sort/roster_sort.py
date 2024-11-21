@@ -6,6 +6,11 @@ from pathlib import Path
 
 # Imports - Python Third-Party
 from pandas import DataFrame, ExcelWriter, read_excel
+from pandas.io.formats import excel
+
+# Disable automatic border formatting in column headings
+excel.ExcelFormatter.header_style = None
+
 
 # Constants
 CURRENT_DIR = Path(__file__).parent
