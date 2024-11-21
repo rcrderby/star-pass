@@ -11,7 +11,7 @@ import sys
 # Imports - Third-Party
 from dateparser import parse
 from dotenv import load_dotenv
-from fuzzywuzzy import fuzz, process
+from thefuzz import fuzz, process
 from requests import exceptions, request, Response
 
 # Imports - Local
