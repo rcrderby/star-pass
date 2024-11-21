@@ -23,7 +23,7 @@ pylint
 
 # Python fuzzy string matching
 python-Levenshtein
-fuzzywuzzy
+thefuzz
 
 # Python interpreter
 ipython
