@@ -74,7 +74,7 @@ def sort_roster_data(
 def export_roster_data(
         sorted_roster_data: DataFrame
 ) -> None:
-    """ Export an Excel file of sorted roster data.
+    """ Add a new worksheet to an Excel file with sorted roster data.
 
     Description
 
