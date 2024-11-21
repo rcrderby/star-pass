@@ -6,7 +6,7 @@ pandas
 
 # Python fuzzy string matching
 python-Levenshtein
-fuzzywuzzy
+thefuzz
 
 # Python HTTP requests
 requests
