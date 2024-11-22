@@ -4,6 +4,9 @@ python_dotenv
 # Data formats
 pyyaml
 
+# Excel spreadsheet management
+openpyxl
+
 # Date parsing
 dateparser
 

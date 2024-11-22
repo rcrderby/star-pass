@@ -1,6 +1,9 @@
 # .env file support
 python_dotenv
 
+# Excel spreadsheet management
+openpyxl
+
 # Pandas data structures
 pandas
 
