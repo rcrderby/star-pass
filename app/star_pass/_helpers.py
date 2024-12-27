@@ -269,7 +269,8 @@ class Helpers:
         best_match = process.extractOne(
             query=need_name,
             choices=keywords,
-            scorer=fuzz.partial_ratio
+            scorer=fuzz.partial_ratio  # Best for games
+            # scorer=fuzz.ratio  # Best for scrimmages
         )[0]
 
         try:
