@@ -47,8 +47,14 @@ INPUT_DIR_PATH = _defaults.INPUT_DIR_PATH
 INPUT_FILE_EXTENSION = _defaults.INPUT_FILE_EXTENSION
 
 # Default date and time values
-DEFAULT_GCAL_TIME_MIN = _defaults.GCAL_TIME_MIN
-DEFAULT_GCAL_TIME_MAX = _defaults.GCAL_TIME_MAX
+DEFAULT_GCAL_TIME_MIN = getenv(
+    'GCAL_TIME_MIN',
+    _defaults.GCAL_TIME_MIN
+)
+DEFAULT_GCAL_TIME_MAX = (
+    'GCAL_TIME_MAX',
+    _defaults.GCAL_TIME_MAX
+)
 
 
 class GCALShift:
