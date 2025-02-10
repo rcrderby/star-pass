@@ -51,10 +51,11 @@ DEFAULT_GCAL_TIME_MIN = getenv(
     'GCAL_TIME_MIN',
     _defaults.GCAL_TIME_MIN
 )
-DEFAULT_GCAL_TIME_MAX = (
+DEFAULT_GCAL_TIME_MAX = getenv(
     'GCAL_TIME_MAX',
     _defaults.GCAL_TIME_MAX
 )
+print(DEFAULT_GCAL_TIME_MIN, DEFAULT_GCAL_TIME_MAX)
 
 
 class GCALShift:
