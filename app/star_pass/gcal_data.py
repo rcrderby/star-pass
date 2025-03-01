@@ -490,6 +490,25 @@ class GCALData:
 
         return gcal_shifts
 
+    def filter_shifts(
+            self,
+            gcal_shift_data: List[Dict[str, str]]
+    ) -> List[GCALShift]:
+        """ Remove unneeded shifts.
+
+            Filter shifts the from processed Google Calendar Data.
+
+            Args:
+                gcal_shifts (List[GCALShift]:
+                    List of GCALShift objects.
+
+            Returns:
+                gcal_shifts (List[GCALShift]:
+                    Filtered List of GCALShift objects.
+        """
+
+        return gcal_shift_data
+
     def generate_shift_csv(
             self,
             gcal_shifts: List[GCALShift]
