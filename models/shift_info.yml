@@ -1,5 +1,19 @@
 # Shift information model for looking up shift IDs based on keywords
 
+# Reference
+## 607810: Junior Scrimmages - SOs
+## 607934: Adult Scrimmages - SOs
+## 628861: Adult Scrimmages - NSOs
+## 628862: Junior Scrimmages - NSOs
+## 773454: Adult Officiating Practices
+## 868881: Junior Officiating Practices
+## 879609: Adult Games - NSOs
+## 879610: Adult Games - SOs
+## 892230: Adult Officiating Practices Coaches
+## 905196: Junior Games - NSOs
+## 905197: Junior Games - SOs
+## 968727: Junior Officiating Practices Coaches
+
 ---
 # 'Events' calendar keywords
 calendar:
