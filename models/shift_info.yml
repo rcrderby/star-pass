@@ -9,17 +9,17 @@ calendar:
 
       'dh: game 1':
         description: Adult Games
-        group: officials
+        group: adults
         initiative: officiating
         need_ids:
           - description: NSOs
-            id: 905196
+            id: 879609
             max_length: 165
             slots: 12
             offset_start: 15
             offset_end: 30
           - description: SOs
-            id: 905197
+            id: 879610
             max_length: 165
             offset_start: 15
             offset_end: 30
@@ -28,17 +28,17 @@ calendar:
 
       'dh: game 2':
         description: Adult Games
-        group: juniors
+        group: adults
         initiative: officiating
         need_ids:
           - description: NSOs
-            id: 905196
+            id: 879609
             max_length: 165
             offset_start: 0
             offset_end: 30
             slots: 12
           - description: SOs
-            id: 905197
+            id: 879610
             max_length: 165
             offset_start: 0
             offset_end: 30
