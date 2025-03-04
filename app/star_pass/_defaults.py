@@ -117,6 +117,10 @@ GCAL_CALENDARS = {
     }
 }
 
+GCAL_PRACTICE_PREFIX_FILTERS = (
+    'CANCELED:'
+)
+
 # Amplify CSV input file management
 DROP_COLUMNS = 'need_name, start_date, start_time'
 GROUP_BY_COLUMN = 'need_id'
