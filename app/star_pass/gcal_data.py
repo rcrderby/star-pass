@@ -246,6 +246,9 @@ class GCALData:
             self.gcal_shifts = self.process_gcal_shift_data(
                 gcal_shift_data=self.gcal_shift_data
             )
+            self.gcal_shifts = self.filter_shifts(
+                gcal_shifts=self.gcal_shifts
+            )
             self.csv_data = self.generate_shift_csv(
                 gcal_shifts=self.gcal_shifts
             )
@@ -492,7 +495,7 @@ class GCALData:
 
     def filter_shifts(
             self,
-            gcal_shift_data: List[Dict[str, str]]
+            gcal_shifts: List[Dict[str, str]]
     ) -> List[GCALShift]:
         """ Remove unneeded shifts.
 
@@ -507,7 +510,29 @@ class GCALData:
                     Filtered List of GCALShift objects.
         """
 
-        return gcal_shift_data
+        # Display preliminary status message
+        message = 'Filtering event data...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
+
+        # Loop over the list of Google Calendar shifts
+        for index, shift in enumerate(gcal_shifts):
+
+            # Search for shifts that match a tuple filter prefixes
+            if shift.need_name.startswith(
+                _defaults.GCAL_PRACTICE_PREFIX_FILTERS
+            ) is True:
+
+                # Remove a shift that matches a filter prefixes
+                del gcal_shifts[index]
+
+        # Display status message
+        message = "done."
+        self.helpers.printer(message=message)
+
+        return gcal_shifts
 
     def generate_shift_csv(
             self,
