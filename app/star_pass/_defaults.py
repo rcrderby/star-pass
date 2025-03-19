@@ -8,6 +8,10 @@ import sys
 # Imports - Third-Party
 from yaml import safe_load
 
+# Date and time formatting
+DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
+FILE_NAME_DATE_TIME_FORMAT = '%Y-%m-%dT%H_%M_%S_%f'
+
 # Application run modes
 RUN_MODES = (
     'create_amplify_shifts',
@@ -146,7 +150,3 @@ with open(
     SHIFTS_INFO = safe_load(
         stream=yaml_data.read()
     )
-
-# Miscellaneous
-DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
-FILE_NAME_DATE_TIME_FORMAT = '%Y-%m-%dT%H_%M_%S_%f'
