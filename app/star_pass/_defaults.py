@@ -121,7 +121,7 @@ GCAL_CALENDARS = {
 }
 
 GCAL_PRACTICE_PREFIX_FILTERS = (
-    'CANCELED:'
+    'canceled'
 )
 
 # Amplify CSV input file management
