@@ -137,7 +137,7 @@ SHIFTS_INFO_FILE = Path.joinpath(
     SHIFTS_INFO_FILE_NAME
 )
 
-# Read the shift info model to set SHIFT_INFO
+# Read the shift info model to set the SHIFTS_INFO constant
 with open(
     file=SHIFTS_INFO_FILE,
     mode='rt',
