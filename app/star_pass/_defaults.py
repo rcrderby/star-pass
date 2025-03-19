@@ -65,7 +65,6 @@ JSON_SCHEMA_SHIFT_FILE = Path.joinpath(
 INPUT_FILE_EXTENSION = '.csv'
 OUTPUT_FILE_EXTENSION = '.json'
 
-
 # HTTP request configuration
 BASE_HEADERS = {
     'Accept': 'application/json',
