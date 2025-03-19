@@ -213,6 +213,7 @@ class GCALData:
 
                         get_gcal_shift_data()
                         process_gcal_data()
+                        filter_shifts()
                         generate_shift_csv()
                         write_shift_csv_file()
 
