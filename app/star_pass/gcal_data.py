@@ -246,11 +246,11 @@ class GCALData:
             self.gcal_shifts = self.process_gcal_shift_data(
                 gcal_shift_data=self.gcal_shift_data
             )
-            self.gcal_shifts = self.filter_shifts(
+            self.filtered_gcal_shifts = self.filter_shifts(
                 gcal_shifts=self.gcal_shifts
             )
             self.csv_data = self.generate_shift_csv(
-                gcal_shifts=self.gcal_shifts
+                filtered_gcal_shifts=self.filtered_gcal_shifts
             )
             self.write_shift_csv_file(
                 csv_data=self.csv_data
@@ -539,12 +539,12 @@ class GCALData:
 
     def generate_shift_csv(
             self,
-            gcal_shifts: List[GCALShift]
+            filtered_gcal_shifts: List[GCALShift]
     ) -> str:
         """ Generate CSV file from shift data.
 
             Args:
-                 gcal_shifts (List[GCALShift]:
+                 filtered_gcal_shifts (List[GCALShift]:
                     List of GCALShift objects.
 
             Returns:
@@ -563,7 +563,7 @@ class GCALData:
         amplify_shifts = []
 
         # Look up details for shift object
-        for gcal_shift in gcal_shifts:
+        for gcal_shift in filtered_gcal_shifts:
             # Loop over each need ID in the 'need_details' dict of a shift
             for need_id in gcal_shift.need_ids:
                 # Calculate shift start date, time, and duration
