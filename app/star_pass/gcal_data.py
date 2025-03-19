@@ -521,7 +521,7 @@ class GCALData:
         filtered_gcal_shifts = []
 
         # Loop over the list of Google Calendar shifts
-        for index, shift in enumerate(gcal_shifts):
+        for shift in gcal_shifts:
 
             # Search for shifts that don't match values in a tuple of prefixes
             if shift.need_name.lower().startswith(
