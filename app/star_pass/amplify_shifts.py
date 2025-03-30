@@ -729,7 +729,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             index: int,
             need_id: str | int,
             url: str,
-            json: str | Any
+            json: Dict | Any
     ) -> str:
         """ Format Amplify shift output for display.
 
@@ -745,9 +745,9 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                 url (str):
                     Opportunity Amplify API URL.
 
-                json (str | Any):
+                json (Dict):
                     JSON body of shift data in an Amplify HTTP API
-                    request.
+                    request in a dictionary format.
 
             Returns:
                 formatted_output (str):
@@ -785,6 +785,29 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                 f'URL: {url}\n'
                 f'Shift Count: {shift_count}\n'
             )
+
+            for shift in json['shifts']:
+                # Get the shift date and time
+                date_time_string = shift.get('start')
+
+                # Convert the shift date to a simple format
+                simple_date = self.helpers.format_shift_date_simple(
+                    date_time_string=date_time_string
+                )
+
+                # Get the shift duration
+                shift_duration = shift.get('duration')
+
+                # Convert the shift start time to a simple start and end format
+                simple_time = self.helpers.format_shift_time_simple(
+                    date_time_string=date_time_string,
+                    shift_duration=shift_duration
+                )
+
+                # Update `output_message`
+                output_message += (
+                    f'{simple_date}: {simple_time}\n'
+                )
 
         # Detailed output formatting
         if self.output_verbosity == VERBOSITY_LEVELS[2]:
