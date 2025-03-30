@@ -759,15 +759,16 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             need_id=need_id
         )
 
+        # Get the count of shifts
+        shift_count = len(json.get('shifts'))
+
+        # Determine whether to display 'shift' or 'shifts'
+        shift_noun = 'shifts'
+        if shift_count == 1:
+            shift_noun = 'shift'
+
         # Basic output formatting
         if self.output_verbosity == VERBOSITY_LEVELS[0]:
-
-            # Get the count of shifts
-            shift_count = len(json.get('shifts'))
-            # Determine whether to display 'shift' or 'shifts'
-            shift_noun = 'shifts'
-            if shift_count == 1:
-                shift_noun = 'shift'
 
             # Create the output message
             output_message = (
@@ -777,7 +778,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         # Simple output formatting
         if self.output_verbosity == VERBOSITY_LEVELS[1]:
-            pass
+            pass    
 
         # Detailed output formatting
         if self.output_verbosity == VERBOSITY_LEVELS[2]:
