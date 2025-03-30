@@ -725,6 +725,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
     def _format_shift_output(
             self,
+            index: int,
             need_id: str | int,
             url: str,
             json: str | Any
@@ -734,6 +735,9 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             Output verbosity level set by self.output_verbosity.
 
             Args:
+                index (int):
+                    Loop iteration index number.
+
                 need_id (str | int):
                     Opportunity ID to look up.
 
@@ -756,7 +760,10 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         # Basic output formatting
         if self.output_verbosity == VERBOSITY_LEVELS[0]:
-            pass
+            output_message = (
+                f'{index}. {opp_title} - '
+                f'{len(json.get("shifts"))} new shifts'
+            )
 
         # Simple output formatting
         if self.output_verbosity == VERBOSITY_LEVELS[1]:
@@ -814,7 +821,10 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             headers = BASE_AMPLIFY_HEADERS
 
             # Create and send request
-            for need_id, shifts in self._json_shift_data.get('data').items():
+            for index, need_id, shifts in enumerate(
+                iterable=self._json_shift_data.get('data').items(),
+                start=1
+            ):
 
                 # Construct URL and JSON payload
                 url = f'{BASE_AMPLIFY_URL}/needs/{need_id}/shifts'
@@ -844,6 +854,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
                 # Format output_message
                 output_message = self._format_shift_output(
+                    index=index,
                     need_id=need_id,
                     url=url,
                     json=json
