@@ -18,7 +18,7 @@ from requests import exceptions, request, Response
 from . import _defaults
 
 # Constants
-DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
+AMPLIFY_DATE_TIME_FORMAT = _defaults.AMPLIFY_DATE_TIME_FORMAT
 ENV_FILE_PATH = _defaults.ENV_FILE_PATH
 FILE_ENCODING = _defaults.FILE_ENCODING
 GCAL_CALENDARS = _defaults.GCAL_CALENDARS
@@ -118,7 +118,37 @@ class Helpers:
 
         # Convert 'dt_object' to a formatted string
         formatted_date_time_string = dt_object.strftime(
-            format=DATE_TIME_FORMAT
+            format=AMPLIFY_DATE_TIME_FORMAT
+        )
+
+        return formatted_date_time_string
+
+    def format_date_simple(
+            self,
+            date_time_string: str
+    ) -> str:
+        """ Format an Amplify date and time to a simple date format.
+
+            Example:
+                '2025-04-09 11:30' -------> 'Wednesday, April 9 2025'
+
+            Args:
+                date_time_string (str):
+                    Date and time string in the format YYYY-MM-DD HH:MM.
+
+            Returns:
+                formatted_date_time_string (str):
+                    Date string in the format Wednesday, April 9 2025
+        """
+
+        # Parse date/time string into datetime.datetime object
+        dt_object = parse(
+            date_string=date_time_string
+        )
+
+        # Convert 'dt_object' to a formatted string
+        formatted_date_time_string = dt_object.strftime(
+            format=AMPLIFY_DATE_TIME_FORMAT
         )
 
         return formatted_date_time_string
@@ -165,7 +195,7 @@ class Helpers:
     def iso_datetime_to_string(
             self,
             datetime_object: str,
-            datetime_string_format: str = DATE_TIME_FORMAT
+            datetime_string_format: str = AMPLIFY_DATE_TIME_FORMAT
     ) -> str:
         """ Convert an ISO-formatted datetime to a simplified format.
 
