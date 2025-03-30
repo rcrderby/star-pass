@@ -374,7 +374,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         # Format the 'start' column for Amplify compatibility
         self._shift_data[START_COLUMN] = self._shift_data[START_COLUMN].apply(
-            lambda x: self.helpers.format_date_time(x)
+            lambda x: self.helpers.format_date_time_amplify(x)
         )
 
         # Display status message

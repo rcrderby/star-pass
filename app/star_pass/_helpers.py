@@ -82,7 +82,7 @@ class Helpers:
 
         return arg_bool
 
-    def format_date_time(
+    def format_date_time_amplify(
             self,
             date_time_string: str
     ) -> str:
