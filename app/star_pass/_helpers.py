@@ -3,7 +3,7 @@
 
 # Imports - Python Standard Library
 from ast import literal_eval
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict
 from pprint import pprint as pp
 import sys
@@ -18,11 +18,13 @@ from requests import exceptions, request, Response
 from . import _defaults
 
 # Constants
-DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
+AMPLIFY_DATE_TIME_FORMAT = _defaults.AMPLIFY_DATE_TIME_FORMAT
 ENV_FILE_PATH = _defaults.ENV_FILE_PATH
 FILE_ENCODING = _defaults.FILE_ENCODING
 GCAL_CALENDARS = _defaults.GCAL_CALENDARS
 SHIFTS_INFO = _defaults.SHIFTS_INFO
+SIMPLE_DATE_FORMAT = _defaults.SIMPLE_DATE_FORMAT
+SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
 
 
 # Class definitions
@@ -82,7 +84,7 @@ class Helpers:
 
         return arg_bool
 
-    def format_date_time(
+    def format_date_time_amplify(
             self,
             date_time_string: str
     ) -> str:
@@ -118,10 +120,96 @@ class Helpers:
 
         # Convert 'dt_object' to a formatted string
         formatted_date_time_string = dt_object.strftime(
-            format=DATE_TIME_FORMAT
+            format=AMPLIFY_DATE_TIME_FORMAT
         )
 
         return formatted_date_time_string
+
+    def format_shift_date_simple(
+            self,
+            date_time_string: str
+    ) -> str:
+        """ Format an Amplify date and time to a simple date format.
+
+            Example:
+                '2025-04-09 11:30' -------> 'Wednesday, April 9 2025'
+
+            Args:
+                date_time_string (str):
+                    Date and time string in the format YYYY-MM-DD HH:MM.
+
+            Returns:
+                simple_date_string (str):
+                    Date string in the format Wednesday, April 9 2025
+        """
+
+        # Convert an Amplify time string to a datetime.datetime object.
+        dt_object = datetime.strptime(
+            date_time_string,
+            "%Y-%m-%d %H:%M"
+        )
+
+        # Convert 'dt_object' to a formatted string
+        simple_date_string = dt_object.strftime(
+            format=SIMPLE_DATE_FORMAT
+        )
+
+        return simple_date_string
+
+    def format_shift_time_simple(
+            self,
+            date_time_string: str,
+            shift_duration: str
+    ) -> str:
+        """ Format an Amplify date and time to a simple shift time.
+
+            Also add an end time based on the duration.
+
+            Example:
+                '2025-04-09 11:30' -------> '11:30'
+
+            Args:
+                date_time_string (str):
+                    Date and time string in the format YYYY-MM-DD HH:MM.
+
+                shift_duration (str):
+                    Number of minutes in a shift duration.
+
+            Returns:
+                simple_shift_time_string (str):
+                    Time string in the format 11:30-12:30.
+        """
+
+        # Convert an Amplify time string to a datetime.datetime object.
+        dt_object = datetime.strptime(
+            date_time_string,
+            "%Y-%m-%d %H:%M"
+        )
+
+        # Convert 'dt_object' to a formatted start time string
+        start_time = dt_object.strftime(
+            format=SIMPLE_TIME_FORMAT
+        )
+
+        # Convert the shift duration to a timedelta object
+        shift_duration_object = timedelta(
+            minutes=int(shift_duration)
+        )
+
+        # Calculate the shift end time
+        end_time_object = dt_object + shift_duration_object
+
+        # Convert 'end_time_object' to a formatted start time string
+        end_time = end_time_object.strftime(
+            format=SIMPLE_TIME_FORMAT
+        )
+
+        # Create a simple shift time string
+        simple_shift_time_string = (
+            f'{start_time}-{end_time}'
+        )
+
+        return simple_shift_time_string
 
     def get_gcal_info(
             self,
@@ -165,7 +253,7 @@ class Helpers:
     def iso_datetime_to_string(
             self,
             datetime_object: str,
-            datetime_string_format: str = DATE_TIME_FORMAT
+            datetime_string_format: str = AMPLIFY_DATE_TIME_FORMAT
     ) -> str:
         """ Convert an ISO-formatted datetime to a simplified format.
 

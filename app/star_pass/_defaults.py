@@ -8,6 +8,12 @@ import sys
 # Imports - Third-Party
 from yaml import safe_load
 
+# Date and time formatting
+AMPLIFY_DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
+FILE_NAME_DATE_TIME_FORMAT = '%Y-%m-%dT%H_%M_%S_%f'
+SIMPLE_DATE_FORMAT = '%A, %B %d %Y'
+SIMPLE_TIME_FORMAT = '%H:%M'
+
 # Application run modes
 RUN_MODES = (
     'create_amplify_shifts',
@@ -60,7 +66,6 @@ JSON_SCHEMA_SHIFT_FILE = Path.joinpath(
 # Input and output data file extensions
 INPUT_FILE_EXTENSION = '.csv'
 OUTPUT_FILE_EXTENSION = '.json'
-
 
 # HTTP request configuration
 BASE_HEADERS = {
@@ -118,7 +123,7 @@ GCAL_CALENDARS = {
 }
 
 GCAL_PRACTICE_PREFIX_FILTERS = (
-    'CANCELED:'
+    'canceled'
 )
 
 # Amplify CSV input file management
@@ -130,14 +135,22 @@ START_DATE_COLUMN = 'start_date'
 START_TIME_COLUMN = 'start_time'
 KEEP_COLUMNS = f'{START_COLUMN}, duration, slots'
 
-# Shift lookup data model
+# Amplify shift output formatting
+HTTP_CHECK_MODE_MESSAGE = '\n** HTTP API Check Mode Run **'
+VERBOSITY_LEVELS = (
+    'basic',    # Shift name and number of new shifts
+    'simple',   # Basic data plus shift dates and times
+    'detailed'  # JSON data with headings
+)
+
+# Amplify Shift lookup data model
 SHIFTS_INFO_FILE_NAME = 'shift_info.yml'
 SHIFTS_INFO_FILE = Path.joinpath(
     MODELS_DIR_PATH,
     SHIFTS_INFO_FILE_NAME
 )
 
-# Read the shift info model to set SHIFT_INFO
+# Read the Amplify shift info model to set the SHIFTS_INFO constant
 with open(
     file=SHIFTS_INFO_FILE,
     mode='rt',
@@ -146,7 +159,3 @@ with open(
     SHIFTS_INFO = safe_load(
         stream=yaml_data.read()
     )
-
-# Miscellaneous
-DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
-FILE_NAME_DATE_TIME_FORMAT = '%Y-%m-%dT%H_%M_%S_%f'

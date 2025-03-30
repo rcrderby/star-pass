@@ -35,7 +35,7 @@ BASE_GCAL_URL = _defaults.BASE_GCAL_URL
 HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
 # Date and time management
-DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
+AMPLIFY_DATE_TIME_FORMAT = _defaults.AMPLIFY_DATE_TIME_FORMAT
 FILE_NAME_DATE_TIME_FORMAT = _defaults.FILE_NAME_DATE_TIME_FORMAT
 
 # Shift lookup data
@@ -55,7 +55,6 @@ DEFAULT_GCAL_TIME_MAX = getenv(
     'GCAL_TIME_MAX',
     _defaults.GCAL_TIME_MAX
 )
-print(DEFAULT_GCAL_TIME_MIN, DEFAULT_GCAL_TIME_MAX)
 
 
 class GCALShift:
@@ -213,6 +212,7 @@ class GCALData:
 
                         get_gcal_shift_data()
                         process_gcal_data()
+                        filter_shifts()
                         generate_shift_csv()
                         write_shift_csv_file()
 
@@ -246,11 +246,11 @@ class GCALData:
             self.gcal_shifts = self.process_gcal_shift_data(
                 gcal_shift_data=self.gcal_shift_data
             )
-            self.gcal_shifts = self.filter_shifts(
+            self.filtered_gcal_shifts = self.filter_shifts(
                 gcal_shifts=self.gcal_shifts
             )
             self.csv_data = self.generate_shift_csv(
-                gcal_shifts=self.gcal_shifts
+                filtered_gcal_shifts=self.filtered_gcal_shifts
             )
             self.write_shift_csv_file(
                 csv_data=self.csv_data
@@ -343,7 +343,7 @@ class GCALData:
 
         # Convert the shift start time to a formatted string
         shift_start_string = shift_start_datetime.strftime(
-            format=DATE_TIME_FORMAT
+            format=AMPLIFY_DATE_TIME_FORMAT
         )
 
         # Split the `shift_start_string` values to separate variables
@@ -506,7 +506,7 @@ class GCALData:
                     List of GCALShift objects.
 
             Returns:
-                gcal_shifts (List[GCALShift]:
+                filtered_gcal_shifts (List[GCALShift]:
                     Filtered List of GCALShift objects.
         """
 
@@ -517,31 +517,34 @@ class GCALData:
             end=''
         )
 
+        # Create a list of filtered Google Calendar Shifts
+        filtered_gcal_shifts = []
+
         # Loop over the list of Google Calendar shifts
-        for index, shift in enumerate(gcal_shifts):
+        for shift in gcal_shifts:
 
-            # Search for shifts that match a tuple filter prefixes
-            if shift.need_name.startswith(
+            # Search for shifts that don't match values in a tuple of prefixes
+            if shift.need_name.lower().startswith(
                 _defaults.GCAL_PRACTICE_PREFIX_FILTERS
-            ) is True:
+            ) is False:
 
-                # Remove a shift that matches a filter prefixes
-                del gcal_shifts[index]
+                # Add non-matching shifts to filtered_gcal_shifts list
+                filtered_gcal_shifts.append(shift)
 
         # Display status message
         message = "done."
         self.helpers.printer(message=message)
 
-        return gcal_shifts
+        return filtered_gcal_shifts
 
     def generate_shift_csv(
             self,
-            gcal_shifts: List[GCALShift]
+            filtered_gcal_shifts: List[GCALShift]
     ) -> str:
         """ Generate CSV file from shift data.
 
             Args:
-                 gcal_shifts (List[GCALShift]:
+                 filtered_gcal_shifts (List[GCALShift]:
                     List of GCALShift objects.
 
             Returns:
@@ -560,7 +563,7 @@ class GCALData:
         amplify_shifts = []
 
         # Look up details for shift object
-        for gcal_shift in gcal_shifts:
+        for gcal_shift in filtered_gcal_shifts:
             # Loop over each need ID in the 'need_details' dict of a shift
             for need_id in gcal_shift.need_ids:
                 # Calculate shift start date, time, and duration

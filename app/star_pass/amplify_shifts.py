@@ -54,6 +54,9 @@ START_DATE_COLUMN = _defaults.START_DATE_COLUMN
 START_TIME_COLUMN = _defaults.START_TIME_COLUMN
 KEEP_COLUMNS = _defaults.KEEP_COLUMNS.split(sep=', ')
 
+# Default output format verbosity
+VERBOSITY_LEVELS = _defaults.VERBOSITY_LEVELS
+
 
 # Class definitions
 class CreateShifts:  # pylint: disable=too-many-instance-attributes
@@ -64,6 +67,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             input_file: str,
             auto_prep_data: bool = True,
             check_mode: bool = True,
+            output_verbosity: str = VERBOSITY_LEVELS[0],
             **kwargs: Any
     ) -> None:
         """ CreateShifts initialization method.
@@ -117,6 +121,11 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                     Prepare HTTP API requests without sending the
                     requests.  Default value is True.
 
+                output_verbosity (str, optional):
+                    Verbosity level for output display.  Default value
+                    is the simplest format, which is the first index in
+                    VERBOSITY_LEVELS[0].
+
                 **kwargs (Any, optional):
                     Unspecified keyword arguments.
 
@@ -135,6 +144,14 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             self.check_mode = check_mode
         else:
             self.check_mode = self.helpers.convert_to_bool(check_mode)
+
+        # Determine if the verbosity level is valid
+        if output_verbosity in VERBOSITY_LEVELS:
+            self.output_verbosity = output_verbosity
+
+        else:
+            # Set the simplest valid verbosity level
+            self.output_verbosity = VERBOSITY_LEVELS[0]
 
         # Set the base file name
         self.base_file_name = input_file.rstrip(INPUT_FILE_EXTENSION)
@@ -357,7 +374,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         # Format the 'start' column for Amplify compatibility
         self._shift_data[START_COLUMN] = self._shift_data[START_COLUMN].apply(
-            lambda x: self.helpers.format_date_time(x)
+            lambda x: self.helpers.format_date_time_amplify(x)
         )
 
         # Display status message
@@ -669,7 +686,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """ Lookup an opportunity title with a need ID.
 
             Args:
-                need_id (str|int):
+                need_id (str | int):
                     Opportunity ID to look up.
 
                 timeout (int):
@@ -698,13 +715,112 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         # Send API request
         response = self.helpers.send_api_request(
-            api_request_data=api_request_data
+            api_request_data=api_request_data,
+            display_request_status=False
         )
 
         # Parse opportunity title from response
         opp_title = response.json()['data'].get("need_title", "Unknown")
 
         return opp_title
+
+    def _format_shift_output(
+            self,
+            index: int,
+            need_id: str | int,
+            url: str,
+            json: Dict | Any
+    ) -> str:
+        """ Format Amplify shift output for display.
+
+            Output verbosity level set by self.output_verbosity.
+
+            Args:
+                index (int):
+                    Loop iteration index number.
+
+                need_id (str | int):
+                    Opportunity ID to look up.
+
+                url (str):
+                    Opportunity Amplify API URL.
+
+                json (Dict):
+                    JSON body of shift data in an Amplify HTTP API
+                    request in a dictionary format.
+
+            Returns:
+                formatted_output (str):
+                    String of formatted shift output for display.
+        """
+
+        # Lookup opportunity title
+        opp_title = self._lookup_opportunity_title(
+            need_id=need_id
+        )
+
+        # Get the count of shifts
+        shift_count = len(json.get('shifts'))
+
+        # Determine whether to display 'shift' or 'shifts'
+        shift_noun = 'shifts'
+        if shift_count == 1:
+            shift_noun = 'shift'
+
+        # Basic output formatting
+        if self.output_verbosity == VERBOSITY_LEVELS[0]:
+
+            # Create the output message
+            output_message = (
+                f'{index}. {opp_title} - '
+                f'{shift_count} new {shift_noun}'
+            )
+
+        # Simple output formatting
+        if self.output_verbosity == VERBOSITY_LEVELS[1]:
+
+            # Create output message
+            output_message = (
+                f'Opportunity Title: {opp_title}\n'
+                f'URL: {url}\n'
+                f'Shift Count: {shift_count}\n'
+            )
+
+            for shift in json['shifts']:
+                # Get the shift date and time
+                date_time_string = shift.get('start')
+
+                # Convert the shift date to a simple format
+                simple_date = self.helpers.format_shift_date_simple(
+                    date_time_string=date_time_string
+                )
+
+                # Get the shift duration
+                shift_duration = shift.get('duration')
+
+                # Convert the shift start time to a simple start and end format
+                simple_time = self.helpers.format_shift_time_simple(
+                    date_time_string=date_time_string,
+                    shift_duration=shift_duration
+                )
+
+                # Update `output_message`
+                output_message += (
+                    f'{simple_date}: {simple_time}\n'
+                )
+
+        # Detailed output formatting
+        if self.output_verbosity == VERBOSITY_LEVELS[2]:
+
+            # Create output message
+            output_message = (
+                f'URL: {url}\n'
+                f'Opportunity Title: {opp_title}\n'
+                f'Shift Count: {shift_count}\n'
+                f'Payload:\n{dumps(json, indent=2)}'
+            )
+
+        return output_message
 
     def create_new_shifts(
             self,
@@ -737,15 +853,23 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                 message=message
             )
 
-            # Set a default value for 'output_heading'
-            output_heading = None
+            # Display a check_mode output message
+            if self.check_mode is True:
+                check_mode_heading = _defaults.HTTP_CHECK_MODE_MESSAGE
+                # Display output message
+                self.helpers.printer(
+                    message=check_mode_heading
+                )
 
             # Set HTTP request variables
             method = 'POST'
             headers = BASE_AMPLIFY_HEADERS
 
             # Create and send request
-            for need_id, shifts in self._json_shift_data.get('data').items():
+            for index, (need_id, shifts) in enumerate(
+                iterable=self._json_shift_data.get('data').items(),
+                start=1
+            ):
 
                 # Construct URL and JSON payload
                 url = f'{BASE_AMPLIFY_URL}/needs/{need_id}/shifts'
@@ -767,28 +891,13 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                         api_request_data=api_request_data
                     )
 
-                else:
-                    # Set check_mode output message
-                    output_heading = (
-                        '** HTTP API Check Mode Run **\n'
-                    )
-
-                # Lookup opportunity title
-                opp_title = self._lookup_opportunity_title(
-                    need_id=need_id
+                # Format output_message
+                output_message = self._format_shift_output(
+                    index=index,
+                    need_id=need_id,
+                    url=url,
+                    json=json
                 )
-
-                # Create output message
-                output_message = (
-                    f'URL: {url}\n'
-                    f'Opportunity Title: {opp_title}\n'
-                    f'Shift Count: {len(json.get("shifts"))}\n'
-                    f'Payload:\n{dumps(json, indent=2)}'
-                )
-
-                # Add a heading if it exists
-                if output_heading is not None:
-                    output_message = f'{output_heading}{output_message}'
 
                 # Display output message
                 self.helpers.printer(
