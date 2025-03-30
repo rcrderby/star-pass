@@ -669,7 +669,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """ Lookup an opportunity title with a need ID.
 
             Args:
-                need_id (str|int):
+                need_id (str | int):
                     Opportunity ID to look up.
 
                 timeout (int):
@@ -706,16 +706,25 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         return opp_title
 
-    def _format_amplify_response(
+    def _format_shift_output(
             self,
-            amplify_response: str | Any,
+            need_id: str | int,
+            url: str,
+            json: str | Any,
             verbosity_level: str = _defaults.VERBOSITY_LEVEL[0]
     ) -> str:
-        """ Format 
+        """ Format Amplify shift output for display.
 
             Args:
-                amplify_response (str | Any):
-                    JSON response from Amplify to format for output.
+                need_id (str | int):
+                    Opportunity ID to look up.
+
+                url (str):
+                    Opportunity Amplify API URL.
+
+                json (str | Any):
+                    JSON body of shift data in an Amplify HTTP API
+                    request.
 
                 verbosity_level (str):
                     Verbosity level for output.  Default is the simplest
@@ -723,10 +732,23 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
             Returns:
                 formatted_output (str):
-                    String of data formatted for output.
+                    String of formatted shift output for display.
         """
 
-        return None
+        # Lookup opportunity title
+        opp_title = self._lookup_opportunity_title(
+            need_id=need_id
+        )
+
+        # Create output message
+        output_message = (
+            f'URL: {url}\n'
+            f'Opportunity Title: {opp_title}\n'
+            f'Shift Count: {len(json.get("shifts"))}\n'
+            f'Payload:\n{dumps(json, indent=2)}'
+        )
+
+        return output_message
 
     def create_new_shifts(
             self,
@@ -795,17 +817,11 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                         '** HTTP API Check Mode Run **\n'
                     )
 
-                # Lookup opportunity title
-                opp_title = self._lookup_opportunity_title(
-                    need_id=need_id
-                )
-
-                # Create output message
-                output_message = (
-                    f'URL: {url}\n'
-                    f'Opportunity Title: {opp_title}\n'
-                    f'Shift Count: {len(json.get("shifts"))}\n'
-                    f'Payload:\n{dumps(json, indent=2)}'
+                # Format output_message
+                output_message = self._format_shift_output(
+                    need_id=need_id,
+                    url=url,
+                    json=json
                 )
 
                 # Add a heading if it exists
