@@ -134,6 +134,7 @@ START_TIME_COLUMN = 'start_time'
 KEEP_COLUMNS = f'{START_COLUMN}, duration, slots'
 
 # Amplify shift output formatting
+HTTP_CHECK_MODE_MESSAGE = '\n** HTTP API Check Mode Run **'
 VERBOSITY_LEVELS = (
     'basic',    # Shift name and number of new shifts
     'simple',   # Basic data plus shift dates and times
