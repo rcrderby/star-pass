@@ -821,7 +821,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             headers = BASE_AMPLIFY_HEADERS
 
             # Create and send request
-            for index, need_id, shifts in enumerate(
+            for index, (need_id, shifts) in enumerate(
                 iterable=self._json_shift_data.get('data').items(),
                 start=1
             ):
