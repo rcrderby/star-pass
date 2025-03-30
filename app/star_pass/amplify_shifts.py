@@ -145,8 +145,13 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         else:
             self.check_mode = self.helpers.convert_to_bool(check_mode)
 
-        # Set the default output verbosity level
-        self.output_verbosity = output_verbosity
+        # Determine if the verbosity level is valid
+        if output_verbosity in range(len(VERBOSITY_LEVELS)):
+            # Set the specified verbosity level
+            self.output_verbosity = output_verbosity
+        else:
+            # Set the simplest valid verbosity level
+            self.output_verbosity = VERBOSITY_LEVELS[0]
 
         # Set the base file name
         self.base_file_name = input_file.rstrip(INPUT_FILE_EXTENSION)
