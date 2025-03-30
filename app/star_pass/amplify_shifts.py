@@ -706,6 +706,28 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         return opp_title
 
+    def _format_amplify_response(
+            self,
+            amplify_response: str | Any,
+            verbosity_level: str = _defaults.VERBOSITY_LEVEL[0]
+    ) -> str:
+        """ Format 
+
+            Args:
+                amplify_response (str | Any):
+                    JSON response from Amplify to format for output.
+
+                verbosity_level (str):
+                    Verbosity level for output.  Default is the simplest
+                    format/first index in _defaults.VERBOSITY_LEVEL.
+
+            Returns:
+                formatted_output (str):
+                    String of data formatted for output.
+        """
+
+        return None
+
     def create_new_shifts(
             self,
             json: Any = None,
