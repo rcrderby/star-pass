@@ -146,9 +146,9 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             self.check_mode = self.helpers.convert_to_bool(check_mode)
 
         # Determine if the verbosity level is valid
-        if output_verbosity in range(len(VERBOSITY_LEVELS)):
-            # Set the specified verbosity level
+        if output_verbosity in VERBOSITY_LEVELS:
             self.output_verbosity = output_verbosity
+
         else:
             # Set the simplest valid verbosity level
             self.output_verbosity = VERBOSITY_LEVELS[0]
@@ -761,9 +761,18 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         # Basic output formatting
         if self.output_verbosity == VERBOSITY_LEVELS[0]:
+
+            # Get the count of shifts
+            shift_count = len(json.get('shifts'))
+            # Determine whether to display 'shift' or 'shifts'
+            shift_noun = 'shifts'
+            if shift_count == 1:
+                shift_noun = 'shift'
+
+            # Create the output message
             output_message = (
                 f'{index}. {opp_title} - '
-                f'{len(json.get("shifts"))} new shifts'
+                f'{shift_count} new {shift_noun}'
             )
 
         # Simple output formatting
@@ -814,8 +823,13 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                 message=message
             )
 
-            # Set a default value for 'output_heading'
-            output_heading = None
+            # Display a check_mode output message
+            if self.check_mode is True:
+                check_mode_heading = _defaults.HTTP_CHECK_MODE_MESSAGE
+                # Display output message
+                self.helpers.printer(
+                    message=check_mode_heading
+                )
 
             # Set HTTP request variables
             method = 'POST'
@@ -847,12 +861,6 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                         api_request_data=api_request_data
                     )
 
-                else:
-                    # Set check_mode output message
-                    output_heading = (
-                        '** HTTP API Check Mode Run **\n'
-                    )
-
                 # Format output_message
                 output_message = self._format_shift_output(
                     index=index,
@@ -860,10 +868,6 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                     url=url,
                     json=json
                 )
-
-                # Add a heading if it exists
-                if output_heading is not None:
-                    output_message = f'{output_heading}{output_message}'
 
                 # Display output message
                 self.helpers.printer(
