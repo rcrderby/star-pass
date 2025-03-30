@@ -125,7 +125,7 @@ class Helpers:
 
         return formatted_date_time_string
 
-    def format_date_simple(
+    def format_shift_date_simple(
             self,
             date_time_string: str
     ) -> str:
@@ -145,8 +145,8 @@ class Helpers:
 
         # Convert an Amplify time string to a datetime.datetime object.
         dt_object = datetime.strptime(
-            date_string=date_time_string,
-            format="%Y-%m-%d %H:%M"
+            date_time_string,
+            "%Y-%m-%d %H:%M"
         )
 
         # Convert 'dt_object' to a formatted string
@@ -159,7 +159,7 @@ class Helpers:
     def format_shift_time_simple(
             self,
             date_time_string: str,
-            duration: str
+            shift_duration: str
     ) -> str:
         """ Format an Amplify date and time to a simple shift time.
 
@@ -172,7 +172,7 @@ class Helpers:
                 date_time_string (str):
                     Date and time string in the format YYYY-MM-DD HH:MM.
 
-                duration (str):
+                shift_duration (str):
                     Number of minutes in a shift duration.
 
             Returns:
@@ -182,8 +182,8 @@ class Helpers:
 
         # Convert an Amplify time string to a datetime.datetime object.
         dt_object = datetime.strptime(
-            date_string=date_time_string,
-            format="%Y-%m-%d %H:%M"
+            date_time_string,
+            "%Y-%m-%d %H:%M"
         )
 
         # Convert 'dt_object' to a formatted start time string
@@ -193,7 +193,7 @@ class Helpers:
 
         # Convert the shift duration to a timedelta object
         shift_duration_object = timedelta(
-            minutes=duration
+            minutes=int(shift_duration)
         )
 
         # Calculate the shift end time
