@@ -11,6 +11,8 @@ from yaml import safe_load
 # Date and time formatting
 AMPLIFY_DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
 FILE_NAME_DATE_TIME_FORMAT = '%Y-%m-%dT%H_%M_%S_%f'
+SIMPLE_DATE_FORMAT = '%A, %B %d %Y'
+SIMPLE_TIME_FORMAT = '%H:%M'
 
 # Application run modes
 RUN_MODES = (
