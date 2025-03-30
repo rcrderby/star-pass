@@ -3,7 +3,7 @@
 
 # Imports - Python Standard Library
 from ast import literal_eval
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict
 from pprint import pprint as pp
 import sys
@@ -23,6 +23,8 @@ ENV_FILE_PATH = _defaults.ENV_FILE_PATH
 FILE_ENCODING = _defaults.FILE_ENCODING
 GCAL_CALENDARS = _defaults.GCAL_CALENDARS
 SHIFTS_INFO = _defaults.SHIFTS_INFO
+SIMPLE_DATE_FORMAT = _defaults.SIMPLE_DATE_FORMAT
+SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
 
 
 # Class definitions
@@ -137,21 +139,77 @@ class Helpers:
                     Date and time string in the format YYYY-MM-DD HH:MM.
 
             Returns:
-                formatted_date_time_string (str):
+                simple_date_string (str):
                     Date string in the format Wednesday, April 9 2025
         """
 
-        # Parse date/time string into datetime.datetime object
-        dt_object = parse(
-            date_string=date_time_string
+        # Convert an Amplify time string to a datetime.datetime object.
+        dt_object = datetime.strptime(
+            date_string=date_time_string,
+            format="%Y-%m-%d %H:%M"
         )
 
         # Convert 'dt_object' to a formatted string
-        formatted_date_time_string = dt_object.strftime(
-            format=AMPLIFY_DATE_TIME_FORMAT
+        simple_date_string = dt_object.strftime(
+            format=SIMPLE_DATE_FORMAT
         )
 
-        return formatted_date_time_string
+        return simple_date_string
+
+    def format_shift_time_simple(
+            self,
+            date_time_string: str,
+            duration: str
+    ) -> str:
+        """ Format an Amplify date and time to a simple shift time.
+
+            Also add an end time based on the duration.
+
+            Example:
+                '2025-04-09 11:30' -------> '11:30'
+
+            Args:
+                date_time_string (str):
+                    Date and time string in the format YYYY-MM-DD HH:MM.
+
+                duration (str):
+                    Number of minutes in a shift duration.
+
+            Returns:
+                simple_shift_time_string (str):
+                    Time string in the format 11:30-12:30.
+        """
+
+        # Convert an Amplify time string to a datetime.datetime object.
+        dt_object = datetime.strptime(
+            date_string=date_time_string,
+            format="%Y-%m-%d %H:%M"
+        )
+
+        # Convert 'dt_object' to a formatted start time string
+        start_time = dt_object.strftime(
+            format=SIMPLE_TIME_FORMAT
+        )
+
+        # Convert the shift duration to a timedelta object
+        shift_duration_object = timedelta(
+            minutes=duration
+        )
+
+        # Calculate the shift end time
+        end_time_object = dt_object + shift_duration_object
+
+        # Convert 'end_time_object' to a formatted start time string
+        end_time = end_time_object.strftime(
+            format=SIMPLE_TIME_FORMAT
+        )
+
+        # Create a simple shift time string
+        simple_shift_time_string = (
+            f'{start_time}-{end_time}'
+        )
+
+        return simple_shift_time_string
 
     def get_gcal_info(
             self,
