@@ -134,7 +134,7 @@ START_TIME_COLUMN = 'start_time'
 KEEP_COLUMNS = f'{START_COLUMN}, duration, slots'
 
 # Amplify shift output formatting
-VERBOSITY_LEVEL = (
+OUTPUT_VERBOSITY = (
     'basic',    # Shift name and number of new shifts
     'simple',   # Basic data plus shift dates and times
     'detailed'  # JSON data with headings
