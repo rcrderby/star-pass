@@ -54,6 +54,9 @@ START_DATE_COLUMN = _defaults.START_DATE_COLUMN
 START_TIME_COLUMN = _defaults.START_TIME_COLUMN
 KEEP_COLUMNS = _defaults.KEEP_COLUMNS.split(sep=', ')
 
+# Default output format verbosity
+VERBOSITY_LEVEL = _defaults.VERBOSITY_LEVEL[0]
+
 
 # Class definitions
 class CreateShifts:  # pylint: disable=too-many-instance-attributes
