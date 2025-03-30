@@ -35,7 +35,7 @@ BASE_GCAL_URL = _defaults.BASE_GCAL_URL
 HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
 # Date and time management
-DATE_TIME_FORMAT = _defaults.DATE_TIME_FORMAT
+AMPLIFY_DATE_TIME_FORMAT = _defaults.AMPLIFY_DATE_TIME_FORMAT
 FILE_NAME_DATE_TIME_FORMAT = _defaults.FILE_NAME_DATE_TIME_FORMAT
 
 # Shift lookup data
@@ -343,7 +343,7 @@ class GCALData:
 
         # Convert the shift start time to a formatted string
         shift_start_string = shift_start_datetime.strftime(
-            format=DATE_TIME_FORMAT
+            format=AMPLIFY_DATE_TIME_FORMAT
         )
 
         # Split the `shift_start_string` values to separate variables
