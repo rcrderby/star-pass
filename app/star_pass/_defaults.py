@@ -133,14 +133,21 @@ START_DATE_COLUMN = 'start_date'
 START_TIME_COLUMN = 'start_time'
 KEEP_COLUMNS = f'{START_COLUMN}, duration, slots'
 
-# Shift lookup data model
+# Amplify shift output formatting
+VERBOSITY_LEVEL = (
+    'basic',    # Shift name and number of new shifts
+    'simple',   # Basic data plus shift dates and times
+    'detailed'  # JSON data with headings
+)
+
+# Amplify Shift lookup data model
 SHIFTS_INFO_FILE_NAME = 'shift_info.yml'
 SHIFTS_INFO_FILE = Path.joinpath(
     MODELS_DIR_PATH,
     SHIFTS_INFO_FILE_NAME
 )
 
-# Read the shift info model to set the SHIFTS_INFO constant
+# Read the Amplify shift info model to set the SHIFTS_INFO constant
 with open(
     file=SHIFTS_INFO_FILE,
     mode='rt',
