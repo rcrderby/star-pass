@@ -715,7 +715,8 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         # Send API request
         response = self.helpers.send_api_request(
-            api_request_data=api_request_data
+            api_request_data=api_request_data,
+            display_request_status=False
         )
 
         # Parse opportunity title from response
