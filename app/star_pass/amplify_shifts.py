@@ -55,7 +55,7 @@ START_TIME_COLUMN = _defaults.START_TIME_COLUMN
 KEEP_COLUMNS = _defaults.KEEP_COLUMNS.split(sep=', ')
 
 # Default output format verbosity
-VERBOSITY_LEVEL = _defaults.VERBOSITY_LEVEL[0]
+OUTPUT_VERBOSITY = _defaults.OUTPUT_VERBOSITY[0]
 
 
 # Class definitions
@@ -67,6 +67,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             input_file: str,
             auto_prep_data: bool = True,
             check_mode: bool = True,
+            output_verbosity: str = OUTPUT_VERBOSITY,
             **kwargs: Any
     ) -> None:
         """ CreateShifts initialization method.
@@ -120,6 +121,10 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                     Prepare HTTP API requests without sending the
                     requests.  Default value is True.
 
+                output_verbosity (str, optional):
+                    Verbosity level for output display.  Default value
+                    is OUTPUT_VERBOSITY.
+
                 **kwargs (Any, optional):
                     Unspecified keyword arguments.
 
@@ -138,6 +143,9 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             self.check_mode = check_mode
         else:
             self.check_mode = self.helpers.convert_to_bool(check_mode)
+
+        # Set the default output verbosity level
+        self.output_verbosity = output_verbosity
 
         # Set the base file name
         self.base_file_name = input_file.rstrip(INPUT_FILE_EXTENSION)
@@ -713,10 +721,11 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             self,
             need_id: str | int,
             url: str,
-            json: str | Any,
-            verbosity_level: str = _defaults.VERBOSITY_LEVEL[0]
+            json: str | Any
     ) -> str:
         """ Format Amplify shift output for display.
+
+            Output verbosity level set by self.output_verbosity.
 
             Args:
                 need_id (str | int):
@@ -728,10 +737,6 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                 json (str | Any):
                     JSON body of shift data in an Amplify HTTP API
                     request.
-
-                verbosity_level (str):
-                    Verbosity level for output.  Default is the simplest
-                    format/first index in _defaults.VERBOSITY_LEVEL.
 
             Returns:
                 formatted_output (str):
