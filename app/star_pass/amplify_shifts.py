@@ -778,7 +778,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         # Simple output formatting
         if self.output_verbosity == VERBOSITY_LEVELS[1]:
-            pass    
+            pass
 
         # Detailed output formatting
         if self.output_verbosity == VERBOSITY_LEVELS[2]:
