@@ -754,13 +754,24 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             need_id=need_id
         )
 
-        # Create output message
-        output_message = (
-            f'URL: {url}\n'
-            f'Opportunity Title: {opp_title}\n'
-            f'Shift Count: {len(json.get("shifts"))}\n'
-            f'Payload:\n{dumps(json, indent=2)}'
-        )
+        # Basic output formatting
+        if self.output_verbosity == VERBOSITY_LEVELS[0]:
+            pass
+
+        # Simple output formatting
+        if self.output_verbosity == VERBOSITY_LEVELS[1]:
+            pass
+
+        # Detailed output formatting
+        if self.output_verbosity == VERBOSITY_LEVELS[2]:
+
+            # Create output message
+            output_message = (
+                f'URL: {url}\n'
+                f'Opportunity Title: {opp_title}\n'
+                f'Shift Count: {len(json.get("shifts"))}\n'
+                f'Payload:\n{dumps(json, indent=2)}'
+            )
 
         return output_message
 
