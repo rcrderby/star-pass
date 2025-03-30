@@ -55,7 +55,7 @@ START_TIME_COLUMN = _defaults.START_TIME_COLUMN
 KEEP_COLUMNS = _defaults.KEEP_COLUMNS.split(sep=', ')
 
 # Default output format verbosity
-OUTPUT_VERBOSITY = _defaults.OUTPUT_VERBOSITY[0]
+VERBOSITY_LEVELS = _defaults.VERBOSITY_LEVELS
 
 
 # Class definitions
@@ -67,7 +67,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             input_file: str,
             auto_prep_data: bool = True,
             check_mode: bool = True,
-            output_verbosity: str = OUTPUT_VERBOSITY,
+            output_verbosity: str = VERBOSITY_LEVELS[0],
             **kwargs: Any
     ) -> None:
         """ CreateShifts initialization method.
@@ -123,7 +123,8 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
                 output_verbosity (str, optional):
                     Verbosity level for output display.  Default value
-                    is OUTPUT_VERBOSITY.
+                    is the simplest format, which is the first index in
+                    VERBOSITY_LEVELS[0].
 
                 **kwargs (Any, optional):
                     Unspecified keyword arguments.
