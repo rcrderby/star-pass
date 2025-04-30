@@ -266,6 +266,25 @@ calendar:
             slots: 8
         type: game
 
+      'justice':
+        description: Wheels of Justice (WoJ) Games
+        group: adults
+        initiative: officiating
+        need_ids:
+          - description: NSOs
+            id: 879609
+            max_length: 165
+            offset_start: 15
+            offset_end: 30
+            slots: 12
+          - description: SOs
+            id: 879610
+            max_length: 165
+            offset_start: 15
+            offset_end: 30
+            slots: 8
+        type: game
+
       'wreckers':
         description: Wreckers Games
         group: adults
