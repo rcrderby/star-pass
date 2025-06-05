@@ -525,7 +525,7 @@ class GCALData:
 
             # Search for shifts that don't match values in a tuple of prefixes
             if shift.need_name.lower().startswith(
-                _defaults.GCAL_PRACTICE_PREFIX_FILTERS
+                _defaults.GCAL_PREFIX_FILTERS
             ) is False:
 
                 # Add non-matching shifts to filtered_gcal_shifts list
