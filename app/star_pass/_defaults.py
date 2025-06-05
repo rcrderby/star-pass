@@ -124,7 +124,9 @@ GCAL_CALENDARS = {
 
 GCAL_PREFIX_FILTERS = (
     'canceled',
-    'cancelled'
+    'cancelled',
+    'derby daze',
+    'summer camp'
 )
 
 # Amplify CSV input file management
