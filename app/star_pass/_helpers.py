@@ -420,7 +420,12 @@ class Helpers:
             exceptions.RequestException
         ) as error:
             # Display the error text and exit
-            error_message = error.args[0].reason.args[0].rsplit(">: ")[1]
+            try:
+                error_message = error.args[0].reason.args[0].rsplit(">: ")[1]
+            # Handle non-standard errors
+            except AttributeError:
+                error_message = 'Unspecified'
+
             message = '\n\n** An HTTP Error Occurred **\n'
             message += f'{len(message) * "_"}\n\n'
             message += f'{error_message}\n\n'
