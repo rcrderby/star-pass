@@ -122,7 +122,7 @@ GCAL_CALENDARS = {
     }
 }
 
-GCAL_PRACTICE_PREFIX_FILTERS = (
+GCAL_PREFIX_FILTERS = (
     'canceled',
     'cancelled'
 )
