@@ -31,8 +31,8 @@ This tool automates bulk operations on the Galaxy Digital Amplify volunteer mana
 3. Create a file named `.env` at the root directory with the following variables and their corresponding values:
 
     ```text
-    AMPLIFY_TOKEN=abcdefg1234567890              ## Amplify API Token
-    GCAL_TOKEN=abcdefg1234567890                 ## Google Calendar API Token
+    AMPLIFY_TOKEN=<insert_amplify_token>         ## Amplify API Token
+    GCAL_TOKEN=<insert_gcal_token>               ## Google Calendar API Token
     GCAL_TIME_MIN = '2099-01-10T00:00:00-00:00'  ## "From" date for Google Calendar shift searches
     GCAL_TIME_MAX = '2099-01-30T00:00:00-00:00'  ## "To" date for Google Calendar shift searches
     ```
