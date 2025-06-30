@@ -52,5 +52,5 @@ This tool automates bulk operations on the Galaxy Digital Amplify volunteer mana
 2. Create Amplify Shifts using formatted CSV file data:
 
     ```bash
-    ./app/__main__.py --mode=create_create_amplify_shifts --input_file=gcal_shifts_2099-01-01T00_00_00_000000.csv check_mode=False
+    ./app/__main__.py --mode=create_amplify_shifts --input_file=gcal_shifts_2099-01-01T00_00_00_000000.csv check_mode=False
     ```
