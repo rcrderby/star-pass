@@ -24,7 +24,7 @@ dependencies = [
   "python_dotenv",
   "pandas",
   "python-Levenshtein",
-  "fuzzywuzzy",
+  "thefuzz",
   "requests"
 ]
 description = "Tool to automate manual volunteer management in Galaxy Digital Amplify."
