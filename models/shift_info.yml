@@ -22,7 +22,7 @@ calendar:
     keywords:
 
       'dh: game 1':
-        description: Adult Games
+        description: Adult Games - Unspecified
         group: adults
         initiative: officiating
         need_ids:
@@ -41,7 +41,7 @@ calendar:
         type: game
 
       'dh: game 2':
-        description: Adult Games
+        description: Adult Games - Unspecified
         group: adults
         initiative: officiating
         need_ids:
