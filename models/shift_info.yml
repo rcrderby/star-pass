@@ -135,6 +135,25 @@ calendar:
             slots: 8
         type: game
 
+      'juniors':
+        description: Juniors Games - Unspecified
+        group: juniors
+        initiative: officiating
+        need_ids:
+          - description: NSOs
+            id: 905196
+            max_length: 165
+            offset_start: 15
+            offset_end: 30
+            slots: 12
+          - description: SOs
+            id: 905197
+            max_length: 165
+            offset_start: 15
+            offset_end: 30
+            slots: 8
+        type: game
+
       'aoa':
         description: Axles of Annihilation (AoA) Games
         group: adults
@@ -226,25 +245,6 @@ calendar:
             slots: 8
         offset_start: 15
         offset_end: 30
-        type: game
-
-      'juniors':
-        description: Juniors Games
-        group: juniors
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 905196
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 12
-          - description: SOs
-            id: 905197
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 8
         type: game
 
       'woj':
