@@ -173,6 +173,25 @@ calendar:
             slots: 8
         type: game
 
+      'buds closed scored scrimmage':
+        description: Rose Buds HT Games
+        group: juniors
+        initiative: officiating
+        need_ids:
+          - description: NSOs
+            id: 905196
+            max_length: 165
+            offset_start: -30
+            offset_end: 15
+            slots: 12
+          - description: SOs
+            id: 905197
+            max_length: 165
+            offset_start: -30
+            offset_end: 15
+            slots: 8
+        type: game
+
       'juniors':
         description: Juniors Games - Unspecified
         group: juniors
