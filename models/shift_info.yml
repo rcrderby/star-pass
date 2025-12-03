@@ -405,7 +405,7 @@ calendar:
             slots: 20
         type: scrimmage
 
-      'buds scrimmage':
+      'buds ntt scrimmage':
         description: Rose Buds Scrimmages
         group: juniors
         initiative: officiating
