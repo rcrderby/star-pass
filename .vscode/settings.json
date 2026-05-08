@@ -14,6 +14,7 @@
         "pylint",
         "rosecityrollers",
         "setuptools",
+        "SHFMT",
         "thefuzz"
     ],
     "python-envs.defaultEnvManager": "ms-python.python:system",
