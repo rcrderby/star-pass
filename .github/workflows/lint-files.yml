@@ -53,3 +53,5 @@ jobs:
           VALIDATE_YAML: true
           # Language-specific configuration
           YAML_ERROR_ON_WARNING: true
+          # Exclusions
+          IGNORE_PATHS: .devcontainer/devcontainer.json

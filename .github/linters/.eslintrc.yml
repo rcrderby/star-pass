@@ -24,7 +24,6 @@ globals:
 ignorePatterns:
   - "!.*"
   - "**/node_modules/.*"
-  - ".devcontainer/devcontainer.json"
 
 ###############
 # Parser vars #
