@@ -56,10 +56,7 @@ overrides:
       - plugin:jsonc/recommended-with-json
     parser: jsonc-eslint-parser
     parserOptions:
-      jsonSyntax: JSONC
-    rules: {
-      "jsonc/no-comments": "off"
-    }
+      jsonSyntax: JSON
 
   # JSONC files
   - files:
@@ -78,3 +75,14 @@ overrides:
     parser: jsonc-eslint-parser
     parserOptions:
       jsonSyntax: JSON5
+
+  - files:
+      - "**/devcontainer.json"
+      - "**/.devcontainer/devcontainer.json"
+    extends:
+      - plugin:jsonc/recommended-with-jsonc
+    parser: jsonc-eslint-parser
+    parserOptions:
+      jsonSyntax: JSONC
+    rules:
+      jsonc/no-comments: "off"
