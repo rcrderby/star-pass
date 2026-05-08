@@ -54,4 +54,4 @@ jobs:
           # Language-specific configuration
           YAML_ERROR_ON_WARNING: true
           # Exclusions
-          IGNORE_PATHS: .devcontainer/devcontainer.json
+          FILTER_REGEX_EXCLUDE: .*\.devcontainer/devcontainer\.json$
