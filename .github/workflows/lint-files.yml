@@ -26,7 +26,7 @@ jobs:
       # checkout action documentation
       # https://github.com/marketplace/actions/checkout
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # Fetch all history for all branches and tags
           fetch-depth: 0
@@ -34,7 +34,7 @@ jobs:
       # Super Linter action documentation
       # https://github.com/marketplace/actions/super-linter
       - name: Super Linter
-        uses: super-linter/super-linter@v6.8.0
+        uses: super-linter/super-linter@v8
         # Configuration settings
         env:
           # Report status checks
@@ -53,3 +53,5 @@ jobs:
           VALIDATE_YAML: true
           # Language-specific configuration
           YAML_ERROR_ON_WARNING: true
+          # Exclusions
+          FILTER_REGEX_EXCLUDE: .*\.devcontainer/devcontainer\.json$

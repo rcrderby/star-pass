@@ -42,7 +42,7 @@ plugins:
 #########
 # Rules #
 #########
-rules: { }
+rules: {}
 
 ##############################
 # Overrides for JSON parsing #
@@ -56,10 +56,7 @@ overrides:
       - plugin:jsonc/recommended-with-json
     parser: jsonc-eslint-parser
     parserOptions:
-      jsonSyntax: JSONC
-    rules: {
-      "jsonc/no-comments": "off"
-    }
+      jsonSyntax: JSON
 
   # JSONC files
   - files:
