@@ -21,119 +21,119 @@ calendar:
     description: Calendar with game information
     keywords:
 
-      'dh: game 1':
-        description: Adult Games - Unspecified
-        group: adults
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 879609
-            max_length: 165
-            slots: 12
-            offset_start: 15
-            offset_end: 30
-          - description: SOs
-            id: 879610
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 8
-        type: game
+      # 'dh: game 1':
+      #   description: Adult Games - Unspecified
+      #   group: adults
+      #   initiative: officiating
+      #   need_ids:
+      #     - description: NSOs
+      #       id: 879609
+      #       max_length: 165
+      #       slots: 12
+      #       offset_start: 15
+      #       offset_end: 30
+      #     - description: SOs
+      #       id: 879610
+      #       max_length: 165
+      #       offset_start: 15
+      #       offset_end: 30
+      #       slots: 8
+      #   type: game
 
-      'dh: game 2':
-        description: Adult Games - Unspecified
-        group: adults
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 879609
-            max_length: 165
-            offset_start: 0
-            offset_end: 30
-            slots: 12
-          - description: SOs
-            id: 879610
-            max_length: 165
-            offset_start: 0
-            offset_end: 30
-            slots: 8
-        type: game
+      # 'dh: game 2':
+      #   description: Adult Games - Unspecified
+      #   group: adults
+      #   initiative: officiating
+      #   need_ids:
+      #     - description: NSOs
+      #       id: 879609
+      #       max_length: 165
+      #       offset_start: 0
+      #       offset_end: 30
+      #       slots: 12
+      #     - description: SOs
+      #       id: 879610
+      #       max_length: 165
+      #       offset_start: 0
+      #       offset_end: 30
+      #       slots: 8
+      #   type: game
 
-      'juniors dh game 1':
-        description: Rose Petals HT Games
-        group: juniors
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 905196
-            max_length: 135
-            slots: 12
-            offset_start: -15
-            offset_end: 30
-          - description: SOs
-            id: 905197
-            max_length: 135
-            offset_start: -15
-            offset_end: 30
-            slots: 8
-        type: game
+      # 'juniors dh game 1':
+      #   description: Rose Petals HT Games
+      #   group: juniors
+      #   initiative: officiating
+      #   need_ids:
+      #     - description: NSOs
+      #       id: 905196
+      #       max_length: 135
+      #       slots: 12
+      #       offset_start: -15
+      #       offset_end: 30
+      #     - description: SOs
+      #       id: 905197
+      #       max_length: 135
+      #       offset_start: -15
+      #       offset_end: 30
+      #       slots: 8
+      #   type: game
 
-      'dh juniors g1: petals hT':
-        description: Rose Petals HT Games
-        group: juniors
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 905196
-            max_length: 135
-            slots: 12
-            offset_start: -15
-            offset_end: 30
-          - description: SOs
-            id: 905197
-            max_length: 135
-            offset_start: -15
-            offset_end: 30
-            slots: 8
-        type: game
+      # 'dh juniors g1: petals hT':
+      #   description: Rose Petals HT Games
+      #   group: juniors
+      #   initiative: officiating
+      #   need_ids:
+      #     - description: NSOs
+      #       id: 905196
+      #       max_length: 135
+      #       slots: 12
+      #       offset_start: -15
+      #       offset_end: 30
+      #     - description: SOs
+      #       id: 905197
+      #       max_length: 135
+      #       offset_start: -15
+      #       offset_end: 30
+      #       slots: 8
+      #   type: game
 
-      'juniors dh game 2':
-        description: Rose Buds HT Games
-        group: juniors
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 905196
-            max_length: 165
-            offset_start: 0
-            offset_end: 75
-            slots: 12
-          - description: SOs
-            id: 905197
-            max_length: 165
-            offset_start: 0
-            offset_end: 75
-            slots: 8
-        type: game
+      # 'juniors dh game 2':
+      #   description: Rose Buds HT Games
+      #   group: juniors
+      #   initiative: officiating
+      #   need_ids:
+      #     - description: NSOs
+      #       id: 905196
+      #       max_length: 165
+      #       offset_start: 0
+      #       offset_end: 75
+      #       slots: 12
+      #     - description: SOs
+      #       id: 905197
+      #       max_length: 165
+      #       offset_start: 0
+      #       offset_end: 75
+      #       slots: 8
+      #   type: game
 
-      'dh juniors g2: buds ht':
-        description: Rose Buds HT Games
-        group: juniors
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 905196
-            max_length: 165
-            offset_start: 0
-            offset_end: 75
-            slots: 12
-          - description: SOs
-            id: 905197
-            max_length: 165
-            offset_start: 0
-            offset_end: 75
-            slots: 8
-        type: game
+      # 'dh juniors g2: buds ht':
+      #   description: Rose Buds HT Games
+      #   group: juniors
+      #   initiative: officiating
+      #   need_ids:
+      #     - description: NSOs
+      #       id: 905196
+      #       max_length: 165
+      #       offset_start: 0
+      #       offset_end: 75
+      #       slots: 12
+      #     - description: SOs
+      #       id: 905197
+      #       max_length: 165
+      #       offset_start: 0
+      #       offset_end: 75
+      #       slots: 8
+      #   type: game
 
       'petals':
         description: Rose Petals Games
@@ -230,7 +230,7 @@ calendar:
             slots: 8
         type: game
 
-      'bnb':
+      'bb':
         description: Break Neck Betties (BNB) Games
         group: adults
         initiative: officiating
