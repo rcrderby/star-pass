@@ -7,6 +7,10 @@
 # pylint: disable=missing-function-docstring,missing-class-docstring
 # pylint: disable=protected-access,redefined-outer-name
 
+# Imports - Python Standard Library
+import copy
+from unittest.mock import Mock
+
 # Imports - Third-Party
 import pytest
 
@@ -18,6 +22,14 @@ from star_pass.gcal_data import GCALData
 def gcal() -> GCALData:
     # auto_prep_data=False prevents any Google Calendar API calls.
     return GCALData(gcal_name='practices', auto_prep_data=False)
+
+
+def _mock_response(payload: dict) -> Mock:
+    # Build a stand-in for a requests.Response whose .json() returns
+    # the supplied payload.
+    response = Mock()
+    response.json.return_value = payload
+    return response
 
 
 class TestGetShiftTimeData:
@@ -47,3 +59,56 @@ class TestGetShiftTimeData:
             '2025-04-09T18:00:00-07:00'
         )
         assert result == ('2025-04-09', '18:00', 120)
+
+
+class TestGetGcalShiftData:
+    # The 'events' calendar has a single query string, which keeps the
+    # pagination assertions focused on the page loop itself.
+
+    def test_follows_next_page_token(self, monkeypatch):
+        gcal = GCALData(gcal_name='events', auto_prep_data=False)
+        pages = [
+            _mock_response(
+                {'items': [{'id': 'a'}], 'nextPageToken': 'PAGE2'}
+            ),
+            _mock_response(
+                {'items': [{'id': 'b'}]}
+            ),
+        ]
+        seen_params = []
+
+        def fake_send(api_request_data, **_kwargs):
+            # Snapshot params per call; the method mutates one dict.
+            seen_params.append(copy.deepcopy(api_request_data['params']))
+            return pages[len(seen_params) - 1]
+
+        monkeypatch.setattr(gcal.helpers, 'send_api_request', fake_send)
+
+        result = gcal.get_gcal_shift_data(
+            timeMin='2099-01-01T00:00:00-00:00',
+            timeMax='2099-01-31T00:00:00-00:00'
+        )
+
+        # Items from both pages are accumulated in order.
+        assert result == [{'id': 'a'}, {'id': 'b'}]
+        # Two requests: the initial page and the next-page follow-up.
+        assert len(seen_params) == 2
+        assert 'pageToken' not in seen_params[0]
+        assert seen_params[1]['pageToken'] == 'PAGE2'
+
+    def test_missing_items_key_does_not_raise(self, monkeypatch):
+        gcal = GCALData(gcal_name='events', auto_prep_data=False)
+        response = _mock_response({})  # no 'items', no 'nextPageToken'
+
+        monkeypatch.setattr(
+            gcal.helpers,
+            'send_api_request',
+            lambda **_kwargs: response
+        )
+
+        result = gcal.get_gcal_shift_data(
+            timeMin='2099-01-01T00:00:00-00:00',
+            timeMax='2099-01-31T00:00:00-00:00'
+        )
+
+        assert result == []
