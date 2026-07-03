@@ -255,16 +255,14 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
             Modifies:
                 self._shift_data (frame.DataFrame):
-                    Pandas Data Frame of shift data with duplicates
-                    removed.
+                    Pandas Data Frame of shift data with fully-duplicate
+                    rows removed (index 2 dropped in the example below).
 
             Example data structure:
                 need_name need_id start_date start_time duration slots
-            0   Need 1    000001  1/1/99     12:00      60       20
-            1   Need 2    000002  1/1/99     12:00      90       20
-            2   Need 3    000002  1/1/99     12:00      60       20
-            3   Need 4    000003  1/1/99     12:00      120      20
-            4   Need 5    000004  1/1/99     12:00      90       20
+            0   Alpha     000001  1/1/99     12:00      60       20
+            1   Bravo     000002  1/1/99     12:00      90       20
+            3   Charlie   000003  1/1/99     12:00      120      20
 
             Returns:
                 None.

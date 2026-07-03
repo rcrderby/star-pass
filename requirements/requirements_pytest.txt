@@ -1,8 +1,14 @@
-# .env file support
+# Application runtime dependencies -- required to import the modules
+# under test. The CI pytest job installs only this file, so the runtime
+# packages must be listed here alongside the test tooling.
 python_dotenv
-
-# Date parsing
 dateparser
+jsonschema
+pandas
+pyyaml
+python-Levenshtein
+thefuzz
+requests
 
 # Python testing
 pytest
