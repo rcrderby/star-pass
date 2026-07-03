@@ -5,6 +5,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Dict
 from pprint import pprint as pp
+import re
 import sys
 
 # Imports - Third-Party
@@ -393,6 +394,42 @@ class Helpers:
 
         return need_details
 
+    # Regex patterns matching secret-bearing substrings (API keys and
+    # bearer tokens) that must never be printed or logged.
+    _SECRET_PATTERNS = (
+        re.compile(r'(?i)(key=)[^&\s\'"]+'),
+        re.compile(r'(?i)(bearer\s+)[^\s\'"]+'),
+    )
+
+    def redact_secrets(
+            self,
+            text: Any
+    ) -> str:
+        """ Redact API keys and bearer tokens from a string.
+
+            Replaces the value portion of 'key=<value>' query parameters
+            and 'Bearer <token>' header values with 'REDACTED', so that
+            secrets cannot leak into stdout, stderr, or logs (for
+            example, via an exception repr that includes a request URL).
+
+            Args:
+                text (Any):
+                    Value to scrub.  Converted to a string before
+                    redaction.
+
+            Returns:
+                redacted (str):
+                    The input with any secret values replaced by
+                    'REDACTED'.
+        """
+
+        # Substitute each secret pattern, preserving the label prefix
+        redacted = str(text)
+        for pattern in self._SECRET_PATTERNS:
+            redacted = pattern.sub(r'\1REDACTED', redacted)
+
+        return redacted
+
     def send_api_request(
             self,
             api_request_data: Dict,
@@ -454,6 +491,10 @@ class Helpers:
             message += f'{error_message}\n\n'
             message += repr(f'{error!r}')
 
+            # Redact any secrets before display (an error repr may
+            # include the request URL with its 'key' query parameter).
+            message = self.redact_secrets(message)
+
             self.printer(
                 message=message,
                 file=sys.stderr
@@ -474,6 +515,10 @@ class Helpers:
             )
             message += f'{len(message) * "_"}\n\n'
             message += repr(f'{error!r}')
+
+            # Redact any secrets before display
+            message = self.redact_secrets(message)
+
             self.printer(
                 message=message,
                 file=sys.stderr

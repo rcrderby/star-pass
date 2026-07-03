@@ -10,6 +10,9 @@
 # Imports - Third-Party
 import pytest
 
+# Imports - Local
+from star_pass import _helpers
+
 
 class TestConvertToBool:
     @pytest.mark.parametrize(
@@ -87,3 +90,66 @@ class TestSearchShiftInfo:
             need_name=need_name
         )
         assert result['description'] == expected_description
+
+
+class TestRedactSecrets:
+    @pytest.mark.parametrize(
+        'text, secret',
+        [
+            (
+                'https://www.googleapis.com/events?key=SUPERSECRET&x=1',
+                'SUPERSECRET'
+            ),
+            (
+                "{'Authorization': 'Bearer abc123.token'}",
+                'abc123.token'
+            ),
+        ]
+    )
+    def test_secret_is_removed(self, helpers, text, secret):
+        result = helpers.redact_secrets(text)
+        assert secret not in result
+        assert 'REDACTED' in result
+
+    def test_preserves_the_label_prefix(self, helpers):
+        result = helpers.redact_secrets('?key=SUPERSECRET&page=2')
+        assert result == '?key=REDACTED&page=2'
+
+    def test_ordinary_text_is_unchanged(self, helpers):
+        text = 'HTTP 404 Not Found for /needs/123/shifts'
+        assert helpers.redact_secrets(text) == text
+
+
+class TestSendApiRequestRedaction:
+    def test_error_repr_with_key_is_redacted(self, helpers, monkeypatch):
+        # 'sentinel' (not 'secret'/'token') avoids a false-positive
+        # bandit B105 hardcoded-password finding on the test value.
+        sentinel = 'TOPSECRET'
+
+        def raise_conn_error(**_kwargs):
+            raise _helpers.exceptions.ConnectionError(
+                f'Failed for url https://x/events?key={sentinel}'
+            )
+
+        # Force the HTTP call to raise, and capture the message that
+        # would be written to stderr before the program exits.
+        monkeypatch.setattr(_helpers, 'request', raise_conn_error)
+        captured = {}
+        monkeypatch.setattr(
+            helpers,
+            'printer',
+            lambda message, **_kwargs: captured.update(message=message)
+        )
+
+        # The real exit_program raises SystemExit after printing.
+        with pytest.raises(SystemExit):
+            helpers.send_api_request(
+                api_request_data={
+                    'method': 'GET',
+                    'url': 'https://x/events',
+                    'timeout': 3
+                }
+            )
+
+        assert sentinel not in captured['message']
+        assert 'REDACTED' in captured['message']
