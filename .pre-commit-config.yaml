@@ -1,0 +1,16 @@
+---
+# Pre-commit hooks for star-pass.
+#
+# One-time setup:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Run against all files on demand:
+#   pre-commit run --all-files
+
+repos:
+  # Secret scanning: block commits that contain API keys or tokens.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
