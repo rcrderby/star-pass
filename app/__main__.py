@@ -86,9 +86,12 @@ def main() -> None:
 
         # Run the application in 'create_amplify_shifts' mode
         if run_mode in ('create_amplify_shifts', 'c'):
-            # Create output message
+            # Create and display the output message
             output_message = (
                 '\n\n** Run mode is "Create Amplify Shifts" **\n'
+            )
+            helpers.printer(
+                message=output_message
             )
             # Create CreateShifts object
             shifts = CreateShifts(
@@ -99,9 +102,12 @@ def main() -> None:
 
         # Run the application in 'get_gcal_events' mode
         if run_mode in ('get_gcal_events', 'g'):
-            # Create output message
+            # Create and display the output message
             output_message = (
                 '\n\n** Run mode is "Get Google Calendar Events" **\n'
+            )
+            helpers.printer(
+                message=output_message
             )
             # Create CreateShifts object
             GCALData(
