@@ -19,10 +19,29 @@ class TestConvertToBool:
             ('false', False),
             ('True', True),
             ('False', False),
+            ('  TRUE  ', True),
+            ('yes', True),
+            ('y', True),
+            ('t', True),
+            ('1', True),
+            ('no', False),
+            ('n', False),
+            ('f', False),
+            ('0', False),
         ]
     )
     def test_valid_boolean_strings(self, helpers, value, expected):
         assert helpers.convert_to_bool(value) is expected
+
+    @pytest.mark.parametrize(
+        'value',
+        ['maybe', 'flase', '', '2', 'tru', 'noo']
+    )
+    def test_invalid_input_raises_value_error(self, helpers, value):
+        # Fail fast: a typo must never be silently coerced (e.g. so a
+        # mistyped check_mode can't accidentally send live requests).
+        with pytest.raises(ValueError):
+            helpers.convert_to_bool(value)
 
 
 class TestDateTimeFormatting:

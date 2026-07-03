@@ -153,8 +153,10 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             # Set the simplest valid verbosity level
             self.output_verbosity = VERBOSITY_LEVELS[0]
 
-        # Set the base file name
-        self.base_file_name = input_file.rstrip(INPUT_FILE_EXTENSION)
+        # Set the base file name.
+        # Use removesuffix (not rstrip, which strips a *character set*
+        # and would corrupt names ending in '.', 'c', 's', or 'v').
+        self.base_file_name = input_file.removesuffix(INPUT_FILE_EXTENSION)
 
         # Set the input file path
         self.input_file = Path.joinpath(

@@ -2,7 +2,6 @@
 """ Helper methods for star_pass.py """
 
 # Imports - Python Standard Library
-from ast import literal_eval
 from datetime import datetime, timedelta
 from typing import Any, Dict
 from pprint import pprint as pp
@@ -61,28 +60,52 @@ class Helpers:
         # Exit the program
         sys.exit(status_code)
 
+    # Accepted string representations for each boolean value.
+    _TRUE_STRINGS = frozenset({'true', 't', 'yes', 'y', '1'})
+    _FALSE_STRINGS = frozenset({'false', 'f', 'no', 'n', '0'})
+
     def convert_to_bool(
             self,
             arg_value: str
-    ) -> str:
+    ) -> bool:
         """ Convert a string representation of a boolean to a bool.
+
+            Comparison is case-insensitive and ignores surrounding
+            whitespace. Unrecognized values raise a ValueError rather
+            than defaulting, so that a typo (e.g. 'flase') can never
+            silently send live API requests.
 
             Args:
                 arg_value (str):
-                    String representation of a boolean.
+                    String representation of a boolean. Accepted
+                    (case-insensitive) values are:
+                        True:  'true', 't', 'yes', 'y', '1'
+                        False: 'false', 'f', 'no', 'n', '0'
+
+            Raises:
+                ValueError:
+                    If 'arg_value' is not a recognized boolean string.
 
             Returns:
                 arg_bool (bool):
                     bool object converted from a string.
         """
 
-        # Normalize the string capitalization of 'bool_dict_value'
-        arg_value = arg_value.lower().capitalize()
+        # Normalize the string for comparison
+        normalized = arg_value.strip().lower()
 
-        # Convert `bool_dict_value` to a boolean
-        arg_bool = literal_eval(arg_value)
+        # Map the normalized value to a boolean
+        if normalized in self._TRUE_STRINGS:
+            return True
+        if normalized in self._FALSE_STRINGS:
+            return False
 
-        return arg_bool
+        # Fail fast on unrecognized input
+        accepted = sorted(self._TRUE_STRINGS | self._FALSE_STRINGS)
+        raise ValueError(
+            f'Cannot convert {arg_value!r} to a boolean. '
+            f'Accepted values (case-insensitive): {accepted}.'
+        )
 
     def format_date_time_amplify(
             self,
