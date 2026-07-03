@@ -5,6 +5,7 @@
     ],
     "ignore": [
       "**/.bandit.yml",
+      "**/.github/workflows/**",
       "**/__snapshots__/**",
       "**/data/json/**",
       "**/node_modules/**",
