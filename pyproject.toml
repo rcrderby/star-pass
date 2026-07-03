@@ -44,3 +44,10 @@ Repository = "https://github.com/rcrderby/star-pass.git"
 [tool.setuptools.dynamic]
 readme = {file = "README.md"}
 version = {attr = "app.__version__"}
+
+[tool.pytest.ini_options]
+# Put the 'app' directory on sys.path so tests can `import star_pass...`
+# without the ./app/__main__.py script-directory trick.
+pythonpath = ["app"]
+testpaths = ["tests"]
+addopts = "--verbose"
