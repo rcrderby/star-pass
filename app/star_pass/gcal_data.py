@@ -428,25 +428,40 @@ class GCALData:
         # Loop over keywords to construct consolidated results
         for query_string in query_strings:
 
-            # Update the 'q' query string parameter
+            # Update the 'q' query string parameter and reset pagination
+            # so a page token from a previous query does not carry over.
             params.update({'q': query_string})
+            params.pop('pageToken', None)
 
-            # Construct API request data
-            api_request_data = {
-                'method': method,
-                'url': url,
-                'headers': headers,
-                'params': params,
-                'timeout': timeout
-            }
+            # Page through every result set for this query string. The
+            # Google Calendar API returns a 'nextPageToken' whenever more
+            # results are available (the default page size is 250).
+            while True:
 
-            # Send API request
-            response = self.helpers.send_api_request(
-                api_request_data=api_request_data
-            )
+                # Construct API request data
+                api_request_data = {
+                    'method': method,
+                    'url': url,
+                    'headers': headers,
+                    'params': params,
+                    'timeout': timeout
+                }
 
-            # Add matching results to `gcal_shift_data`
-            gcal_shift_data += response.json().get('items')
+                # Send API request
+                response = self.helpers.send_api_request(
+                    api_request_data=api_request_data
+                )
+                response_json = response.json()
+
+                # Add matching results to `gcal_shift_data`, defaulting
+                # to an empty list when the 'items' key is absent.
+                gcal_shift_data += response_json.get('items') or []
+
+                # Stop unless the response supplies a next page token.
+                next_page_token = response_json.get('nextPageToken')
+                if not next_page_token:
+                    break
+                params.update({'pageToken': next_page_token})
 
         return gcal_shift_data
 
