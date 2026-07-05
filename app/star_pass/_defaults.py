@@ -17,14 +17,6 @@ FILE_NAME_DATE_TIME_FORMAT = '%Y-%m-%dT%H_%M_%S_%f'
 SIMPLE_DATE_FORMAT = '%A, %B %d %Y'
 SIMPLE_TIME_FORMAT = '%H:%M'
 
-# Application run modes
-RUN_MODES = (
-    'create_amplify_shifts',
-    'c',  # Alias for 'create_amplify_shifts
-    'get_gcal_events',
-    'g'  # Alias for 'get_gcal_events'
-)
-
 # Data file management
 FILE_ENCODING = sys.getfilesystemencoding()
 # .env file path
