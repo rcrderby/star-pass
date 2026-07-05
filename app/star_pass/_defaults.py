@@ -116,6 +116,12 @@ HTTP_TIMEOUT = int(
     )
 )
 
+# Logging configuration
+LOG_LEVEL = getenv(
+    'LOG_LEVEL',
+    'INFO'
+)
+
 # Google Calendar values
 BASE_GCAL_ENDPOINT = '/events'
 GCAL_ORDER_BY = 'startTime'

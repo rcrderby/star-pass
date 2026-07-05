@@ -24,6 +24,9 @@ through the Amplify API. It is run once per month.
 - `app/star_pass/_helpers.py` — shared helpers (`Helpers`), including
   `send_api_request`.
 - `app/star_pass/_defaults.py` — central configuration and constants.
+- `app/star_pass/_logging.py` — package logger setup (`get_logger`);
+  level via the `LOG_LEVEL` environment variable. Diagnostics and status
+  flow through `logging`; report data still uses `Helpers.printer`.
 - `models/shift_info.yml` — keyword-to-need-ID data model.
 - `app/schema/amplify.shifts.schema.json` — JSON Schema for shift
   payloads.
