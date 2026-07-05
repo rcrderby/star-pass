@@ -38,18 +38,23 @@ This tool automates bulk operations on the Galaxy Digital Amplify volunteer mana
 
 ## Usage
 
+Run `./app/__main__.py --help` to list the run modes, or `./app/__main__.py <mode> --help` for the options of a specific mode. Each mode has a single-letter alias (`c` and `g`).
+
 1. Collect Google Calendar Shift data and save shift data in a formatted CSV file:
 
     ```bash
     # Get events from the "Practices" calendar
-    ./app/__main__.py --mode=get_gcal_events gcal_name=practices
+    ./app/__main__.py get_gcal_events --gcal-name practices
 
     # Get events from the "Events" calendar
-    ./app/__main__.py --mode=get_gcal_events gcal_name=events
+    ./app/__main__.py get_gcal_events --gcal-name events
     ```
 
 2. Create Amplify Shifts using formatted CSV file data:
 
     ```bash
-    ./app/__main__.py --mode=create_amplify_shifts --input_file=gcal_shifts_2099-01-01T00_00_00_000000.csv check_mode=False
+    # Dry run (default); add --check-mode false to send live requests
+    ./app/__main__.py create_amplify_shifts \
+        --input-file gcal_shifts_2099-01-01T00_00_00_000000.csv \
+        --check-mode false
     ```

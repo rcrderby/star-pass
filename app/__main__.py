@@ -2,8 +2,8 @@
 """ Main application script. """
 
 # Imports - Python Standard Library
-from sys import argv
-from typing import Dict
+import argparse
+from typing import Optional, Sequence
 
 # Imports - Local
 from star_pass.amplify_shifts import CreateShifts
@@ -12,118 +12,166 @@ from star_pass._helpers import Helpers
 from star_pass import _defaults
 
 # Constants
-RUN_MODES = _defaults.RUN_MODES
+VERBOSITY_LEVELS = _defaults.VERBOSITY_LEVELS
+# Valid Google Calendar names, derived from the configured calendars so
+# the choices stay in sync with any deployment overrides.
+GCAL_NAMES = tuple(_defaults.GCAL_CALENDARS)
 
 # Initialize helper methods
 helpers = Helpers()
 
 
-# Check for CLI arguments
-def get_cli_args() -> Dict[str, str]:
-    """ Check for CLI arguments.
+# argparse boolean type converter
+def _bool_arg(
+        value: str
+) -> bool:
+    """ Parse a boolean CLI value, reusing the shared converter.
+
+        Wraps 'Helpers.convert_to_bool' so an unrecognized value raises
+        'argparse.ArgumentTypeError', letting argparse surface the
+        converter's message (which lists the accepted spellings).
+
+        Args:
+            value (str):
+                Raw argument value.
+
+        Raises:
+            argparse.ArgumentTypeError:
+                If 'value' is not a recognized boolean string.
+
+        Returns:
+            bool:
+                The parsed boolean value.
+    """
+
+    try:
+        return helpers.convert_to_bool(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(str(error)) from error
+
+
+# Build the command-line argument parser
+def build_parser() -> argparse.ArgumentParser:
+    """ Build the command-line argument parser.
+
+        Defines a subcommand per run mode ('create_amplify_shifts' and
+        'get_gcal_events', each with a single-letter alias) so the tool
+        exposes a real '--help', validates arguments, and returns a
+        non-zero exit code on misuse.
 
         Args:
             None.
 
         Returns:
-            args (Dict[str, str]):
-                Dict of CLI arguments and their values that map to Dict
-                keys and values, respectively.
+            parser (argparse.ArgumentParser):
+                The configured top-level argument parser.
     """
 
-    # Create a Dict to store args
-    cli_args = {}
+    parser = argparse.ArgumentParser(
+        prog='star-pass',
+        description=(
+            'Automate volunteer-shift management in Galaxy Digital '
+            'Amplify.'
+        )
+    )
 
-    if len(argv) > 1:
-        # Slice the file name from the list of arguments
-        arg_list = argv[1:]
+    # A run mode is required; each subcommand carries its own arguments.
+    subparsers = parser.add_subparsers(
+        dest='mode',
+        required=True,
+        metavar='mode'
+    )
 
-        # Parse keys and values from arg_list to add to the 'args' Dict
-        for arg in arg_list:
-            # Split the argument and its value to separate variables
-            arg_key, arg_value = arg.split('=')
+    # Run mode: create Amplify shifts from a CSV file (alias: c)
+    create_parser = subparsers.add_parser(
+        'create_amplify_shifts',
+        aliases=['c'],
+        help='Create Amplify shifts from a formatted CSV file.'
+    )
+    create_parser.add_argument(
+        '--input-file',
+        required=True,
+        help='Name of the CSV file to read shift data from.'
+    )
+    create_parser.add_argument(
+        '--check-mode',
+        type=_bool_arg,
+        default=True,
+        metavar='{true,false}',
+        help='Prepare requests without sending them. Default: true.'
+    )
+    create_parser.add_argument(
+        '--output-verbosity',
+        choices=VERBOSITY_LEVELS,
+        default=VERBOSITY_LEVELS[0],
+        help=f'Amount of detail to display. Default: {VERBOSITY_LEVELS[0]}.'
+    )
 
-            # Remove leading '-' chars and strip outer spaces from 'arg_key'
-            arg_key = arg_key.lstrip('-').strip()
+    # Run mode: collect Google Calendar events into a CSV file (alias: g)
+    gcal_parser = subparsers.add_parser(
+        'get_gcal_events',
+        aliases=['g'],
+        help='Collect events from a Google Calendar into a CSV file.'
+    )
+    gcal_parser.add_argument(
+        '--gcal-name',
+        required=True,
+        choices=GCAL_NAMES,
+        help='Name of the Google Calendar to collect events from.'
+    )
 
-            # Strip outer spaces from 'arg_value'
-            arg_value = arg_value.strip()
-
-            # Add `arg_key` and `arg_value` to the `args` Dict
-            cli_args.update({arg_key: arg_value})
-
-    return cli_args
+    return parser
 
 
 # Main application function definition
-def main() -> None:
+def main(
+        argv: Optional[Sequence[str]] = None
+) -> None:
     """ Main application.
 
         Args:
+            argv (Optional[Sequence[str]]):
+                Argument list to parse.  Defaults to None, which parses
+                'sys.argv'.  Primarily an injection point for tests.
+
+        Returns:
             None.
-
-        Returns None.
-
     """
 
-    # Get CLI arguments
-    cli_args = get_cli_args()
+    # Parse CLI arguments (argparse exits non-zero on invalid input)
+    parser = build_parser()
+    args = parser.parse_args(argv)
 
-    # Display help
-    # Add app usage instructions
-
-    # Initially set the run mode to invalid
-    run_mode_valid = False
-
-    # Determine the validity of the 'mode' argument
-    run_mode = cli_args.get('mode', '').lower()
-    if run_mode in RUN_MODES:
-        # Set the run mode to valid
-        run_mode_valid = True
-
-    # Run the application in the specified mode
-    if run_mode_valid is True:
-
-        # Run the application in 'create_amplify_shifts' mode
-        if run_mode in ('create_amplify_shifts', 'c'):
-            # Create and display the output message
-            output_message = (
-                '\n\n** Run mode is "Create Amplify Shifts" **\n'
-            )
-            helpers.printer(
-                message=output_message
-            )
-            # Create CreateShifts object
-            shifts = CreateShifts(
-                **cli_args
-            )
-            # Create shifts
-            shifts.create_new_shifts()
-
-        # Run the application in 'get_gcal_events' mode
-        if run_mode in ('get_gcal_events', 'g'):
-            # Create and display the output message
-            output_message = (
-                '\n\n** Run mode is "Get Google Calendar Events" **\n'
-            )
-            helpers.printer(
-                message=output_message
-            )
-            # Create CreateShifts object
-            GCALData(
-                **cli_args
-            )
-
-    # Display usage instructions and exit if the mode is unset or invalid
-    else:
-        # Create output message
+    # Run the application in 'create_amplify_shifts' mode
+    if args.mode in ('create_amplify_shifts', 'c'):
+        # Create and display the output message
         output_message = (
-            '\n\n** Invalid or unset "mode" argument **\n'
+            '\n\n** Run mode is "Create Amplify Shifts" **\n'
         )
-
-        # Display output message
         helpers.printer(
             message=output_message
+        )
+        # Create CreateShifts object
+        shifts = CreateShifts(
+            input_file=args.input_file,
+            check_mode=args.check_mode,
+            output_verbosity=args.output_verbosity
+        )
+        # Create shifts
+        shifts.create_new_shifts()
+
+    # Run the application in 'get_gcal_events' mode
+    elif args.mode in ('get_gcal_events', 'g'):
+        # Create and display the output message
+        output_message = (
+            '\n\n** Run mode is "Get Google Calendar Events" **\n'
+        )
+        helpers.printer(
+            message=output_message
+        )
+        # Create GCALData object
+        GCALData(
+            gcal_name=args.gcal_name
         )
 
     return None

@@ -32,13 +32,16 @@ through the Amplify API. It is run once per month.
 ## Running the workflow
 
 ```bash
-# 1. Collect Google Calendar events into a timestamped CSV.
-./app/__main__.py --mode=get_gcal_events gcal_name=practices
-./app/__main__.py --mode=get_gcal_events gcal_name=events
+# Run modes are argparse subcommands (aliases: c, g). Use --help or
+# <mode> --help for details.
 
-# 2. Create Amplify shifts from a CSV (check_mode=True is a dry run).
-./app/__main__.py --mode=create_amplify_shifts \
-  --input_file=gcal_shifts_<timestamp>.csv --check_mode=True
+# 1. Collect Google Calendar events into a timestamped CSV.
+./app/__main__.py get_gcal_events --gcal-name practices
+./app/__main__.py get_gcal_events --gcal-name events
+
+# 2. Create Amplify shifts from a CSV (--check-mode true is a dry run).
+./app/__main__.py create_amplify_shifts \
+  --input-file gcal_shifts_<timestamp>.csv --check-mode true
 ```
 
 ## Development
