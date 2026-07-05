@@ -1,2 +1,2 @@
 # Static code analysis
-bandit
+bandit==1.9.4
