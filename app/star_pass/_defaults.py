@@ -112,9 +112,29 @@ BASE_GCAL_URL = getenv(
 HTTP_TIMEOUT = int(
     getenv(
         'HTTP_TIMEOUT',
+        '10'
+    )
+)
+
+# HTTP retry configuration
+# Total retry attempts for transient failures.
+HTTP_RETRY_TOTAL = int(
+    getenv(
+        'HTTP_RETRY_TOTAL',
         '3'
     )
 )
+# Exponential backoff factor between retries, in seconds.
+HTTP_RETRY_BACKOFF_FACTOR = float(
+    getenv(
+        'HTTP_RETRY_BACKOFF_FACTOR',
+        '0.5'
+    )
+)
+# Response status codes that trigger a retry (idempotent methods only;
+# see Helpers._build_session).  urllib3 never retries a POST body-write
+# on these, so shift-creating POSTs are not automatically re-sent.
+HTTP_RETRY_STATUS_FORCELIST = (429, 500, 502, 503, 504)
 
 # Logging configuration
 LOG_LEVEL = getenv(
