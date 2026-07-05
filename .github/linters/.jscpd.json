@@ -9,7 +9,8 @@
       "**/__snapshots__/**",
       "**/data/json/**",
       "**/node_modules/**",
-      "**/models/shift_info.yml"
+      "**/models/shift_info.yml",
+      "**/tests/fixtures/**"
     ],
     "absolute": true
 }

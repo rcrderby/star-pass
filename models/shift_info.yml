@@ -1,6 +1,11 @@
-# Shift information model for looking up shift IDs based on keywords
+# Shift information model: map Google Calendar event titles to Amplify
+# need IDs. Each category holds its shift configuration (need IDs, slots,
+# timing) plus the list of title keywords ('aliases') that map to it.
+# To add a new team or event, add its keyword to the relevant category's
+# 'aliases' list. When a title matches more than one alias, the longest
+# alias wins.
 
-# Reference
+# Amplify need ID reference
 ## 607810: Junior Scrimmages - SOs
 ## 607934: Adult Scrimmages - SOs
 ## 628861: Adult Scrimmages - NSOs
@@ -15,149 +20,59 @@
 ## 968727: Junior Officiating Practices Coaches
 
 ---
-# 'Events' calendar keywords
 calendar:
+
+  # ----- 'Events' calendar (games) ----- #
   events:
     description: Calendar with game information
-    keywords:
+    categories:
 
-      # 'dh: game 1':
-      #   description: Adult Games - Unspecified
-      #   group: adults
-      #   initiative: officiating
-      #   need_ids:
-      #     - description: NSOs
-      #       id: 879609
-      #       max_length: 165
-      #       slots: 12
-      #       offset_start: 15
-      #       offset_end: 30
-      #     - description: SOs
-      #       id: 879610
-      #       max_length: 165
-      #       offset_start: 15
-      #       offset_end: 30
-      #       slots: 8
-      #   type: game
+      adult_game:
+        description: Adult Games
+        group: adults
+        initiative: officiating
+        type: game
+        aliases: [aoa, bb, gnr, hh, hr, woj, justice, wreckers]
+        need_ids:
+          - description: NSOs
+            id: 879609
+            max_length: 165
+            offset_start: 15
+            offset_end: 30
+            slots: 12
+          - description: SOs
+            id: 879610
+            max_length: 165
+            offset_start: 15
+            offset_end: 30
+            slots: 8
 
-      # 'dh: game 2':
-      #   description: Adult Games - Unspecified
-      #   group: adults
-      #   initiative: officiating
-      #   need_ids:
-      #     - description: NSOs
-      #       id: 879609
-      #       max_length: 165
-      #       offset_start: 0
-      #       offset_end: 30
-      #       slots: 12
-      #     - description: SOs
-      #       id: 879610
-      #       max_length: 165
-      #       offset_start: 0
-      #       offset_end: 30
-      #       slots: 8
-      #   type: game
-
-      # 'juniors dh game 1':
-      #   description: Rose Petals HT Games
-      #   group: juniors
-      #   initiative: officiating
-      #   need_ids:
-      #     - description: NSOs
-      #       id: 905196
-      #       max_length: 135
-      #       slots: 12
-      #       offset_start: -15
-      #       offset_end: 30
-      #     - description: SOs
-      #       id: 905197
-      #       max_length: 135
-      #       offset_start: -15
-      #       offset_end: 30
-      #       slots: 8
-      #   type: game
-
-      # 'dh juniors g1: petals hT':
-      #   description: Rose Petals HT Games
-      #   group: juniors
-      #   initiative: officiating
-      #   need_ids:
-      #     - description: NSOs
-      #       id: 905196
-      #       max_length: 135
-      #       slots: 12
-      #       offset_start: -15
-      #       offset_end: 30
-      #     - description: SOs
-      #       id: 905197
-      #       max_length: 135
-      #       offset_start: -15
-      #       offset_end: 30
-      #       slots: 8
-      #   type: game
-
-      # 'juniors dh game 2':
-      #   description: Rose Buds HT Games
-      #   group: juniors
-      #   initiative: officiating
-      #   need_ids:
-      #     - description: NSOs
-      #       id: 905196
-      #       max_length: 165
-      #       offset_start: 0
-      #       offset_end: 75
-      #       slots: 12
-      #     - description: SOs
-      #       id: 905197
-      #       max_length: 165
-      #       offset_start: 0
-      #       offset_end: 75
-      #       slots: 8
-      #   type: game
-
-      # 'dh juniors g2: buds ht':
-      #   description: Rose Buds HT Games
-      #   group: juniors
-      #   initiative: officiating
-      #   need_ids:
-      #     - description: NSOs
-      #       id: 905196
-      #       max_length: 165
-      #       offset_start: 0
-      #       offset_end: 75
-      #       slots: 12
-      #     - description: SOs
-      #       id: 905197
-      #       max_length: 165
-      #       offset_start: 0
-      #       offset_end: 75
-      #       slots: 8
-      #   type: game
-
-      'petals':
+      junior_game_petals:
         description: Rose Petals Games
         group: juniors
         initiative: officiating
+        type: game
+        aliases: [petals]
         need_ids:
           - description: NSOs
             id: 905196
             max_length: 135
-            slots: 12
             offset_start: -15
             offset_end: 30
+            slots: 12
           - description: SOs
             id: 905197
             max_length: 135
             offset_start: -15
             offset_end: 30
             slots: 8
-        type: game
 
-      'buds':
+      junior_game_buds:
         description: Rose Buds HT Games
         group: juniors
         initiative: officiating
+        type: game
+        aliases: [buds]
         need_ids:
           - description: NSOs
             id: 905196
@@ -171,12 +86,13 @@ calendar:
             offset_start: 0
             offset_end: 75
             slots: 8
-        type: game
 
-      'buds closed scored scrimmage':
-        description: Rose Buds HT Games
+      junior_game_buds_closed:
+        description: Rose Buds Closed Scored Scrimmage
         group: juniors
         initiative: officiating
+        type: game
+        aliases: ['buds closed scored scrimmage']
         need_ids:
           - description: NSOs
             id: 905196
@@ -190,12 +106,13 @@ calendar:
             offset_start: -30
             offset_end: 15
             slots: 8
-        type: game
 
-      'juniors':
+      junior_game:
         description: Juniors Games - Unspecified
         group: juniors
         initiative: officiating
+        type: game
+        aliases: [juniors]
         need_ids:
           - description: NSOs
             id: 905196
@@ -209,187 +126,38 @@ calendar:
             offset_start: 15
             offset_end: 30
             slots: 8
-        type: game
 
-      'aoa':
-        description: Axles of Annihilation (AoA) Games
-        group: adults
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 879609
-            max_length: 165
-            offset_start: 0
-            offset_end: 45
-            slots: 12
-          - description: SOs
-            id: 879610
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 8
-        type: game
+    # Fallback when no alias matches: empty IDs signal 'operator must review'.
+    default:
+      description: Unknown Game
+      group: null
+      initiative: officiating
+      type: game
+      need_ids:
+        - description: NSOs
+          id: ''
+          max_length: 165
+          offset_start: 0
+          offset_end: 0
+          slots: 12
+        - description: SOs
+          id: ''
+          max_length: 165
+          offset_start: 0
+          offset_end: 0
+          slots: 8
 
-      'bb':
-        description: Break Neck Betties (BNB) Games
-        group: adults
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 879609
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 12
-          - description: SOs
-            id: 879610
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 8
-        type: game
-
-      'gnr':
-        description: Guns N Rollers (GNR) Games
-        group: adults
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 879609
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 12
-          - description: SOs
-            id: 879610
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 8
-        type: game
-
-      'hh':
-        description: Heartless Heathers (HH) Games
-        group: adults
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 879609
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 12
-          - description: SOs
-            id: 879610
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 8
-        type: game
-
-      'hr':
-        description: High Rollers (HR) Games
-        group: adults
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 879609
-            max_length: 165
-            slots: 12
-          - description: SOs
-            id: 879610
-            max_length: 165
-            slots: 8
-        offset_start: 15
-        offset_end: 30
-        type: game
-
-      'woj':
-        description: Wheels of Justice (WoJ) Games
-        group: adults
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 879609
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 12
-          - description: SOs
-            id: 879610
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 8
-        type: game
-
-      'justice':
-        description: Wheels of Justice (WoJ) Games
-        group: adults
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 879609
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 12
-          - description: SOs
-            id: 879610
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 8
-        type: game
-
-      'wreckers':
-        description: Wreckers Games
-        group: adults
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 879609
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 12
-          - description: SOs
-            id: 879610
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 8
-        type: game
-
-      # Default value if a keyword search fails
-      'default':
-        description: Unknown Game
-        group: null
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: ''
-            max_length: 165
-            offset_start: 0
-            offset_end: 0
-            slots: 12
-          - description: SOs
-            id: ''
-            max_length: 165
-            offset_start: 0
-            offset_end: 0
-            slots: 8
-        type: game
-
-  # 'Practices' calendar keywords
+  # ----- 'Practices' calendar (scrimmages and practices) ----- #
   practices:
     description: Calendar with scrimmages and practices information
-    keywords:
+    categories:
 
-      'adult scrimmage':
+      adult_scrimmage:
         description: Adult Scrimmages
         group: adults
         initiative: officiating
+        type: scrimmage
+        aliases: ['adult scrimmage', 'woj scrimmage', 'wreckers scrimmage']
         need_ids:
           - description: NSOs
             id: 628861
@@ -403,12 +171,13 @@ calendar:
             offset_start: 0
             offset_end: 0
             slots: 20
-        type: scrimmage
 
-      'buds ntt scrimmage':
-        description: Rose Buds Scrimmages
+      junior_scrimmage:
+        description: Junior Scrimmages
         group: juniors
         initiative: officiating
+        type: scrimmage
+        aliases: ['petals scrimmage', 'buds ntt scrimmage']
         need_ids:
           - description: NSOs
             id: 628862
@@ -422,31 +191,13 @@ calendar:
             offset_start: 0
             offset_end: 0
             slots: 20
-        type: scrimmage
 
-      'junior officials':
-        description: Junior Officiating Practices
-        group: juniors
-        initiative: officiating
-        need_ids:
-          - description: Attendees
-            id: 868881
-            max_length: null
-            offset_start: 0
-            offset_end: 0
-            slots: 20
-          - description: Coaches
-            id: 968727
-            max_length: null
-            offset_start: 0
-            offset_end: 0
-            slots: 2
-        type: practice
-
-      'officials':
+      adult_practice:
         description: Adult Officiating Practices
         group: adults
         initiative: officiating
+        type: practice
+        aliases: [officials]
         need_ids:
           - description: Attendees
             id: 773454
@@ -460,81 +211,43 @@ calendar:
             offset_start: 0
             offset_end: 0
             slots: 2
-        type: practice
 
-      'petals scrimmage':
-        description: Petals Scrimmages
+      junior_practice:
+        description: Junior Officiating Practices
         group: juniors
         initiative: officiating
+        type: practice
+        aliases: ['junior officials']
         need_ids:
-          - description: NSOs
-            id: 628862
+          - description: Attendees
+            id: 868881
             max_length: null
             offset_start: 0
             offset_end: 0
             slots: 20
-          - description: SOs
-            id: 607810
+          - description: Coaches
+            id: 968727
             max_length: null
             offset_start: 0
             offset_end: 0
-            slots: 20
-        type: scrimmage
+            slots: 2
 
-      'woj scrimmage':
-        description: Wheels of Justice (WoJ) Scrimmages
-        group: adults
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 628861
-            max_length: null
-            offset_start: 0
-            offset_end: 0
-            slots: 20
-          - description: SOs
-            id: 607934
-            max_length: null
-            offset_start: 0
-            offset_end: 0
-            slots: 20
-        type: scrimmage
-
-      'wreckers scrimmage':
-        description: Wreckers Scrimmages
-        group: adults
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: 628861
-            max_length: null
-            offset_start: 0
-            offset_end: 0
-            slots: 20
-          - description: SOs
-            id: 607934
-            max_length: null
-            offset_start: 0
-            offset_end: 0
-            slots: 20
-        type: scrimmage
-
-      # Default value if a keyword search fails
-      'default':
-        description: Unknown Scrimmage
-        group: null
-        initiative: officiating
-        need_ids:
-          - description: NSOs
-            id: ''
-            max_length: null
-            offset_start: 0
-            offset_end: 0
-            slots: 20
-          - description: SOs
-            id: ''
-            max_length: null
-            offset_start: 0
-            offset_end: 0
-            slots: 20
-        type: scrimmage
+    # Fallback when no alias matches: empty IDs signal 'operator must review'.
+    default:
+      description: Unknown Scrimmage
+      group: null
+      initiative: officiating
+      type: scrimmage
+      need_ids:
+        - description: NSOs
+          id: ''
+          max_length: null
+          offset_start: 0
+          offset_end: 0
+          slots: 20
+        - description: SOs
+          id: ''
+          max_length: null
+          offset_start: 0
+          offset_end: 0
+          slots: 20

@@ -9,7 +9,9 @@
 # pylint: disable=protected-access
 
 # Imports - Python Standard Library
+import json
 import logging
+from pathlib import Path
 
 # Imports - Third-Party
 import pytest
@@ -73,17 +75,40 @@ class TestDateTimeFormatting:
         assert result == '11:30-12:30'
 
 
+# Independent baseline of the need_ids each keyword resolved to before the
+# data-model refactor, with the two documented fixes applied (hr, aoa ->
+# standard adult_game). Keys are '<calendar>|<keyword>'.
+_NEED_IDS_BASELINE = json.loads(
+    (
+        Path(__file__).resolve().parent
+        / 'fixtures' / 'shift_need_ids_expected.json'
+    ).read_text(encoding='utf-8')
+)
+
+
 class TestSearchShiftInfo:
+    @pytest.mark.parametrize(
+        'key, expected_need_ids',
+        list(_NEED_IDS_BASELINE.items())
+    )
+    def test_need_ids_unchanged_after_refactor(
+        self, helpers, key, expected_need_ids
+    ):
+        # Every historical keyword must still resolve to the same need_ids
+        # (hr and aoa intentionally corrected to the adult_game standard).
+        gcal_name, need_name = key.split('|', 1)
+        result = helpers.search_shift_info(
+            gcal_name=gcal_name,
+            need_name=need_name
+        )
+        assert result['need_ids'] == expected_need_ids
+
     @pytest.mark.parametrize(
         'gcal_name, need_name, expected_description',
         [
             ('practices', 'Adult Scrimmage', 'Adult Scrimmages'),
-            (
-                'practices',
-                'WoJ Scrimmage',
-                'Wheels of Justice (WoJ) Scrimmages'
-            ),
-            ('events', 'AoA vs BNB', 'Axles of Annihilation (AoA) Games'),
+            ('practices', 'WoJ Scrimmage', 'Adult Scrimmages'),
+            ('events', 'AoA vs BNB', 'Adult Games'),
         ]
     )
     def test_best_match_description(

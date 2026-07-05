@@ -1,0 +1,344 @@
+{
+  "events|aoa": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|bb": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|buds": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 8
+    }
+  ],
+  "events|buds closed scored scrimmage": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 15,
+      "offset_start": -30,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 15,
+      "offset_start": -30,
+      "slots": 8
+    }
+  ],
+  "events|gnr": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|hh": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|hr": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|juniors": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|justice": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|petals": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 8
+    }
+  ],
+  "events|woj": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|wreckers": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "practices|adult scrimmage": [
+    {
+      "description": "NSOs",
+      "id": 628861,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    },
+    {
+      "description": "SOs",
+      "id": 607934,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    }
+  ],
+  "practices|buds ntt scrimmage": [
+    {
+      "description": "NSOs",
+      "id": 628862,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    },
+    {
+      "description": "SOs",
+      "id": 607810,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    }
+  ],
+  "practices|junior officials": [
+    {
+      "description": "Attendees",
+      "id": 868881,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    },
+    {
+      "description": "Coaches",
+      "id": 968727,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 2
+    }
+  ],
+  "practices|officials": [
+    {
+      "description": "Attendees",
+      "id": 773454,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    },
+    {
+      "description": "Coaches",
+      "id": 892230,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 2
+    }
+  ],
+  "practices|petals scrimmage": [
+    {
+      "description": "NSOs",
+      "id": 628862,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    },
+    {
+      "description": "SOs",
+      "id": 607810,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    }
+  ],
+  "practices|woj scrimmage": [
+    {
+      "description": "NSOs",
+      "id": 628861,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    },
+    {
+      "description": "SOs",
+      "id": 607934,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    }
+  ],
+  "practices|wreckers scrimmage": [
+    {
+      "description": "NSOs",
+      "id": 628861,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    },
+    {
+      "description": "SOs",
+      "id": 607934,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    }
+  ]
+}

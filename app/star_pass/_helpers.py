@@ -376,29 +376,34 @@ class Helpers:
             Returns:
                 need_details (Dict):
                     Dictionary object with need details for the best
-                    keyword search result match.
+                    alias search result match.
         """
 
-        # Create reference object to the applicable keywords
-        shifts_info = SHIFTS_INFO['calendar'][gcal_name]['keywords']
+        # Reference the categories for the calendar
+        categories = SHIFTS_INFO['calendar'][gcal_name]['categories']
 
-        # Create a list of keywords to search
-        keywords = list(shifts_info.keys())
+        # Map each alias to its category configuration
+        alias_categories = {
+            alias: category
+            for category in categories.values()
+            for alias in category['aliases']
+        }
 
-        # Search for the best match of 'need_name'
+        # Find the best fuzzy match of 'need_name' among the aliases
         best_match = process.extractOne(
             query=need_name,
-            choices=keywords,
+            choices=list(alias_categories),
             scorer=fuzz.ratio
         )[0]
 
-        try:
-            # Attempt to get need details for the best match
-            need_details = shifts_info[best_match]
-
-        except KeyError:
-            # Use the 'default' option if there is no match
-            need_details = shifts_info['default']
+        # Assemble need details, preserving the historical dict shape
+        # (every category key except the internal 'aliases' list)
+        category = alias_categories[best_match]
+        need_details = {
+            key: value
+            for key, value in category.items()
+            if key != 'aliases'
+        }
 
         return need_details
 
