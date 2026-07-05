@@ -6,6 +6,7 @@
     the real behavior and notes the discrepancy.
 """
 # pylint: disable=missing-function-docstring,missing-class-docstring
+# pylint: disable=protected-access
 
 # Imports - Python Standard Library
 import logging
@@ -131,14 +132,16 @@ class TestSendApiRequestRedaction:
         # bandit B105 hardcoded-password finding on the test value.
         sentinel = 'TOPSECRET'
 
-        def raise_conn_error(**_kwargs):
+        def raise_conn_error(_self, **_kwargs):
             raise _helpers.exceptions.ConnectionError(
                 f'Failed for url https://x/events?key={sentinel}'
             )
 
-        # Force the HTTP call to raise, and capture the error record
-        # that is logged before the program exits.
-        monkeypatch.setattr(_helpers, 'request', raise_conn_error)
+        # Force the session's HTTP call to raise, and capture the error
+        # record that is logged before the program exits.
+        monkeypatch.setattr(
+            _helpers.Session, 'request', raise_conn_error
+        )
 
         # The real exit_program raises SystemExit after logging.
         with caplog.at_level(logging.ERROR, logger='star_pass'):
@@ -153,3 +156,24 @@ class TestSendApiRequestRedaction:
 
         assert sentinel not in caplog.text
         assert 'REDACTED' in caplog.text
+
+
+class TestBuildSession:
+    def test_session_retry_is_configured(self, helpers):
+        session = helpers._build_session()
+        retry = session.get_adapter('https://example.test').max_retries
+
+        assert retry.total == 3
+        assert retry.backoff_factor == 0.5
+        assert 429 in retry.status_forcelist
+        assert 503 in retry.status_forcelist
+
+    def test_post_is_not_retried(self, helpers):
+        # POST creates Amplify shifts; it must not be auto-retried on a
+        # read error or bad status, which could duplicate a shift. The
+        # urllib3 default allowed-methods set excludes POST.
+        session = helpers._build_session()
+        retry = session.get_adapter('https://example.test').max_retries
+
+        assert 'POST' not in retry.allowed_methods
+        assert 'GET' in retry.allowed_methods

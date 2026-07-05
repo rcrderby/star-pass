@@ -12,7 +12,9 @@ import sys
 from dateparser import parse
 from dotenv import load_dotenv
 from thefuzz import fuzz, process
-from requests import exceptions, request, Response
+from requests import exceptions, Response, Session
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Imports - Local
 from . import _defaults
@@ -23,6 +25,9 @@ AMPLIFY_DATE_TIME_FORMAT = _defaults.AMPLIFY_DATE_TIME_FORMAT
 ENV_FILE_PATH = _defaults.ENV_FILE_PATH
 FILE_ENCODING = _defaults.FILE_ENCODING
 GCAL_CALENDARS = _defaults.GCAL_CALENDARS
+HTTP_RETRY_BACKOFF_FACTOR = _defaults.HTTP_RETRY_BACKOFF_FACTOR
+HTTP_RETRY_STATUS_FORCELIST = _defaults.HTTP_RETRY_STATUS_FORCELIST
+HTTP_RETRY_TOTAL = _defaults.HTTP_RETRY_TOTAL
 SHIFTS_INFO = _defaults.SHIFTS_INFO
 SIMPLE_DATE_FORMAT = _defaults.SIMPLE_DATE_FORMAT
 SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
@@ -433,6 +438,40 @@ class Helpers:
 
         return redacted
 
+    def _build_session(self) -> Session:
+        """ Build a requests Session with retry and backoff configured.
+
+            Transient failures are retried with exponential backoff.
+            The urllib3 default set of allowed methods is used, so only
+            idempotent methods (GET, HEAD, PUT, DELETE, OPTIONS, TRACE)
+            are retried on read errors or the status forcelist.  A POST
+            (used to create Amplify shifts) is retried only on a
+            connection error that occurred before the request reached
+            the server, which cannot create a duplicate shift.
+
+            Args:
+                None.
+
+            Returns:
+                session (requests.Session):
+                    A session whose HTTP and HTTPS adapters retry
+                    transient failures.
+        """
+
+        retry = Retry(
+            total=HTTP_RETRY_TOTAL,
+            backoff_factor=HTTP_RETRY_BACKOFF_FACTOR,
+            status_forcelist=HTTP_RETRY_STATUS_FORCELIST,
+            raise_on_status=False
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+
+        session = Session()
+        session.mount('https://', adapter)
+        session.mount('http://', adapter)
+
+        return session
+
     def send_api_request(
             self,
             api_request_data: Dict,
@@ -469,9 +508,10 @@ class Helpers:
                     HTTP server response object.
         """
 
-        # Send API request
+        # Send the API request through a retry-enabled session
+        session = self._build_session()
         try:
-            response = request(**api_request_data)
+            response = session.request(**api_request_data)
         # Handle TCP Connection Errors
         except (
             exceptions.ConnectionError,
