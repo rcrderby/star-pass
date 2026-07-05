@@ -28,14 +28,13 @@ This tool automates bulk operations on the Galaxy Digital Amplify volunteer mana
 
 1. Clone the GitHub repository.
 2. Open the Development Container in Visual Studio Code.
-3. Create a file named `.env` at the root directory with the following variables and their corresponding values:
+3. Create a `.env` file at the root directory by copying the tracked template and filling in your values:
 
-    ```text
-    AMPLIFY_TOKEN=<insert_amplify_token>         ## Amplify API Token
-    GCAL_TOKEN=<insert_gcal_token>               ## Google Calendar API Token
-    GCAL_TIME_MIN = '2099-01-10T00:00:00-00:00'  ## "From" date for Google Calendar shift searches
-    GCAL_TIME_MAX = '2099-01-30T00:00:00-00:00'  ## "To" date for Google Calendar shift searches
+    ```bash
+    cp .env.example .env
     ```
+
+    Only `AMPLIFY_TOKEN` and `GCAL_TOKEN` are required. Deployment values such as the API URLs, HTTP timeout, and Google Calendar IDs and query strings are optional overrides; when unset, the defaults in `app/star_pass/_defaults.py` apply. Every supported variable is documented in `.env.example`.
 
 ## Usage
 
