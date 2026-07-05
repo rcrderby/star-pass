@@ -21,11 +21,11 @@ classifiers = [
   "Programming Language :: Python :: 3.12"
 ]
 dependencies = [
-  "python_dotenv",
-  "pandas",
-  "python-Levenshtein",
-  "thefuzz",
-  "requests"
+  "python_dotenv==1.2.2",
+  "pandas==3.0.3",
+  "python-Levenshtein==0.27.3",
+  "thefuzz==0.22.1",
+  "requests==2.34.2"
 ]
 description = "Tool to automate manual volunteer management in Galaxy Digital Amplify."
 dynamic = ["version"]
@@ -34,7 +34,7 @@ readme = "README.md"
 requires-python = ">= 3.12"
 
 [project.scripts]
-star-pass = "app.star_pass.__main__:main"
+star-pass = "app.__main__:main"
 
 [project.urls]
 Repository = "https://github.com/rcrderby/star-pass.git"

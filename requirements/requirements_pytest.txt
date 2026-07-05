@@ -1,15 +1,15 @@
 # Application runtime dependencies -- required to import the modules
 # under test. The CI pytest job installs only this file, so the runtime
 # packages must be listed here alongside the test tooling.
-python_dotenv
-dateparser
-jsonschema
-pandas
-pyyaml
-python-Levenshtein
-thefuzz
-requests
+python_dotenv==1.2.2
+dateparser==1.4.1
+jsonschema==4.26.0
+pandas==3.0.3
+pyyaml==6.0.3
+python-Levenshtein==0.27.3
+thefuzz==0.22.1
+requests==2.34.2
 
 # Python testing
-pytest
-pytest-cov
+pytest==9.1.1
+pytest-cov==7.1.0

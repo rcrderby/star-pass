@@ -1,15 +1,15 @@
 # .env file support
-python_dotenv
+python_dotenv==1.2.2
 
 # Excel spreadsheet management
-openpyxl
+openpyxl==3.1.5
 
 # Pandas data structures
-pandas
+pandas==3.0.3
 
 # Python fuzzy string matching
-python-Levenshtein
-thefuzz
+python-Levenshtein==0.27.3
+thefuzz==0.22.1
 
 # Python HTTP requests
-requests
+requests==2.34.2

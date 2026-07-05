@@ -1,45 +1,45 @@
 # .env file support
-python_dotenv
+python_dotenv==1.2.2
 
 # Data formats
-pyyaml
+pyyaml==6.0.3
 
 # Excel spreadsheet management
-openpyxl
+openpyxl==3.1.5
 
 # Date parsing
-dateparser
+dateparser==1.4.1
 
 # HTTP requests
-requests
+requests==2.34.2
 
 # JSON Schema validation
-jsonschema
+jsonschema==4.26.0
 
 # Pandas data structures
-pandas
+pandas==3.0.3
 
 # Python formatting
-autopep8
-flake8
-pylint
+autopep8==2.3.2
+flake8==7.3.0
+pylint==4.0.6
 
 # Python fuzzy string matching
-python-Levenshtein
-thefuzz
+python-Levenshtein==0.27.3
+thefuzz==0.22.1
 
 # Python interpreter
-ipython
+ipython==9.15.0
 
 # Python package versioning
-bump
+bump==1.4.0
 
 # Python testing
-pytest
-pytest-cov
+pytest==9.1.1
+pytest-cov==7.1.0
 
 # Static code analysis
-bandit
+bandit==1.9.4
 
 # YAML formatting
-yamllint
+yamllint==1.38.0
