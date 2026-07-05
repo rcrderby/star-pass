@@ -121,6 +121,8 @@ celerybeat.pid
 # Environments
 .env
 .env.*
+# Keep the tracked, secret-free configuration template.
+!.env.example
 .venv
 env/
 venv/

@@ -2,10 +2,13 @@
 """ star_pass default values. """
 
 # Imports - Python Standard Library
+from os import getenv
 from pathlib import Path
+from typing import List
 import sys
 
 # Imports - Third-Party
+from dotenv import load_dotenv
 from yaml import safe_load
 
 # Date and time formatting
@@ -26,6 +29,40 @@ RUN_MODES = (
 FILE_ENCODING = sys.getfilesystemencoding()
 # .env file path
 ENV_FILE_PATH = './.env'
+# Load environment variables so the deployment values defined below can
+# be overridden via the environment (twelve-factor config).  Values
+# already present in the environment are not overridden by the .env file.
+load_dotenv(
+    dotenv_path=ENV_FILE_PATH,
+    encoding=FILE_ENCODING
+)
+
+
+def _get_env_list(
+        var_name: str,
+        default: List[str]
+) -> List[str]:
+    """ Read a comma-separated environment variable as a list.
+
+        Args:
+            var_name (str):
+                Name of the environment variable to read.
+
+            default (List[str]):
+                Value to return when the variable is unset.
+
+        Returns:
+            List[str]:
+                The comma-separated values as a list of stripped
+                strings, or 'default' when the variable is unset.
+    """
+
+    raw_value = getenv(var_name)
+    if raw_value is None:
+        return default
+    return [item.strip() for item in raw_value.split(',')]
+
+
 # Path relative to this file
 CURRENT_FILE_PATH = Path(__file__).parent
 # 'app' directory path
@@ -72,9 +109,20 @@ BASE_HEADERS = {
     'Accept': 'application/json',
     'Content-Type': 'application/json'
 }
-BASE_AMPLIFY_URL = 'https://api.galaxydigital.com/api'
-BASE_GCAL_URL = 'https://www.googleapis.com/calendar/v3/calendars'
-HTTP_TIMEOUT = 3
+BASE_AMPLIFY_URL = getenv(
+    'BASE_AMPLIFY_URL',
+    'https://api.galaxydigital.com/api'
+)
+BASE_GCAL_URL = getenv(
+    'BASE_GCAL_URL',
+    'https://www.googleapis.com/calendar/v3/calendars'
+)
+HTTP_TIMEOUT = int(
+    getenv(
+        'HTTP_TIMEOUT',
+        '3'
+    )
+)
 
 # Google Calendar values
 BASE_GCAL_ENDPOINT = '/events'
@@ -83,13 +131,14 @@ GCAL_SHOW_DELETED = 'false'
 GCAL_SINGLE_EVENTS = 'true'
 GCAL_TIME_MIN = '2025-01-01T00:00:00-00:00'
 GCAL_TIME_MAX = '2025-02-09T00:00:00-00:00'
-GCAL_EVENTS_QUERY_STRINGS = [
-    ''
-]
-GCAL_PRACTICES_QUERY_STRINGS = [
-    'officials',
-    'scrimmage'
-]
+GCAL_EVENTS_QUERY_STRINGS = _get_env_list(
+    'GCAL_EVENTS_QUERY_STRINGS',
+    ['']
+)
+GCAL_PRACTICES_QUERY_STRINGS = _get_env_list(
+    'GCAL_PRACTICES_QUERY_STRINGS',
+    ['officials', 'scrimmage']
+)
 BASE_GCAL_PARAMS = {
     'orderBy': GCAL_ORDER_BY,
     'q': '',
@@ -99,13 +148,15 @@ BASE_GCAL_PARAMS = {
     'timeMax': '',
 }
 GCAL_ID_PREFIX = '/rosecityrollers.com_'
-GCAL_EVENTS_CAL_ID = (
+GCAL_EVENTS_CAL_ID = getenv(
+    'GCAL_EVENTS_CAL_ID',
     (
         f'{GCAL_ID_PREFIX}'
         '2d35383436363030372d363035@resource.calendar.google.com'
     )
 )
-GCAL_PRACTICES_CAL_ID = (
+GCAL_PRACTICES_CAL_ID = getenv(
+    'GCAL_PRACTICES_CAL_ID',
     (
         f'{GCAL_ID_PREFIX}'
         '313938323232323331%40resource.calendar.google.com'
