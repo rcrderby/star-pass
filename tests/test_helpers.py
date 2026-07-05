@@ -7,6 +7,9 @@
 """
 # pylint: disable=missing-function-docstring,missing-class-docstring
 
+# Imports - Python Standard Library
+import logging
+
 # Imports - Third-Party
 import pytest
 
@@ -121,7 +124,9 @@ class TestRedactSecrets:
 
 
 class TestSendApiRequestRedaction:
-    def test_error_repr_with_key_is_redacted(self, helpers, monkeypatch):
+    def test_error_repr_with_key_is_redacted(
+            self, helpers, monkeypatch, caplog
+    ):
         # 'sentinel' (not 'secret'/'token') avoids a false-positive
         # bandit B105 hardcoded-password finding on the test value.
         sentinel = 'TOPSECRET'
@@ -131,25 +136,20 @@ class TestSendApiRequestRedaction:
                 f'Failed for url https://x/events?key={sentinel}'
             )
 
-        # Force the HTTP call to raise, and capture the message that
-        # would be written to stderr before the program exits.
+        # Force the HTTP call to raise, and capture the error record
+        # that is logged before the program exits.
         monkeypatch.setattr(_helpers, 'request', raise_conn_error)
-        captured = {}
-        monkeypatch.setattr(
-            helpers,
-            'printer',
-            lambda message, **_kwargs: captured.update(message=message)
-        )
 
-        # The real exit_program raises SystemExit after printing.
-        with pytest.raises(SystemExit):
-            helpers.send_api_request(
-                api_request_data={
-                    'method': 'GET',
-                    'url': 'https://x/events',
-                    'timeout': 3
-                }
-            )
+        # The real exit_program raises SystemExit after logging.
+        with caplog.at_level(logging.ERROR, logger='star_pass'):
+            with pytest.raises(SystemExit):
+                helpers.send_api_request(
+                    api_request_data={
+                        'method': 'GET',
+                        'url': 'https://x/events',
+                        'timeout': 3
+                    }
+                )
 
-        assert sentinel not in captured['message']
-        assert 'REDACTED' in captured['message']
+        assert sentinel not in caplog.text
+        assert 'REDACTED' in caplog.text

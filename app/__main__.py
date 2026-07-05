@@ -9,6 +9,7 @@ from typing import Optional, Sequence
 from star_pass.amplify_shifts import CreateShifts
 from star_pass.gcal_data import GCALData
 from star_pass._helpers import Helpers
+from star_pass._logging import get_logger
 from star_pass import _defaults
 
 # Constants
@@ -19,6 +20,9 @@ GCAL_NAMES = tuple(_defaults.GCAL_CALENDARS)
 
 # Initialize helper methods
 helpers = Helpers()
+
+# Application logger
+logger = get_logger('star_pass.main')
 
 
 # argparse boolean type converter
@@ -144,12 +148,9 @@ def main(
 
     # Run the application in 'create_amplify_shifts' mode
     if args.mode in ('create_amplify_shifts', 'c'):
-        # Create and display the output message
-        output_message = (
-            '\n\n** Run mode is "Create Amplify Shifts" **\n'
-        )
-        helpers.printer(
-            message=output_message
+        # Announce the run mode
+        logger.info(
+            'Run mode is "Create Amplify Shifts"'
         )
         # Create CreateShifts object
         shifts = CreateShifts(
@@ -162,12 +163,9 @@ def main(
 
     # Run the application in 'get_gcal_events' mode
     elif args.mode in ('get_gcal_events', 'g'):
-        # Create and display the output message
-        output_message = (
-            '\n\n** Run mode is "Get Google Calendar Events" **\n'
-        )
-        helpers.printer(
-            message=output_message
+        # Announce the run mode
+        logger.info(
+            'Run mode is "Get Google Calendar Events"'
         )
         # Create GCALData object
         GCALData(

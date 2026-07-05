@@ -8,7 +8,6 @@ from math import floor
 from os import getenv
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
-import sys
 
 # Imports - Third-Party
 from pandas import DataFrame as df
@@ -16,6 +15,7 @@ from pandas import DataFrame as df
 # Imports - Local
 from . import _defaults
 from ._helpers import Helpers, load_env_file
+from ._logging import get_logger
 
 # Load environment variables
 load_env_file()
@@ -55,6 +55,9 @@ DEFAULT_GCAL_TIME_MAX = getenv(
     'GCAL_TIME_MAX',
     _defaults.GCAL_TIME_MAX
 )
+
+# Module logger
+logger = get_logger(__name__)
 
 
 class GCALShift:
@@ -403,12 +406,9 @@ class GCALData:
 
         # Confirm the Google calendar variables are not None
         if gcal_id is None or query_strings is None:
-            # Display an error message and exit
-            message = '\n** Invalid Google Calendar Data **\n'
-            self.helpers.printer(
-                message=message,
-                file=sys.stderr
-            )
+            # Log an error message and exit
+            message = f'Invalid Google Calendar data for "{self.gcal_name}"'
+            logger.error(message)
             self.helpers.exit_program(status_code=1)
 
         # Construct URL

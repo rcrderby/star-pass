@@ -15,6 +15,7 @@
 
 # Imports - Python Standard Library
 import importlib.util
+import logging
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -50,22 +51,14 @@ def app_main():
     return module
 
 
-def _printed(app_main) -> str:
-    # Join every message passed to helpers.printer().
-    return '\n'.join(
-        call.kwargs.get('message', '')
-        for call in app_main.helpers.printer.call_args_list
-    )
-
-
 class TestMainRunModeBanners:
-    def test_create_mode_prints_banner_and_runs(self, app_main):
-        app_main.main(
-            ['create_amplify_shifts', '--input-file', 'x.csv']
-        )
+    def test_create_mode_logs_banner_and_runs(self, app_main, caplog):
+        with caplog.at_level(logging.INFO, logger='star_pass'):
+            app_main.main(
+                ['create_amplify_shifts', '--input-file', 'x.csv']
+            )
 
-        printed = _printed(app_main)
-        assert 'Run mode is "Create Amplify Shifts"' in printed
+        assert 'Run mode is "Create Amplify Shifts"' in caplog.text
         app_main.CreateShifts.assert_called_once_with(
             input_file='x.csv',
             check_mode=True,
@@ -90,11 +83,11 @@ class TestMainRunModeBanners:
             output_verbosity='simple'
         )
 
-    def test_get_mode_prints_banner_and_runs(self, app_main):
-        app_main.main(['get_gcal_events', '--gcal-name', 'events'])
+    def test_get_mode_logs_banner_and_runs(self, app_main, caplog):
+        with caplog.at_level(logging.INFO, logger='star_pass'):
+            app_main.main(['get_gcal_events', '--gcal-name', 'events'])
 
-        printed = _printed(app_main)
-        assert 'Run mode is "Get Google Calendar Events"' in printed
+        assert 'Run mode is "Get Google Calendar Events"' in caplog.text
         app_main.GCALData.assert_called_once_with(gcal_name='events')
 
     def test_get_mode_alias(self, app_main):

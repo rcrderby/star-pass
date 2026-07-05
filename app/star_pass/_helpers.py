@@ -16,6 +16,7 @@ from requests import exceptions, request, Response
 
 # Imports - Local
 from . import _defaults
+from ._logging import get_logger
 
 # Constants
 AMPLIFY_DATE_TIME_FORMAT = _defaults.AMPLIFY_DATE_TIME_FORMAT
@@ -25,6 +26,9 @@ GCAL_CALENDARS = _defaults.GCAL_CALENDARS
 SHIFTS_INFO = _defaults.SHIFTS_INFO
 SIMPLE_DATE_FORMAT = _defaults.SIMPLE_DATE_FORMAT
 SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
+
+# Module logger
+logger = get_logger(__name__)
 
 
 # Class definitions
@@ -258,18 +262,10 @@ class Helpers:
         try:
             gcal_id = GCAL_CALENDARS[gcal_name]
 
-        # Display an error and exit if the 'gcal_name' lookup fails
+        # Log an error and exit if the 'gcal_name' lookup fails
         except KeyError:
-            message = (
-                f'\n** Error: "{gcal_name}" '
-                'is not a valid calendar name **\n'
-            )
-
-            # Display the error message and exit
-            self.printer(
-                message=message,
-                file=sys.stderr
-            )
+            message = f'"{gcal_name}" is not a valid calendar name'
+            logger.error(message)
             self.exit_program(status_code=1)
 
         return gcal_id
@@ -309,7 +305,7 @@ class Helpers:
             self,
             message: Any,
             end: str = '\n',
-            file=sys.stdout,
+            file=None,
             pretty_print: bool = False
     ) -> None:
         """ Message printer.
@@ -324,8 +320,10 @@ class Helpers:
                     'True'.
 
                 file (_io.TextIOWrapper, optional):
-                    Target for the output stream.  Default
-                    'sys.stdout'.
+                    Target for the output stream.  Default 'None', which
+                    resolves to the current 'sys.stdout' at call time so
+                    that stdout redirection (for example, pytest's capsys
+                    or capfd) is respected.
 
                 pretty_print (bool):
                     Display the output using 'pprint.pprint'.  Default
@@ -334,6 +332,11 @@ class Helpers:
             Returns:
                 None.
         """
+
+        # Resolve the output stream at call time rather than binding
+        # 'sys.stdout' once as a default argument value.
+        if file is None:
+            file = sys.stdout
 
         # Print formatted output
         if pretty_print is False:
@@ -479,26 +482,18 @@ class Helpers:
             exceptions.TooManyRedirects,
             exceptions.RequestException
         ) as error:
-            # Display the error text and exit
+            # Log the error text and exit
             try:
                 error_message = error.args[0].reason.args[0].rsplit(">: ")[1]
             # Handle non-standard errors
             except AttributeError:
                 error_message = 'Unspecified'
 
-            message = '\n\n** An HTTP Error Occurred **\n'
-            message += f'{len(message) * "_"}\n\n'
-            message += f'{error_message}\n\n'
-            message += repr(f'{error!r}')
-
-            # Redact any secrets before display (an error repr may
+            # Redact any secrets before logging (an error repr may
             # include the request URL with its 'key' query parameter).
-            message = self.redact_secrets(message)
-
-            self.printer(
-                message=message,
-                file=sys.stderr
-            )
+            detail = self.redact_secrets(f'{error_message} {error!r}')
+            message = f'An HTTP error occurred: {detail}'
+            logger.error(message)
             self.exit_program(status_code=1)
 
         # Check for HTTP errors
@@ -508,24 +503,16 @@ class Helpers:
 
         # Handle non-ok HTTP responses
         except exceptions.HTTPError as error:
-            # Display the error text and exit
+            # Redact any secrets before logging
+            detail = self.redact_secrets(repr(f'{error!r}'))
             message = (
-                '\n\n** The request returned a bad status code '
-                f'({response.status_code}) **\n'
+                'The request returned a bad status code '
+                f'({response.status_code}): {detail}'
             )
-            message += f'{len(message) * "_"}\n\n'
-            message += repr(f'{error!r}')
-
-            # Redact any secrets before display
-            message = self.redact_secrets(message)
-
-            self.printer(
-                message=message,
-                file=sys.stderr
-            )
+            logger.error(message)
             self.exit_program(status_code=1)
 
-        # Display the HTTP request status
+        # Log the HTTP request status
         if display_request_status is True:
             # Create display URL that does not expose any paths or parameters
             display_url = response.request.url.replace(
@@ -533,22 +520,11 @@ class Helpers:
                 ''
             )
 
-            # Set HTTP response output message
-            output_heading = (
-                '** HTTP API Response **\n'
-                f'URL: {display_url}\n'
-                f'Response: HTTP {response.status_code} {response.reason}'
+            message = (
+                f'HTTP API response: {display_url} -> '
+                f'HTTP {response.status_code} {response.reason}'
             )
-
-            # Create output message
-            output_message = (
-                f'\n{output_heading}\n'
-            )
-
-            # Display output message
-            self.printer(
-                message=output_message
-            )
+            logger.info(message)
 
         return response
 
