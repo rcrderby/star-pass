@@ -5,6 +5,14 @@
 # 'aliases' list. When a title matches more than one alias, the longest
 # alias wins.
 
+# Team and level abbreviations seen in event titles:
+##   HT = Home Team, TT = Travel Team
+##   PTT = Petals Travel Team (Petals)
+##   RTT = Regional Travel Team, NTT = National Travel Team (Rose Buds)
+##   Adult teams: AoA (Axles), WoJ (Wheels / Justice), BB (BNB), GnR,
+##   HH, HR, Wreckers. WoJ and AoA form combined fundraiser teams; the
+##   Rose Buds RTT and NTT play a 'Roses vs Buds' fundraiser.
+
 # Amplify need ID reference
 ## 607810: Junior Scrimmages - SOs
 ## 607934: Adult Scrimmages - SOs
@@ -32,7 +40,7 @@ calendar:
         group: adults
         initiative: officiating
         type: game
-        aliases: [aoa, bb, gnr, hh, hr, woj, justice, wreckers]
+        aliases: [aoa, axles, bb, gnr, hh, hr, woj, wheels, justice, wreckers]
         need_ids:
           - description: NSOs
             id: 879609
@@ -52,7 +60,7 @@ calendar:
         group: juniors
         initiative: officiating
         type: game
-        aliases: [petals]
+        aliases: [petals, ptt]
         need_ids:
           - description: NSOs
             id: 905196
@@ -72,7 +80,7 @@ calendar:
         group: juniors
         initiative: officiating
         type: game
-        aliases: [buds]
+        aliases: [buds, roses, rtt, ntt]
         need_ids:
           - description: NSOs
             id: 905196
@@ -157,7 +165,11 @@ calendar:
         group: adults
         initiative: officiating
         type: scrimmage
-        aliases: ['adult scrimmage', 'woj scrimmage', 'wreckers scrimmage']
+        aliases:
+          - 'adult scrimmage'
+          - 'woj scrimmage'
+          - 'wreckers scrimmage'
+          - wreckers
         need_ids:
           - description: NSOs
             id: 628861
@@ -197,7 +209,7 @@ calendar:
         group: adults
         initiative: officiating
         type: practice
-        aliases: [officials]
+        aliases: [officials, officiating]
         need_ids:
           - description: Attendees
             id: 773454
@@ -217,7 +229,7 @@ calendar:
         group: juniors
         initiative: officiating
         type: practice
-        aliases: ['junior officials']
+        aliases: ['junior officials', 'junior officiating']
         need_ids:
           - description: Attendees
             id: 868881

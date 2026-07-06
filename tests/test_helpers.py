@@ -122,24 +122,20 @@ class TestSearchShiftInfo:
             ('practices', 'Wreckers A/B Scrimmage', 'Adult Scrimmages'),
             ('practices', 'Buds Mixed Scrimmage', 'Junior Scrimmages'),
             # Synthesized titles a human might reasonably use.
-            ('events', 'Wheels of Justice vs Wreckers', 'Adult Games'),
+            ('events', 'Axles vs. Jet City', 'Adult Games'),
             (
                 'practices',
-                'Junior Officials Practice',
-                'Junior Officiating Practices'
+                'Officiating Practice',
+                'Adult Officiating Practices'
             ),
-            ('events', 'Petals Game Day', 'Rose Petals Games'),
-            ('events', 'GnR vs BB Doubleheader', 'Adult Games'),
+            ('events', 'PTT vs Cherry City', 'Rose Petals Games'),
+            ('events', 'BB vs. JRD', 'Adult Games'),
             (
                 'practices',
                 'Officials Training',
                 'Adult Officiating Practices'
             ),
-            (
-                'practices',
-                'Wreckers Contact Scrimmage',
-                'Adult Scrimmages'
-            ),
+            ('practices', 'Wreckers Mod. Contact', 'Adult Scrimmages'),
         ]
     )
     def test_realistic_event_name_matches(
@@ -152,13 +148,13 @@ class TestSearchShiftInfo:
         assert result['description'] == expected_description
 
     def test_unmatched_title_routes_to_review(self, helpers, caplog):
-        # A junior travel-team abbreviation with no alias must not be
-        # guessed; it falls back to the review default and logs a
-        # warning so the operator can add an alias.
+        # A title with no recognized team must not be guessed; it falls
+        # back to the review default and logs a warning so the operator
+        # can add an alias.
         with caplog.at_level(logging.WARNING, logger='star_pass'):
             result = helpers.search_shift_info(
                 gcal_name='events',
-                need_name='G1: PTT v TBD'
+                need_name='Jet City vs Cherry City'
             )
 
         assert result['description'] == 'Unknown Game'
