@@ -9,6 +9,7 @@ pyyaml==6.0.3
 python-Levenshtein==0.27.3
 thefuzz==0.22.1
 requests==2.34.2
+slack_sdk==3.43.0
 
 # Python testing
 pytest==9.1.1

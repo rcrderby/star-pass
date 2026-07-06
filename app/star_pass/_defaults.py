@@ -225,6 +225,16 @@ VERBOSITY_LEVELS = (
     'detailed'  # JSON data with headings
 )
 
+# Slack configuration
+# Destination channel IDs (non-secret deployment config).  The bot
+# token itself is a secret and is read in slack_notify.py, not here.
+SLACK_CHANNEL = getenv('SLACK_CHANNEL')
+SLACK_DEV_CHANNEL = getenv('SLACK_DEV_CHANNEL')
+# Displayed when a Slack post is skipped in check mode (dry run).
+SLACK_CHECK_MODE_MESSAGE = '\n** Slack Check Mode Run (no message sent) **'
+# Label for the sign-up link button attached to a shift.
+SLACK_SIGN_UP_BUTTON_TEXT = 'Sign up'
+
 # Amplify Shift lookup data model
 SHIFTS_INFO_FILE_NAME = 'shift_info.yml'
 SHIFTS_INFO_FILE = Path.joinpath(
