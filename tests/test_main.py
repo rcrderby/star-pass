@@ -46,6 +46,8 @@ def app_main():
     module.helpers = mock_helpers
     module.CreateShifts = Mock()
     module.GCALData = Mock()
+    module.AmplifyResponses = Mock()
+    module.SlackNotifier = Mock()
     return module
 
 
@@ -91,6 +93,40 @@ class TestMainRunModeDispatch:
 
         app_main.GCALData.assert_called_once_with(gcal_name='practices')
 
+    def test_slack_mode_short_flags(self, app_main, caplog):
+        with caplog.at_level(logging.INFO, logger='star_pass'):
+            app_main.main(['-s', '-N', '879610'])
+
+        assert 'Run mode is "Post Slack Summary"' in caplog.text
+        app_main.AmplifyResponses.return_value.build_need_summary \
+            .assert_called_once_with(need_id='879610', title=None)
+        # Dry run by default; channel falls back to the configured value
+        # (None in the test environment).
+        app_main.SlackNotifier.assert_called_once_with(
+            channel=None,
+            check_mode=True
+        )
+        app_main.SlackNotifier.return_value.post_summary \
+            .assert_called_once()
+
+    def test_slack_mode_long_flags_and_options(self, app_main):
+        app_main.main(
+            [
+                '--post-slack-summary',
+                '--need-id', '5',
+                '--slack-title', 'Custom',
+                '--slack-channel', 'C999',
+                '--check-mode', 'false'
+            ]
+        )
+
+        app_main.AmplifyResponses.return_value.build_need_summary \
+            .assert_called_once_with(need_id='5', title='Custom')
+        app_main.SlackNotifier.assert_called_once_with(
+            channel='C999',
+            check_mode=False
+        )
+
 
 class TestMainArgumentErrors:
     def test_no_mode_exits_nonzero(self, app_main):
@@ -128,6 +164,24 @@ class TestMainArgumentErrors:
             app_main.main(['-c', '-i', 'x.csv', '-n', 'events'])
         assert exc_info.value.code != 0
         app_main.CreateShifts.assert_not_called()
+
+    def test_slack_without_need_id_exits_nonzero(self, app_main):
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-s'])
+        assert exc_info.value.code != 0
+        app_main.AmplifyResponses.assert_not_called()
+
+    def test_slack_mode_rejects_create_option(self, app_main):
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-s', '-N', '5', '-i', 'x.csv'])
+        assert exc_info.value.code != 0
+        app_main.AmplifyResponses.assert_not_called()
+
+    def test_get_mode_rejects_slack_option(self, app_main):
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-g', '-n', 'events', '-N', '5'])
+        assert exc_info.value.code != 0
+        app_main.GCALData.assert_not_called()
 
     def test_invalid_check_mode_value_exits_nonzero(self, app_main):
         with pytest.raises(SystemExit) as exc_info:
