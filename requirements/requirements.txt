@@ -13,3 +13,6 @@ thefuzz==0.22.1
 
 # Python HTTP requests
 requests==2.34.2
+
+# Slack Web API
+slack_sdk==3.43.0
