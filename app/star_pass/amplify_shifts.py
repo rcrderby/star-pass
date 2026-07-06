@@ -719,8 +719,12 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             display_request_status=False
         )
 
-        # Parse opportunity title from response
-        opp_title = response.json()['data'].get("need_title", "Unknown")
+        # Parse opportunity title from response (guarding a non-JSON
+        # body and a missing 'data' key)
+        response_data = self.helpers.response_json(response)
+        opp_title = response_data.get('data', {}).get(
+            'need_title', 'Unknown'
+        )
 
         return opp_title
 

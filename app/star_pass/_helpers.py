@@ -620,16 +620,13 @@ class Helpers:
             exceptions.TooManyRedirects,
             exceptions.RequestException
         ) as error:
-            # Log the error text and exit
-            try:
-                error_message = error.args[0].reason.args[0].rsplit(">: ")[1]
-            # Handle non-standard errors
-            except AttributeError:
-                error_message = 'Unspecified'
-
-            # Redact any secrets before logging (an error repr may
-            # include the request URL with its 'key' query parameter).
-            detail = self.redact_secrets(f'{error_message} {error!r}')
+            # Redact any secrets before logging.  'repr' captures the
+            # error type and message without the fragile assumptions of
+            # digging into nested exception args -- the previous approach
+            # assumed a '>: ' delimiter and raised IndexError on read
+            # timeouts.  The repr may include the request URL with its
+            # 'key' query parameter, hence the redaction.
+            detail = self.redact_secrets(repr(error))
             message = f'An HTTP error occurred: {detail}'
             logger.error(message)
             self.exit_program(status_code=1)
@@ -665,6 +662,41 @@ class Helpers:
             logger.info(message)
 
         return response
+
+    def response_json(
+            self,
+            response: Response,
+            default: Any = None
+    ) -> Any:
+        """ Parse an HTTP response body as JSON.
+
+            Guards against a non-JSON body -- for example, an HTML
+            gateway error page returned with a 2xx status.  The error is
+            logged with secrets redacted and the program exits.
+
+            Args:
+                response (requests.Response):
+                    HTTP response whose body should be JSON.
+
+                default (Any, optional):
+                    Value returned if the program does not exit
+                    ('exit_program' normally raises SystemExit first).
+
+            Returns:
+                data (Any):
+                    The parsed JSON body.
+        """
+
+        # 'requests' raises a ValueError subclass when the body is not
+        # valid JSON.
+        try:
+            return response.json()
+        except ValueError as error:
+            detail = self.redact_secrets(repr(error))
+            message = f'The response body was not valid JSON: {detail}'
+            logger.error(message)
+            self.exit_program(status_code=1)
+            return default
 
 
 # Standalone functions

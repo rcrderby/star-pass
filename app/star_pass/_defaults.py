@@ -243,11 +243,15 @@ AMPLIFY_NEED_DETAIL_URL = getenv(
     'AMPLIFY_NEED_DETAIL_URL',
     'https://rosecityrollers.galaxydigital.com/need/detail/'
 )
-# Page size when reading responses (Amplify list maximum is 150).
-AMPLIFY_RESPONSES_PER_PAGE = int(
+# Extended timeout (seconds) for the slow per-need responses read.  That
+# endpoint ignores pagination and returns a need's entire response
+# history in one response, so the default HTTP_TIMEOUT is too short for
+# large needs.  (Very large needs can still exceed the server's ~60s
+# gateway limit -- an open question with Galaxy Digital support.)
+AMPLIFY_RESPONSES_TIMEOUT = int(
     getenv(
-        'AMPLIFY_RESPONSES_PER_PAGE',
-        '150'
+        'AMPLIFY_RESPONSES_TIMEOUT',
+        '90'
     )
 )
 

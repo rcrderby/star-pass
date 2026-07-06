@@ -67,39 +67,17 @@ class TestFormatShiftWhen:
 
 
 class TestGetNeedResponses:
-    def test_follows_meta_last_page(self, monkeypatch):
+    def test_single_request_even_for_large_result(self, monkeypatch):
+        # The endpoint ignores paging and returns the whole set, so a
+        # large result with no pagination metadata must NOT trigger
+        # repeated fetches (the old loop re-fetched up to 100x).
         reader = AmplifyResponses()
-        pages = [
-            _mock_response(
-                {'data': [{'id': 'r1'}], 'meta': {'last_page': 2}}
-            ),
-            _mock_response(
-                {'data': [{'id': 'r2'}], 'meta': {'last_page': 2}}
-            ),
-        ]
-        seen_pages = []
-
-        def fake_send(api_request_data, **_kwargs):
-            seen_pages.append(api_request_data['params']['page'])
-            return pages[len(seen_pages) - 1]
-
-        monkeypatch.setattr(
-            reader.helpers, 'send_api_request', fake_send
-        )
-
-        result = reader.get_need_responses(need_id='123')
-        assert result == [{'id': 'r1'}, {'id': 'r2'}]
-        assert seen_pages == [1, 2]
-
-    def test_stops_on_short_page(self, monkeypatch):
-        reader = AmplifyResponses()
-        # One item is fewer than a full page and there is no meta, so the
-        # loop stops after a single request.
-        response = _mock_response({'data': [{'id': 'r1'}]})
+        big = [{'id': index} for index in range(200)]
+        response = _mock_response({'data': big})
         calls = []
 
         def fake_send(api_request_data, **_kwargs):
-            calls.append(api_request_data['params']['page'])
+            calls.append(api_request_data)
             return response
 
         monkeypatch.setattr(
@@ -107,8 +85,22 @@ class TestGetNeedResponses:
         )
 
         result = reader.get_need_responses(need_id='123')
-        assert result == [{'id': 'r1'}]
-        assert calls == [1]
+        assert len(result) == 200
+        # Exactly one request, with no pagination parameters.
+        assert len(calls) == 1
+        assert 'params' not in calls[0]
+
+    def test_missing_data_key_returns_empty(self, monkeypatch):
+        reader = AmplifyResponses()
+        response = _mock_response({})  # no 'data' key
+
+        monkeypatch.setattr(
+            reader.helpers,
+            'send_api_request',
+            lambda **_kwargs: response
+        )
+
+        assert reader.get_need_responses(need_id='1') == []
 
 
 class TestGetNeed:

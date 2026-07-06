@@ -21,16 +21,14 @@ load_env_file()
 
 # Constants
 HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
+RESPONSES_HTTP_TIMEOUT = _defaults.AMPLIFY_RESPONSES_TIMEOUT
 AMPLIFY_NEED_DETAIL_URL = _defaults.AMPLIFY_NEED_DETAIL_URL
-AMPLIFY_RESPONSES_PER_PAGE = _defaults.AMPLIFY_RESPONSES_PER_PAGE
 AMPLIFY_SHIFT_DATETIME_FORMAT = _defaults.AMPLIFY_SHIFT_DATETIME_FORMAT
 SIMPLE_DATE_FORMAT = _defaults.SIMPLE_DATE_FORMAT
 SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
 
 # Only responses with this status count as a filled slot.
 ACTIVE_RESPONSE_STATUS = 'active'
-# Safety cap so an endpoint that ignores pagination cannot loop forever.
-MAX_RESPONSE_PAGES = 100
 
 # Module logger
 logger = get_logger(__name__)
@@ -164,7 +162,7 @@ class AmplifyResponses:
             display_request_status=False
         )
 
-        return response.json().get('data', {})
+        return self.helpers.response_json(response).get('data', {})
 
     def get_need_responses(
             self,
@@ -172,10 +170,14 @@ class AmplifyResponses:
     ) -> List[Dict[str, Any]]:
         """ Read every response (sign-up) for a need.
 
-            Follows pagination: authoritative 'meta.last_page' when the
-            API provides it, otherwise stops once a short page arrives.
-            A hard page cap ('MAX_RESPONSE_PAGES') guards against an
-            endpoint that ignores the pagination parameters.
+            The Amplify per-need responses endpoint ignores pagination
+            parameters ('per_page'/'page') and returns the need's entire
+            response history in a single (slow) response, so this issues
+            one request with an extended timeout
+            ('AMPLIFY_RESPONSES_TIMEOUT').  Very large, long-lived needs
+            can still exceed the server's ~60s gateway limit; a supported
+            way to filter or paginate this data is an open question with
+            Galaxy Digital support.
 
             Args:
                 need_id (str | int):
@@ -186,46 +188,22 @@ class AmplifyResponses:
                     All response objects for the need.
         """
 
+        # A single request -- the endpoint ignores paging, so a loop
+        # would only re-fetch the same full result set.
         url = f'{BASE_AMPLIFY_URL}/needs/{need_id}/responses'
-        responses: List[Dict[str, Any]] = []
-        page = 1
+        api_request_data = {
+            'method': 'GET',
+            'url': url,
+            'headers': BASE_AMPLIFY_HEADERS,
+            'json': None,
+            'timeout': RESPONSES_HTTP_TIMEOUT
+        }
+        response = self.helpers.send_api_request(
+            api_request_data=api_request_data,
+            display_request_status=False
+        )
 
-        while page <= MAX_RESPONSE_PAGES:
-
-            # Construct and send the request for the current page
-            api_request_data = {
-                'method': 'GET',
-                'url': url,
-                'headers': BASE_AMPLIFY_HEADERS,
-                'params': {
-                    'per_page': AMPLIFY_RESPONSES_PER_PAGE,
-                    'page': page
-                },
-                'timeout': self.timeout
-            }
-            response = self.helpers.send_api_request(
-                api_request_data=api_request_data,
-                display_request_status=False
-            )
-            response_json = response.json()
-
-            # Accumulate this page's results
-            data = response_json.get('data') or []
-            responses += data
-
-            # Prefer authoritative pagination metadata when present;
-            # otherwise stop once a short (or empty) page arrives.
-            meta = response_json.get('meta') or {}
-            last_page = meta.get('last_page')
-            if last_page is not None:
-                if page >= int(last_page):
-                    break
-            elif len(data) < AMPLIFY_RESPONSES_PER_PAGE:
-                break
-
-            page += 1
-
-        return responses
+        return self.helpers.response_json(response).get('data') or []
 
     def build_need_summary(
             self,
