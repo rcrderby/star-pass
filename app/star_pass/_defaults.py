@@ -13,6 +13,8 @@ from yaml import safe_load
 
 # Date and time formatting
 AMPLIFY_DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
+# Amplify returns shift/response datetimes with seconds.
+AMPLIFY_SHIFT_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 FILE_NAME_DATE_TIME_FORMAT = '%Y-%m-%dT%H_%M_%S_%f'
 SIMPLE_DATE_FORMAT = '%A, %B %d %Y'
 SIMPLE_TIME_FORMAT = '%H:%M'
@@ -234,6 +236,20 @@ SLACK_DEV_CHANNEL = getenv('SLACK_DEV_CHANNEL')
 SLACK_CHECK_MODE_MESSAGE = '\n** Slack Check Mode Run (no message sent) **'
 # Label for the sign-up link button attached to a shift.
 SLACK_SIGN_UP_BUTTON_TEXT = 'Sign up'
+
+# Amplify responses (sign-ups)
+# Public need-detail URL used for shift sign-up link buttons.
+AMPLIFY_NEED_DETAIL_URL = getenv(
+    'AMPLIFY_NEED_DETAIL_URL',
+    'https://rosecityrollers.galaxydigital.com/need/detail/'
+)
+# Page size when reading responses (Amplify list maximum is 150).
+AMPLIFY_RESPONSES_PER_PAGE = int(
+    getenv(
+        'AMPLIFY_RESPONSES_PER_PAGE',
+        '150'
+    )
+)
 
 # Amplify Shift lookup data model
 SHIFTS_INFO_FILE_NAME = 'shift_info.yml'
