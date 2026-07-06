@@ -142,6 +142,16 @@ LOG_LEVEL = getenv(
     'INFO'
 )
 
+# Fuzzy match confidence threshold (0-100).  When no alias appears
+# literally in an event title, the fuzzy fallback must score at least
+# this high to assign a category; otherwise the title is sent to review.
+FUZZY_MATCH_THRESHOLD = int(
+    getenv(
+        'FUZZY_MATCH_THRESHOLD',
+        '80'
+    )
+)
+
 # Google Calendar values
 BASE_GCAL_ENDPOINT = '/events'
 GCAL_ORDER_BY = 'startTime'

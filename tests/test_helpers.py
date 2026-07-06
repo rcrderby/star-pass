@@ -9,7 +9,9 @@
 # pylint: disable=protected-access
 
 # Imports - Python Standard Library
+import json
 import logging
+from pathlib import Path
 
 # Imports - Third-Party
 import pytest
@@ -73,20 +75,70 @@ class TestDateTimeFormatting:
         assert result == '11:30-12:30'
 
 
+# Independent baseline of the need_ids each keyword resolved to before the
+# data-model refactor, with the two documented fixes applied (hr, aoa ->
+# standard adult_game). Keys are '<calendar>|<keyword>'.
+_NEED_IDS_BASELINE = json.loads(
+    (
+        Path(__file__).resolve().parent
+        / 'fixtures' / 'shift_need_ids_expected.json'
+    ).read_text(encoding='utf-8')
+)
+
+
 class TestSearchShiftInfo:
+    @pytest.mark.parametrize(
+        'key, expected_need_ids',
+        list(_NEED_IDS_BASELINE.items())
+    )
+    def test_need_ids_unchanged_after_refactor(
+        self, helpers, key, expected_need_ids
+    ):
+        # Every historical keyword must still resolve to the same
+        # need_ids after the data-model and matcher refactor.
+        gcal_name, need_name = key.split('|', 1)
+        result = helpers.search_shift_info(
+            gcal_name=gcal_name,
+            need_name=need_name
+        )
+        assert result['need_ids'] == expected_need_ids
+
     @pytest.mark.parametrize(
         'gcal_name, need_name, expected_description',
         [
-            ('practices', 'Adult Scrimmage', 'Adult Scrimmages'),
+            # Real event titles sampled from Google Calendar exports.
+            ('events', 'GNR v HH', 'Adult Games'),
+            (
+                'events',
+                'G1: Petals Exhibition Bout',
+                'Rose Petals Games'
+            ),
+            ('practices', 'Officials', 'Adult Officiating Practices'),
             (
                 'practices',
-                'WoJ Scrimmage',
-                'Wheels of Justice (WoJ) Scrimmages'
+                'Adult HT Scrimmage: BB/HH',
+                'Adult Scrimmages'
             ),
-            ('events', 'AoA vs BNB', 'Axles of Annihilation (AoA) Games'),
+            ('practices', 'Wreckers A/B Scrimmage', 'Adult Scrimmages'),
+            ('practices', 'Buds Mixed Scrimmage', 'Junior Scrimmages'),
+            # Synthesized titles a human might reasonably use.
+            ('events', 'Axles vs. Jet City', 'Adult Games'),
+            (
+                'practices',
+                'Officiating Practice',
+                'Adult Officiating Practices'
+            ),
+            ('events', 'PTT vs Cherry City', 'Rose Petals Games'),
+            ('events', 'BB vs. JRD', 'Adult Games'),
+            (
+                'practices',
+                'Officials Training',
+                'Adult Officiating Practices'
+            ),
+            ('practices', 'Wreckers Mod. Contact', 'Adult Scrimmages'),
         ]
     )
-    def test_best_match_description(
+    def test_realistic_event_name_matches(
         self, helpers, gcal_name, need_name, expected_description
     ):
         result = helpers.search_shift_info(
@@ -94,6 +146,20 @@ class TestSearchShiftInfo:
             need_name=need_name
         )
         assert result['description'] == expected_description
+
+    def test_unmatched_title_routes_to_review(self, helpers, caplog):
+        # A title with no recognized team must not be guessed; it falls
+        # back to the review default and logs a warning so the operator
+        # can add an alias.
+        with caplog.at_level(logging.WARNING, logger='star_pass'):
+            result = helpers.search_shift_info(
+                gcal_name='events',
+                need_name='Jet City vs Cherry City'
+            )
+
+        assert result['description'] == 'Unknown Game'
+        assert result['need_ids'][0]['id'] == ''
+        assert 'review' in caplog.text.lower()
 
 
 class TestRedactSecrets:

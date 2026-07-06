@@ -24,6 +24,7 @@ from ._logging import get_logger
 AMPLIFY_DATE_TIME_FORMAT = _defaults.AMPLIFY_DATE_TIME_FORMAT
 ENV_FILE_PATH = _defaults.ENV_FILE_PATH
 FILE_ENCODING = _defaults.FILE_ENCODING
+FUZZY_MATCH_THRESHOLD = _defaults.FUZZY_MATCH_THRESHOLD
 GCAL_CALENDARS = _defaults.GCAL_CALENDARS
 HTTP_RETRY_BACKOFF_FACTOR = _defaults.HTTP_RETRY_BACKOFF_FACTOR
 HTTP_RETRY_STATUS_FORCELIST = _defaults.HTTP_RETRY_STATUS_FORCELIST
@@ -375,32 +376,129 @@ class Helpers:
 
             Returns:
                 need_details (Dict):
-                    Dictionary object with need details for the best
-                    keyword search result match.
+                    Dictionary object with need details for the matched
+                    category, or the calendar 'default' when no category
+                    matches with enough confidence.
         """
 
-        # Create reference object to the applicable keywords
-        shifts_info = SHIFTS_INFO['calendar'][gcal_name]['keywords']
+        calendar = SHIFTS_INFO['calendar'][gcal_name]
+        categories = calendar['categories']
 
-        # Create a list of keywords to search
-        keywords = list(shifts_info.keys())
+        # Map each alias to its category configuration
+        alias_categories = {
+            alias: category
+            for category in categories.values()
+            for alias in category['aliases']
+        }
 
-        # Search for the best match of 'need_name'
-        best_match = process.extractOne(
+        # Deterministic pass: prefer an alias whose words all appear in
+        # the title (the longest such alias wins).
+        best_alias = self._best_literal_alias(
+            need_name,
+            list(alias_categories)
+        )
+        if best_alias is not None:
+            return self._category_need_details(alias_categories[best_alias])
+
+        # Fuzzy fallback: accept the best token-set match only if it
+        # clears the confidence threshold.
+        match = process.extractOne(
             query=need_name,
-            choices=keywords,
-            scorer=fuzz.ratio
-        )[0]
+            choices=list(alias_categories),
+            scorer=fuzz.token_set_ratio
+        )
+        if match is not None and match[1] >= FUZZY_MATCH_THRESHOLD:
+            return self._category_need_details(alias_categories[match[0]])
 
-        try:
-            # Attempt to get need details for the best match
-            need_details = shifts_info[best_match]
+        # Unmatched: log for review and fall back to the default category
+        message = (
+            f'No confident shift-info match for "{need_name}" in the '
+            f'"{gcal_name}" calendar; assigning the review fallback'
+        )
+        logger.warning(message)
+        return self._category_need_details(calendar['default'])
 
-        except KeyError:
-            # Use the 'default' option if there is no match
-            need_details = shifts_info['default']
+    @classmethod
+    def _best_literal_alias(
+            cls,
+            need_name: str,
+            aliases: list
+    ):
+        """ Return the best alias that appears literally in a title.
 
-        return need_details
+            An alias matches when all of its words appear as tokens in
+            the title.  Among matches, the longest alias wins (by word
+            count, then character length), with ties broken by the
+            earliest position of the alias in the title.
+
+            Args:
+                need_name (str):
+                    Event title to search.
+
+                aliases (list):
+                    Candidate alias strings.
+
+            Returns:
+                str | None:
+                    The best matching alias, or None if none match.
+        """
+
+        title_tokens = cls._tokenize(need_name)
+        title_token_set = set(title_tokens)
+        best_alias = None
+        best_key = None
+        for alias in aliases:
+            alias_tokens = cls._tokenize(alias)
+            if all(token in title_token_set for token in alias_tokens):
+                position = min(
+                    title_tokens.index(token) for token in alias_tokens
+                )
+                key = (len(alias_tokens), len(alias), -position)
+                if best_key is None or key > best_key:
+                    best_key = key
+                    best_alias = alias
+
+        return best_alias
+
+    @staticmethod
+    def _tokenize(
+            text: str
+    ) -> list:
+        """ Split text into lowercase alphanumeric word tokens.
+
+            Args:
+                text (str):
+                    Text to tokenize.
+
+            Returns:
+                list:
+                    Lowercase alphanumeric tokens, in order.
+        """
+
+        return re.findall(r'[a-z0-9]+', text.lower())
+
+    @staticmethod
+    def _category_need_details(
+            category: Dict
+    ) -> Dict:
+        """ Return a category's need details without the alias list.
+
+            Args:
+                category (Dict):
+                    A category (or 'default') config from the shift-info
+                    model.
+
+            Returns:
+                Dict:
+                    The category config minus the internal 'aliases'
+                    key, preserving the historical need_details shape.
+        """
+
+        return {
+            key: value
+            for key, value in category.items()
+            if key != 'aliases'
+        }
 
     # Regex patterns matching secret-bearing substrings (API keys and
     # bearer tokens) that must never be printed or logged.

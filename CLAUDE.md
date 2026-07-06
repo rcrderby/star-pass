@@ -27,7 +27,13 @@ through the Amplify API. It is run once per month.
 - `app/star_pass/_logging.py` — package logger setup (`get_logger`);
   level via the `LOG_LEVEL` environment variable. Diagnostics and status
   flow through `logging`; report data still uses `Helpers.printer`.
-- `models/shift_info.yml` — keyword-to-need-ID data model.
+- `models/shift_info.yml` — shift data model: per calendar, `categories`
+  (need IDs, slots, timing) each with an `aliases` list of title
+  keywords. Add a team by adding its keyword to a category's `aliases`.
+  `Helpers.search_shift_info` matches an event title to a category by the
+  longest alias whose words all appear in the title, falling back to a
+  fuzzy match (`FUZZY_MATCH_THRESHOLD`); an unmatched title logs a
+  warning and uses the `default` category for operator review.
 - `app/schema/amplify.shifts.schema.json` — JSON Schema for shift
   payloads.
 - `tests/` — pytest suite.
