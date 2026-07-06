@@ -94,8 +94,8 @@ class TestSearchShiftInfo:
     def test_need_ids_unchanged_after_refactor(
         self, helpers, key, expected_need_ids
     ):
-        # Every historical keyword must still resolve to the same need_ids
-        # (hr and aoa intentionally corrected to the adult_game standard).
+        # Every historical keyword must still resolve to the same
+        # need_ids after the data-model and matcher refactor.
         gcal_name, need_name = key.split('|', 1)
         result = helpers.search_shift_info(
             gcal_name=gcal_name,
@@ -106,12 +106,43 @@ class TestSearchShiftInfo:
     @pytest.mark.parametrize(
         'gcal_name, need_name, expected_description',
         [
-            ('practices', 'Adult Scrimmage', 'Adult Scrimmages'),
-            ('practices', 'WoJ Scrimmage', 'Adult Scrimmages'),
-            ('events', 'AoA vs BNB', 'Adult Games'),
+            # Real event titles sampled from Google Calendar exports.
+            ('events', 'GNR v HH', 'Adult Games'),
+            (
+                'events',
+                'G1: Petals Exhibition Bout',
+                'Rose Petals Games'
+            ),
+            ('practices', 'Officials', 'Adult Officiating Practices'),
+            (
+                'practices',
+                'Adult HT Scrimmage: BB/HH',
+                'Adult Scrimmages'
+            ),
+            ('practices', 'Wreckers A/B Scrimmage', 'Adult Scrimmages'),
+            ('practices', 'Buds Mixed Scrimmage', 'Junior Scrimmages'),
+            # Synthesized titles a human might reasonably use.
+            ('events', 'Wheels of Justice vs Wreckers', 'Adult Games'),
+            (
+                'practices',
+                'Junior Officials Practice',
+                'Junior Officiating Practices'
+            ),
+            ('events', 'Petals Game Day', 'Rose Petals Games'),
+            ('events', 'GnR vs BB Doubleheader', 'Adult Games'),
+            (
+                'practices',
+                'Officials Training',
+                'Adult Officiating Practices'
+            ),
+            (
+                'practices',
+                'Wreckers Contact Scrimmage',
+                'Adult Scrimmages'
+            ),
         ]
     )
-    def test_best_match_description(
+    def test_realistic_event_name_matches(
         self, helpers, gcal_name, need_name, expected_description
     ):
         result = helpers.search_shift_info(
@@ -119,6 +150,20 @@ class TestSearchShiftInfo:
             need_name=need_name
         )
         assert result['description'] == expected_description
+
+    def test_unmatched_title_routes_to_review(self, helpers, caplog):
+        # A junior travel-team abbreviation with no alias must not be
+        # guessed; it falls back to the review default and logs a
+        # warning so the operator can add an alias.
+        with caplog.at_level(logging.WARNING, logger='star_pass'):
+            result = helpers.search_shift_info(
+                gcal_name='events',
+                need_name='G1: PTT v TBD'
+            )
+
+        assert result['description'] == 'Unknown Game'
+        assert result['need_ids'][0]['id'] == ''
+        assert 'review' in caplog.text.lower()
 
 
 class TestRedactSecrets:
