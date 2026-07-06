@@ -4,11 +4,9 @@
     by file path. CreateShifts, GCALData, and the module-level helpers
     object are replaced with mocks so that main() exercises only the
     argument parsing, run-mode dispatch, and banner output -- no CSV is
-    read, no API call is made, and banner text is asserted via the
-    mocked printer (the real printer binds sys.stdout at import time,
-    which defeats stdout capture fixtures). The mocked helpers keeps the
-    real convert_to_bool so that --check-mode parsing is exercised for
-    real.
+    read and no API call is made. Run-mode banners are asserted through
+    the 'star_pass' logger via caplog. The mocked helpers keeps the real
+    convert_to_bool so that --check-mode parsing is exercised for real.
 """
 # pylint: disable=missing-function-docstring,missing-class-docstring
 # pylint: disable=redefined-outer-name
@@ -40,9 +38,9 @@ def app_main():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
-    # Replace collaborators so main() performs no real work and banner
-    # output is observable through the mocked printer. Preserve the real
-    # convert_to_bool so argparse validates --check-mode as in production.
+    # Replace collaborators so main() performs no real work. Preserve the
+    # real convert_to_bool so argparse validates --check-mode as in
+    # production.
     mock_helpers = Mock()
     mock_helpers.convert_to_bool = Helpers().convert_to_bool
     module.helpers = mock_helpers
@@ -51,12 +49,10 @@ def app_main():
     return module
 
 
-class TestMainRunModeBanners:
-    def test_create_mode_logs_banner_and_runs(self, app_main, caplog):
+class TestMainRunModeDispatch:
+    def test_create_mode_short_flags(self, app_main, caplog):
         with caplog.at_level(logging.INFO, logger='star_pass'):
-            app_main.main(
-                ['create_amplify_shifts', '--input-file', 'x.csv']
-            )
+            app_main.main(['-c', '-i', 'x.csv'])
 
         assert 'Run mode is "Create Amplify Shifts"' in caplog.text
         app_main.CreateShifts.assert_called_once_with(
@@ -67,10 +63,10 @@ class TestMainRunModeBanners:
         app_main.CreateShifts.return_value.create_new_shifts \
             .assert_called_once()
 
-    def test_create_mode_alias_and_options(self, app_main):
+    def test_create_mode_long_flags_and_options(self, app_main):
         app_main.main(
             [
-                'c',
+                '--create-amplify-shifts',
                 '--input-file', 'x.csv',
                 '--check-mode', 'false',
                 '--output-verbosity', 'simple'
@@ -83,63 +79,69 @@ class TestMainRunModeBanners:
             output_verbosity='simple'
         )
 
-    def test_get_mode_logs_banner_and_runs(self, app_main, caplog):
+    def test_get_mode_short_flags(self, app_main, caplog):
         with caplog.at_level(logging.INFO, logger='star_pass'):
-            app_main.main(['get_gcal_events', '--gcal-name', 'events'])
+            app_main.main(['-g', '-n', 'events'])
 
         assert 'Run mode is "Get Google Calendar Events"' in caplog.text
         app_main.GCALData.assert_called_once_with(gcal_name='events')
 
-    def test_get_mode_alias(self, app_main):
-        app_main.main(['g', '--gcal-name', 'practices'])
+    def test_get_mode_long_flags(self, app_main):
+        app_main.main(['--get-gcal-events', '--gcal-name', 'practices'])
 
         app_main.GCALData.assert_called_once_with(gcal_name='practices')
 
 
 class TestMainArgumentErrors:
-    def test_missing_mode_exits_nonzero(self, app_main):
+    def test_no_mode_exits_nonzero(self, app_main):
         with pytest.raises(SystemExit) as exc_info:
             app_main.main([])
         assert exc_info.value.code != 0
         app_main.CreateShifts.assert_not_called()
         app_main.GCALData.assert_not_called()
 
-    def test_invalid_mode_exits_nonzero(self, app_main):
+    def test_both_modes_exits_nonzero(self, app_main):
         with pytest.raises(SystemExit) as exc_info:
-            app_main.main(['bogus'])
+            app_main.main(['-c', '-g', '-i', 'x.csv'])
         assert exc_info.value.code != 0
 
-    def test_missing_required_input_file_exits_nonzero(self, app_main):
+    def test_create_without_input_file_exits_nonzero(self, app_main):
         with pytest.raises(SystemExit) as exc_info:
-            app_main.main(['create_amplify_shifts'])
+            app_main.main(['-c'])
+        assert exc_info.value.code != 0
+        app_main.CreateShifts.assert_not_called()
+
+    def test_get_without_gcal_name_exits_nonzero(self, app_main):
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-g'])
+        assert exc_info.value.code != 0
+        app_main.GCALData.assert_not_called()
+
+    def test_get_mode_rejects_create_option(self, app_main):
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-g', '-n', 'events', '-i', 'x.csv'])
+        assert exc_info.value.code != 0
+        app_main.GCALData.assert_not_called()
+
+    def test_create_mode_rejects_gcal_name(self, app_main):
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-c', '-i', 'x.csv', '-n', 'events'])
         assert exc_info.value.code != 0
         app_main.CreateShifts.assert_not_called()
 
     def test_invalid_check_mode_value_exits_nonzero(self, app_main):
         with pytest.raises(SystemExit) as exc_info:
-            app_main.main(
-                [
-                    'create_amplify_shifts',
-                    '--input-file', 'x.csv',
-                    '--check-mode', 'maybe'
-                ]
-            )
+            app_main.main(['-c', '-i', 'x.csv', '-C', 'maybe'])
         assert exc_info.value.code != 0
 
     def test_invalid_verbosity_choice_exits_nonzero(self, app_main):
         with pytest.raises(SystemExit) as exc_info:
-            app_main.main(
-                [
-                    'create_amplify_shifts',
-                    '--input-file', 'x.csv',
-                    '--output-verbosity', 'loud'
-                ]
-            )
+            app_main.main(['-c', '-i', 'x.csv', '-o', 'loud'])
         assert exc_info.value.code != 0
 
     def test_invalid_gcal_name_choice_exits_nonzero(self, app_main):
         with pytest.raises(SystemExit) as exc_info:
-            app_main.main(['get_gcal_events', '--gcal-name', 'nope'])
+            app_main.main(['-g', '-n', 'nope'])
         assert exc_info.value.code != 0
 
     def test_help_exits_zero(self, app_main):
