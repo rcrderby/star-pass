@@ -41,8 +41,9 @@ through the Amplify API. It is run once per month.
 ## Running the workflow
 
 ```bash
-# The run mode is a flag: -g/--get-gcal-events or
-# -c/--create-amplify-shifts. Use --help for the full option list.
+# The run mode is a flag: -g/--get-gcal-events,
+# -c/--create-amplify-shifts, or -s/--post-slack-summary. Use --help
+# for the full option list.
 
 # 1. Collect Google Calendar events into a timestamped CSV.
 ./app/__main__.py -g -n practices
@@ -50,6 +51,9 @@ through the Amplify API. It is run once per month.
 
 # 2. Create Amplify shifts from a CSV (-C true is a dry run).
 ./app/__main__.py -c -i gcal_shifts_<timestamp>.csv -C true
+
+# 3. Post a Slack sign-up summary for a need (-C true is a dry run).
+./app/__main__.py -s -N <need_id> -C true
 ```
 
 ## Development

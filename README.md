@@ -38,7 +38,7 @@ This tool automates bulk operations on the Galaxy Digital Amplify volunteer mana
 
 ## Usage
 
-Select the run mode with a flag: `-g`/`--get-gcal-events` or `-c`/`--create-amplify-shifts`. Every input has a short and long form. Run `./app/__main__.py --help` for the full list.
+Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplify-shifts`, or `-s`/`--post-slack-summary`. Every input has a short and long form. Run `./app/__main__.py --help` for the full list.
 
 1. Collect Google Calendar Shift data and save shift data in a formatted CSV file:
 
@@ -58,3 +58,19 @@ Select the run mode with a flag: `-g`/`--get-gcal-events` or `-c`/`--create-ampl
         -i gcal_shifts_2099-01-01T00_00_00_000000.csv \
         -C false
     ```
+
+3. Post a shift sign-up summary to Slack (live counts per shift):
+
+    ```bash
+    # Dry run (default): build and print the Block Kit message, no send
+    ./app/__main__.py -s -N 879610
+
+    # Post live (needs SLACK_BOT_TOKEN); -k overrides the default
+    # channel (SLACK_CHANNEL, else SLACK_DEV_CHANNEL)
+    ./app/__main__.py --post-slack-summary \
+        --need-id 879610 \
+        --slack-channel C0123ABC456 \
+        --check-mode false
+    ```
+
+    Requires `SLACK_BOT_TOKEN` and a destination channel (`SLACK_CHANNEL` or `SLACK_DEV_CHANNEL`, or `-k`) in your `.env`; see `.env.example`.
