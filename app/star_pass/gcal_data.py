@@ -451,7 +451,7 @@ class GCALData:
                 response = self.helpers.send_api_request(
                     api_request_data=api_request_data
                 )
-                response_json = response.json()
+                response_json = self.helpers.response_json(response)
 
                 # Add matching results to `gcal_shift_data`, defaulting
                 # to an empty list when the 'items' key is absent.

@@ -12,9 +12,11 @@
 import json
 import logging
 from pathlib import Path
+from unittest.mock import Mock
 
 # Imports - Third-Party
 import pytest
+from urllib3.exceptions import MaxRetryError, ReadTimeoutError
 
 # Imports - Local
 from star_pass import _helpers
@@ -222,6 +224,66 @@ class TestSendApiRequestRedaction:
 
         assert sentinel not in caplog.text
         assert 'REDACTED' in caplog.text
+
+    def test_read_timeout_error_is_handled(
+            self, helpers, monkeypatch, caplog
+    ):
+        # A realistic requests ConnectionError from an exhausted retry:
+        # args[0] is a MaxRetryError whose reason is a ReadTimeoutError.
+        # The old handler assumed a '>: ' delimiter and raised
+        # IndexError on this exact shape -- this guards that regression.
+        sentinel = 'TOPSECRET'
+        reason = ReadTimeoutError(
+            None,
+            'https://x/events',
+            'Read timed out. (read timeout=10)'
+        )
+        conn_error = _helpers.exceptions.ConnectionError(
+            MaxRetryError(
+                None,
+                f'https://x/events?key={sentinel}',
+                reason=reason
+            )
+        )
+
+        def raise_conn_error(_self, **_kwargs):
+            raise conn_error
+
+        monkeypatch.setattr(
+            _helpers.Session, 'request', raise_conn_error
+        )
+
+        with caplog.at_level(logging.ERROR, logger='star_pass'):
+            with pytest.raises(SystemExit):
+                helpers.send_api_request(
+                    api_request_data={
+                        'method': 'GET',
+                        'url': 'https://x/events',
+                        'timeout': 3
+                    }
+                )
+
+        # Handled cleanly (no IndexError), logged, and redacted.
+        assert 'An HTTP error occurred' in caplog.text
+        assert sentinel not in caplog.text
+
+
+class TestResponseJson:
+    def test_returns_parsed_json(self, helpers):
+        response = Mock()
+        response.json.return_value = {'data': [1, 2]}
+        assert helpers.response_json(response) == {'data': [1, 2]}
+
+    def test_non_json_body_exits(self, helpers, caplog):
+        # e.g. an HTML gateway error page returned with a 2xx status.
+        response = Mock()
+        response.json.side_effect = ValueError('Expecting value')
+
+        with caplog.at_level(logging.ERROR, logger='star_pass'):
+            with pytest.raises(SystemExit):
+                helpers.response_json(response)
+
+        assert 'not valid JSON' in caplog.text
 
 
 class TestBuildSession:
