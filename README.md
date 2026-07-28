@@ -59,7 +59,7 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
         -C false
     ```
 
-3. Post a shift sign-up summary to Slack (live counts per shift):
+3. Post a shift sign-up summary to Slack (live counts per **upcoming** shift):
 
     ```bash
     # Dry run (default): build and print the Block Kit message, no send
@@ -74,3 +74,12 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     ```
 
     Requires `SLACK_BOT_TOKEN` and a destination channel (`SLACK_CHANNEL` or `SLACK_DEV_CHANNEL`, or `-k`) in your `.env`; see `.env.example`.
+
+    The summary lists only shifts that start in the future, with a live
+    sign-up count for each. Counts come from the Amplify `/responses`
+    endpoint, which has no server-side filter for a need or for a shift's
+    date, so the run reads the domain's recent responses and filters them
+    to the need. `AMPLIFY_RESPONSES_SINCE_DAYS` (default 90) bounds how far
+    back that read goes: a sign-up cannot predate the shift it is for, so a
+    90-day window comfortably covers sign-ups for upcoming shifts. Each run
+    logs how much margin the window had, and warns when it gets thin.

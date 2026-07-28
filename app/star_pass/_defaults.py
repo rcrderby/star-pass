@@ -243,15 +243,53 @@ AMPLIFY_NEED_DETAIL_URL = getenv(
     'AMPLIFY_NEED_DETAIL_URL',
     'https://rosecityrollers.galaxydigital.com/need/detail/'
 )
-# Extended timeout (seconds) for the slow per-need responses read.  That
-# endpoint ignores pagination and returns a need's entire response
-# history in one response, so the default HTTP_TIMEOUT is too short for
-# large needs.  (Very large needs can still exceed the server's ~60s
-# gateway limit -- an open question with Galaxy Digital support.)
+# Extended timeout (seconds) for a responses page.  Response reads are
+# slower than a need read, so the default HTTP_TIMEOUT is too short.
 AMPLIFY_RESPONSES_TIMEOUT = int(
     getenv(
         'AMPLIFY_RESPONSES_TIMEOUT',
         '90'
+    )
+)
+# Look-back window (days) for the 'since_created' filter on the responses
+# read.  The Amplify API has no server-side filter for a need or for a
+# shift's date; 'since_created' (when the sign-up record was created) is
+# the only lever that bounds the volume, so the whole domain's recent
+# responses are paged and filtered to the target need client-side.
+#
+# The window is safe because a sign-up cannot predate the shift it is
+# for, and shifts are created at most a month or two ahead, so a sign-up
+# for an upcoming shift is always recent.  Widen this value if sign-ups
+# might be created further ahead than the window; 'AmplifyResponses'
+# logs the observed margin on every run and warns when it gets thin.
+AMPLIFY_RESPONSES_SINCE_DAYS = int(
+    getenv(
+        'AMPLIFY_RESPONSES_SINCE_DAYS',
+        '90'
+    )
+)
+# Results per page for the responses read (the API maximum is 150).
+AMPLIFY_RESPONSES_PER_PAGE = int(
+    getenv(
+        'AMPLIFY_RESPONSES_PER_PAGE',
+        '150'
+    )
+)
+# Safety cap on the number of response pages read in one run.
+AMPLIFY_RESPONSES_MAX_PAGES = int(
+    getenv(
+        'AMPLIFY_RESPONSES_MAX_PAGES',
+        '80'
+    )
+)
+# Datetime format the API expects for the 'since_created' parameter.
+AMPLIFY_RESPONSES_SINCE_FORMAT = '%Y-%m-%d %H:%M'
+# Warn when the oldest counted sign-up was created fewer than this many
+# days after the 'since_created' cutoff (a thin margin risks undercount).
+AMPLIFY_RESPONSES_MARGIN_WARN_DAYS = int(
+    getenv(
+        'AMPLIFY_RESPONSES_MARGIN_WARN_DAYS',
+        '7'
     )
 )
 
