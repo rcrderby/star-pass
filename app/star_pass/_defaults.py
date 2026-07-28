@@ -159,8 +159,13 @@ BASE_GCAL_ENDPOINT = '/events'
 GCAL_ORDER_BY = 'startTime'
 GCAL_SHOW_DELETED = 'false'
 GCAL_SINGLE_EVENTS = 'true'
-GCAL_TIME_MIN = '2025-01-01T00:00:00-00:00'
-GCAL_TIME_MAX = '2025-02-09T00:00:00-00:00'
+# 'GCAL_TIME_MIN' and 'GCAL_TIME_MAX' are deliberately NOT defined here.
+# They bound the calendar search window, which moves with every run, so
+# no default can stay correct: a stale default silently collects zero
+# events and writes an empty CSV.  'gcal_data' requires them from the
+# environment instead, and reports a clear error when they are missing.
+# Format for the search window values, and the earliest date accepted.
+GCAL_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S%z'
 GCAL_EVENTS_QUERY_STRINGS = _get_env_list(
     'GCAL_EVENTS_QUERY_STRINGS',
     ['']

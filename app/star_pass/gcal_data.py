@@ -46,18 +46,107 @@ FILE_ENCODING = _defaults.FILE_ENCODING
 INPUT_DIR_PATH = _defaults.INPUT_DIR_PATH
 INPUT_FILE_EXTENSION = _defaults.INPUT_FILE_EXTENSION
 
-# Default date and time values
-DEFAULT_GCAL_TIME_MIN = getenv(
-    'GCAL_TIME_MIN',
-    _defaults.GCAL_TIME_MIN
-)
-DEFAULT_GCAL_TIME_MAX = getenv(
-    'GCAL_TIME_MAX',
-    _defaults.GCAL_TIME_MAX
-)
+# Calendar search window format (no default value -- see
+# 'get_gcal_time_window').
+GCAL_TIME_FORMAT = _defaults.GCAL_TIME_FORMAT
 
 # Module logger
 logger = get_logger(__name__)
+
+
+def _parse_gcal_time(
+        name: str,
+        value: str
+) -> datetime:
+    """ Parse a calendar search window value.
+
+        Args:
+            name (str):
+                Environment variable name, for the error message.
+
+            value (str):
+                An ISO 8601 datetime with a UTC offset, for example
+                '2099-01-01T00:00:00-00:00'.
+
+        Raises:
+            ValueError:
+                If 'value' is not a valid ISO 8601 datetime with an
+                offset.
+
+        Returns:
+            parsed (datetime):
+                The parsed datetime.
+    """
+
+    try:
+        return datetime.strptime(value, GCAL_TIME_FORMAT)
+    except (TypeError, ValueError) as error:
+        message = (
+            f'{name} is not a valid date and time: {value!r}.  Use the '
+            f'ISO 8601 format 2099-01-01T00:00:00-00:00.'
+        )
+        logger.error(message)
+        raise ValueError(message) from error
+
+
+def get_gcal_time_window() -> Tuple[str, str]:
+    """ Read and validate the Google Calendar search window.
+
+        'GCAL_TIME_MIN' and 'GCAL_TIME_MAX' bound the calendar search and
+        have no default: the window moves with every run, so a default
+        would go stale and silently collect zero events.  They are read
+        here, when a calendar request is about to run, rather than at
+        import time, so the other run modes ('-c' and '-s') do not
+        require Google Calendar configuration.
+
+        Raises:
+            ValueError:
+                If either value is unset, unparseable, or the window does
+                not move forward in time.
+
+        Returns:
+            window (Tuple[str, str]):
+                The validated ('GCAL_TIME_MIN', 'GCAL_TIME_MAX') values,
+                unchanged, ready to send as request parameters.
+    """
+
+    time_min = getenv('GCAL_TIME_MIN')
+    time_max = getenv('GCAL_TIME_MAX')
+
+    # Both values are required for a calendar request
+    missing = [
+        name
+        for name, value in (
+            ('GCAL_TIME_MIN', time_min),
+            ('GCAL_TIME_MAX', time_max)
+        )
+        if not value
+    ]
+    if missing:
+        message = (
+            f'{" and ".join(missing)} must be set to collect Google '
+            'Calendar events.  Set the calendar search window in your '
+            '.env file (see .env.example); there is no default, because '
+            'a stale window silently collects zero events.'
+        )
+        logger.error(message)
+        raise ValueError(message)
+
+    # A malformed value fails the same way a stale one does, silently,
+    # so reject it here rather than send it to the API.
+    parsed_min = _parse_gcal_time(name='GCAL_TIME_MIN', value=time_min)
+    parsed_max = _parse_gcal_time(name='GCAL_TIME_MAX', value=time_max)
+
+    if parsed_min >= parsed_max:
+        message = (
+            f'GCAL_TIME_MIN ({time_min}) must be earlier than '
+            f'GCAL_TIME_MAX ({time_max}); the current values select an '
+            'empty search window.'
+        )
+        logger.error(message)
+        raise ValueError(message)
+
+    return time_min, time_max
 
 
 class GCALShift:
@@ -242,9 +331,12 @@ class GCALData:
 
         # Call methods to initialize the workflow
         if self.auto_prep_data is True:
+            # Read the search window here, so an unset or invalid value
+            # fails before any request is sent.
+            time_min, time_max = get_gcal_time_window()
             self.gcal_shift_data = self.get_gcal_shift_data(
-                timeMin=DEFAULT_GCAL_TIME_MIN,
-                timeMax=DEFAULT_GCAL_TIME_MAX
+                timeMin=time_min,
+                timeMax=time_max
             )
             self.gcal_shifts = self.process_gcal_shift_data(
                 gcal_shift_data=self.gcal_shift_data

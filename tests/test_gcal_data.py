@@ -9,13 +9,14 @@
 
 # Imports - Python Standard Library
 import copy
+import importlib
 from unittest.mock import Mock
 
 # Imports - Third-Party
 import pytest
 
 # Imports - Local
-from star_pass.gcal_data import GCALData
+from star_pass.gcal_data import GCALData, get_gcal_time_window
 
 
 @pytest.fixture
@@ -30,6 +31,97 @@ def _mock_response(payload: dict) -> Mock:
     response = Mock()
     response.json.return_value = payload
     return response
+
+
+class TestGetGcalTimeWindow:
+    # The search window has no default: a stale one silently collects
+    # zero events, so every invalid state must fail loudly instead.
+
+    VALID_MIN = '2099-01-01T00:00:00-00:00'
+    VALID_MAX = '2099-01-31T00:00:00-00:00'
+
+    def test_returns_the_configured_window(self, monkeypatch):
+        monkeypatch.setenv('GCAL_TIME_MIN', self.VALID_MIN)
+        monkeypatch.setenv('GCAL_TIME_MAX', self.VALID_MAX)
+
+        assert get_gcal_time_window() == (self.VALID_MIN, self.VALID_MAX)
+
+    @pytest.mark.parametrize('missing', ['GCAL_TIME_MIN', 'GCAL_TIME_MAX'])
+    def test_raises_when_a_value_is_unset(self, monkeypatch, missing):
+        monkeypatch.setenv('GCAL_TIME_MIN', self.VALID_MIN)
+        monkeypatch.setenv('GCAL_TIME_MAX', self.VALID_MAX)
+        monkeypatch.delenv(missing)
+
+        with pytest.raises(ValueError, match=missing):
+            get_gcal_time_window()
+
+    def test_raises_when_both_are_unset(self, monkeypatch):
+        monkeypatch.delenv('GCAL_TIME_MIN', raising=False)
+        monkeypatch.delenv('GCAL_TIME_MAX', raising=False)
+
+        with pytest.raises(ValueError) as error:
+            get_gcal_time_window()
+
+        assert 'GCAL_TIME_MIN' in str(error.value)
+        assert 'GCAL_TIME_MAX' in str(error.value)
+
+    def test_raises_when_a_value_is_empty(self, monkeypatch):
+        monkeypatch.setenv('GCAL_TIME_MIN', '')
+        monkeypatch.setenv('GCAL_TIME_MAX', self.VALID_MAX)
+
+        with pytest.raises(ValueError, match='GCAL_TIME_MIN'):
+            get_gcal_time_window()
+
+    def test_raises_on_an_unparseable_value(self, monkeypatch):
+        # A typo fails the same silent way a stale window does.
+        monkeypatch.setenv('GCAL_TIME_MIN', '2099-01-01')
+        monkeypatch.setenv('GCAL_TIME_MAX', self.VALID_MAX)
+
+        with pytest.raises(ValueError, match='not a valid date and time'):
+            get_gcal_time_window()
+
+    def test_raises_when_the_window_does_not_move_forward(self, monkeypatch):
+        monkeypatch.setenv('GCAL_TIME_MIN', self.VALID_MAX)
+        monkeypatch.setenv('GCAL_TIME_MAX', self.VALID_MIN)
+
+        with pytest.raises(ValueError, match='must be earlier than'):
+            get_gcal_time_window()
+
+    def test_raises_when_the_window_is_empty(self, monkeypatch):
+        # Identical bounds select nothing at all.
+        monkeypatch.setenv('GCAL_TIME_MIN', self.VALID_MIN)
+        monkeypatch.setenv('GCAL_TIME_MAX', self.VALID_MIN)
+
+        with pytest.raises(ValueError, match='must be earlier than'):
+            get_gcal_time_window()
+
+
+class TestOtherRunModesDoNotNeedTheWindow:
+    # Regression guard: the window is validated lazily, when a calendar
+    # request is about to run.  Reading it at import time would make the
+    # create-shifts and Slack run modes -- and the scheduled Slack job --
+    # require Google Calendar configuration they never use.
+
+    def test_importing_the_cli_without_the_window(self, monkeypatch):
+        monkeypatch.delenv('GCAL_TIME_MIN', raising=False)
+        monkeypatch.delenv('GCAL_TIME_MAX', raising=False)
+
+        # A fresh import of every module the CLI pulls in must succeed.
+        for module in (
+            'star_pass.gcal_data',
+            'star_pass.amplify_shifts',
+            'star_pass.amplify_responses',
+            'star_pass.slack_notify',
+        ):
+            importlib.reload(importlib.import_module(module))
+
+    def test_constructing_gcal_data_without_the_window(self, monkeypatch):
+        # Construction alone performs no calendar request, so it must
+        # not require the window either.
+        monkeypatch.delenv('GCAL_TIME_MIN', raising=False)
+        monkeypatch.delenv('GCAL_TIME_MAX', raising=False)
+
+        assert GCALData(gcal_name='practices', auto_prep_data=False)
 
 
 class TestGetShiftTimeData:
