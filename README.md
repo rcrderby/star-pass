@@ -50,6 +50,14 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     ./app/__main__.py --get-gcal-events --gcal-name events
     ```
 
+    Set `GCAL_TIME_MIN` and `GCAL_TIME_MAX` in your `.env` to the date
+    range you are collecting, in ISO 8601 format
+    (`2099-01-01T00:00:00-00:00`). They are required, and deliberately
+    have no defaults: the window moves with every run, so a default
+    would go stale and silently collect zero events. The run stops with
+    an error if either is missing, malformed, or does not move forward
+    in time. Only this run mode reads them.
+
 2. Create Amplify Shifts using formatted CSV file data:
 
     ```bash
