@@ -166,7 +166,7 @@ class Helpers:
         """ Format an Amplify date and time to a simple date format.
 
             Example:
-                '2025-04-09 11:30' -------> 'Wednesday, April 9 2025'
+                '2025-04-09 11:30' ------> 'Wednesday, April 09 2025'
 
             Args:
                 date_time_string (str):

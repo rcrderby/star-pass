@@ -59,6 +59,12 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     an error if either is missing, malformed, or does not move forward
     in time. Only this run mode reads them.
 
+    Events are filtered before shifts are built. An event is skipped,
+    with a logged reason, when its title contains a term in
+    `GCAL_PREFIX_FILTERS` (cancelled events, derby daze, summer camp),
+    when it is an all-day event, or when it has no title. Review the
+    generated CSV file before step 2.
+
 2. Create Amplify Shifts using formatted CSV file data:
 
     ```bash
@@ -67,6 +73,16 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
         -i gcal_shifts_2099-01-01T00_00_00_000000.csv \
         -C false
     ```
+
+    A dry run (`-C true`, the default) does not create anything, but it
+    is **not** entirely request-free: it reads each opportunity title
+    from Amplify with a `GET /needs/{id}` so the preview can name the
+    opportunity. `AMPLIFY_TOKEN` is therefore required in both modes.
+
+    The run stops before sending anything if any row has no need ID.
+    That happens when an event title matched no category in the shift
+    data model, so the review fallback assigned an empty ID. See
+    [Unmatched event titles](#unmatched-event-titles) below.
 
 3. Post a shift sign-up summary to Slack (live counts per **upcoming** shift):
 
@@ -92,3 +108,63 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     back that read goes: a sign-up cannot predate the shift it is for, so a
     90-day window comfortably covers sign-ups for upcoming shifts. Each run
     logs how much margin the window had, and warns when it gets thin.
+
+## Unmatched event titles
+
+`Helpers.search_shift_info` maps a Google Calendar event title to a
+category in `models/shift_info.yml`. It first looks for a category whose
+`aliases` all appear in the title (longest alias wins), then falls back
+to a fuzzy match that must score at least `FUZZY_MATCH_THRESHOLD`
+(default 80).
+
+When neither matches, the title is not guessed at. The event is assigned
+the calendar's `default` category, whose need IDs are deliberately
+empty, and a warning names the title:
+
+```text
+No confident shift-info match for "Jet City vs Cherry City" in the
+"events" calendar; assigning the review fallback
+```
+
+An empty need ID cannot become a shift, so the `-c` run refuses to send
+anything and names every affected row and its line in the CSV file. To
+resolve it:
+
+1. Find the category the event belongs to in `models/shift_info.yml`.
+2. Add a distinguishing keyword from the title to that category's
+   `aliases` list.
+3. Re-run the `-g` collection so the CSV file is regenerated, or edit
+   the `need_id` column in the existing file by hand.
+
+Alternatively, delete the row from the CSV file if the event should not
+produce shifts at all. Adding the alias is preferable: it fixes every
+future run as well.
+
+## Development
+
+```bash
+python -m venv .venv
+. .venv/bin/activate
+pip install -r requirements/requirements_dev.txt
+```
+
+Run the tests and the linters that continuous integration runs:
+
+```bash
+python -m pytest
+python -m flake8 --config .github/linters/.flake8 app tests
+python -m pylint --rcfile .github/linters/.python-lint app tests
+python -m bandit -rc .bandit.yml app tests
+```
+
+Tests are hermetic: they make no network calls and require no `.env`
+file. `tests/conftest.py` sets dummy credentials before the package is
+imported.
+
+Secrets live in `.env`, which is git-ignored and scanned by gitleaks in
+continuous integration and by a pre-commit hook. Install the hook once
+with:
+
+```bash
+pip install pre-commit && pre-commit install
+```

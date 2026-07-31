@@ -27,13 +27,18 @@ through the Amplify API. It is run once per month.
 - `app/star_pass/_logging.py` — package logger setup (`get_logger`);
   level via the `LOG_LEVEL` environment variable. Diagnostics and status
   flow through `logging`; report data still uses `Helpers.printer`.
+- `app/star_pass/_validation.py` — shift input file checks, run before
+  the transformation pipeline.
 - `models/shift_info.yml` — shift data model: per calendar, `categories`
   (need IDs, slots, timing) each with an `aliases` list of title
   keywords. Add a team by adding its keyword to a category's `aliases`.
   `Helpers.search_shift_info` matches an event title to a category by the
   longest alias whose words all appear in the title, falling back to a
   fuzzy match (`FUZZY_MATCH_THRESHOLD`); an unmatched title logs a
-  warning and uses the `default` category for operator review.
+  warning and uses the `default` category, whose need IDs are empty. An
+  empty need ID cannot become a shift, so the `-c` run stops and names
+  the affected rows rather than dropping them. See the "Unmatched event
+  titles" section of `README.md` for the operator workflow.
 - `app/schema/amplify.shifts.schema.json` — JSON Schema for shift
   payloads.
 - `tests/` — pytest suite.
@@ -58,39 +63,32 @@ through the Amplify API. It is run once per month.
 
 ## Development
 
-### Environment
+The environment setup and the test and lint commands are in the
+"Development" section of `README.md`; run all of them before pushing.
+Do not repeat those commands here, because the duplicate-code check
+(jscpd) runs over Markdown and its threshold is zero.
 
-```bash
-python -m venv .venv
-. .venv/bin/activate
-pip install -r requirements/requirements_dev.txt
-```
-
-Secrets are read from a `.env` file at the repository root. Never commit
-`.env`.
+The notes below are the ones that are not obvious from the commands.
 
 ### Tests
-
-```bash
-python -m pytest
-```
 
 - Tests must be hermetic: no network calls and no real `.env`.
 - `tests/conftest.py` sets dummy credentials before import.
 - Construct `GCALData` / `CreateShifts` with `auto_prep_data=False`, and
   mock `Helpers.send_api_request`, to avoid live API calls.
+- A test that asserts a failure should assert the logged message as
+  well as the exit, so an error stays actionable.
 
 ### Linting
 
-Continuous integration runs Super Linter (flake8, pylint, bandit,
-jscpd, markdownlint, yamllint) and a separate bandit workflow. Run these
-before pushing:
-
-```bash
-python -m flake8 --config .github/linters/.flake8 app tests
-python -m pylint --rcfile .github/linters/.python-lint app tests
-python -m bandit -rc .bandit.yml app tests
-```
+- flake8 enforces a 79-character line limit; pylint allows 100 and caps
+  a module at 1000 lines.
+- Super Linter also runs Node-based linters that are easy to miss
+  locally: markdownlint, textlint (which enforces a terminology list),
+  and jscpd. Prose changes can fail continuous integration even when
+  the Python linters pass.
+- Bandit is a separate workflow and scans the whole repository,
+  including `tests/`.
 
 - flake8 enforces a 79-character line limit; pylint allows 100.
 - Test files start `test_*` methods, so add
@@ -115,3 +113,10 @@ python -m bandit -rc .bandit.yml app tests
   values in logic modules.
 - Amplify has no update endpoint for an individual shift (only create,
   and delete by shift ID); design shift changes around that constraint.
+- Check mode (`-C true`) does not create or send anything, but it is not
+  request-free: the shift preview reads each opportunity title with a
+  `GET /needs/{id}`, so `AMPLIFY_TOKEN` is required in both modes.
+- Prefer failing loudly over dropping data. A row that cannot become a
+  correct shift stops the run and is named, rather than being skipped:
+  a missing shift is invisible, and the operator only discovers it when
+  volunteers cannot sign up.
