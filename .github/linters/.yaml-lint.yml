@@ -7,6 +7,13 @@
 extends: default
 
 rules:
+  # A GitHub Actions step pinned to a commit SHA does not fit in the
+  # default 80 columns once the trailing '# v6' version comment is
+  # added, and Dependabot needs that comment in order to refresh it
+  # alongside the SHA.  Allow the longer line rather than drop either
+  # the pin or the comment.
+  line-length:
+    max: 120
   # Allow an empty space within braces
   braces:
     forbid: false

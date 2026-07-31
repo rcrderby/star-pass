@@ -67,8 +67,8 @@ class TestDateTimeFormatting:
         assert helpers.format_date_time_amplify(value) == expected
 
     def test_format_shift_date_simple(self, helpers):
-        # NOTE: the '%d' directive zero-pads the day ('09'), unlike the
-        # method docstring's 'April 9' example. Current behavior asserted.
+        # The '%d' directive zero-pads the day. The docstring example
+        # used to disagree with this and has been corrected to match.
         result = helpers.format_shift_date_simple('2025-04-09 11:30')
         assert result == 'Wednesday, April 09 2025'
 
@@ -191,6 +191,30 @@ class TestRedactSecrets:
         text = 'HTTP 404 Not Found for /needs/123/shifts'
         assert helpers.redact_secrets(text) == text
 
+    @pytest.mark.parametrize(
+        'text, sentinel',
+        [
+            ('?api_key=SENTINELVALUE&x=1', 'SENTINELVALUE'),
+            ('?access_token=SENTINELVALUE', 'SENTINELVALUE'),
+            ('?token=SENTINELVALUE', 'SENTINELVALUE'),
+            # A Slack credential carries its own prefix, so it can leak
+            # with no adjacent label to match on.
+            ('posted with xoxb-123-456-SENTINELVALUE', 'SENTINELVALUE'),
+            ('xoxp-9-9-SENTINELVALUE in a message', 'SENTINELVALUE'),
+        ]
+    )
+    def test_additional_secret_shapes_are_removed(
+        self, helpers, text, sentinel
+    ):
+        result = helpers.redact_secrets(text)
+        assert sentinel not in result
+        assert 'REDACTED' in result
+
+    def test_a_word_ending_in_token_is_not_mangled(self, helpers):
+        # The label patterns require the '=' separator.
+        text = 'the token was rejected'
+        assert helpers.redact_secrets(text) == text
+
 
 class TestSendApiRequestRedaction:
     def test_error_repr_with_key_is_redacted(
@@ -295,6 +319,17 @@ class TestBuildSession:
         assert retry.backoff_factor == 0.5
         assert 429 in retry.status_forcelist
         assert 503 in retry.status_forcelist
+
+    def test_the_session_is_reused(self, helpers):
+        # A session per request left pooled connections unreleased and
+        # defeated the connection reuse a Session exists to provide.
+        assert helpers._build_session() is helpers._build_session()
+
+    def test_each_helpers_instance_has_its_own_session(self):
+        assert (
+            _helpers.Helpers()._build_session()
+            is not _helpers.Helpers()._build_session()
+        )
 
     def test_post_is_not_retried(self, helpers):
         # POST creates Amplify shifts; it must not be auto-retried on a

@@ -3,6 +3,7 @@
 
 # Imports - Python Standard Library
 from datetime import datetime, timedelta
+from os import getenv
 from typing import Any, Dict
 from pprint import pprint as pp
 import re
@@ -47,9 +48,16 @@ class Helpers:
             Args:
                 None.
 
+            Object Attributes:
+                _session (requests.Session | None):
+                    HTTP session, built on first use by
+                    '_build_session' and reused for every request.
+
             Returns:
                 None.
         """
+
+        self._session: Session | None = None
 
         return None
 
@@ -152,6 +160,15 @@ class Helpers:
             date_string=date_time_string
         )
 
+        # 'dateparser.parse' returns None rather than raising when it
+        # cannot make sense of the input, which used to surface as an
+        # AttributeError on the next line.  The shift CSV file is
+        # reviewed and edited by hand, so a typo here is expected input.
+        if dt_object is None:
+            raise ValueError(
+                f'Cannot read {date_time_string!r} as a date and time.'
+            )
+
         # Convert 'dt_object' to a formatted string
         formatted_date_time_string = dt_object.strftime(
             format=AMPLIFY_DATE_TIME_FORMAT
@@ -166,7 +183,7 @@ class Helpers:
         """ Format an Amplify date and time to a simple date format.
 
             Example:
-                '2025-04-09 11:30' -------> 'Wednesday, April 9 2025'
+                '2025-04-09 11:30' ------> 'Wednesday, April 09 2025'
 
             Args:
                 date_time_string (str):
@@ -264,9 +281,12 @@ class Helpers:
                     plus the corresponding URL query string(s).
         """
 
-        # Check for a matching calendar ID
+        # Check for a matching calendar ID.  Returning inside the 'try'
+        # keeps the name bound on the only path that reaches the return;
+        # the previous trailing return read as though 'gcal_id' were
+        # available after the lookup had failed.
         try:
-            gcal_id = GCAL_CALENDARS[gcal_name]
+            return GCAL_CALENDARS[gcal_name]
 
         # Log an error and exit if the 'gcal_name' lookup fails
         except KeyError:
@@ -274,38 +294,7 @@ class Helpers:
             logger.error(message)
             self.exit_program(status_code=1)
 
-        return gcal_id
-
-    def iso_datetime_to_string(
-            self,
-            datetime_object: str,
-            datetime_string_format: str = AMPLIFY_DATE_TIME_FORMAT
-    ) -> str:
-        """ Convert an ISO-formatted datetime to a simplified format.
-
-            Args:
-                datetime_object (str[datetime]):
-                    String representation of a datetime.datetime object
-                    in ISO format:
-
-                    2024-10-06T12:00:00-07:00
-
-                datetime_string_format (str):
-                    Simplified date and time output format.
-
-            Returns:
-                datetime_string (str):
-                    Date and time as a string, formatted by
-                    datetime_string_format.
-        """
-
-        # Create a datetime object from the ISO-formatted string
-        datetime_object = datetime.fromisoformat(datetime_object)
-
-        # Format the datetime object as a string with `datetime_string_format'`
-        datetime_string = datetime_object.strftime(datetime_string_format)
-
-        return datetime_string
+        return None
 
     def printer(
             self,
@@ -323,7 +312,7 @@ class Helpers:
                 end (str):
                     String appended at the end of the message.  Default
                     is a new line.  Ignored when 'pretty_print' is
-                    'True'.
+                    'True', which always ends with a new line.
 
                 file (_io.TextIOWrapper, optional):
                     Target for the output stream.  Default 'None', which
@@ -353,8 +342,13 @@ class Helpers:
                 file=file
             )
         else:
-            # Pretty Print
-            pp(message)
+            # Pretty Print, to the same stream as a standard print so
+            # that redirected output (pytest's capsys, a shell
+            # redirection) captures both forms.
+            pp(
+                message,
+                stream=file
+            )
 
         return None
 
@@ -500,11 +494,17 @@ class Helpers:
             if key != 'aliases'
         }
 
-    # Regex patterns matching secret-bearing substrings (API keys and
-    # bearer tokens) that must never be printed or logged.
+    # Regex patterns matching secret-bearing substrings that must never
+    # be printed or logged.  Each pattern keeps the label in group 1 so
+    # the substitution shows what was redacted.
     _SECRET_PATTERNS = (
-        re.compile(r'(?i)(key=)[^&\s\'"]+'),
+        # Query parameters: '?key=', '&api_key=', 'access_token=', ...
+        re.compile(r'(?i)((?:api_|access_|auth_)?(?:key|token)=)[^&\s\'"]+'),
+        # Authorization header values
         re.compile(r'(?i)(bearer\s+)[^\s\'"]+'),
+        # Slack tokens, which carry their own recognizable prefix and so
+        # can leak without an adjacent label
+        re.compile(r'(xox[abprs]-)[A-Za-z0-9-]+'),
     )
 
     def redact_secrets(
@@ -537,7 +537,7 @@ class Helpers:
         return redacted
 
     def _build_session(self) -> Session:
-        """ Build a requests Session with retry and backoff configured.
+        """ Return a requests Session with retry and backoff configured.
 
             Transient failures are retried with exponential backoff.
             The urllib3 default set of allowed methods is used, so only
@@ -547,6 +547,12 @@ class Helpers:
             connection error that occurred before the request reached
             the server, which cannot create a duplicate shift.
 
+            The session is built once and reused.  A session per request
+            left its pooled connections unreleased and defeated the
+            connection reuse a Session exists to provide, which matters
+            most to the responses reader: it can send up to
+            'AMPLIFY_RESPONSES_MAX_PAGES' requests in one run.
+
             Args:
                 None.
 
@@ -555,6 +561,9 @@ class Helpers:
                     A session whose HTTP and HTTPS adapters retry
                     transient failures.
         """
+
+        if self._session is not None:
+            return self._session
 
         retry = Retry(
             total=HTTP_RETRY_TOTAL,
@@ -567,6 +576,7 @@ class Helpers:
         session = Session()
         session.mount('https://', adapter)
         session.mount('http://', adapter)
+        self._session = session
 
         return session
 
@@ -639,7 +649,7 @@ class Helpers:
         # Handle non-ok HTTP responses
         except exceptions.HTTPError as error:
             # Redact any secrets before logging
-            detail = self.redact_secrets(repr(f'{error!r}'))
+            detail = self.redact_secrets(repr(error))
             message = (
                 'The request returned a bad status code '
                 f'({response.status_code}): {detail}'
@@ -700,6 +710,42 @@ class Helpers:
 
 
 # Standalone functions
+def require_env_vars(
+        *var_names: str
+) -> None:
+    """ Confirm required environment variables have a value.
+
+        Without this check a missing credential is only discovered when
+        the API rejects the request: the run sends 'Bearer None' (or
+        'key=None'), gets a 401 or 403, and reports the status code,
+        which says nothing about the actual cause.
+
+        Args:
+            *var_names (str):
+                Names of the environment variables to require.
+
+        Raises:
+            SystemExit:
+                When any named variable is unset or empty.
+
+        Returns:
+            None.
+    """
+
+    missing = [name for name in var_names if not getenv(name)]
+
+    if missing:
+        message = (
+            f'{", ".join(missing)} must be set to run this command.  '
+            'Add the value(s) to the .env file at the repository root '
+            '(see .env.example).'
+        )
+        logger.error(message)
+        sys.exit(1)
+
+    return None
+
+
 def load_env_file() -> bool:
     """ Load environment variables from an .env file.
 

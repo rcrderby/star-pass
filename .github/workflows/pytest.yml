@@ -27,20 +27,26 @@ jobs:
       github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
 
-    # Set environment variables
-    env:
-      PYTHONPATH: ./
+    # Job permissions
+    permissions:
+      contents: read
 
     steps:
       # checkout action documentation
       # https://github.com/marketplace/actions/checkout
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6
 
-      # Set PYTHONPATH environment variable
-      - name: Set PYTHONPATH environment variable
-        run: |
-          export PYTHONPATH=$PYTHONPATH:${{ env.PYTHONPATH }}
+      # Pin the interpreter.  Without this the job ran on whichever
+      # Python the runner image happened to ship, so the 'requires-python'
+      # floor was never enforced and a runner image update could change
+      # the interpreter silently.
+      # setup-python action documentation
+      # https://github.com/marketplace/actions/setup-python
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+        with:
+          python-version: '3.12'
 
       # Install pytest packages
       - name: Install pytest packages
@@ -49,7 +55,8 @@ jobs:
           python -m pip install --upgrade -r \
             requirements/requirements_pytest.txt
 
-      # Perform pytest testing and coverage analysis
+      # Perform pytest testing and coverage analysis.  The measured
+      # packages and the minimum coverage live in pyproject.toml, so the
+      # floor is enforced rather than reported and then ignored.
       - name: pytest
-        run: |
-          pytest --verbose --cov-report='term-missing' --cov='.'
+        run: pytest --cov
