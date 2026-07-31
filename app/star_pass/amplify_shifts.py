@@ -18,6 +18,7 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 from . import _defaults
 from ._helpers import Helpers, load_env_file
 from ._logging import get_logger
+from ._validation import validate_shift_columns, validate_shift_need_ids
 
 # Load environment variables
 load_env_file()
@@ -55,9 +56,6 @@ START_COLUMN = _defaults.START_COLUMN
 START_DATE_COLUMN = _defaults.START_DATE_COLUMN
 START_TIME_COLUMN = _defaults.START_TIME_COLUMN
 KEEP_COLUMNS = _defaults.KEEP_COLUMNS.split(sep=', ')
-
-# Shift lookup data model file, named in the unmatched-need-ID error
-SHIFTS_INFO_FILE = _defaults.SHIFTS_INFO_FILE
 
 # Default output format verbosity
 VERBOSITY_LEVELS = _defaults.VERBOSITY_LEVELS
@@ -195,7 +193,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         if self.auto_prep_data is True:
             self._read_shift_csv_data()
             self._remove_duplicate_shifts()
-            self._validate_shift_rows()
+            self._validate_shift_need_ids()
             self._combine_date_time_columns()
             self._format_shift_start()
             self._drop_unused_columns()
@@ -239,19 +237,43 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             end=''
         )
 
-        # Read CSV file
-        shift_data = pd.read_csv(
-            filepath_or_buffer=f'{self.input_file}',
-            dtype='string'
-        )
+        # Read CSV file.  A missing or unreadable file is an operator
+        # error (a mistyped -i value), not a bug, so report the path
+        # rather than raising a traceback from deep inside pandas.
+        try:
+            shift_data = pd.read_csv(
+                filepath_or_buffer=f'{self.input_file}',
+                dtype='string'
+            )
+        except FileNotFoundError:
+            self.helpers.printer(message='')
+            message = (
+                f'No shift data file at "{self.input_file}".  Pass the '
+                'file name of a CSV file in the input directory with '
+                '-i/--input-file.'
+            )
+            logger.error(message)
+            self.helpers.exit_program(status_code=1)
+        except pd.errors.EmptyDataError:
+            self.helpers.printer(message='')
+            message = (
+                f'The shift data file "{self.input_file}" is empty.'
+            )
+            logger.error(message)
+            self.helpers.exit_program(status_code=1)
 
         # Update self._shift_data
         self._shift_data = shift_data
 
-        # Display status message ('read_csv' raises rather than
-        # returning None, so a failure never reaches this line)
+        # Display status message
         message = "done."
         self.helpers.printer(message=message)
+
+        # Confirm the file has the columns the pipeline transforms
+        validate_shift_columns(
+            shift_data=self._shift_data,
+            input_file=self.input_file
+        )
 
         return None
 
@@ -296,17 +318,8 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         return None
 
-    def _validate_shift_rows(self) -> None:
+    def _validate_shift_need_ids(self) -> None:
         """ Reject shift rows that have no need ID.
-
-            'Helpers.search_shift_info' assigns the review fallback -- a
-            category whose need IDs are empty -- to an event title it
-            cannot match confidently, so an unmatched Google Calendar
-            event reaches the CSV with a blank 'need_id'.  Because
-            'DataFrame.groupby' drops null keys, those rows used to
-            vanish during '_group_shift_data': the shift never reached
-            Amplify and nothing reported it.  Fail here instead, naming
-            every event that needs an alias in the shift data model.
 
             Args:
                 self._shift_data (frame.DataFrame):
@@ -315,8 +328,8 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
             Raises:
                 SystemExit:
-                    Through 'Helpers.exit_program', when any row has a
-                    missing, empty, or whitespace-only need ID.
+                    Through 'validate_shift_need_ids', when any row has
+                    a missing, empty, or whitespace-only need ID.
 
             Returns:
                 None.
@@ -329,44 +342,17 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             end=''
         )
 
-        # Treat a missing, empty, or whitespace-only value as blank
-        need_ids = self._shift_data[GROUP_BY_COLUMN]
-        blank_rows = self._shift_data[
-            need_ids.fillna('').str.strip() == ''
-        ]
-
-        # Every row has a need ID
-        if blank_rows.empty:
-            # Display status message
-            message = "done."
-            self.helpers.printer(message=message)
-
-            return None
-
-        # Name each unmatched event and the CSV line it came from.  The
-        # 'need_name' column is still present at this point in the
-        # pipeline ('_drop_unused_columns' removes it later), and adding
-        # 2 to a zero-based index yields the line number in the file.
-        need_names = blank_rows.get(NEED_NAME_COLUMN)
-        row_details = [
-            f'line {index + 2}' if need_names is None
-            else f'"{need_names.loc[index]}" (line {index + 2})'
-            for index in blank_rows.index
-        ]
-
-        # Close the status line, then log the error and exit
+        # Close the status line first: the check writes its report to
+        # the log, which goes to stderr, when it finds a blank need ID.
         self.helpers.printer(message='')
-        message = (
-            f'{len(blank_rows)} shift row(s) in "{self.input_file}" have '
-            f'no need ID: {", ".join(row_details)}.  These event titles '
-            'did not match a category in the shift data model, so the '
-            'review fallback assigned an empty need ID.  Add an alias '
-            f'for each title to "{SHIFTS_INFO_FILE}" and collect the '
-            'calendar data again, or remove the rows from the CSV file.  '
-            'No shifts were created.'
+        validate_shift_need_ids(
+            shift_data=self._shift_data,
+            input_file=self.input_file
         )
-        logger.error(message)
-        self.helpers.exit_program(status_code=1)
+
+        # Display status message
+        message = "done."
+        self.helpers.printer(message=message)
 
         return None
 
@@ -453,10 +439,24 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             end=''
         )
 
-        # Format the 'start' column for Amplify compatibility
-        self._shift_data[START_COLUMN] = self._shift_data[START_COLUMN].apply(
-            lambda x: self.helpers.format_date_time_amplify(x)
-        )
+        # Format the 'start' column for Amplify compatibility.  A value
+        # the date parser cannot read is an error in a hand-edited file,
+        # so name it instead of raising a traceback.
+        try:
+            self._shift_data[START_COLUMN] = self._shift_data[
+                START_COLUMN
+            ].apply(
+                lambda x: self.helpers.format_date_time_amplify(x)
+            )
+        except ValueError as error:
+            self.helpers.printer(message='')
+            message = (
+                f'{error}  Check the {START_DATE_COLUMN} and '
+                f'{START_TIME_COLUMN} columns in '
+                f'"{self.input_file}".'
+            )
+            logger.error(message)
+            self.helpers.exit_program(status_code=1)
 
         # Display status message
         message = "done."
@@ -680,7 +680,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         return None
 
-    def _validate_shift_json_data(self) -> bool:
+    def _validate_shift_json_data(self) -> None:
         """ Validate shift JSON data against JSON Schema.
 
             Args:
@@ -896,19 +896,17 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
     def create_new_shifts(
             self,
-            json: Any = None,
             timeout: int = HTTP_TIMEOUT
     ) -> None:
         """ Upload shift data to create new Amplify shifts.
 
-            Args:
-                json (Any):
-                    JSON body of shift data.  Default value is None in
-                    order to allow sending a custom JSON body of shift
-                    data, although the method will use the data in the
-                    self._shift_data variable to construct a JSON body
-                    by default.
+            The body of each request is built from the prepared data in
+            'self._json_shift_data'.  A 'json' parameter used to be
+            documented as a way to send a custom body, but the loop
+            below overwrote it on every iteration, so it never had any
+            effect and is not reinstated here.
 
+            Args:
                 timeout (int):
                     HTTP timeout.  Default is HTTP_TIMEOUT.
 
@@ -978,17 +976,22 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         # Display a message if self._json_shift_data['valid'] is not True
         else:
-            # Create output message
+            # Create output message.  The validation error is appended
+            # when there is one, but the message is reported either way:
+            # nesting the report inside the error check meant that
+            # unvalidated data (['valid'] is None) returned in silence,
+            # as though the shifts had been created.
             output_message = (
-                '** Unable to create shifts while shift data is invalid **\n'
+                '** Unable to create shifts while shift data is invalid **'
             )
-            if self._json_shift_data.get('error') is not None:
-                # Update output message
-                output_message += f'\n{self._json_shift_data.get("error")}\n'
+            validation_error = self._json_shift_data.get('error')
+            if validation_error is not None:
+                output_message += f'\n\n{validation_error}'
 
-                # Display output message
-                self.helpers.printer(
-                    message=output_message
-                )
+            # Report to the log and to the display
+            logger.error(output_message)
+            self.helpers.printer(
+                message=f'{output_message}\n'
+            )
 
         return None

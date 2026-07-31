@@ -1,0 +1,49 @@
+---
+# Dependabot configuration
+## https://docs.github.com/code-security/dependabot
+
+# Every dependency in this repository is pinned to an exact version:
+# the Python requirements to '==', the GitHub Actions to a commit SHA.
+# Pinning is what makes a build reproducible, but nothing then notices a
+# published vulnerability or a security release, because no resolver
+# ever re-resolves. Dependabot supplies that missing half by opening a
+# pull request when a pinned version falls behind, which CI then tests
+# like any other change.
+
+version: 2
+
+updates:
+  # Python dependencies, across every requirements file in the directory
+  - package-ecosystem: pip
+    directory: /requirements
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+    labels:
+      - dependencies
+
+  # The project metadata pins the same runtime versions as the
+  # requirements files, so it is tracked too and the two stay in step.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+    labels:
+      - dependencies
+
+  # GitHub Actions. Dependabot updates a SHA pin in place and refreshes
+  # the version comment beside it, so pinning does not mean going stale.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+    labels:
+      - dependencies
