@@ -203,6 +203,49 @@ class TestValidateShiftRows:
         assert 'First Unmatched' in caplog.text
         assert 'Second Unmatched' in caplog.text
 
+    def test_input_file_errors_are_reported(self, csv_dir, caplog):
+        # A mistyped -i value is an operator error, not a bug, so the
+        # path is named instead of raising from inside pandas.
+        with caplog.at_level(logging.ERROR, logger='star_pass'):
+            with pytest.raises(SystemExit) as exc_info:
+                CreateShifts(input_file='does_not_exist.csv')
+
+        assert exc_info.value.code == 1
+        assert 'does_not_exist.csv' in caplog.text
+        assert csv_dir is not None
+
+    def test_missing_columns_are_named(self, csv_dir, caplog):
+        # A hand-edited file with a renamed column previously surfaced
+        # as a bare KeyError from whichever transformation hit it first.
+        path = csv_dir / 'bad_columns.csv'
+        path.write_text(
+            'need_name,need_id,start_date,start_time\n'
+            'Adult Game A,879609,2099-01-01,12:00\n',
+            encoding='utf-8'
+        )
+
+        with caplog.at_level(logging.ERROR, logger='star_pass'):
+            with pytest.raises(SystemExit):
+                CreateShifts(input_file='bad_columns.csv')
+
+        assert 'duration' in caplog.text
+        assert 'slots' in caplog.text
+
+    def test_unparseable_start_is_named(self, csv_dir, caplog):
+        # 'dateparser.parse' returns None rather than raising, which
+        # used to surface as an AttributeError.
+        input_file = _write_csv(
+            csv_dir,
+            ['Adult Game A,879609,not-a-date,99:99,60,12']
+        )
+
+        with caplog.at_level(logging.ERROR, logger='star_pass'):
+            with pytest.raises(SystemExit) as exc_info:
+                CreateShifts(input_file=input_file)
+
+        assert exc_info.value.code == 1
+        assert 'not-a-date' in caplog.text
+
     def test_complete_data_does_not_exit(self, csv_dir, caplog):
         input_file = _write_csv(
             csv_dir,
