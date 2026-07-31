@@ -1,8 +1,9 @@
 """ Characterization tests for star_pass.gcal_data.GCALData.
 
-    Focused on the pure time/offset math in _get_shift_time_data. The
-    GCALData instance is created with auto_prep_data=False so that
-    construction performs no network calls.
+    Covers the time/offset math in _get_shift_time_data, the calendar
+    item filter, and the collection pipeline. Unless a test drives the
+    pipeline deliberately, the GCALData instance is created with
+    auto_prep_data=False so that construction performs no network calls.
 """
 # pylint: disable=missing-function-docstring,missing-class-docstring
 # pylint: disable=protected-access,redefined-outer-name
@@ -10,12 +11,15 @@
 # Imports - Python Standard Library
 import copy
 import importlib
+import logging
 from unittest.mock import Mock
 
 # Imports - Third-Party
 import pytest
 
 # Imports - Local
+from star_pass import gcal_data
+from star_pass._helpers import Helpers
 from star_pass.gcal_data import GCALData, get_gcal_time_window
 
 
@@ -31,6 +35,24 @@ def _mock_response(payload: dict) -> Mock:
     response = Mock()
     response.json.return_value = payload
     return response
+
+
+def _timed_item(summary: str, start: str, end: str) -> dict:
+    # A Google Calendar item for an event with a start and end time.
+    return {
+        'summary': summary,
+        'start': {'dateTime': start},
+        'end': {'dateTime': end}
+    }
+
+
+def _all_day_item(summary: str, start: str, end: str) -> dict:
+    # An all-day event carries 'date' instead of 'dateTime'.
+    return {
+        'summary': summary,
+        'start': {'date': start},
+        'end': {'date': end}
+    }
 
 
 class TestGetGcalTimeWindow:
@@ -151,6 +173,229 @@ class TestGetShiftTimeData:
             '2025-04-09T18:00:00-07:00'
         )
         assert result == ('2025-04-09', '18:00', 120)
+
+    def test_event_spanning_more_than_a_day(self, gcal):
+        # Regression for the 'timedelta.seconds' bug: 'seconds' excludes
+        # the 'days' component, so a two-day event measured 0 minutes.
+        # 'total_seconds' gives the real 2880 minute span.
+        need = {'slots': 20, 'id': 628861}
+        result = gcal._get_shift_time_data(
+            need,
+            '2025-04-11T18:00:00-07:00',
+            '2025-04-09T18:00:00-07:00'
+        )
+        assert result == ('2025-04-09', '18:00', 2880)
+
+    def test_long_event_still_capped_at_max_length(self, gcal):
+        need = {'slots': 20, 'id': 628861, 'max_length': 165}
+        result = gcal._get_shift_time_data(
+            need,
+            '2025-04-11T18:00:00-07:00',
+            '2025-04-09T18:00:00-07:00'
+        )
+        assert result == ('2025-04-09', '18:00', 165)
+
+    def test_negative_duration_exits(self, gcal, caplog):
+        # Regression for the 'timedelta.seconds' bug: an end time pulled
+        # before the start time reported ~1440 minutes instead of a
+        # negative value, so a nonsense shift was created silently.
+        need = {
+            'slots': 20,
+            'id': 628861,
+            'offset_end': -90
+        }
+
+        with caplog.at_level(logging.ERROR, logger='star_pass'):
+            with pytest.raises(SystemExit) as exc_info:
+                gcal._get_shift_time_data(
+                    need,
+                    '2025-04-09T19:00:00-07:00',
+                    '2025-04-09T18:00:00-07:00',
+                    need_name='Backwards Scrimmage'
+                )
+
+        assert exc_info.value.code == 1
+        assert 'Backwards Scrimmage' in caplog.text
+        assert '-30 minute(s)' in caplog.text
+        assert 'offset_end -90' in caplog.text
+
+    def test_zero_duration_exits(self, gcal, caplog):
+        # An offset that collapses the shift to nothing is equally wrong.
+        need = {'slots': 20, 'id': 628861, 'offset_end': -60}
+
+        with caplog.at_level(logging.ERROR, logger='star_pass'):
+            with pytest.raises(SystemExit):
+                gcal._get_shift_time_data(
+                    need,
+                    '2025-04-09T19:00:00-07:00',
+                    '2025-04-09T18:00:00-07:00'
+                )
+
+        assert '0 minute(s)' in caplog.text
+
+
+class TestFilterGcalItems:
+    # Filtering runs before shifts are built, so an unusable item cannot
+    # raise and a filtered-out event is never matched against the model.
+
+    def test_keeps_an_ordinary_event(self, gcal):
+        items = [
+            _timed_item(
+                'Wreckers A/B Scrimmage',
+                '2099-01-05T18:00:00-08:00',
+                '2099-01-05T20:00:00-08:00'
+            )
+        ]
+
+        assert gcal.filter_gcal_items(items) == items
+
+    @pytest.mark.parametrize(
+        'title',
+        [
+            'CANCELED: Adult Scrimmage',
+            'Cancelled Officials Practice',
+            'Derby Daze',
+            'Summer Camp Session 2'
+        ]
+    )
+    def test_drops_excluded_titles(self, gcal, title):
+        items = [
+            _timed_item(
+                title,
+                '2099-01-05T18:00:00-08:00',
+                '2099-01-05T20:00:00-08:00'
+            )
+        ]
+
+        assert gcal.filter_gcal_items(items) == []
+
+    def test_drops_all_day_events(self, gcal, caplog):
+        # Regression: an all-day event has no 'dateTime', which raised
+        # an uncaught KeyError while the shift was being built.
+        items = [_all_day_item('Board Retreat', '2099-01-05', '2099-01-06')]
+
+        with caplog.at_level(logging.WARNING, logger='star_pass'):
+            result = gcal.filter_gcal_items(items)
+
+        assert result == []
+        assert 'Board Retreat' in caplog.text
+        assert 'all-day' in caplog.text
+
+    def test_drops_untitled_events(self, gcal, caplog):
+        # Regression: an event with no 'summary' raised an uncaught
+        # KeyError while the shift was being built.
+        items = [
+            {
+                'start': {'dateTime': '2099-01-05T18:00:00-08:00'},
+                'end': {'dateTime': '2099-01-05T20:00:00-08:00'}
+            }
+        ]
+
+        with caplog.at_level(logging.WARNING, logger='star_pass'):
+            result = gcal.filter_gcal_items(items)
+
+        assert result == []
+        assert 'no title' in caplog.text
+
+    def test_keeps_only_the_usable_items(self, gcal):
+        good = _timed_item(
+            'Wreckers A/B Scrimmage',
+            '2099-01-05T18:00:00-08:00',
+            '2099-01-05T20:00:00-08:00'
+        )
+        items = [
+            good,
+            _timed_item(
+                'CANCELLED: Adult Scrimmage',
+                '2099-01-06T18:00:00-08:00',
+                '2099-01-06T20:00:00-08:00'
+            ),
+            _all_day_item('Board Retreat', '2099-01-07', '2099-01-08'),
+        ]
+
+        assert gcal.filter_gcal_items(items) == [good]
+
+
+class TestCollectionPipeline:
+    # End-to-end: calendar JSON in, CSV file out, with no network call.
+
+    @staticmethod
+    def _run_pipeline(monkeypatch, tmp_path, items):
+        # Serve one page of calendar items and capture the CSV file the
+        # run writes.
+        monkeypatch.setattr(gcal_data, 'INPUT_DIR_PATH', tmp_path)
+        pages = iter([_mock_response({'items': items})])
+        monkeypatch.setattr(
+            Helpers,
+            'send_api_request',
+            lambda _self, **_kwargs: next(pages)
+        )
+
+        # The 'events' calendar has a single query string, so the page
+        # loop issues exactly one request.
+        GCALData(gcal_name='events')
+
+        written = list(tmp_path.glob('gcal_shifts_*.csv'))
+        assert len(written) == 1
+        return written[0].read_text(encoding='utf-8')
+
+    def test_unusable_and_excluded_events_never_reach_the_model(
+        self, monkeypatch, tmp_path, caplog
+    ):
+        # Regression for two coupled bugs: shifts were built before
+        # filtering, so an all-day or untitled event raised a KeyError,
+        # and every excluded event was matched against the shift data
+        # model first, logging a spurious review warning each run.
+        items = [
+            _timed_item(
+                'GNR v HH',
+                '2099-01-05T18:00:00-08:00',
+                '2099-01-05T20:00:00-08:00'
+            ),
+            _timed_item(
+                'CANCELLED: Jet City vs Cherry City',
+                '2099-01-06T18:00:00-08:00',
+                '2099-01-06T20:00:00-08:00'
+            ),
+            _all_day_item('Board Retreat', '2099-01-07', '2099-01-08'),
+            {
+                'start': {'dateTime': '2099-01-08T18:00:00-08:00'},
+                'end': {'dateTime': '2099-01-08T20:00:00-08:00'}
+            },
+        ]
+
+        with caplog.at_level(logging.WARNING, logger='star_pass'):
+            csv_text = self._run_pipeline(monkeypatch, tmp_path, items)
+
+        # Only the matched event produces shifts: one row per need ID,
+        # with the model's offsets applied (18:00 +15, 20:00 +30).
+        rows = [line for line in csv_text.splitlines() if line.strip()]
+        assert len(rows) == 3
+        assert all('GNR v HH' in row for row in rows[1:])
+        assert all(',135,' in row for row in rows[1:])
+        assert '879609' in csv_text and '879610' in csv_text
+
+        # The excluded event was never matched, so no review warning.
+        assert 'review' not in caplog.text.lower()
+        assert 'Jet City' not in caplog.text
+
+    def test_an_all_day_event_does_not_abort_the_run(
+        self, monkeypatch, tmp_path
+    ):
+        # Before filtering moved ahead of shift building, this raised
+        # KeyError('dateTime') and lost the whole collection.
+        items = [
+            _all_day_item('Board Retreat', '2099-01-07', '2099-01-08'),
+            _timed_item(
+                'GNR v HH',
+                '2099-01-05T18:00:00-08:00',
+                '2099-01-05T20:00:00-08:00'
+            ),
+        ]
+
+        csv_text = self._run_pipeline(monkeypatch, tmp_path, items)
+
+        assert 'GNR v HH' in csv_text
 
 
 class TestGetGcalShiftData:

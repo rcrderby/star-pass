@@ -149,6 +149,33 @@ def get_gcal_time_window() -> Tuple[str, str]:
     return time_min, time_max
 
 
+def _item_times(
+        gcal_item: Dict[str, Any]
+) -> Tuple[str, str] | None:
+    """ Return a calendar item's start and end times.
+
+        A timed event carries a 'dateTime'; an all-day event carries a
+        'date' instead and so cannot become a shift.
+
+        Args:
+            gcal_item (Dict[str, Any]):
+                Raw Google Calendar item.
+
+        Returns:
+            times (Tuple[str, str] | None):
+                The ('start', 'end') ISO datetime strings, or None when
+                either is absent.
+    """
+
+    start = (gcal_item.get('start') or {}).get('dateTime')
+    end = (gcal_item.get('end') or {}).get('dateTime')
+
+    if not start or not end:
+        return None
+
+    return start, end
+
+
 class GCALShift:
     """ Object to store Google Calendar shift data. """
     def __init__(
@@ -184,9 +211,10 @@ class GCALShift:
                 None.
         """
 
-        # Set initial attribute values
-        self.item_end = gcal_item['end']['dateTime']
-        self.item_start = gcal_item['start']['dateTime']
+        # Set initial attribute values.  'GCALData.filter_gcal_items'
+        # removes any item without a 'dateTime' or a 'summary' before a
+        # shift is built, so these lookups are safe.
+        self.item_start, self.item_end = _item_times(gcal_item=gcal_item)
         self.need_details = None
         self.need_ids = None
         self.need_name = gcal_item['summary']
@@ -290,10 +318,12 @@ class GCALData:
 
                     1. Collects shift data from the Google Calendar
                        service.
-                    2. Formats the Google Calendar shift data to
+                    2. Removes calendar items that must not become
+                       shifts.
+                    3. Formats the Google Calendar shift data to
                        comply with the Amplify API shift format.
-                    3. Converts the shift data to a CSV format.
-                    4. Writes the CSV shift data to a file.
+                    4. Converts the shift data to a CSV format.
+                    5. Writes the CSV shift data to a file.
 
                     When 'auto_prep_data' is True, creating an instance
                     of the 'GCALData' class will automatically attempt
@@ -303,8 +333,8 @@ class GCALData:
                     Functions that prepare data include:
 
                         get_gcal_shift_data()
-                        process_gcal_data()
-                        filter_shifts()
+                        filter_gcal_items()
+                        process_gcal_shift_data()
                         generate_shift_csv()
                         write_shift_csv_file()
 
@@ -338,14 +368,17 @@ class GCALData:
                 timeMin=time_min,
                 timeMax=time_max
             )
-            self.gcal_shifts = self.process_gcal_shift_data(
+            # Filter before building shifts, so that an unusable item
+            # cannot raise and a filtered-out event is never matched
+            # against the shift data model.
+            self.filtered_gcal_items = self.filter_gcal_items(
                 gcal_shift_data=self.gcal_shift_data
             )
-            self.filtered_gcal_shifts = self.filter_shifts(
-                gcal_shifts=self.gcal_shifts
+            self.gcal_shifts = self.process_gcal_shift_data(
+                gcal_shift_data=self.filtered_gcal_items
             )
             self.csv_data = self.generate_shift_csv(
-                filtered_gcal_shifts=self.filtered_gcal_shifts
+                filtered_gcal_shifts=self.gcal_shifts
             )
             self.write_shift_csv_file(
                 csv_data=self.csv_data
@@ -382,11 +415,62 @@ class GCALData:
 
         return gcal_shift
 
+    def _reject_invalid_duration(
+            self,
+            shift_duration: int,
+            need_id: Dict[str, int | str],
+            need_name: str,
+            start_time: str,
+            end_time: str
+    ) -> None:
+        """ Report a non-positive shift duration and exit.
+
+            Args:
+                shift_duration (int):
+                    The calculated duration, in minutes.
+
+                need_id (Dict[str, int | str]):
+                    Need ID data, including the offsets that produced
+                    the duration.
+
+                need_name (str):
+                    Event title, or an empty string when unknown.
+
+                start_time (str):
+                    Google Shift start time in ISO format.
+
+                end_time (str):
+                    Google Shift end time in ISO format.
+
+            Raises:
+                SystemExit:
+                    Through 'Helpers.exit_program', always.
+
+            Returns:
+                None.
+        """
+
+        message = (
+            f'"{need_name or "An event"}" produced a shift duration of '
+            f'{shift_duration} minute(s).  The event runs from '
+            f'{start_time} to {end_time}, and the shift data model '
+            f'offsets for need ID {need_id.get("id")} '
+            f'(offset_start {need_id.get("offset_start", 0)}, '
+            f'offset_end {need_id.get("offset_end", 0)}) move the end of '
+            'the shift to or before its start.  Correct the offsets in '
+            'the shift data model, or the event times in the calendar.'
+        )
+        logger.error(message)
+        self.helpers.exit_program(status_code=1)
+
+        return None
+
     def _get_shift_time_data(
             self,
             need_id: Dict[str, int | str],
             end_time: str,
-            start_time: str
+            start_time: str,
+            need_name: str = ''
     ) -> Tuple[str, str, int | str]:
         """ Calculate the date, time, and duration of a shift.
 
@@ -402,6 +486,15 @@ class GCALData:
 
                 start_time (str):
                     Google Shift start time in ISO format.
+
+                need_name (str, optional):
+                    Event title, used to identify the event in an error
+                    message.  Default is an empty string.
+
+            Raises:
+                SystemExit:
+                    Through 'Helpers.exit_program', when the offsets
+                    produce a duration of zero or less.
 
             Returns:
                 shift_timing (Tuple[str, str, int | str]):
@@ -428,8 +521,24 @@ class GCALData:
         # Calculate the time delta between the start and end of a shift
         start_end_delta = shift_end_datetime - shift_start_datetime
 
-        # Convert the time delta to minutes
-        shift_duration = floor(start_end_delta.seconds / 60)
+        # Convert the time delta to minutes.  Use 'total_seconds', not
+        # the 'seconds' attribute: 'seconds' excludes the 'days'
+        # component and is never negative, so an event spanning more
+        # than one day measured 0 minutes, and an end time pulled before
+        # the start time by an offset measured ~1440 minutes.
+        shift_duration = floor(start_end_delta.total_seconds() / 60)
+
+        # A shift that ends before it starts means the offsets in the
+        # shift data model are wrong for this event.  Creating it would
+        # send Amplify a zero or negative duration, so stop and report.
+        if shift_duration <= 0:
+            self._reject_invalid_duration(
+                shift_duration=shift_duration,
+                need_id=need_id,
+                need_name=need_name,
+                start_time=start_time,
+                end_time=end_time
+            )
 
         # Ensure `shift_duration` does note exceed the shift's `max_length`
         max_length = need_id.get('max_length', None)
@@ -600,21 +709,53 @@ class GCALData:
 
         return gcal_shifts
 
-    def filter_shifts(
-            self,
-            gcal_shifts: List[Dict[str, str]]
-    ) -> List[GCALShift]:
-        """ Remove unneeded shifts.
-
-            Filter shifts the from processed Google Calendar Data.
+    @staticmethod
+    def _is_excluded_title(
+            need_name: str
+    ) -> bool:
+        """ Determine whether an event title excludes it from shifts.
 
             Args:
-                gcal_shifts (List[GCALShift]:
-                    List of GCALShift objects.
+                need_name (str):
+                    Google Calendar event title.
 
             Returns:
-                filtered_gcal_shifts (List[GCALShift]:
-                    Filtered List of GCALShift objects.
+                bool:
+                    True when the title contains any excluded term.
+        """
+
+        title = need_name.lower()
+
+        return any(
+            excluded_term in title
+            for excluded_term in _defaults.GCAL_PREFIX_FILTERS
+        )
+
+    def filter_gcal_items(
+            self,
+            gcal_shift_data: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """ Remove calendar items that must not become shifts.
+
+            Filtering runs before 'process_gcal_shift_data' builds
+            'GCALShift' objects, for two reasons:
+
+            1. Building a shift looks the event title up in the shift
+               data model, so filtering afterwards meant every cancelled
+               event was matched first, logging a spurious "no confident
+               match" warning on every run.
+            2. An item without a 'dateTime' (an all-day event) or without
+               a 'summary' (an untitled event) raised an uncaught
+               KeyError while the shift was being built, aborting the
+               collection partway through.
+
+            Args:
+                gcal_shift_data (List[Dict[str, Any]]):
+                    Raw Google Calendar items.
+
+            Returns:
+                filtered_gcal_items (List[Dict[str, Any]]):
+                    The items that can and should become shifts.
         """
 
         # Display preliminary status message
@@ -624,29 +765,64 @@ class GCALData:
             end=''
         )
 
-        # Create a list of filtered Google Calendar Shifts
-        filtered_gcal_shifts = []
+        filtered_gcal_items = []
+        for gcal_item in gcal_shift_data:
 
-        # Loop over the list of Google Calendar shifts
-        for shift in gcal_shifts:
-
-            # Search for shifts that don't match values in a tuple of prefixes
-            if (
-                any(
-                    filter in shift.need_name.lower()
-                    for filter in _defaults.GCAL_PREFIX_FILTERS
+            # An untitled event cannot be matched to a need
+            need_name = gcal_item.get('summary')
+            if not need_name:
+                message = (
+                    'Skipping a Google Calendar event with no title '
+                    f'(starting {self._item_start(gcal_item)})'
                 )
-                is False
-            ):
+                logger.warning(message)
+                continue
 
-                # Add non-matching shifts to filtered_gcal_shifts list
-                filtered_gcal_shifts.append(shift)
+            # Cancelled and non-officiated events never become shifts
+            if self._is_excluded_title(need_name=need_name) is True:
+                continue
+
+            # An all-day event has a 'date' instead of a 'dateTime', so
+            # it has no start or end time to build a shift from
+            if _item_times(gcal_item=gcal_item) is None:
+                message = (
+                    f'Skipping "{need_name}" because it has no start and '
+                    'end time (an all-day event cannot become a shift)'
+                )
+                logger.warning(message)
+                continue
+
+            filtered_gcal_items.append(gcal_item)
 
         # Display status message
         message = "done."
         self.helpers.printer(message=message)
 
-        return filtered_gcal_shifts
+        return filtered_gcal_items
+
+    @staticmethod
+    def _item_start(
+            gcal_item: Dict[str, Any]
+    ) -> str:
+        """ Return a calendar item's start for a log message.
+
+            Args:
+                gcal_item (Dict[str, Any]):
+                    Raw Google Calendar item.
+
+            Returns:
+                str:
+                    The item's start dateTime, its all-day date, or
+                    'an unknown date' when it has neither.
+        """
+
+        start = gcal_item.get('start') or {}
+
+        return (
+            start.get('dateTime')
+            or start.get('date')
+            or 'an unknown date'
+        )
 
     def generate_shift_csv(
             self,
@@ -681,7 +857,8 @@ class GCALData:
                 start_date, start_time, duration = self._get_shift_time_data(
                     need_id=need_id,
                     end_time=gcal_shift.item_end,
-                    start_time=gcal_shift.item_start
+                    start_time=gcal_shift.item_start,
+                    need_name=gcal_shift.need_name
                 )
 
                 # Create an AmplifyShift object for each shift
