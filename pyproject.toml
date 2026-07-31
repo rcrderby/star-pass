@@ -67,6 +67,18 @@ packages = [
 # this table.
 version = {attr = "app.__version__"}
 
+[tool.coverage.run]
+# Measure the application only.  The previous '--cov=.' also measured
+# the test files themselves, which inflated the reported percentage.
+source = ["app"]
+
+[tool.coverage.report]
+# Enforce a floor rather than reporting a number nothing acts on.  Set
+# just below the coverage at the time of writing, so a genuine drop
+# fails the run while ordinary variation does not.
+fail_under = 90
+show_missing = true
+
 [tool.pytest.ini_options]
 # Put the 'app' directory on sys.path so tests can `import star_pass...`
 # without the ./app/__main__.py script-directory trick.
