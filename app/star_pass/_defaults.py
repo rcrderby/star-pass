@@ -216,12 +216,13 @@ GCAL_PREFIX_FILTERS = (
 )
 
 # Amplify CSV input file management
-DROP_COLUMNS = 'need_name, start_date, start_time'
 GROUP_BY_COLUMN = 'need_id'
+NEED_NAME_COLUMN = 'need_name'
 SHIFTS_DICT_KEY_NAME = 'shifts'
 START_COLUMN = 'start'
 START_DATE_COLUMN = 'start_date'
 START_TIME_COLUMN = 'start_time'
+DROP_COLUMNS = f'{NEED_NAME_COLUMN}, {START_DATE_COLUMN}, {START_TIME_COLUMN}'
 KEEP_COLUMNS = f'{START_COLUMN}, duration, slots'
 
 # Amplify shift output formatting

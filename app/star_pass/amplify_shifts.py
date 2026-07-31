@@ -17,6 +17,7 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 # Imports - Local
 from . import _defaults
 from ._helpers import Helpers, load_env_file
+from ._logging import get_logger
 
 # Load environment variables
 load_env_file()
@@ -48,14 +49,21 @@ JSON_SCHEMA_SHIFT_FILE = _defaults.JSON_SCHEMA_SHIFT_FILE
 # CSV data file management
 DROP_COLUMNS = _defaults.DROP_COLUMNS.split(sep=', ')
 GROUP_BY_COLUMN = _defaults.GROUP_BY_COLUMN
+NEED_NAME_COLUMN = _defaults.NEED_NAME_COLUMN
 SHIFTS_DICT_KEY_NAME = _defaults.SHIFTS_DICT_KEY_NAME
 START_COLUMN = _defaults.START_COLUMN
 START_DATE_COLUMN = _defaults.START_DATE_COLUMN
 START_TIME_COLUMN = _defaults.START_TIME_COLUMN
 KEEP_COLUMNS = _defaults.KEEP_COLUMNS.split(sep=', ')
 
+# Shift lookup data model file, named in the unmatched-need-ID error
+SHIFTS_INFO_FILE = _defaults.SHIFTS_INFO_FILE
+
 # Default output format verbosity
 VERBOSITY_LEVELS = _defaults.VERBOSITY_LEVELS
+
+# Module logger
+logger = get_logger(__name__)
 
 
 # Class definitions
@@ -86,16 +94,17 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
                     1. Imports shift data from a CSV file.
                     2. Removes any duplicate shifts.
-                    3. Formats the shift start date and time to comply
+                    3. Rejects any shift row without a need ID.
+                    4. Formats the shift start date and time to comply
                        with the Amplify API shift format.
-                    4. Removes any CSV file columns not used by the
+                    5. Removes any CSV file columns not used by the
                        Amplify API.
-                    5. Groups shift data by need ID.
-                    6. Formats data to comply with the structure
+                    6. Groups shift data by need ID.
+                    7. Formats data to comply with the structure
                        requirements of the Amplify API.
-                    7. Creates a JSON-formatted object of shift data
+                    8. Creates a JSON-formatted object of shift data
                        to send to the Amplify API.
-                    8. Validates the JSON-formatted object using a JSON
+                    9. Validates the JSON-formatted object using a JSON
                        Schema object.
 
                     When 'auto_prep_data' is True, creating
@@ -108,6 +117,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
                         _read_shift_csv_data()
                         _remove_duplicate_shifts()
+                        _validate_shift_rows()
                         _format_shift_start()
                         _drop_unused_columns()
                         _group_shift_data()
@@ -185,6 +195,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         if self.auto_prep_data is True:
             self._read_shift_csv_data()
             self._remove_duplicate_shifts()
+            self._validate_shift_rows()
             self._combine_date_time_columns()
             self._format_shift_start()
             self._drop_unused_columns()
@@ -237,13 +248,9 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         # Update self._shift_data
         self._shift_data = shift_data
 
-        # Prepare status message
-        if self._shift_data is not None:
-            message = "done."
-        else:
-            message = f'\n\n** Error reading data in "{self.input_file}" **\n'
-
-        # Display status message
+        # Display status message ('read_csv' raises rather than
+        # returning None, so a failure never reaches this line)
+        message = "done."
         self.helpers.printer(message=message)
 
         return None
@@ -286,6 +293,80 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         # Display status message
         message = "done."
         self.helpers.printer(message=message)
+
+        return None
+
+    def _validate_shift_rows(self) -> None:
+        """ Reject shift rows that have no need ID.
+
+            'Helpers.search_shift_info' assigns the review fallback -- a
+            category whose need IDs are empty -- to an event title it
+            cannot match confidently, so an unmatched Google Calendar
+            event reaches the CSV with a blank 'need_id'.  Because
+            'DataFrame.groupby' drops null keys, those rows used to
+            vanish during '_group_shift_data': the shift never reached
+            Amplify and nothing reported it.  Fail here instead, naming
+            every event that needs an alias in the shift data model.
+
+            Args:
+                self._shift_data (frame.DataFrame):
+                    Pandas Data Frame of shift data with duplicate rows
+                    removed.
+
+            Raises:
+                SystemExit:
+                    Through 'Helpers.exit_program', when any row has a
+                    missing, empty, or whitespace-only need ID.
+
+            Returns:
+                None.
+        """
+
+        # Display preliminary status message
+        message = 'Validating shift need IDs...'
+        self.helpers.printer(
+            message=message,
+            end=''
+        )
+
+        # Treat a missing, empty, or whitespace-only value as blank
+        need_ids = self._shift_data[GROUP_BY_COLUMN]
+        blank_rows = self._shift_data[
+            need_ids.fillna('').str.strip() == ''
+        ]
+
+        # Every row has a need ID
+        if blank_rows.empty:
+            # Display status message
+            message = "done."
+            self.helpers.printer(message=message)
+
+            return None
+
+        # Name each unmatched event and the CSV line it came from.  The
+        # 'need_name' column is still present at this point in the
+        # pipeline ('_drop_unused_columns' removes it later), and adding
+        # 2 to a zero-based index yields the line number in the file.
+        need_names = blank_rows.get(NEED_NAME_COLUMN)
+        row_details = [
+            f'line {index + 2}' if need_names is None
+            else f'"{need_names.loc[index]}" (line {index + 2})'
+            for index in blank_rows.index
+        ]
+
+        # Close the status line, then log the error and exit
+        self.helpers.printer(message='')
+        message = (
+            f'{len(blank_rows)} shift row(s) in "{self.input_file}" have '
+            f'no need ID: {", ".join(row_details)}.  These event titles '
+            'did not match a category in the shift data model, so the '
+            'review fallback assigned an empty need ID.  Add an alias '
+            f'for each title to "{SHIFTS_INFO_FILE}" and collect the '
+            'calendar data again, or remove the rows from the CSV file.  '
+            'No shifts were created.'
+        )
+        logger.error(message)
+        self.helpers.exit_program(status_code=1)
 
         return None
 
@@ -477,13 +558,9 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             # [KEEP_COLUMNS] excludes the 'need_id' column
             by=[GROUP_BY_COLUMN])[KEEP_COLUMNS]
 
-        # Prepare status message
-        if self._grouped_shift_data is not None:
-            message = "done."
-        else:
-            message = '\n\n** Error grouping shift data **\n'
-
-        # Display status message
+        # Display status message ('groupby' raises rather than returning
+        # None, so a failure never reaches this line)
+        message = "done."
         self.helpers.printer(message=message)
 
         return None
@@ -534,14 +611,9 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             }
         )
 
-        # Prepare status message
-        if self._grouped_series is not None:
-            message = "done."
-
-        else:
-            message = '\n\n** Error organizing shift data **\n'
-
-        # Display status message
+        # Display status message ('apply' raises rather than returning
+        # None, so a failure never reaches this line)
+        message = "done."
         self.helpers.printer(message=message)
 
         return None
@@ -601,13 +673,9 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             {'data': self._grouped_series.to_dict()}
         )
 
-        # Prepare status message
-        if self._json_shift_data.get('data') is not None:
-            message = "done."
-        else:
-            message = '\n\n** Error converting shift data to JSON **\n'
-
-        # Display status message
+        # Display status message ('to_dict' raises rather than returning
+        # None, so a failure never reaches this line)
+        message = "done."
         self.helpers.printer(message=message)
 
         return None
