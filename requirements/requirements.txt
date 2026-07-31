@@ -11,7 +11,7 @@ dateparser==1.4.1
 jsonschema==4.26.0
 
 # Pandas data structures
-pandas==3.0.3
+pandas==3.0.5
 
 # Python fuzzy string matching
 python-Levenshtein==0.27.3
