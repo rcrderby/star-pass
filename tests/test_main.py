@@ -202,3 +202,78 @@ class TestMainArgumentErrors:
         with pytest.raises(SystemExit) as exc_info:
             app_main.main(['--help'])
         assert exc_info.value.code == 0
+
+
+class TestCredentialPreflight:
+    # A missing credential must be named before any request is sent.
+    # Without the preflight the run sent 'Bearer None', and reported the
+    # resulting 401 -- which says nothing about the real cause.
+
+    @pytest.mark.parametrize(
+        'argv, missing',
+        [
+            (['-g', '-n', 'events'], 'GCAL_TOKEN'),
+            (['-c', '-i', 'x.csv'], 'AMPLIFY_TOKEN'),
+            (['-s', '-N', '5'], 'AMPLIFY_TOKEN'),
+        ]
+    )
+    def test_missing_credential_exits(
+        self, app_main, monkeypatch, caplog, argv, missing
+    ):
+        monkeypatch.delenv(missing, raising=False)
+
+        with caplog.at_level(logging.ERROR, logger='star_pass'):
+            with pytest.raises(SystemExit) as exc_info:
+                app_main.main(argv)
+
+        assert exc_info.value.code == 1
+        assert missing in caplog.text
+        # The run mode never started.
+        app_main.CreateShifts.assert_not_called()
+        app_main.GCALData.assert_not_called()
+        app_main.AmplifyResponses.assert_not_called()
+
+    def test_slack_token_required_only_for_a_live_post(
+        self, app_main, monkeypatch, caplog
+    ):
+        monkeypatch.delenv('SLACK_BOT_TOKEN', raising=False)
+
+        with caplog.at_level(logging.ERROR, logger='star_pass'):
+            with pytest.raises(SystemExit):
+                app_main.main(['-s', '-N', '5', '-C', 'false'])
+
+        assert 'SLACK_BOT_TOKEN' in caplog.text
+
+    def test_check_mode_does_not_require_the_slack_token(
+        self, app_main, monkeypatch
+    ):
+        # A dry run builds the message but never contacts Slack.
+        monkeypatch.delenv('SLACK_BOT_TOKEN', raising=False)
+
+        app_main.main(['-s', '-N', '5'])
+
+        app_main.SlackNotifier.return_value.post_summary \
+            .assert_called_once()
+
+
+class TestRunFailureHandling:
+    # A run mode that reports a failure and raises must exit non-zero
+    # without a traceback landing on top of the message it just logged.
+
+    def test_value_error_exits_nonzero(self, app_main):
+        app_main.GCALData.side_effect = ValueError(
+            'GCAL_TIME_MIN must be set'
+        )
+
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-g', '-n', 'events'])
+
+        assert exc_info.value.code == 1
+
+    def test_unexpected_error_still_propagates(self, app_main):
+        # Only expected failures are converted; a genuine bug must keep
+        # its traceback.
+        app_main.GCALData.side_effect = RuntimeError('unexpected')
+
+        with pytest.raises(RuntimeError):
+            app_main.main(['-g', '-n', 'events'])

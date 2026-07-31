@@ -3,14 +3,18 @@
 
 # Imports - Python Standard Library
 import argparse
+import sys
 from typing import Optional, Sequence
+
+# Imports - Third-Party
+from slack_sdk.errors import SlackApiError
 
 # Imports - Local
 from star_pass.amplify_responses import AmplifyResponses
 from star_pass.amplify_shifts import CreateShifts
 from star_pass.gcal_data import GCALData
 from star_pass.slack_notify import SlackNotifier
-from star_pass._helpers import Helpers
+from star_pass._helpers import Helpers, require_env_vars
 from star_pass._logging import get_logger
 from star_pass import _defaults
 
@@ -181,10 +185,47 @@ def main(
 ) -> None:
     """ Main application.
 
+        Dispatches to a run mode and converts an expected failure into a
+        non-zero exit.  'get_gcal_time_window', 'SlackNotifier.post', and
+        the Slack Web API all log the cause before raising, so the
+        handler exits without repeating the message or printing a
+        traceback over a report the operator has already been given.  An
+        unexpected exception is deliberately left to propagate.
+
         Args:
             argv (Optional[Sequence[str]]):
                 Argument list to parse.  Defaults to None, which parses
                 'sys.argv'.  Primarily an injection point for tests.
+
+        Raises:
+            SystemExit:
+                With status 1 when a run mode reports a failure.
+
+        Returns:
+            None.
+    """
+
+    try:
+        _run(argv=argv)
+    except (ValueError, SlackApiError) as error:
+        logger.debug(
+            'The run mode reported a failure: %r',
+            error
+        )
+        sys.exit(1)
+
+    return None
+
+
+def _run(
+        argv: Optional[Sequence[str]] = None
+) -> None:
+    """ Parse arguments and run the selected run mode.
+
+        Args:
+            argv (Optional[Sequence[str]]):
+                Argument list to parse.  Defaults to None, which parses
+                'sys.argv'.
 
         Returns:
             None.
@@ -216,6 +257,9 @@ def main(
                 'only -n/--gcal-name is valid with '
                 '-g/--get-gcal-events'
             )
+
+        # Fail before the first request when the credential is missing
+        require_env_vars('GCAL_TOKEN')
 
         # Announce the run mode
         logger.info(
@@ -256,6 +300,10 @@ def main(
             if args.output_verbosity is not None
             else VERBOSITY_LEVELS[0]
         )
+
+        # The opportunity title lookup is sent even in check mode, so
+        # the token is required in both modes
+        require_env_vars('AMPLIFY_TOKEN')
 
         # Announce the run mode
         logger.info(
@@ -301,6 +349,12 @@ def main(
             or SLACK_CHANNEL
             or SLACK_DEV_CHANNEL
         )
+
+        # The summary is read from Amplify in both modes; the Slack
+        # token is only needed when the message is actually sent
+        require_env_vars('AMPLIFY_TOKEN')
+        if check_mode is False:
+            require_env_vars('SLACK_BOT_TOKEN')
 
         # Announce the run mode
         logger.info(

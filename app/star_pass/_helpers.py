@@ -3,6 +3,7 @@
 
 # Imports - Python Standard Library
 from datetime import datetime, timedelta
+from os import getenv
 from typing import Any, Dict
 from pprint import pprint as pp
 import re
@@ -151,6 +152,15 @@ class Helpers:
         dt_object = parse(
             date_string=date_time_string
         )
+
+        # 'dateparser.parse' returns None rather than raising when it
+        # cannot make sense of the input, which used to surface as an
+        # AttributeError on the next line.  The shift CSV file is
+        # reviewed and edited by hand, so a typo here is expected input.
+        if dt_object is None:
+            raise ValueError(
+                f'Cannot read {date_time_string!r} as a date and time.'
+            )
 
         # Convert 'dt_object' to a formatted string
         formatted_date_time_string = dt_object.strftime(
@@ -700,6 +710,42 @@ class Helpers:
 
 
 # Standalone functions
+def require_env_vars(
+        *var_names: str
+) -> None:
+    """ Confirm required environment variables have a value.
+
+        Without this check a missing credential is only discovered when
+        the API rejects the request: the run sends 'Bearer None' (or
+        'key=None'), gets a 401 or 403, and reports the status code,
+        which says nothing about the actual cause.
+
+        Args:
+            *var_names (str):
+                Names of the environment variables to require.
+
+        Raises:
+            SystemExit:
+                When any named variable is unset or empty.
+
+        Returns:
+            None.
+    """
+
+    missing = [name for name in var_names if not getenv(name)]
+
+    if missing:
+        message = (
+            f'{", ".join(missing)} must be set to run this command.  '
+            'Add the value(s) to the .env file at the repository root '
+            '(see .env.example).'
+        )
+        logger.error(message)
+        sys.exit(1)
+
+    return None
+
+
 def load_env_file() -> bool:
     """ Load environment variables from an .env file.
 
