@@ -1,0 +1,102 @@
+---
+# Build the deployable artifacts and smoke test them.
+#
+# The container image is the deployment target, so a missing runtime
+# dependency or a file the application reads at startup but the image
+# does not contain must fail here rather than at run time.
+
+# Name of the action
+name: Build
+
+# Events that trigger the action
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on a branch; never cancel main runs so the
+# post-merge run (and status badges) always complete.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  container_image:
+    name: Container image
+    # Same-repo pushes are already covered by the 'push' event, so only
+    # run the pull_request event for forks (their branches are not in
+    # this repo and so never trigger 'push').
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+
+    # Job permissions
+    permissions:
+      contents: read
+
+    steps:
+      # checkout action documentation
+      # https://github.com/marketplace/actions/checkout
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build the container image
+        run: docker build -t star-pass:ci .
+
+      # Guards the runtime requirements file: every third-party package
+      # the application imports must be installed in the image.
+      - name: Verify every application module imports
+        run: |
+          docker run --rm star-pass:ci python -c "
+          import star_pass.amplify_responses
+          import star_pass.amplify_shifts
+          import star_pass.gcal_data
+          import star_pass.slack_notify
+          print('All star_pass modules imported.')
+          "
+
+      # Guards the image contents: importing '_defaults' reads the shift
+      # data model, and the CLI resolves the data directories, both from
+      # paths outside the package.
+      - name: Verify the CLI runs
+        env:
+          AMPLIFY_TOKEN: ci-placeholder
+          GCAL_TOKEN: ci-placeholder
+        run: |
+          docker run --rm \
+            -e AMPLIFY_TOKEN -e GCAL_TOKEN \
+            star-pass:ci python /app/__main__.py --help
+
+  python_package:
+    name: Python package
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+
+    # Job permissions
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # setup-python action documentation
+      # https://github.com/marketplace/actions/setup-python
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade build
+
+      # Guards the package configuration: automatic flat-layout
+      # discovery fails on this repository, so the packages are declared
+      # explicitly and a build must keep succeeding.
+      - name: Build the wheel
+        run: python -m build --wheel
