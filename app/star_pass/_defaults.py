@@ -9,7 +9,7 @@ import sys
 
 # Imports - Third-Party
 from dotenv import load_dotenv
-from yaml import safe_load
+from yaml import safe_load, YAMLError
 
 # Date and time formatting
 AMPLIFY_DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
@@ -20,7 +20,12 @@ SIMPLE_DATE_FORMAT = '%A, %B %d %Y'
 SIMPLE_TIME_FORMAT = '%H:%M'
 
 # Data file management
-FILE_ENCODING = sys.getfilesystemencoding()
+# Encoding for file *content* (CSV, JSON, YAML, .env).  This is not the
+# filesystem encoding, which describes path names: reading content with
+# 'sys.getfilesystemencoding()' happened to work only because it
+# resolves to UTF-8 on the platforms in use, and would corrupt a
+# non-ASCII event title anywhere it does not.
+FILE_ENCODING = 'utf-8'
 # .env file path
 ENV_FILE_PATH = './.env'
 # Load environment variables so the deployment values defined below can
@@ -306,12 +311,29 @@ SHIFTS_INFO_FILE = Path.joinpath(
     SHIFTS_INFO_FILE_NAME
 )
 
-# Read the Amplify shift info model to set the SHIFTS_INFO constant
-with open(
-    file=SHIFTS_INFO_FILE,
-    mode='rt',
-    encoding=FILE_ENCODING
-) as yaml_data:
-    SHIFTS_INFO = safe_load(
-        stream=yaml_data.read()
+# Read the Amplify shift info model to set the SHIFTS_INFO constant.
+# This runs at import, before logging is configured, so a missing or
+# malformed model is reported to stderr rather than as a traceback from
+# whichever module imported this one first.
+try:
+    with open(
+        file=SHIFTS_INFO_FILE,
+        mode='rt',
+        encoding=FILE_ENCODING
+    ) as yaml_data:
+        SHIFTS_INFO = safe_load(
+            stream=yaml_data.read()
+        )
+except OSError as error:
+    print(
+        f'Cannot read the shift data model "{SHIFTS_INFO_FILE}": {error}',
+        file=sys.stderr
     )
+    raise SystemExit(1) from error
+except YAMLError as error:
+    print(
+        f'The shift data model "{SHIFTS_INFO_FILE}" is not valid YAML: '
+        f'{error}',
+        file=sys.stderr
+    )
+    raise SystemExit(1) from error

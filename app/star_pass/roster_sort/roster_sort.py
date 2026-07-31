@@ -21,11 +21,6 @@ INPUT_FILE = Path.joinpath(
 )
 INPUT_WORKSHEET = 'Sheet1'
 
-OUTPUT_FILE_NAME = 'sorted_roster_data.xlsx'
-OUTPUT_FILE = Path.joinpath(
-    CURRENT_DIR,
-    OUTPUT_FILE_NAME
-)
 SORT_COLUMN = 'number'
 OUTPUT_WORKSHEET = 'Sheet2'
 
@@ -92,14 +87,16 @@ def export_roster_data(
             None.
     """
 
+    # Write to the same absolute path the roster was read from.  Using
+    # the bare file name wrote to (or, in append mode, failed to find)
+    # a file in whatever directory the script happened to run from.
     with ExcelWriter(
-        path=INPUT_FILE_NAME,
+        path=INPUT_FILE,
         mode='a',
         if_sheet_exists='replace'
     ) as writer:
         sorted_roster_data.to_excel(
             excel_writer=writer,
-            # excel_writer=OUTPUT_FILE_NAME,
             index=False,
             sheet_name=OUTPUT_WORKSHEET
         )

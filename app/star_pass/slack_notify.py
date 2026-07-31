@@ -312,7 +312,10 @@ class SlackNotifier:
                 text=text or 'star-pass update'
             )
         except SlackApiError as error:
-            message = f'Slack API error posting to {target}: {error}'
+            # Redact before logging: the error carries the request that
+            # produced it, which can include the bot token.
+            detail = self.helpers.redact_secrets(error)
+            message = f'Slack API error posting to {target}: {detail}'
             logger.error(message)
             raise
 

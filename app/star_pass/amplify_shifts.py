@@ -680,7 +680,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         return None
 
-    def _validate_shift_json_data(self) -> bool:
+    def _validate_shift_json_data(self) -> None:
         """ Validate shift JSON data against JSON Schema.
 
             Args:
@@ -896,19 +896,17 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
     def create_new_shifts(
             self,
-            json: Any = None,
             timeout: int = HTTP_TIMEOUT
     ) -> None:
         """ Upload shift data to create new Amplify shifts.
 
-            Args:
-                json (Any):
-                    JSON body of shift data.  Default value is None in
-                    order to allow sending a custom JSON body of shift
-                    data, although the method will use the data in the
-                    self._shift_data variable to construct a JSON body
-                    by default.
+            The body of each request is built from the prepared data in
+            'self._json_shift_data'.  A 'json' parameter used to be
+            documented as a way to send a custom body, but the loop
+            below overwrote it on every iteration, so it never had any
+            effect and is not reinstated here.
 
+            Args:
                 timeout (int):
                     HTTP timeout.  Default is HTTP_TIMEOUT.
 
