@@ -4,9 +4,6 @@ python_dotenv==1.2.2
 # Data formats
 pyyaml==6.0.3
 
-# Excel spreadsheet management
-openpyxl==3.1.5
-
 # Date parsing
 dateparser==1.4.1
 
