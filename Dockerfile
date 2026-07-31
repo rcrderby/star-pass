@@ -24,5 +24,13 @@ ENV PYTHONPATH=/app
 # Copy the /app directory to the image
 COPY /app /app
 
+# Copy the shift data model, which 'star_pass._defaults' reads at import
+# time from a path relative to the package ('<app>/../models').
+COPY /models /models
+
+# Create the CSV input and JSON output directories that the Google
+# Calendar and Amplify shift run modes read from and write to.
+RUN mkdir -p /data/csv /data/json
+
 # Start the bash prompt
 CMD ["/bin/bash"]
