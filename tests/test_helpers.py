@@ -67,8 +67,8 @@ class TestDateTimeFormatting:
         assert helpers.format_date_time_amplify(value) == expected
 
     def test_format_shift_date_simple(self, helpers):
-        # NOTE: the '%d' directive zero-pads the day ('09'), unlike the
-        # method docstring's 'April 9' example. Current behavior asserted.
+        # The '%d' directive zero-pads the day. The docstring example
+        # used to disagree with this and has been corrected to match.
         result = helpers.format_shift_date_simple('2025-04-09 11:30')
         assert result == 'Wednesday, April 09 2025'
 
