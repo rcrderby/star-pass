@@ -60,7 +60,7 @@ class TestCountSignupsByShift:
             {'response_status': 'active', 'shift': {}},
             {'response_status': 'active'},
         ]
-        assert count_signups_by_shift(responses) == {}
+        assert not count_signups_by_shift(responses)
 
     def test_numeric_shift_ids_key_on_strings(self):
         # The API returns numeric IDs in some payloads; counts must key

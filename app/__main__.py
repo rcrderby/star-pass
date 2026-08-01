@@ -208,10 +208,12 @@ def main(
     try:
         _run(argv=argv)
     except (ValueError, SlackApiError) as error:
-        logger.debug(
-            'The run mode reported a failure: %r',
-            error
-        )
+        # Pre-format the message rather than passing logging arguments:
+        # the pylint configuration sets 'logging-format-style=new', and
+        # brace-style placeholders are not interpolated by the standard
+        # library, which formats with '%'.
+        message = f'The run mode reported a failure: {error!r}'
+        logger.debug(message)
         sys.exit(1)
 
     return None

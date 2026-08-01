@@ -12,6 +12,10 @@
 """
 # pylint: disable=missing-function-docstring,missing-class-docstring
 # pylint: disable=protected-access,redefined-outer-name
+# '_json_shift_data' is initialized with 'data' set to None and filled in
+# by the pipeline, so pylint infers the value as unsubscriptable even
+# though it is a dictionary by the time these assertions run.
+# pylint: disable=unsubscriptable-object
 
 # Imports - Python Standard Library
 import logging
