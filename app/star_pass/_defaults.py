@@ -169,8 +169,14 @@ GCAL_SINGLE_EVENTS = 'true'
 # no default can stay correct: a stale default silently collects zero
 # events and writes an empty CSV.  'gcal_data' requires them from the
 # environment instead, and reports a clear error when they are missing.
-# Format for the search window values, and the earliest date accepted.
-GCAL_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S%z'
+# Time zone applied to a search window value written without a UTC
+# offset, so a plain local date means the same thing year round and
+# Daylight Saving is applied automatically.  A value that carries its
+# own offset is used as written.
+GCAL_TIMEZONE = getenv(
+    'GCAL_TIMEZONE',
+    'America/Los_Angeles'
+)
 GCAL_EVENTS_QUERY_STRINGS = _get_env_list(
     'GCAL_EVENTS_QUERY_STRINGS',
     ['']

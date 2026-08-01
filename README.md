@@ -52,12 +52,31 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     ```
 
     Set `GCAL_TIME_MIN` and `GCAL_TIME_MAX` in your `.env` to the date
-    range you are collecting, in ISO 8601 format
-    (`2099-01-01T00:00:00-00:00`). They are required, and deliberately
-    have no defaults: the window moves with every run, so a default
-    would go stale and silently collect zero events. The run stops with
-    an error if either is missing, malformed, or does not move forward
-    in time. Only this run mode reads them.
+    range you are collecting, as plain local dates (`2099-01-01`). They
+    are required, and deliberately have no defaults: the window moves
+    with every run, so a default would go stale and silently collect
+    zero events. The run stops with an error if either is missing,
+    malformed, or does not move forward in time. Only this run mode
+    reads them.
+
+    Each date means midnight local time, and the UTC offset in effect
+    on that date is applied automatically, so Daylight Saving needs no
+    attention. Use the first day of the next month to collect a whole
+    month:
+
+    ```bash
+    GCAL_TIME_MIN=2099-01-01
+    GCAL_TIME_MAX=2099-02-01
+    ```
+
+    Local time means `GCAL_TIMEZONE`, which defaults to
+    `America/Los_Angeles`; set it to any IANA time zone name. A value
+    that carries its own UTC offset
+    (`2099-01-01T00:00:00-08:00`) is honored as written. Prefer plain
+    dates: writing the window in UTC shifts it eight hours earlier
+    during Pacific Standard Time, which silently drops evening events
+    on its final day. The resolved window is logged at the start of
+    each run.
 
     Events are filtered before shifts are built. An event is skipped,
     with a logged reason, when its title contains a term in
