@@ -265,10 +265,10 @@ class GCALData:
         if self.auto_prep_data is True:
             # Read the search window here, so an unset or invalid value
             # fails before any request is sent.
-            time_min, time_max = get_gcal_time_window()
+            window_start, window_end = get_gcal_time_window()
             self.gcal_shift_data = self.get_gcal_shift_data(
-                timeMin=time_min,
-                timeMax=time_max
+                timeMin=window_start,
+                timeMax=window_end
             )
             # Filter before building shifts, so that an unusable item
             # cannot raise and a filtered-out event is never matched

@@ -15,8 +15,8 @@ os.environ.setdefault('GCAL_TOKEN', 'test-gcal-token')
 # Set so the run-mode credential preflight passes. Tests that exercise a
 # missing credential delete the variable with monkeypatch.
 os.environ.setdefault('SLACK_BOT_TOKEN', 'test-slack-not-a-real-token')
-os.environ.setdefault('GCAL_TIME_MIN', '2099-01-01T00:00:00-00:00')
-os.environ.setdefault('GCAL_TIME_MAX', '2099-01-31T00:00:00-00:00')
+os.environ.setdefault('GCAL_WINDOW_START', '2099-01-01T00:00:00-00:00')
+os.environ.setdefault('GCAL_WINDOW_END', '2099-01-31T00:00:00-00:00')
 
 # Imports below intentionally follow the env setup above.
 # pylint: disable=wrong-import-position
