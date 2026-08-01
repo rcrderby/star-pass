@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ Google Calendar search window.
 
-    Reads and validates 'GCAL_TIME_MIN' and 'GCAL_TIME_MAX', the bounds
+    Reads and validates 'GCAL_WINDOW_START' and 'GCAL_WINDOW_END', the bounds
     of the calendar search.  They have no defaults: the window moves
     with every run, so a default would go stale and silently collect
     zero events.
@@ -112,7 +112,7 @@ def _parse_gcal_time(
 def get_gcal_time_window() -> Tuple[str, str]:
     """ Read and validate the Google Calendar search window.
 
-        'GCAL_TIME_MIN' and 'GCAL_TIME_MAX' bound the calendar search and
+        'GCAL_WINDOW_START' and 'GCAL_WINDOW_END' bound the calendar search and
         have no default: the window moves with every run, so a default
         would go stale and silently collect zero events.  They are read
         here, when a calendar request is about to run, rather than at
@@ -132,20 +132,20 @@ def get_gcal_time_window() -> Tuple[str, str]:
 
         Returns:
             window (Tuple[str, str]):
-                The validated ('GCAL_TIME_MIN', 'GCAL_TIME_MAX') values
+                The validated ('GCAL_WINDOW_START', 'GCAL_WINDOW_END') values
                 as RFC 3339 strings with an explicit UTC offset, ready to
                 send as request parameters.
     """
 
-    time_min = getenv('GCAL_TIME_MIN')
-    time_max = getenv('GCAL_TIME_MAX')
+    window_start = getenv('GCAL_WINDOW_START')
+    window_end = getenv('GCAL_WINDOW_END')
 
     # Both values are required for a calendar request
     missing = [
         name
         for name, value in (
-            ('GCAL_TIME_MIN', time_min),
-            ('GCAL_TIME_MAX', time_max)
+            ('GCAL_WINDOW_START', window_start),
+            ('GCAL_WINDOW_END', window_end)
         )
         if not value
     ]
@@ -162,23 +162,23 @@ def get_gcal_time_window() -> Tuple[str, str]:
     # A malformed value fails the same way a stale one does, silently,
     # so reject it here rather than send it to the API.
     timezone = _get_gcal_timezone()
-    parsed_min = _parse_gcal_time(
-        name='GCAL_TIME_MIN',
-        value=time_min,
+    parsed_start = _parse_gcal_time(
+        name='GCAL_WINDOW_START',
+        value=window_start,
         timezone=timezone
     )
-    parsed_max = _parse_gcal_time(
-        name='GCAL_TIME_MAX',
-        value=time_max,
+    parsed_end = _parse_gcal_time(
+        name='GCAL_WINDOW_END',
+        value=window_end,
         timezone=timezone
     )
 
     # Compare the resolved instants, so a window mixing a local value
     # with an offset value is ordered correctly.
-    if parsed_min >= parsed_max:
+    if parsed_start >= parsed_end:
         message = (
-            f'GCAL_TIME_MIN ({time_min}) must be earlier than '
-            f'GCAL_TIME_MAX ({time_max}); the current values select an '
+            f'GCAL_WINDOW_START ({window_start}) must be earlier than '
+            f'GCAL_WINDOW_END ({window_end}); the current values select an '
             'empty search window.'
         )
         logger.error(message)
@@ -186,11 +186,11 @@ def get_gcal_time_window() -> Tuple[str, str]:
 
     # Send the resolved values: the API requires an explicit offset, and
     # logging them makes the applied offset visible.
-    resolved_min = parsed_min.isoformat()
-    resolved_max = parsed_max.isoformat()
+    resolved_start = parsed_start.isoformat()
+    resolved_end = parsed_end.isoformat()
     message = (
-        f'Google Calendar search window: {resolved_min} to {resolved_max}'
+        f'Google Calendar search window: {resolved_start} to {resolved_end}'
     )
     logger.info(message)
 
-    return resolved_min, resolved_max
+    return resolved_start, resolved_end

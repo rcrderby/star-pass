@@ -262,7 +262,7 @@ class TestRunFailureHandling:
 
     def test_value_error_exits_nonzero(self, app_main):
         app_main.GCALData.side_effect = ValueError(
-            'GCAL_TIME_MIN must be set'
+            'GCAL_WINDOW_START must be set'
         )
 
         with pytest.raises(SystemExit) as exc_info:

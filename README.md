@@ -51,7 +51,7 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     ./app/__main__.py --get-gcal-events --gcal-name events
     ```
 
-    Set `GCAL_TIME_MIN` and `GCAL_TIME_MAX` in your `.env` to the date
+    Set `GCAL_WINDOW_START` and `GCAL_WINDOW_END` in your `.env` to the date
     range you are collecting, as plain local dates (`2099-01-01`). They
     are required, and deliberately have no defaults: the window moves
     with every run, so a default would go stale and silently collect
@@ -65,8 +65,8 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     month:
 
     ```bash
-    GCAL_TIME_MIN=2099-01-01
-    GCAL_TIME_MAX=2099-02-01
+    GCAL_WINDOW_START=2099-01-01
+    GCAL_WINDOW_END=2099-02-01
     ```
 
     Local time means `GCAL_TIMEZONE`, which defaults to

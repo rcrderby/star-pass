@@ -164,7 +164,7 @@ BASE_GCAL_ENDPOINT = '/events'
 GCAL_ORDER_BY = 'startTime'
 GCAL_SHOW_DELETED = 'false'
 GCAL_SINGLE_EVENTS = 'true'
-# 'GCAL_TIME_MIN' and 'GCAL_TIME_MAX' are deliberately NOT defined here.
+# 'GCAL_WINDOW_START' and 'GCAL_WINDOW_END' are deliberately NOT defined here.
 # They bound the calendar search window, which moves with every run, so
 # no default can stay correct: a stale default silently collects zero
 # events and writes an empty CSV.  'gcal_data' requires them from the

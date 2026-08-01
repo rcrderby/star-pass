@@ -59,44 +59,46 @@ class TestGetGcalTimeWindow:
     # The search window has no default: a stale one silently collects
     # zero events, so every invalid state must fail loudly instead.
 
-    VALID_MIN = '2099-01-01T00:00:00-00:00'
-    VALID_MAX = '2099-01-31T00:00:00-00:00'
+    VALID_START = '2099-01-01T00:00:00-00:00'
+    VALID_END = '2099-01-31T00:00:00-00:00'
 
     def test_honors_an_explicit_offset(self, monkeypatch):
         # A value carrying its own offset keeps that offset; only the
         # spelling is normalized ('-00:00' and '+00:00' are both UTC).
-        monkeypatch.setenv('GCAL_TIME_MIN', self.VALID_MIN)
-        monkeypatch.setenv('GCAL_TIME_MAX', self.VALID_MAX)
+        monkeypatch.setenv('GCAL_WINDOW_START', self.VALID_START)
+        monkeypatch.setenv('GCAL_WINDOW_END', self.VALID_END)
 
         assert get_gcal_time_window() == (
             '2099-01-01T00:00:00+00:00',
             '2099-01-31T00:00:00+00:00'
         )
 
-    @pytest.mark.parametrize('missing', ['GCAL_TIME_MIN', 'GCAL_TIME_MAX'])
+    @pytest.mark.parametrize(
+        'missing', ['GCAL_WINDOW_START', 'GCAL_WINDOW_END']
+    )
     def test_raises_when_a_value_is_unset(self, monkeypatch, missing):
-        monkeypatch.setenv('GCAL_TIME_MIN', self.VALID_MIN)
-        monkeypatch.setenv('GCAL_TIME_MAX', self.VALID_MAX)
+        monkeypatch.setenv('GCAL_WINDOW_START', self.VALID_START)
+        monkeypatch.setenv('GCAL_WINDOW_END', self.VALID_END)
         monkeypatch.delenv(missing)
 
         with pytest.raises(ValueError, match=missing):
             get_gcal_time_window()
 
     def test_raises_when_both_are_unset(self, monkeypatch):
-        monkeypatch.delenv('GCAL_TIME_MIN', raising=False)
-        monkeypatch.delenv('GCAL_TIME_MAX', raising=False)
+        monkeypatch.delenv('GCAL_WINDOW_START', raising=False)
+        monkeypatch.delenv('GCAL_WINDOW_END', raising=False)
 
         with pytest.raises(ValueError) as error:
             get_gcal_time_window()
 
-        assert 'GCAL_TIME_MIN' in str(error.value)
-        assert 'GCAL_TIME_MAX' in str(error.value)
+        assert 'GCAL_WINDOW_START' in str(error.value)
+        assert 'GCAL_WINDOW_END' in str(error.value)
 
     def test_raises_when_a_value_is_empty(self, monkeypatch):
-        monkeypatch.setenv('GCAL_TIME_MIN', '')
-        monkeypatch.setenv('GCAL_TIME_MAX', self.VALID_MAX)
+        monkeypatch.setenv('GCAL_WINDOW_START', '')
+        monkeypatch.setenv('GCAL_WINDOW_END', self.VALID_END)
 
-        with pytest.raises(ValueError, match='GCAL_TIME_MIN'):
+        with pytest.raises(ValueError, match='GCAL_WINDOW_START'):
             get_gcal_time_window()
 
     @pytest.mark.parametrize(
@@ -105,23 +107,23 @@ class TestGetGcalTimeWindow:
     def test_raises_on_an_unparseable_value(self, monkeypatch, bad_value):
         # A typo fails the same silent way a stale window does.  An
         # empty value is reported as unset rather than unparseable.
-        monkeypatch.setenv('GCAL_TIME_MIN', bad_value)
-        monkeypatch.setenv('GCAL_TIME_MAX', self.VALID_MAX)
+        monkeypatch.setenv('GCAL_WINDOW_START', bad_value)
+        monkeypatch.setenv('GCAL_WINDOW_END', self.VALID_END)
 
-        with pytest.raises(ValueError, match='GCAL_TIME_MIN'):
+        with pytest.raises(ValueError, match='GCAL_WINDOW_START'):
             get_gcal_time_window()
 
     def test_raises_when_the_window_does_not_move_forward(self, monkeypatch):
-        monkeypatch.setenv('GCAL_TIME_MIN', self.VALID_MAX)
-        monkeypatch.setenv('GCAL_TIME_MAX', self.VALID_MIN)
+        monkeypatch.setenv('GCAL_WINDOW_START', self.VALID_END)
+        monkeypatch.setenv('GCAL_WINDOW_END', self.VALID_START)
 
         with pytest.raises(ValueError, match='must be earlier than'):
             get_gcal_time_window()
 
     def test_raises_when_the_window_is_empty(self, monkeypatch):
         # Identical bounds select nothing at all.
-        monkeypatch.setenv('GCAL_TIME_MIN', self.VALID_MIN)
-        monkeypatch.setenv('GCAL_TIME_MAX', self.VALID_MIN)
+        monkeypatch.setenv('GCAL_WINDOW_START', self.VALID_START)
+        monkeypatch.setenv('GCAL_WINDOW_END', self.VALID_START)
 
         with pytest.raises(ValueError, match='must be earlier than'):
             get_gcal_time_window()
@@ -150,19 +152,19 @@ class TestSearchWindowTimeZone:
             self, monkeypatch, date_value, expected_offset
     ):
         monkeypatch.delenv('GCAL_TIMEZONE', raising=False)
-        monkeypatch.setenv('GCAL_TIME_MIN', date_value)
-        monkeypatch.setenv('GCAL_TIME_MAX', '2099-01-01')
+        monkeypatch.setenv('GCAL_WINDOW_START', date_value)
+        monkeypatch.setenv('GCAL_WINDOW_END', '2099-01-01')
 
-        time_min, _time_max = get_gcal_time_window()
+        window_start, _window_end = get_gcal_time_window()
 
-        assert time_min == f'{date_value}T00:00:00{expected_offset}'
+        assert window_start == f'{date_value}T00:00:00{expected_offset}'
 
     def test_a_plain_date_starts_at_local_midnight(self, monkeypatch):
         # The whole point: a plain date must not drift into the previous
         # day, which is what a UTC-written window does in winter.
         monkeypatch.delenv('GCAL_TIMEZONE', raising=False)
-        monkeypatch.setenv('GCAL_TIME_MIN', '2026-01-01')
-        monkeypatch.setenv('GCAL_TIME_MAX', '2026-02-01')
+        monkeypatch.setenv('GCAL_WINDOW_START', '2026-01-01')
+        monkeypatch.setenv('GCAL_WINDOW_END', '2026-02-01')
 
         assert get_gcal_time_window() == (
             '2026-01-01T00:00:00-08:00',
@@ -171,26 +173,26 @@ class TestSearchWindowTimeZone:
 
     def test_accepts_a_local_datetime(self, monkeypatch):
         monkeypatch.delenv('GCAL_TIMEZONE', raising=False)
-        monkeypatch.setenv('GCAL_TIME_MIN', '2026-07-01T09:30:00')
-        monkeypatch.setenv('GCAL_TIME_MAX', '2026-08-01')
+        monkeypatch.setenv('GCAL_WINDOW_START', '2026-07-01T09:30:00')
+        monkeypatch.setenv('GCAL_WINDOW_END', '2026-08-01')
 
-        time_min, _time_max = get_gcal_time_window()
+        window_start, _window_end = get_gcal_time_window()
 
-        assert time_min == '2026-07-01T09:30:00-07:00'
+        assert window_start == '2026-07-01T09:30:00-07:00'
 
     def test_honors_a_different_time_zone(self, monkeypatch):
         monkeypatch.setenv('GCAL_TIMEZONE', 'America/New_York')
-        monkeypatch.setenv('GCAL_TIME_MIN', '2026-01-01')
-        monkeypatch.setenv('GCAL_TIME_MAX', '2026-02-01')
+        monkeypatch.setenv('GCAL_WINDOW_START', '2026-01-01')
+        monkeypatch.setenv('GCAL_WINDOW_END', '2026-02-01')
 
-        time_min, _time_max = get_gcal_time_window()
+        window_start, _window_end = get_gcal_time_window()
 
-        assert time_min == '2026-01-01T00:00:00-05:00'
+        assert window_start == '2026-01-01T00:00:00-05:00'
 
     def test_raises_on_an_unknown_time_zone(self, monkeypatch):
         monkeypatch.setenv('GCAL_TIMEZONE', 'Mars/Olympus_Mons')
-        monkeypatch.setenv('GCAL_TIME_MIN', '2026-01-01')
-        monkeypatch.setenv('GCAL_TIME_MAX', '2026-02-01')
+        monkeypatch.setenv('GCAL_WINDOW_START', '2026-01-01')
+        monkeypatch.setenv('GCAL_WINDOW_END', '2026-02-01')
 
         with pytest.raises(ValueError, match='not a known time zone'):
             get_gcal_time_window()
@@ -201,8 +203,8 @@ class TestSearchWindowTimeZone:
         # 00:00-08:00 is 08:00 UTC, so a UTC bound of 04:00 the same day
         # is earlier than a local midnight and must be rejected.
         monkeypatch.delenv('GCAL_TIMEZONE', raising=False)
-        monkeypatch.setenv('GCAL_TIME_MIN', '2026-01-01')
-        monkeypatch.setenv('GCAL_TIME_MAX', '2026-01-01T04:00:00+00:00')
+        monkeypatch.setenv('GCAL_WINDOW_START', '2026-01-01')
+        monkeypatch.setenv('GCAL_WINDOW_END', '2026-01-01T04:00:00+00:00')
 
         with pytest.raises(ValueError, match='must be earlier than'):
             get_gcal_time_window()
@@ -215,8 +217,8 @@ class TestOtherRunModesDoNotNeedTheWindow:
     # require Google Calendar configuration they never use.
 
     def test_importing_the_cli_without_the_window(self, monkeypatch):
-        monkeypatch.delenv('GCAL_TIME_MIN', raising=False)
-        monkeypatch.delenv('GCAL_TIME_MAX', raising=False)
+        monkeypatch.delenv('GCAL_WINDOW_START', raising=False)
+        monkeypatch.delenv('GCAL_WINDOW_END', raising=False)
 
         # A fresh import of every module the CLI pulls in must succeed.
         for module in (
@@ -230,8 +232,8 @@ class TestOtherRunModesDoNotNeedTheWindow:
     def test_constructing_gcal_data_without_the_window(self, monkeypatch):
         # Construction alone performs no calendar request, so it must
         # not require the window either.
-        monkeypatch.delenv('GCAL_TIME_MIN', raising=False)
-        monkeypatch.delenv('GCAL_TIME_MAX', raising=False)
+        monkeypatch.delenv('GCAL_WINDOW_START', raising=False)
+        monkeypatch.delenv('GCAL_WINDOW_END', raising=False)
 
         assert GCALData(gcal_name='practices', auto_prep_data=False)
 
