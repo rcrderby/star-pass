@@ -408,7 +408,7 @@ class TestBuildSummaryBlocks:
         # Buttons follow the section order, so the juniors event leads
         # even though the adult opportunities come first in the summary.
         assert button['text']['text'] == (
-            'Juniors Scrimmages: NSOs \u2192'
+            'Juniors Scrimmages: NSOs \u2197\ufe0e'
         )
         assert button['url'] == 'https://example.org/need/3'
         # Slack rejects duplicate action_ids within a message.
@@ -422,10 +422,10 @@ class TestBuildSummaryBlocks:
         assert [
             block['elements'][0]['text']['text'] for block in actions
         ] == [
-            'Juniors Scrimmages: NSOs \u2192',
-            'Juniors Scrimmages: SOs \u2192',
-            'Adult Scrimmages: NSOs \u2192',
-            'Adult Scrimmages: SOs \u2192'
+            'Juniors Scrimmages: NSOs \u2197\ufe0e',
+            'Juniors Scrimmages: SOs \u2197\ufe0e',
+            'Adult Scrimmages: NSOs \u2197\ufe0e',
+            'Adult Scrimmages: SOs \u2197\ufe0e'
         ]
 
     def test_buttons_appear_after_every_section(self, summary):
@@ -457,7 +457,12 @@ class TestBuildSummaryBlocks:
         assert len(text) == 75
         # The label is trimmed, never the suffix: a button losing its
         # arrow to a long title would be the wrong thing to drop.
-        assert text.endswith('\u2192')
+        assert text.endswith('\u2197\ufe0e')
+
+    def test_the_default_arrow_asks_for_the_text_glyph(self):
+        # U+2197 renders as an emoji tile on its own, so the variation
+        # selector that follows it must survive any edit of the default.
+        assert slack_notify.SLACK_SIGN_UP_BUTTON_SUFFIX == ' \u2197\ufe0e'
 
     def test_buttons_carry_the_configured_style(self, summary):
         blocks = build_summary_blocks(summary)
