@@ -4,7 +4,7 @@
 # Imports - Python Standard Library
 import argparse
 import sys
-from typing import Optional, Sequence
+from typing import Optional, Sequence, TextIO
 
 # Imports - Third-Party
 from slack_sdk.errors import SlackApiError
@@ -26,6 +26,8 @@ GCAL_NAMES = tuple(_defaults.GCAL_CALENDARS)
 # Slack destination channels (deployment config; may be None).
 SLACK_CHANNEL = _defaults.SLACK_CHANNEL
 SLACK_DEV_CHANNEL = _defaults.SLACK_DEV_CHANNEL
+# Need IDs summarized when -N is omitted (non-secret deployment config).
+SLACK_SUMMARY_NEED_IDS = _defaults.SLACK_SUMMARY_NEED_IDS
 
 # Hand-written usage so the help clearly shows which options are
 # mandatory (unbracketed) and optional (bracketed) for each run mode.
@@ -33,7 +35,7 @@ USAGE = (
     'star-pass -g -n {events,practices}\n'
     '       star-pass -c -i INPUT_FILE [-C {true,false}] '
     '[-o {basic,simple,detailed}]\n'
-    '       star-pass -s -N NEED_ID [-C {true,false}] '
+    '       star-pass -s [-N NEED_ID ...] [-C {true,false}] '
     '[-d DAYS] [-t TITLE] [-k CHANNEL]'
 )
 
@@ -71,6 +73,65 @@ def _bool_arg(
         return helpers.convert_to_bool(value)
     except ValueError as error:
         raise argparse.ArgumentTypeError(str(error)) from error
+
+
+def _split_need_ids(
+        values: Sequence[str]
+) -> list:
+    """ Expand comma-separated need IDs into a de-duplicated list.
+
+        Args:
+            values (Sequence[str]):
+                Raw '-N' values, each possibly comma-separated.
+
+        Returns:
+            need_ids (list):
+                The IDs in the order given, without duplicates or blanks.
+    """
+
+    need_ids = []
+    for value in values:
+        for need_id in value.split(','):
+            need_id = need_id.strip()
+            if need_id and need_id not in need_ids:
+                need_ids.append(need_id)
+
+    return need_ids
+
+
+def resolve_need_ids(
+        values: Optional[Sequence[str]],
+        stdin: Optional[TextIO] = None
+) -> list:
+    """ Resolve the need IDs to summarize from the available sources.
+
+        Explicit '-N' values win.  A '-N -' value additionally reads IDs
+        from stdin, which lets another command supply them.  With no
+        '-N' at all the configured 'SLACK_SUMMARY_NEED_IDS' is used, so
+        an unattended run needs no IDs on the command line.
+
+        Args:
+            values (Sequence[str], optional):
+                Raw '-N' values, or None when the option was omitted.
+
+            stdin (TextIO, optional):
+                Stream read for a '-' value.  Defaults to 'sys.stdin'.
+
+        Returns:
+            need_ids (list):
+                The resolved IDs, in order and without duplicates.
+    """
+
+    if not values:
+        return _split_need_ids(values=SLACK_SUMMARY_NEED_IDS)
+
+    # A '-' stands for the stdin list rather than an ID of its own
+    explicit = [value for value in values if value != '-']
+    if '-' in values:
+        stream = stdin if stdin is not None else sys.stdin
+        explicit.extend(stream.read().split())
+
+    return _split_need_ids(values=explicit)
 
 
 # Build the command-line argument parser
@@ -149,8 +210,13 @@ def build_parser() -> argparse.ArgumentParser:
     slack_group = parser.add_argument_group('post-slack-summary options')
     slack_group.add_argument(
         '-N', '--need-id',
+        action='append',
         default=None,
-        help='Amplify need ID to summarize (required with -s).'
+        help=(
+            'Amplify need ID to summarize; repeat or comma-separate for '
+            'several, or pass "-" to read IDs from stdin.  Defaults to '
+            'SLACK_SUMMARY_NEED_IDS.'
+        )
     )
     slack_group.add_argument(
         '-d', '--days',
@@ -335,9 +401,11 @@ def _run(
     # guarantees exactly one mode flag, so this is the Slack case)
     else:
         # Validate that only Slack-mode options were supplied
-        if args.need_id is None:
+        need_ids = resolve_need_ids(values=args.need_id)
+        if not need_ids:
             parser.error(
-                '-s/--post-slack-summary requires -N/--need-id'
+                '-s/--post-slack-summary requires -N/--need-id or '
+                'SLACK_SUMMARY_NEED_IDS'
             )
         if args.days is not None and args.days < 1:
             parser.error(
@@ -378,8 +446,8 @@ def _run(
             'Run mode is "Post Slack Summary"'
         )
         # Build the sign-up summary and post it to Slack
-        summary = AmplifyResponses().build_need_summary(
-            need_id=args.need_id,
+        summary = AmplifyResponses().build_summary(
+            need_ids=need_ids,
             title=args.slack_title,
             days=args.days
         )

@@ -13,6 +13,7 @@
 
 # Imports - Python Standard Library
 import importlib.util
+import io
 import logging
 from pathlib import Path
 from unittest.mock import Mock
@@ -49,6 +50,68 @@ def app_main():
     module.AmplifyResponses = Mock()
     module.SlackNotifier = Mock()
     return module
+
+
+class TestResolveNeedIds:
+    def test_repeated_options_accumulate(self, app_main):
+        assert app_main.resolve_need_ids(['1', '2']) == ['1', '2']
+
+    def test_comma_separated_values_expand(self, app_main):
+        assert app_main.resolve_need_ids(['1,2', '3']) == ['1', '2', '3']
+
+    def test_order_is_preserved_and_duplicates_dropped(self, app_main):
+        # Order drives the message, so it must survive de-duplication.
+        assert app_main.resolve_need_ids(
+            ['3', '1,3', '2', '1']
+        ) == ['3', '1', '2']
+
+    def test_blanks_and_spacing_are_ignored(self, app_main):
+        assert app_main.resolve_need_ids([' 1 , ,2 ']) == ['1', '2']
+
+    def test_dash_reads_ids_from_stdin(self, app_main):
+        # stdin is a value of -N, not a separate option.
+        stdin = io.StringIO('607934 628861\n')
+
+        assert app_main.resolve_need_ids(['-'], stdin=stdin) == [
+            '607934', '628861'
+        ]
+
+    def test_stdin_ids_may_be_newline_separated(self, app_main):
+        stdin = io.StringIO('1\n2\n3\n')
+
+        assert app_main.resolve_need_ids(['-'], stdin=stdin) == [
+            '1', '2', '3'
+        ]
+
+    def test_dash_merges_with_explicit_ids(self, app_main):
+        stdin = io.StringIO('2 3')
+
+        assert app_main.resolve_need_ids(['1', '-'], stdin=stdin) == [
+            '1', '2', '3'
+        ]
+
+    def test_empty_stdin_yields_nothing(self, app_main):
+        assert app_main.resolve_need_ids(['-'], stdin=io.StringIO('')) == []
+
+    def test_falls_back_to_the_configured_ids(self, app_main, monkeypatch):
+        # With no -N at all, a scheduled run needs no arguments.
+        monkeypatch.setattr(
+            app_main, 'SLACK_SUMMARY_NEED_IDS', ['11', '22']
+        )
+
+        assert app_main.resolve_need_ids(None) == ['11', '22']
+
+    def test_explicit_ids_win_over_the_configured_ids(
+            self, app_main, monkeypatch
+    ):
+        monkeypatch.setattr(app_main, 'SLACK_SUMMARY_NEED_IDS', ['99'])
+
+        assert app_main.resolve_need_ids(['7']) == ['7']
+
+    def test_no_ids_anywhere_returns_empty(self, app_main, monkeypatch):
+        monkeypatch.setattr(app_main, 'SLACK_SUMMARY_NEED_IDS', [])
+
+        assert app_main.resolve_need_ids(None) == []
 
 
 class TestMainRunModeDispatch:
@@ -98,9 +161,9 @@ class TestMainRunModeDispatch:
             app_main.main(['-s', '-N', '879610'])
 
         assert 'Run mode is "Post Slack Summary"' in caplog.text
-        app_main.AmplifyResponses.return_value.build_need_summary \
+        app_main.AmplifyResponses.return_value.build_summary \
             .assert_called_once_with(
-                need_id='879610', title=None, days=None
+                need_ids=['879610'], title=None, days=None
             )
         # Dry run by default; channel falls back to the configured value
         # (None in the test environment).
@@ -123,14 +186,42 @@ class TestMainRunModeDispatch:
             ]
         )
 
-        app_main.AmplifyResponses.return_value.build_need_summary \
+        app_main.AmplifyResponses.return_value.build_summary \
             .assert_called_once_with(
-                need_id='5', title='Custom', days=3
+                need_ids=['5'], title='Custom', days=3
             )
         app_main.SlackNotifier.assert_called_once_with(
             channel='C999',
             check_mode=False
         )
+
+
+class TestSlackNeedIdOptions:
+    def test_repeated_option_reaches_the_builder(self, app_main):
+        app_main.main(['-s', '-N', '1', '-N', '2'])
+
+        app_main.AmplifyResponses.return_value.build_summary \
+            .assert_called_once_with(
+                need_ids=['1', '2'], title=None, days=None
+            )
+
+    def test_comma_separated_option_reaches_the_builder(self, app_main):
+        app_main.main(['-s', '-N', '1,2'])
+
+        app_main.AmplifyResponses.return_value.build_summary \
+            .assert_called_once_with(
+                need_ids=['1', '2'], title=None, days=None
+            )
+
+    def test_configured_ids_allow_a_bare_run(self, app_main, monkeypatch):
+        monkeypatch.setattr(app_main, 'SLACK_SUMMARY_NEED_IDS', ['4', '5'])
+
+        app_main.main(['-s'])
+
+        app_main.AmplifyResponses.return_value.build_summary \
+            .assert_called_once_with(
+                need_ids=['4', '5'], title=None, days=None
+            )
 
 
 class TestMainArgumentErrors:
@@ -170,7 +261,11 @@ class TestMainArgumentErrors:
         assert exc_info.value.code != 0
         app_main.CreateShifts.assert_not_called()
 
-    def test_slack_without_need_id_exits_nonzero(self, app_main):
+    def test_slack_without_need_id_exits_nonzero(
+            self, app_main, monkeypatch
+    ):
+        # No -N and no configured IDs leaves nothing to summarize.
+        monkeypatch.setattr(app_main, 'SLACK_SUMMARY_NEED_IDS', [])
         with pytest.raises(SystemExit) as exc_info:
             app_main.main(['-s'])
         assert exc_info.value.code != 0

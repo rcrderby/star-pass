@@ -18,7 +18,8 @@ import pytest
 from star_pass.amplify_responses import (
     AmplifyResponses,
     count_signups_by_shift,
-    _format_shift_when,
+    _format_slot_when,
+    _format_time_range,
     _max_numeric_id,
     _response_created_dt,
     _upcoming_shifts,
@@ -81,22 +82,59 @@ class TestCountSignupsByShift:
         assert count_signups_by_shift(responses) == {'13345369': 1}
 
 
-class TestFormatShiftWhen:
-    def test_formats_datetimes(self):
-        when = _format_shift_when(
-            {
-                'start': '2026-07-10 18:00:00',
-                'end': '2026-07-10 20:45:00'
-            }
+class TestFormatTimeRange:
+    def test_writes_the_meridiem_once_for_a_same_half_range(self):
+        # How the posts are written by hand: "6:00-7:00 p.m.".
+        when = _format_time_range(
+            datetime(2025, 12, 17, 18, 0),
+            datetime(2025, 12, 17, 19, 0)
         )
-        assert when['start'] == '18:00'
-        assert when['end'] == '20:45'
-        assert 'July 10 2026' in when['name']
+        assert when == '6:00-7:00 p.m.'
 
-    def test_fallback_on_bad_input(self):
-        when = _format_shift_when({'start': None, 'end': None})
-        assert when['name'] == 'Shift'
-        assert when['start'] is None
+    def test_writes_both_when_the_range_crosses_noon(self):
+        when = _format_time_range(
+            datetime(2025, 12, 17, 11, 0),
+            datetime(2025, 12, 17, 13, 30)
+        )
+        assert when == '11:00 a.m.-1:30 p.m.'
+
+    def test_midnight_and_noon_read_correctly(self):
+        assert _format_time_range(
+            datetime(2025, 12, 17, 0, 0),
+            datetime(2025, 12, 17, 0, 30)
+        ) == '12:00-12:30 a.m.'
+        assert _format_time_range(
+            datetime(2025, 12, 17, 12, 0),
+            datetime(2025, 12, 17, 12, 30)
+        ) == '12:00-12:30 p.m.'
+
+
+class TestFormatSlotWhen:
+    def test_omits_the_date_for_a_single_day_window(self):
+        when = _format_slot_when(
+            _shift('S1', '2025-12-17 18:00:00', '2025-12-17 19:00:00'),
+            show_date=False
+        )
+        assert when == '6:00-7:00 p.m.'
+
+    def test_includes_the_date_for_a_multi_day_window(self):
+        # Without it, two days of shifts would be indistinguishable.
+        when = _format_slot_when(
+            _shift('S1', '2025-12-17 18:00:00', '2025-12-17 19:00:00'),
+            show_date=True
+        )
+        assert when == 'Wed 12/17, 6:00-7:00 p.m.'
+
+    def test_falls_back_to_the_raw_value_when_unparseable(self):
+        when = _format_slot_when(
+            _shift('S1', 'not-a-date', 'not-a-date'),
+            show_date=False
+        )
+        assert when == 'not-a-date'
+
+    def test_placeholder_without_a_start(self):
+        when = _format_slot_when({'start': None, 'end': None}, False)
+        assert when == 'Time TBD'
 
 
 class TestHelperFunctions:
@@ -219,7 +257,7 @@ class TestGetRecentResponses:
 
         result = reader.get_recent_responses(
             since_created='2026-04-15 09:00',
-            need_id='607934'
+            need_ids=['607934']
         )
 
         # Numeric and string need IDs both match; unrelated rows do not.
@@ -256,7 +294,7 @@ class TestGetRecentResponses:
 
         result = reader.get_recent_responses(
             since_created='2026-04-15 09:00',
-            need_id='1'
+            need_ids=['1']
         )
 
         assert len(calls) == 2
@@ -279,7 +317,7 @@ class TestGetRecentResponses:
 
         result = reader.get_recent_responses(
             since_created='2026-04-15 09:00',
-            need_id='1'
+            need_ids=['1']
         )
 
         assert len(calls) == 1
@@ -312,14 +350,27 @@ class TestGetNeed:
         }
 
 
-class TestBuildNeedSummary:
+class TestBuildSummary:
     def _reader_with(self, monkeypatch, need, responses, since_days=90):
         reader = AmplifyResponses(since_days=since_days)
         monkeypatch.setattr(reader, 'get_need', lambda need_id: need)
         monkeypatch.setattr(
             reader,
             'get_recent_responses',
-            lambda since_created, need_id=None: responses
+            lambda since_created, need_ids=None: responses
+        )
+        return reader
+
+    def _reader_for_needs(self, monkeypatch, needs, responses):
+        # 'needs' maps need ID to the need object that ID returns.
+        reader = AmplifyResponses(since_days=90)
+        monkeypatch.setattr(
+            reader, 'get_need', lambda need_id: needs[str(need_id)]
+        )
+        monkeypatch.setattr(
+            reader,
+            'get_recent_responses',
+            lambda since_created, need_ids=None: responses
         )
         return reader
 
@@ -327,9 +378,12 @@ class TestBuildNeedSummary:
         # These tests cover composition, ordering, and counting; the day
         # window has its own tests, so it is opened wide here.
         reader = self._reader_with(monkeypatch, need, [])
-        return reader.build_need_summary(
-            need_id='1', now=NOW, days=WIDE_DAYS
+        return reader.build_summary(
+            need_ids=['1'], now=NOW, days=WIDE_DAYS
         )
+
+    def _shifts_of(self, summary, index=0):
+        return summary['needs'][index]['shifts']
 
     def test_composes_live_counts(self, monkeypatch):
         need = {
@@ -341,23 +395,156 @@ class TestBuildNeedSummary:
         }
         reader = self._reader_with(monkeypatch, need, SAMPLE_RESPONSES)
 
-        summary = reader.build_need_summary(
-            need_id='628861', now=NOW, days=WIDE_DAYS
+        summary = reader.build_summary(
+            need_ids=['628861'], now=NOW, days=WIDE_DAYS
         )
-        shifts = summary['shifts']
+        need_entry = summary['needs'][0]
+        shifts = need_entry['shifts']
 
         # The default title names the window, not the need: a summary
         # can cover several needs at once.
         assert summary['title'].startswith('Shift sign-ups for')
         assert 'as_of' in summary
+        assert need_entry['title'] == 'Adult Scrimmage Officials'
+        assert need_entry['signup_url'].endswith('?need_id=628861')
         assert len(shifts) == 2
         # The inactive response is not counted.
         assert shifts[0]['filled'] == 2
         assert shifts[1]['filled'] == 1
-        assert shifts[0]['slots'] == '8'
-        assert shifts[0]['start'] == '18:00'
-        assert 'July 20 2026' in shifts[0]['name']
-        assert shifts[0]['signup_url'].endswith('?need_id=628861')
+        # A multi-day window dates each line.
+        assert shifts[0]['when'] == 'Mon 07/20, 6:00-8:45 p.m.'
+
+    def test_covers_several_needs_in_one_summary(self, monkeypatch):
+        needs = {
+            '1': {
+                'need_title': 'Adult Scrimmages - Non-Skating Officials',
+                'shifts': [
+                    _shift(
+                        'S1',
+                        '2026-07-14 19:00:00',
+                        '2026-07-14 20:00:00'
+                    )
+                ]
+            },
+            '2': {
+                'need_title': 'Adult Scrimmages - Skating Officials',
+                'shifts': [
+                    _shift(
+                        'S2',
+                        '2026-07-14 19:00:00',
+                        '2026-07-14 20:00:00'
+                    )
+                ]
+            }
+        }
+        responses = [
+            {'response_status': 'active', 'shift': {'id': 'S1'}},
+            {'response_status': 'active', 'shift': {'id': 'S2'}},
+            {'response_status': 'active', 'shift': {'id': 'S2'}},
+        ]
+        reader = self._reader_for_needs(monkeypatch, needs, responses)
+
+        summary = reader.build_summary(need_ids=['1', '2'], now=NOW)
+
+        assert [need['title'] for need in summary['needs']] == [
+            'Adult Scrimmages - Non-Skating Officials',
+            'Adult Scrimmages - Skating Officials'
+        ]
+        assert self._shifts_of(summary, 0)[0]['filled'] == 1
+        assert self._shifts_of(summary, 1)[0]['filled'] == 2
+
+    def test_reads_responses_once_for_every_need(self, monkeypatch):
+        # The responses endpoint has no server-side need filter, so it
+        # pages the whole domain: one read must serve every need.
+        needs = {
+            str(index): {
+                'need_title': f'Need {index}',
+                'shifts': [
+                    _shift(
+                        f'S{index}',
+                        '2026-07-14 19:00:00',
+                        '2026-07-14 20:00:00'
+                    )
+                ]
+            }
+            for index in range(1, 6)
+        }
+        reader = AmplifyResponses(since_days=90)
+        monkeypatch.setattr(
+            reader, 'get_need', lambda need_id: needs[str(need_id)]
+        )
+        calls = []
+
+        def fake_recent(**kwargs):
+            calls.append(list(kwargs.get('need_ids') or []))
+            return []
+
+        monkeypatch.setattr(reader, 'get_recent_responses', fake_recent)
+
+        reader.build_summary(
+            need_ids=['1', '2', '3', '4', '5'], now=NOW
+        )
+
+        assert len(calls) == 1
+        assert calls[0] == ['1', '2', '3', '4', '5']
+
+    def test_omits_a_need_with_nothing_in_the_window(self, monkeypatch):
+        # An opportunity with no shifts today contributes no lines and
+        # no sign-up button.
+        needs = {
+            '1': {
+                'need_title': 'Running Today',
+                'shifts': [
+                    _shift(
+                        'S1',
+                        '2026-07-14 19:00:00',
+                        '2026-07-14 20:00:00'
+                    )
+                ]
+            },
+            '2': {
+                'need_title': 'Nothing Today',
+                'shifts': [
+                    _shift(
+                        'S2',
+                        '2026-07-20 19:00:00',
+                        '2026-07-20 20:00:00'
+                    )
+                ]
+            }
+        }
+        reader = self._reader_for_needs(monkeypatch, needs, [])
+
+        summary = reader.build_summary(need_ids=['1', '2'], now=NOW)
+
+        assert [need['title'] for need in summary['needs']] == [
+            'Running Today'
+        ]
+
+    def test_rejects_an_empty_need_list(self, monkeypatch):
+        reader = self._reader_with(monkeypatch, {'shifts': []}, [])
+
+        with pytest.raises(ValueError, match='At least one need ID'):
+            reader.build_summary(need_ids=[], now=NOW)
+
+    def test_multi_day_window_dates_each_shift(self, monkeypatch):
+        need = {
+            'need_title': 'Two Days',
+            'shifts': [
+                _shift('S1', '2026-07-14 19:00:00', '2026-07-14 20:00:00'),
+                _shift('S2', '2026-07-15 19:00:00', '2026-07-15 20:00:00'),
+            ]
+        }
+        reader = self._reader_with(monkeypatch, need, [])
+
+        summary = reader.build_summary(
+            need_ids=['1'], now=NOW, days=2
+        )
+
+        assert [shift['when'] for shift in self._shifts_of(summary)] == [
+            'Tue 07/14, 7:00-8:00 p.m.',
+            'Wed 07/15, 7:00-8:00 p.m.'
+        ]
 
     def test_excludes_past_shifts(self, monkeypatch):
         # A long-lived need carries hundreds of past shifts; only the
@@ -371,8 +558,10 @@ class TestBuildNeedSummary:
         }
         summary = self._wide_summary(monkeypatch, need)
 
-        assert len(summary['shifts']) == 1
-        assert 'July 20 2026' in summary['shifts'][0]['name']
+        assert len(self._shifts_of(summary)) == 1
+        assert self._shifts_of(summary)[0]['sort_key'].startswith(
+            '2026-07-20'
+        )
 
     def test_orders_shifts_by_start(self, monkeypatch):
         need = {
@@ -383,10 +572,10 @@ class TestBuildNeedSummary:
             ]
         }
         summary = self._wide_summary(monkeypatch, need)
-        names = [shift['name'] for shift in summary['shifts']]
+        keys = [shift['sort_key'] for shift in self._shifts_of(summary)]
 
-        assert 'July 15 2026' in names[0]
-        assert 'July 22 2026' in names[1]
+        assert keys[0].startswith('2026-07-15')
+        assert keys[1].startswith('2026-07-22')
 
     def test_skips_shifts_with_unparseable_start(self, monkeypatch):
         need = {
@@ -398,7 +587,7 @@ class TestBuildNeedSummary:
         }
         summary = self._wide_summary(monkeypatch, need)
 
-        assert len(summary['shifts']) == 1
+        assert len(self._shifts_of(summary)) == 1
 
     def test_empty_shift_defaults_to_zero(self, monkeypatch):
         need = {
@@ -408,14 +597,14 @@ class TestBuildNeedSummary:
             ]
         }
         summary = self._wide_summary(monkeypatch, need)
-        assert summary['shifts'][0]['filled'] == 0
+        assert self._shifts_of(summary)[0]['filled'] == 0
 
     def test_title_override(self, monkeypatch):
         need = {'need_title': 'Default', 'shifts': []}
         reader = self._reader_with(monkeypatch, need, [])
 
-        summary = reader.build_need_summary(
-            need_id='1', title='Custom', now=NOW
+        summary = reader.build_summary(
+            need_ids=['1'], title='Custom', now=NOW
         )
         assert summary['title'] == 'Custom'
 
@@ -435,10 +624,11 @@ class TestBuildNeedSummary:
         }
         reader = self._reader_with(monkeypatch, need, [])
 
-        summary = reader.build_need_summary(need_id='1', now=NOW)
+        summary = reader.build_summary(need_ids=['1'], now=NOW)
+        shifts = self._shifts_of(summary)
 
-        assert [shift['start'] for shift in summary['shifts']] == ['18:00']
-        assert 'July 14 2026' in summary['shifts'][0]['name']
+        assert len(shifts) == 1
+        assert shifts[0]['sort_key'].startswith('2026-07-14')
 
     def test_two_days_reaches_tomorrow(self, monkeypatch):
         need = {
@@ -455,14 +645,14 @@ class TestBuildNeedSummary:
         }
         reader = self._reader_with(monkeypatch, need, [])
 
-        summary = reader.build_need_summary(need_id='1', now=NOW, days=2)
-        names = [shift['name'] for shift in summary['shifts']]
+        summary = reader.build_summary(need_ids=['1'], now=NOW, days=2)
+        keys = [shift['sort_key'] for shift in self._shifts_of(summary)]
 
-        assert len(names) == 2
-        assert 'July 14 2026' in names[0]
-        assert 'July 15 2026' in names[1]
+        assert len(keys) == 2
+        assert keys[0].startswith('2026-07-14')
+        assert keys[1].startswith('2026-07-15')
 
-    def test_empty_window_yields_no_shifts(self, monkeypatch):
+    def test_empty_window_yields_no_needs(self, monkeypatch):
         # A day with nothing scheduled is routine, not an error; the
         # caller decides not to post.
         need = {
@@ -473,16 +663,18 @@ class TestBuildNeedSummary:
         }
         reader = self._reader_with(monkeypatch, need, [])
 
-        summary = reader.build_need_summary(need_id='1', now=NOW)
+        summary = reader.build_summary(need_ids=['1'], now=NOW)
 
-        assert summary['shifts'] == []
+        assert summary['needs'] == []
         assert summary['title']
 
     def test_rejects_a_window_shorter_than_a_day(self, monkeypatch):
         reader = self._reader_with(monkeypatch, {'shifts': []}, [])
 
         with pytest.raises(ValueError, match='at least one day'):
-            reader.build_need_summary(need_id='1', now=NOW, days=0)
+            reader.build_summary(
+                need_ids=['1'], now=NOW, days=0
+            )
 
     def test_passes_the_since_created_window(self, monkeypatch):
         # The window must be derived from 'now' and 'since_days'.
@@ -492,18 +684,20 @@ class TestBuildNeedSummary:
         )
         captured = {}
 
-        def fake_recent(since_created, need_id=None):
+        def fake_recent(since_created, need_ids=None):
             captured['since_created'] = since_created
-            captured['need_id'] = need_id
+            captured['need_ids'] = need_ids
             return []
 
         monkeypatch.setattr(reader, 'get_recent_responses', fake_recent)
 
-        reader.build_need_summary(need_id='607934', now=NOW)
+        reader.build_summary(
+            need_ids=['607934'], now=NOW
+        )
 
         expected = (NOW - timedelta(days=90)).strftime('%Y-%m-%d %H:%M')
         assert captured['since_created'] == expected
-        assert captured['need_id'] == '607934'
+        assert list(captured['need_ids']) == ['607934']
 
 
 class TestWindowMarginLogging:
@@ -526,7 +720,7 @@ class TestWindowMarginLogging:
         monkeypatch.setattr(
             reader,
             'get_recent_responses',
-            lambda since_created, need_id=None: responses
+            lambda since_created, need_ids=None: responses
         )
         return reader
 
@@ -538,8 +732,8 @@ class TestWindowMarginLogging:
         )
 
         with caplog.at_level('WARNING'):
-            reader.build_need_summary(
-                need_id='1', now=NOW, days=WIDE_DAYS
+            reader.build_summary(
+                need_ids=['1'], now=NOW, days=WIDE_DAYS
             )
 
         assert 'AMPLIFY_RESPONSES_SINCE_DAYS' in caplog.text
@@ -552,8 +746,8 @@ class TestWindowMarginLogging:
         )
 
         with caplog.at_level('INFO'):
-            reader.build_need_summary(
-                need_id='1', now=NOW, days=WIDE_DAYS
+            reader.build_summary(
+                need_ids=['1'], now=NOW, days=WIDE_DAYS
             )
 
         assert 'margin is healthy' in caplog.text
@@ -571,12 +765,12 @@ class TestWindowMarginLogging:
         monkeypatch.setattr(
             reader,
             'get_recent_responses',
-            lambda since_created, need_id=None: []
+            lambda since_created, need_ids=None: []
         )
 
         with caplog.at_level('INFO'):
-            reader.build_need_summary(
-                need_id='1', now=NOW, days=WIDE_DAYS
+            reader.build_summary(
+                need_ids=['1'], now=NOW, days=WIDE_DAYS
             )
 
         assert 'margin' not in caplog.text

@@ -253,6 +253,31 @@ SLACK_DEV_CHANNEL = getenv('SLACK_DEV_CHANNEL')
 SLACK_CHECK_MODE_MESSAGE = '\n** Slack Check Mode Run (no message sent) **'
 # Label for the sign-up link button attached to a shift.
 SLACK_SIGN_UP_BUTTON_TEXT = 'Sign up'
+# Call to action shown above the sign-up buttons.
+SLACK_SIGN_UP_PROMPT = getenv(
+    'SLACK_SIGN_UP_PROMPT',
+    "Sign up if you plan to attend and haven't already. Thanks!"
+)
+# Optional emoji flanking the summary heading, as Slack shortcodes
+# (for example ':flamingo::zebra:').  Empty by default.
+SLACK_SUMMARY_EMOJI = getenv(
+    'SLACK_SUMMARY_EMOJI',
+    ''
+)
+# Separator between an event name and a role in an opportunity title,
+# used to group opportunities and shorten their labels.  A title
+# without it forms a group of its own.
+SLACK_TITLE_SEPARATOR = getenv(
+    'SLACK_TITLE_SEPARATOR',
+    ' - '
+)
+# Date prefix on a shift line when a summary spans more than one day.
+SLACK_SLOT_DATE_FORMAT = '%a %m/%d'
+# Comma-separated Amplify need IDs summarized when -N is not supplied.
+SLACK_SUMMARY_NEED_IDS = _get_env_list(
+    'SLACK_SUMMARY_NEED_IDS',
+    []
+)
 # Number of calendar days a sign-up summary covers, counting today as
 # day one: 1 is today only, 2 adds tomorrow, and so on.  The summary
 # replaces a same-day call for volunteers, so the default is today.

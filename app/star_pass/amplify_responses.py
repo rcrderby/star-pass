@@ -16,7 +16,9 @@
 
 # Imports - Python Standard Library
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set
+from typing import (
+    Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+)
 
 # Imports - Local
 from . import _defaults
@@ -40,6 +42,7 @@ SUMMARY_DAYS = _defaults.SLACK_SUMMARY_DAYS
 AMPLIFY_SHIFT_DATETIME_FORMAT = _defaults.AMPLIFY_SHIFT_DATETIME_FORMAT
 SIMPLE_DATE_FORMAT = _defaults.SIMPLE_DATE_FORMAT
 SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
+SLOT_DATE_FORMAT = _defaults.SLACK_SLOT_DATE_FORMAT
 
 # Only responses with this status count as a filled slot.
 ACTIVE_RESPONSE_STATUS = 'active'
@@ -242,82 +245,132 @@ def _window_title(
     return f'Shift sign-ups for {start_label} - {end_label}'
 
 
-def _format_shift_when(
-        shift: Dict[str, Any]
-) -> Dict[str, Any]:
-    """ Format a shift's date and time window for display.
+def _format_clock(
+        value: datetime
+) -> str:
+    """ Format a time the way the sign-up posts are written by hand.
+
+        Args:
+            value (datetime):
+                The time to format.
+
+        Returns:
+            clock (str):
+                A 12-hour time with no leading zero, such as
+                '6:00 p.m.'.
+    """
+
+    hour = value.strftime('%I').lstrip('0') or '12'
+    meridiem = 'a.m.' if value.hour < 12 else 'p.m.'
+
+    return f'{hour}:{value.strftime("%M")} {meridiem}'
+
+
+def _format_time_range(
+        start_dt: datetime,
+        end_dt: datetime
+) -> str:
+    """ Format a shift's start and end as a single time range.
+
+        The meridiem is written once when both ends share it, matching
+        how the posts read ('6:00-7:00 p.m.').
+
+        Args:
+            start_dt (datetime):
+                Shift start.
+
+            end_dt (datetime):
+                Shift end.
+
+        Returns:
+            when (str):
+                A formatted time range.
+    """
+
+    start = _format_clock(value=start_dt)
+    end = _format_clock(value=end_dt)
+
+    # Drop the repeated meridiem from the start of a same-half range
+    if start.rsplit(' ', 1)[-1] == end.rsplit(' ', 1)[-1]:
+        start = start.rsplit(' ', 1)[0]
+
+    return f'{start}-{end}'
+
+
+def _format_slot_when(
+        shift: Dict[str, Any],
+        show_date: bool
+) -> str:
+    """ Format the time label for one shift line.
 
         Args:
             shift (Dict[str, Any]):
-                Shift object with 'start' and 'end' datetime strings in
-                'AMPLIFY_SHIFT_DATETIME_FORMAT'.
+                Shift object with 'start' and 'end' datetime strings.
+
+            show_date (bool):
+                Whether to prefix the date.  A single-day summary does
+                not need it -- the title already names the day -- but a
+                multi-day window does.
 
         Returns:
-            when (Dict[str, Any]):
-                A dictionary with 'name' (formatted date), 'start', and
-                'end' (formatted times).  When parsing fails the raw
-                values are returned unchanged.
+            when (str):
+                A time range, optionally prefixed with a short date.
+                Falls back to the raw start value when parsing fails.
     """
 
-    start_raw = shift.get('start')
-    end_raw = shift.get('end')
+    start_dt = _parse_amplify_dt(shift.get('start'))
+    end_dt = _parse_amplify_dt(shift.get('end'))
 
-    # Fall back to the raw values when either datetime cannot be parsed
-    start_dt = _parse_amplify_dt(start_raw)
-    end_dt = _parse_amplify_dt(end_raw)
     if start_dt is None or end_dt is None:
-        return {
-            'name': start_raw or 'Shift',
-            'start': start_raw,
-            'end': end_raw
-        }
+        return shift.get('start') or 'Time TBD'
 
-    return {
-        'name': start_dt.strftime(SIMPLE_DATE_FORMAT),
-        'start': start_dt.strftime(SIMPLE_TIME_FORMAT),
-        'end': end_dt.strftime(SIMPLE_TIME_FORMAT)
-    }
+    when = _format_time_range(start_dt=start_dt, end_dt=end_dt)
+
+    if show_date is True:
+        return f'{start_dt.strftime(SLOT_DATE_FORMAT)}, {when}'
+
+    return when
 
 
-def _build_summary_shifts(
+def _build_need_shifts(
         shifts: List[Dict[str, Any]],
         counts: Dict[str, int],
-        signup_url: str
+        show_date: bool
 ) -> List[Dict[str, Any]]:
-    """ Build the per-shift entries of a sign-up summary.
+    """ Build the per-shift entries for one need in a summary.
 
         Args:
             shifts (List[Dict[str, Any]]):
-                The shifts to summarize, in display order.
+                The need's shifts to summarize, in display order.
 
             counts (Dict[str, int]):
                 Active sign-up counts keyed by string shift ID.
 
-            signup_url (str):
-                Public sign-up link attached to every shift.
+            show_date (bool):
+                Whether shift labels carry a date (see
+                '_format_slot_when').
 
         Returns:
-            summary_shifts (List[Dict[str, Any]]):
-                One entry per shift, with 'name', 'start', 'end',
-                'filled', 'slots', and 'signup_url'.  A shift with no
-                sign-ups is reported as zero filled.
+            need_shifts (List[Dict[str, Any]]):
+                One entry per shift, with 'when' (the display label),
+                'sort_key' (the raw start, for ordering across needs),
+                and 'filled'.  A shift with no sign-ups reports zero.
     """
 
-    summary_shifts = []
+    need_shifts = []
     for shift in shifts:
-        when = _format_shift_when(shift=shift)
-        summary_shifts.append(
+        need_shifts.append(
             {
-                'name': when['name'],
-                'start': when['start'],
-                'end': when['end'],
-                'filled': counts.get(str(shift.get('id')), 0),
-                'slots': shift.get('slots'),
-                'signup_url': signup_url
+                'when': _format_slot_when(
+                    shift=shift,
+                    show_date=show_date
+                ),
+                'sort_key': shift.get('start') or '',
+                'filled': counts.get(str(shift.get('id')), 0)
             }
         )
 
-    return summary_shifts
+    return need_shifts
 
 
 def count_signups_by_shift(
@@ -422,13 +475,13 @@ class AmplifyResponses:
     def get_recent_responses(
             self,
             since_created: str,
-            need_id: Optional[str | int] = None
+            need_ids: Optional[Iterable[str | int]] = None
     ) -> List[Dict[str, Any]]:
         """ Read recent responses through the paged top-level endpoint.
 
             Pages 'GET /responses' with a 'since_created' lower bound and
             'show_inactive=No', walking pages with the 'since_id' cursor,
-            and (when 'need_id' is given) keeps only that need's rows.
+            and (when 'need_ids' is given) keeps only those needs' rows.
 
             The endpoint has no server-side need or shift-date filter, so
             the domain's recent responses are paged and filtered
@@ -436,18 +489,30 @@ class AmplifyResponses:
             alternative -- 'GET /needs/{id}/responses' -- ignores
             pagination entirely and times out for large needs.
 
+            Because the read covers the whole domain, several needs are
+            filtered out of one pass rather than one pass per need: the
+            paging cost is the same for one need or a dozen.
+
             Args:
                 since_created (str):
                     Lower bound for a response's creation datetime, in
                     'AMPLIFY_RESPONSES_SINCE_FORMAT'.
 
-                need_id (str | int, optional):
-                    When given, keep only responses for this need.
+                need_ids (Iterable[str | int], optional):
+                    When given, keep only responses for these needs.
 
             Returns:
                 responses (List[Dict[str, Any]]):
-                    Response objects, limited to 'need_id' when given.
+                    Response objects, limited to 'need_ids' when given.
         """
+
+        # Compare as strings: the API returns numeric IDs in some
+        # payloads and string IDs in others.
+        wanted = (
+            {str(need_id) for need_id in need_ids}
+            if need_ids is not None
+            else None
+        )
 
         url = f'{BASE_AMPLIFY_URL}/responses'
         collected: List[Dict[str, Any]] = []
@@ -479,11 +544,11 @@ class AmplifyResponses:
             page = self.helpers.response_json(response).get('data') or []
             pages += 1
 
-            # Client-side filter: keep only the target need's rows
+            # Client-side filter: keep only the target needs' rows
             for row in page:
                 if (
-                    need_id is None
-                    or str((row.get('need') or {}).get('id')) == str(need_id)
+                    wanted is None
+                    or str((row.get('need') or {}).get('id')) in wanted
                 ):
                     collected.append(row)
 
@@ -580,27 +645,98 @@ class AmplifyResponses:
 
         return None
 
-    def build_need_summary(
+    def _summarize_needs(
             self,
-            need_id: str | int,
+            need_ids: Sequence[str | int],
+            counts: Dict[str, int],
+            now: datetime,
+            window_end: datetime,
+            show_date: bool
+    ) -> Tuple[List[Dict[str, Any]], Set[str]]:
+        """ Build the per-need entries of a summary.
+
+            Args:
+                need_ids (Sequence[str | int]):
+                    Amplify need IDs, in display order.
+
+                counts (Dict[str, int]):
+                    Active sign-up counts keyed by string shift ID.
+
+                now (datetime):
+                    Start of the shift window.
+
+                window_end (datetime):
+                    End of the shift window (see '_window_end').
+
+                show_date (bool):
+                    Whether shift labels carry a date.
+
+            Returns:
+                result (Tuple[List[Dict[str, Any]], Set[str]]):
+                    The needs that have shifts inside the window, and the
+                    string shift IDs those needs contributed.
+        """
+
+        summary_needs = []
+        upcoming_ids: Set[str] = set()
+
+        for need_id in need_ids:
+            need = self.get_need(need_id=need_id)
+            upcoming = _upcoming_shifts(
+                shifts=need.get('shifts', []),
+                now=now,
+                window_end=window_end
+            )
+
+            # A need with nothing in the window contributes no lines and
+            # no sign-up button
+            if not upcoming:
+                continue
+
+            upcoming_ids.update(
+                str(shift.get('id')) for shift in upcoming
+            )
+            summary_needs.append(
+                {
+                    'title': need.get('need_title', f'Need {need_id}'),
+                    'signup_url': (
+                        f'{AMPLIFY_NEED_DETAIL_URL}?need_id={need_id}'
+                    ),
+                    'shifts': _build_need_shifts(
+                        shifts=upcoming,
+                        counts=counts,
+                        show_date=show_date
+                    )
+                }
+            )
+
+        return (summary_needs, upcoming_ids)
+
+    def build_summary(
+            self,
+            need_ids: Sequence[str | int],
             title: Optional[str] = None,
             now: Optional[datetime] = None,
             days: Optional[int] = None
     ) -> Dict[str, Any]:
-        """ Build a sign-up summary for a need's upcoming shifts.
+        """ Build a sign-up summary covering one or more needs.
 
-            Combines the need's upcoming shifts (for capacity and timing)
-            with its recent responses (for live filled counts) into the
-            structure consumed by 'slack_notify.build_summary_blocks'.
-            Only shifts starting between 'now' and the end of the day
-            window are included: a long-lived need accumulates hundreds
-            of past shifts that a sign-up summary should not repeat, and
-            the summary is a call for volunteers over the next day or
-            few rather than a full backlog.
+            Combines each need's shifts (for timing) with the domain's
+            recent responses (for live filled counts) into the structure
+            consumed by 'slack_notify.build_summary_blocks'.  Only shifts
+            starting between 'now' and the end of the day window are
+            included: a long-lived need accumulates hundreds of past
+            shifts that a sign-up summary should not repeat, and the
+            summary is a call for volunteers over the next day or few
+            rather than a full backlog.
+
+            The responses read covers the whole domain and is filtered
+            client-side, so it runs ONCE for every need together; only
+            the cheap per-need shift read repeats.
 
             Args:
-                need_id (str | int):
-                    Amplify need ID.
+                need_ids (Sequence[str | int]):
+                    Amplify need IDs, in display order.
 
                 title (str, optional):
                     Summary heading.  Defaults to a heading naming the
@@ -618,15 +754,18 @@ class AmplifyResponses:
 
             Raises:
                 ValueError:
-                    If 'days' is less than one.
+                    If 'days' is less than one, or 'need_ids' is empty.
 
             Returns:
                 summary (Dict[str, Any]):
-                    A summary with 'title', 'as_of', and 'shifts' (each
-                    with 'name', 'start', 'end', 'filled', 'slots', and
-                    'signup_url'), ordered by start time.  The 'shifts'
-                    list is empty when nothing falls inside the window.
+                    A summary with 'title', 'as_of', and 'needs' (each
+                    with 'title', 'signup_url', and 'shifts').  Needs
+                    with no shifts inside the window are omitted, so an
+                    empty 'needs' list means nothing is scheduled.
         """
+
+        if not need_ids:
+            raise ValueError('At least one need ID is required.')
 
         if now is None:
             now = datetime.now()
@@ -644,39 +783,40 @@ class AmplifyResponses:
         cutoff = now - timedelta(days=self.since_days)
         since_created = cutoff.strftime(RESPONSES_SINCE_FORMAT)
 
-        # Read the need (shifts) and its recent responses (sign-ups)
-        need = self.get_need(need_id=need_id)
+        # One responses read serves every need: the endpoint has no
+        # server-side need filter, so paging per need would refetch the
+        # same domain-wide rows once per need.
         responses = self.get_recent_responses(
             since_created=since_created,
-            need_id=need_id
+            need_ids=need_ids
         )
         counts = count_signups_by_shift(responses=responses)
 
-        # Keep only shifts starting inside the window, ordered by start
-        upcoming = _upcoming_shifts(
-            shifts=need.get('shifts', []),
+        summary_needs, upcoming_ids = self._summarize_needs(
+            need_ids=need_ids,
+            counts=counts,
             now=now,
-            window_end=window_end
+            window_end=window_end,
+            # A multi-day window needs the date on each shift line; a
+            # single-day one does not, because the title names the day.
+            show_date=days > 1
         )
 
         # Warn when the counts sit close to the window edge
         self._log_window_margin(
             responses=responses,
-            upcoming_ids={str(shift.get('id')) for shift in upcoming},
+            upcoming_ids=upcoming_ids,
             cutoff=cutoff
         )
-
-        as_of_format = f'{SIMPLE_DATE_FORMAT} {SIMPLE_TIME_FORMAT}'
 
         return {
             'title': title or _window_title(
                 now=now,
                 window_end=window_end
             ),
-            'as_of': now.strftime(as_of_format),
-            'shifts': _build_summary_shifts(
-                shifts=upcoming,
-                counts=counts,
-                signup_url=f'{AMPLIFY_NEED_DETAIL_URL}?need_id={need_id}'
-            )
+            'as_of': (
+                f'{_format_clock(value=now)} on '
+                f'{now.strftime(SIMPLE_DATE_FORMAT)}'
+            ),
+            'needs': summary_needs
         }
