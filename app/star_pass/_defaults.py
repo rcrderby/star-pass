@@ -267,9 +267,15 @@ SLACK_CHECK_MODE_MESSAGE = '\n** Slack Check Mode Run (no message sent) **'
 # ':arrow_upper_right:', which Slack renders as a full emoji tile with
 # a hover card and which crowds out the label on a narrow button.  Set
 # it empty for no suffix.
+#
+# U+2197 carries an emoji presentation by default and would render as
+# that same tile, so U+FE0E follows it to ask for the text glyph.  The
+# selector is invisible, which is why both are written as escapes: a
+# literal arrow pasted here looks identical with the selector dropped,
+# and the tile would return with nothing in the diff to explain it.
 SLACK_SIGN_UP_BUTTON_SUFFIX = getenv(
     'SLACK_SIGN_UP_BUTTON_SUFFIX',
-    ' \u2192'
+    ' \u2197\ufe0e'
 )
 # Slack button style for the sign-up buttons: 'primary' fills them,
 # which reads as a control rather than a label on a phone.  Slack

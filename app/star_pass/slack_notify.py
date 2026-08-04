@@ -229,11 +229,40 @@ def _format_count(
     return f'{filled} x {label}'
 
 
-def _format_day_text(
+def _bold(
+        text: str
+) -> Dict[str, Any]:
+    """ Build a bold 'rich_text' span.
+
+        Args:
+            text (str):
+                The text to embolden.
+
+        Returns:
+            element (Dict[str, Any]):
+                A 'rich_text' text element styled bold.
+    """
+
+    return {
+        'type': 'text',
+        'text': text,
+        'style': {'bold': True}
+    }
+
+
+def _build_day_elements(
         day: Dict[str, Any],
         show_heading: bool
-) -> str:
-    """ Format one day's rows as a Block Kit 'mrkdwn' string.
+) -> List[Dict[str, Any]]:
+    """ Build one day's rows as Block Kit 'rich_text' elements.
+
+        The styling is carried by explicit spans rather than 'mrkdwn'
+        markup because Slack reads a ':...:' pair as an emoji shortcode
+        candidate, and that candidate splits a bold run that wraps a
+        time range: '*Adult Scrimmages 6:00-7:00 p.m.*' lost its bold
+        between the two colons on mobile clients.  Every time range
+        holds two colons, so no markup spelling avoids this; a styled
+        span is not parsed and renders the same on every client.
 
         Args:
             day (Dict[str, Any]):
@@ -244,24 +273,75 @@ def _format_day_text(
                 omits it, because the title already names the day.
 
         Returns:
-            text (str):
+            elements (List[Dict[str, Any]]):
                 The day's rows, each an event and time in bold followed
                 by one line per role.
     """
 
-    blocks = []
+    elements: List[Dict[str, Any]] = []
 
     if show_heading is True and day['day']:
-        blocks.append(f'*{day["day"]}*')
+        elements.append(_bold(text=day['day']))
+        elements.append({'type': 'text', 'text': '\n\n'})
 
-    for row in day['rows']:
+    last_row = len(day['rows']) - 1
+    for index, row in enumerate(day['rows']):
         counts = '\n'.join(
             _format_count(entry=entry, event=row['event'])
             for entry in row['entries']
         )
-        blocks.append(f'*{row["event"]} {row["when"]}*\n{counts}')
+        # A blank line separates rows, but not after the final one,
+        # which would pad the bottom of the day.
+        gap = '\n\n' if index < last_row else ''
+        elements.append(_bold(text=f'{row["event"]} {row["when"]}'))
+        elements.append({'type': 'text', 'text': f'\n{counts}{gap}'})
 
-    return '\n\n'.join(blocks)
+    return elements
+
+
+def _build_summary_elements(
+        days: List[Dict[str, Any]],
+        show_headings: bool
+) -> List[Dict[str, Any]]:
+    """ Build every day's rows as one run of 'rich_text' elements.
+
+        The days share a single block so that the spacing between them
+        is set here rather than by Slack.  Adjacent 'rich_text' blocks
+        sit closer together than a blank line, which put a new date
+        nearer the previous day's last row than that day's own rows
+        were to each other.
+
+        Args:
+            days (List[Dict[str, Any]]):
+                Days in order (see '_group_rows_by_day').
+
+            show_headings (bool):
+                Whether each day leads with its date.
+
+        Returns:
+            elements (List[Dict[str, Any]]):
+                The days in order, separated by a wider gap than the
+                one between rows.
+    """
+
+    elements: List[Dict[str, Any]] = []
+
+    for day in days:
+        day_elements = _build_day_elements(
+            day=day,
+            show_heading=show_headings
+        )
+        if not day_elements:
+            continue
+
+        if elements:
+            # Two blank lines set a new date apart; one is the gap
+            # between rows and would read as just another row.
+            elements.append({'type': 'text', 'text': '\n\n\n'})
+
+        elements.extend(day_elements)
+
+    return elements
 
 
 def _event_position(
@@ -419,20 +499,24 @@ def build_summary_blocks(
     needs = summary.get('needs', [])
     rows = _build_rows(needs=needs)
 
-    # One section per day, rather than per row: Slack caps a message at
-    # 50 blocks, which a week-long window would approach a row at a
-    # time.  A day's text stays far inside the 3000-character limit.
-    for day in _group_rows_by_day(rows=rows):
+    # One block for the whole list, rather than one per row: Slack caps
+    # a message at 50 blocks, which a week-long window would approach a
+    # row at a time.  Holding the days together also keeps the spacing
+    # between them under this module's control.
+    summary_elements = _build_summary_elements(
+        days=_group_rows_by_day(rows=rows),
+        show_headings=summary.get('multi_day', False)
+    )
+    if summary_elements:
         blocks.append(
             {
-                'type': 'section',
-                'text': {
-                    'type': 'mrkdwn',
-                    'text': _format_day_text(
-                        day=day,
-                        show_heading=summary.get('multi_day', False)
-                    )
-                }
+                'type': 'rich_text',
+                'elements': [
+                    {
+                        'type': 'rich_text_section',
+                        'elements': summary_elements
+                    }
+                ]
             }
         )
 
