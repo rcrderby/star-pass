@@ -31,11 +31,9 @@ SIMPLE_DATE_FORMAT = '%A, %B %d %Y'
 SIMPLE_TIME_FORMAT = '%H:%M'
 
 # Data file management
-# Encoding for file *content* (CSV, JSON, YAML, .env).  This is not the
-# filesystem encoding, which describes path names: reading content with
-# 'sys.getfilesystemencoding()' happened to work only because it
-# resolves to UTF-8 on the platforms in use, and would corrupt a
-# non-ASCII event title anywhere it does not.
+# Encoding for file *content* (CSV, JSON, YAML, .env).  Not the
+# filesystem encoding, which describes path names and is not
+# guaranteed to be UTF-8; a non-ASCII event title needs this one.
 FILE_ENCODING = 'utf-8'
 # .env file path
 ENV_FILE_PATH = './.env'
@@ -175,11 +173,11 @@ BASE_GCAL_ENDPOINT = '/events'
 GCAL_ORDER_BY = 'startTime'
 GCAL_SHOW_DELETED = 'false'
 GCAL_SINGLE_EVENTS = 'true'
-# 'GCAL_WINDOW_START' and 'GCAL_WINDOW_END' are deliberately NOT defined here.
-# They bound the calendar search window, which moves with every run, so
-# no default can stay correct: a stale default silently collects zero
-# events and writes an empty CSV.  'gcal_data' requires them from the
-# environment instead, and reports a clear error when they are missing.
+# 'GCAL_WINDOW_START' and 'GCAL_WINDOW_END' have no default here.  They
+# bound the calendar search window, which moves with every run, so no
+# default stays correct, and a stale one collects zero events and
+# writes an empty CSV.  'gcal_data' requires them from the environment
+# and reports a clear error when they are missing.
 # Time zone applied to a search window value written without a UTC
 # offset, so a plain local date means the same thing year round and
 # Daylight Saving is applied automatically.  A value that carries its

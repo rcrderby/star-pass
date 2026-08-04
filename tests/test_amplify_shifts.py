@@ -58,9 +58,9 @@ class TestBaseFileName:
         )
 
     def test_only_removes_the_suffix_not_a_character_set(self):
-        # Regression for the previous rstrip('.csv') bug, which stripped
-        # any trailing '.', 'c', 's', or 'v' characters. removesuffix
-        # must remove only the exact '.csv' extension.
+        # rstrip('.csv') would strip any trailing '.', 'c', 's', or
+        # 'v' characters. removesuffix removes only the exact '.csv'
+        # extension.
         shifts = CreateShifts(
             input_file='shifts_scv.csv',
             auto_prep_data=False
@@ -77,7 +77,7 @@ class TestBaseFileName:
 
 class TestDataPipeline:
     # CSV in, Amplify POST body out. Guards the whole transformation
-    # chain, which previously had no coverage at all.
+    # chain.
 
     def test_builds_a_valid_grouped_payload(self, csv_dir):
         input_file = _write_csv(
@@ -150,10 +150,10 @@ class TestDataPipeline:
 
 
 class TestValidateShiftRows:
-    # Regression guard: an event title that matches no category in the
-    # shift data model reaches the CSV with a blank need_id. groupby
-    # drops null keys, so those rows used to vanish silently -- the shift
-    # was never created and nothing reported it. The run must now fail.
+    # An event title that matches no category in the shift data model
+    # reaches the CSV with a blank need_id. groupby drops null keys, so
+    # those rows would be discarded silently and their shifts never
+    # created. The run must fail instead.
 
     def test_blank_need_id_exits_and_names_the_event(self, csv_dir, caplog):
         input_file = _write_csv(
@@ -219,8 +219,8 @@ class TestValidateShiftRows:
         assert csv_dir is not None
 
     def test_missing_columns_are_named(self, csv_dir, caplog):
-        # A hand-edited file with a renamed column previously surfaced
-        # as a bare KeyError from whichever transformation hit it first.
+        # The file is hand-edited, so a renamed column is expected
+        # input and must be named rather than raising a bare KeyError.
         path = csv_dir / 'bad_columns.csv'
         path.write_text(
             'need_name,need_id,start_date,start_time\n'
@@ -236,8 +236,7 @@ class TestValidateShiftRows:
         assert 'slots' in caplog.text
 
     def test_unparseable_start_is_named(self, csv_dir, caplog):
-        # 'dateparser.parse' returns None rather than raising, which
-        # used to surface as an AttributeError.
+        # 'dateparser.parse' returns None rather than raising.
         input_file = _write_csv(
             csv_dir,
             ['Adult Game A,879609,not-a-date,99:99,60,12']

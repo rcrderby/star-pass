@@ -178,9 +178,9 @@ class TestLocalNow:
     def test_reads_the_configured_zone_not_the_host_clock(
             self, monkeypatch
     ):
-        # The regression this guards: a container or CI runner in UTC
-        # is already on tomorrow's date during a Portland evening, which
-        # would move a same-day summary onto the wrong day.
+        # A container or CI runner in UTC is already on tomorrow's
+        # date during a Portland evening, which would move a same-day
+        # summary onto the wrong day.
         monkeypatch.setattr(amplify_responses, 'LOCAL_TIMEZONE', 'UTC')
         as_utc = local_now()
         monkeypatch.setattr(

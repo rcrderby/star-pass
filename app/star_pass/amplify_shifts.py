@@ -901,10 +901,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """ Upload shift data to create new Amplify shifts.
 
             The body of each request is built from the prepared data in
-            'self._json_shift_data'.  A 'json' parameter used to be
-            documented as a way to send a custom body, but the loop
-            below overwrote it on every iteration, so it never had any
-            effect and is not reinstated here.
+            'self._json_shift_data'.
 
             Args:
                 timeout (int):

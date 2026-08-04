@@ -37,10 +37,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      # Pin the interpreter.  Without this the job ran on whichever
-      # Python the runner image happened to ship, so the 'requires-python'
-      # floor was never enforced and a runner image update could change
-      # the interpreter silently.
+      # Pin the interpreter so the 'requires-python' floor is enforced
+      # and a runner image update cannot change it silently.
       # setup-python action documentation
       # https://github.com/marketplace/actions/setup-python
       - name: Setup Python

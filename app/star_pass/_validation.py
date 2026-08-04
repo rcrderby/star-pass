@@ -95,11 +95,10 @@ def validate_shift_need_ids(
         'Helpers.search_shift_info' assigns the review fallback -- a
         category whose need IDs are empty -- to an event title it cannot
         match confidently, so an unmatched Google Calendar event reaches
-        the CSV with a blank 'need_id'.  Because 'DataFrame.groupby'
-        drops null keys, those rows used to vanish during grouping: the
-        shift never reached Amplify and nothing reported it.  Fail here
-        instead, naming every event that needs an alias in the shift
-        data model.
+        the CSV with a blank 'need_id'.  'DataFrame.groupby' drops null
+        keys, which would silently discard those rows rather than
+        create their shifts, so fail here and name every event that
+        needs an alias in the shift data model.
 
         Args:
             shift_data (frame.DataFrame):
