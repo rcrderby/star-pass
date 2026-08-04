@@ -197,3 +197,54 @@ class TestPostSummary:
         assert kwargs['blocks'][0]['type'] == 'header'
         # Fallback text names the summary and the shift count.
         assert kwargs['text'] == 'Scrimmage Sign-Ups - 2 shift(s)'
+
+
+class TestPostSummarySkipsEmpty:
+    # A summary covers a short day window, so a day with nothing
+    # scheduled is routine.  Posting "nothing today" every off day would
+    # be noise, especially once the summary runs on a schedule.
+    def _empty_summary(self) -> dict:
+        return {
+            'title': 'Shift sign-ups for Tuesday, July 14 2026',
+            'as_of': '2026-07-14 09:00',
+            'shifts': []
+        }
+
+    def test_live_post_is_skipped(self):
+        client = Mock()
+        notifier = SlackNotifier(
+            channel='C123',
+            check_mode=False,
+            token=FAKE_XOXB,
+            client=client
+        )
+
+        assert notifier.post_summary(summary=self._empty_summary()) is None
+        client.chat_postMessage.assert_not_called()
+
+    def test_check_mode_is_skipped_too(self, capsys):
+        # A dry run must preview what a live run would do, including
+        # doing nothing.
+        client = Mock()
+        notifier = SlackNotifier(
+            channel='C123',
+            check_mode=True,
+            client=client
+        )
+
+        assert notifier.post_summary(summary=self._empty_summary()) is None
+        client.chat_postMessage.assert_not_called()
+        # The Block Kit payload is not printed for an empty summary.
+        assert 'blocks' not in capsys.readouterr().out
+
+    def test_missing_shifts_key_is_treated_as_empty(self):
+        client = Mock()
+        notifier = SlackNotifier(
+            channel='C123',
+            check_mode=False,
+            token=FAKE_XOXB,
+            client=client
+        )
+
+        assert notifier.post_summary(summary={'title': 'No key'}) is None
+        client.chat_postMessage.assert_not_called()

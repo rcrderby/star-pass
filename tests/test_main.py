@@ -99,7 +99,9 @@ class TestMainRunModeDispatch:
 
         assert 'Run mode is "Post Slack Summary"' in caplog.text
         app_main.AmplifyResponses.return_value.build_need_summary \
-            .assert_called_once_with(need_id='879610', title=None)
+            .assert_called_once_with(
+                need_id='879610', title=None, days=None
+            )
         # Dry run by default; channel falls back to the configured value
         # (None in the test environment).
         app_main.SlackNotifier.assert_called_once_with(
@@ -114,6 +116,7 @@ class TestMainRunModeDispatch:
             [
                 '--post-slack-summary',
                 '--need-id', '5',
+                '--days', '3',
                 '--slack-title', 'Custom',
                 '--slack-channel', 'C999',
                 '--check-mode', 'false'
@@ -121,7 +124,9 @@ class TestMainRunModeDispatch:
         )
 
         app_main.AmplifyResponses.return_value.build_need_summary \
-            .assert_called_once_with(need_id='5', title='Custom')
+            .assert_called_once_with(
+                need_id='5', title='Custom', days=3
+            )
         app_main.SlackNotifier.assert_called_once_with(
             channel='C999',
             check_mode=False
@@ -182,6 +187,36 @@ class TestMainArgumentErrors:
             app_main.main(['-g', '-n', 'events', '-N', '5'])
         assert exc_info.value.code != 0
         app_main.GCALData.assert_not_called()
+
+    def test_zero_days_exits_nonzero(self, app_main):
+        # Day one is today, so a window must cover at least one day.
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-s', '-N', '5', '-d', '0'])
+        assert exc_info.value.code != 0
+        app_main.AmplifyResponses.assert_not_called()
+
+    def test_negative_days_exits_nonzero(self, app_main):
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-s', '-N', '5', '-d', '-2'])
+        assert exc_info.value.code != 0
+        app_main.AmplifyResponses.assert_not_called()
+
+    def test_non_numeric_days_exits_nonzero(self, app_main):
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-s', '-N', '5', '-d', 'today'])
+        assert exc_info.value.code != 0
+
+    def test_get_mode_rejects_days(self, app_main):
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-g', '-n', 'events', '-d', '2'])
+        assert exc_info.value.code != 0
+        app_main.GCALData.assert_not_called()
+
+    def test_create_mode_rejects_days(self, app_main):
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-c', '-i', 'x.csv', '-d', '2'])
+        assert exc_info.value.code != 0
+        app_main.CreateShifts.assert_not_called()
 
     def test_invalid_check_mode_value_exits_nonzero(self, app_main):
         with pytest.raises(SystemExit) as exc_info:
