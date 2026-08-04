@@ -36,6 +36,7 @@ RESPONSES_MAX_PAGES = _defaults.AMPLIFY_RESPONSES_MAX_PAGES
 RESPONSES_SINCE_FORMAT = _defaults.AMPLIFY_RESPONSES_SINCE_FORMAT
 RESPONSES_MARGIN_WARN_DAYS = _defaults.AMPLIFY_RESPONSES_MARGIN_WARN_DAYS
 AMPLIFY_NEED_DETAIL_URL = _defaults.AMPLIFY_NEED_DETAIL_URL
+SUMMARY_DAYS = _defaults.SLACK_SUMMARY_DAYS
 AMPLIFY_SHIFT_DATETIME_FORMAT = _defaults.AMPLIFY_SHIFT_DATETIME_FORMAT
 SIMPLE_DATE_FORMAT = _defaults.SIMPLE_DATE_FORMAT
 SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
@@ -134,36 +135,111 @@ def _max_numeric_id(
     return max(ids) if ids else None
 
 
+def _window_end(
+        now: datetime,
+        days: int
+) -> datetime:
+    """ Return the last instant of a summary window.
+
+        The window counts today as day one, so 'days=1' ends at the last
+        instant of today and 'days=2' ends at the last instant of
+        tomorrow.
+
+        Args:
+            now (datetime):
+                Reference time; its calendar date is day one.
+
+            days (int):
+                Number of calendar days to cover, one or greater.
+
+        Raises:
+            ValueError:
+                If 'days' is less than one.
+
+        Returns:
+            window_end (datetime):
+                The last instant of the final day in the window.
+    """
+
+    if days < 1:
+        raise ValueError(
+            f'Summary window must cover at least one day, got {days}.'
+        )
+
+    last_day = now + timedelta(days=days - 1)
+
+    return last_day.replace(
+        hour=23,
+        minute=59,
+        second=59,
+        microsecond=999999
+    )
+
+
 def _upcoming_shifts(
         shifts: List[Dict[str, Any]],
-        now: datetime
+        now: datetime,
+        window_end: datetime
 ) -> List[Dict[str, Any]]:
-    """ Select the shifts starting at or after 'now', ordered by start.
+    """ Select the shifts starting inside the window, ordered by start.
 
         A long-lived need accumulates hundreds of past shifts that a
-        sign-up summary should not repeat.  Shifts with an unparseable
-        start are skipped.
+        sign-up summary should not repeat, and a summary is a call for
+        volunteers over the next day or few, not a full backlog.  Shifts
+        that already started are excluded, as are shifts with an
+        unparseable start.
 
         Args:
             shifts (List[Dict[str, Any]]):
                 Shift objects from a need.
 
             now (datetime):
-                Reference time for the comparison.
+                Start of the window; shifts before this are past.
+
+            window_end (datetime):
+                End of the window (see '_window_end').
 
         Returns:
             upcoming (List[Dict[str, Any]]):
-                The upcoming shifts, earliest first.
+                The shifts inside the window, earliest first.
     """
 
     dated = []
     for shift in shifts:
         start_dt = _shift_start_dt(shift=shift)
-        if start_dt is not None and start_dt >= now:
+        if start_dt is not None and now <= start_dt <= window_end:
             dated.append((start_dt, shift))
     dated.sort(key=lambda pair: pair[0])
 
     return [shift for _start_dt, shift in dated]
+
+
+def _window_title(
+        now: datetime,
+        window_end: datetime
+) -> str:
+    """ Build a default summary title describing the window.
+
+        Args:
+            now (datetime):
+                Start of the window.
+
+            window_end (datetime):
+                End of the window (see '_window_end').
+
+        Returns:
+            title (str):
+                A title naming the window's date, or its date range when
+                the window covers more than one day.
+    """
+
+    start_label = now.strftime(SIMPLE_DATE_FORMAT)
+    end_label = window_end.strftime(SIMPLE_DATE_FORMAT)
+
+    if start_label == end_label:
+        return f'Shift sign-ups for {start_label}'
+
+    return f'Shift sign-ups for {start_label} - {end_label}'
 
 
 def _format_shift_when(
@@ -508,38 +584,61 @@ class AmplifyResponses:
             self,
             need_id: str | int,
             title: Optional[str] = None,
-            now: Optional[datetime] = None
+            now: Optional[datetime] = None,
+            days: Optional[int] = None
     ) -> Dict[str, Any]:
         """ Build a sign-up summary for a need's upcoming shifts.
 
             Combines the need's upcoming shifts (for capacity and timing)
             with its recent responses (for live filled counts) into the
             structure consumed by 'slack_notify.build_summary_blocks'.
-            Only shifts starting at or after 'now' are included; a
-            long-lived need accumulates hundreds of past shifts that a
-            sign-up summary should not repeat.
+            Only shifts starting between 'now' and the end of the day
+            window are included: a long-lived need accumulates hundreds
+            of past shifts that a sign-up summary should not repeat, and
+            the summary is a call for volunteers over the next day or
+            few rather than a full backlog.
 
             Args:
                 need_id (str | int):
                     Amplify need ID.
 
                 title (str, optional):
-                    Summary heading.  Defaults to the need title.
+                    Summary heading.  Defaults to a heading naming the
+                    window's date or date range.
 
                 now (datetime, optional):
-                    Reference time for the upcoming-shift filter, the
+                    Reference time for the shift window, the
                     'since_created' window, and the 'as_of' stamp.
                     Defaults to the current local time.
+
+                days (int, optional):
+                    Number of calendar days the summary covers, counting
+                    today as day one.  Defaults to
+                    'SLACK_SUMMARY_DAYS'.
+
+            Raises:
+                ValueError:
+                    If 'days' is less than one.
 
             Returns:
                 summary (Dict[str, Any]):
                     A summary with 'title', 'as_of', and 'shifts' (each
                     with 'name', 'start', 'end', 'filled', 'slots', and
-                    'signup_url'), ordered by start time.
+                    'signup_url'), ordered by start time.  The 'shifts'
+                    list is empty when nothing falls inside the window.
         """
 
         if now is None:
             now = datetime.now()
+
+        if days is None:
+            days = SUMMARY_DAYS
+
+        # The shift window: from now through the end of its final day
+        window_end = _window_end(
+            now=now,
+            days=days
+        )
 
         # The server-side window bounding the responses read
         cutoff = now - timedelta(days=self.since_days)
@@ -553,10 +652,11 @@ class AmplifyResponses:
         )
         counts = count_signups_by_shift(responses=responses)
 
-        # Keep only shifts starting at or after 'now', ordered by start
+        # Keep only shifts starting inside the window, ordered by start
         upcoming = _upcoming_shifts(
             shifts=need.get('shifts', []),
-            now=now
+            now=now,
+            window_end=window_end
         )
 
         # Warn when the counts sit close to the window edge
@@ -569,7 +669,10 @@ class AmplifyResponses:
         as_of_format = f'{SIMPLE_DATE_FORMAT} {SIMPLE_TIME_FORMAT}'
 
         return {
-            'title': title or need.get('need_title', 'Sign-Ups'),
+            'title': title or _window_title(
+                now=now,
+                window_end=window_end
+            ),
             'as_of': now.strftime(as_of_format),
             'shifts': _build_summary_shifts(
                 shifts=upcoming,

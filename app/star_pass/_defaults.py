@@ -253,6 +253,15 @@ SLACK_DEV_CHANNEL = getenv('SLACK_DEV_CHANNEL')
 SLACK_CHECK_MODE_MESSAGE = '\n** Slack Check Mode Run (no message sent) **'
 # Label for the sign-up link button attached to a shift.
 SLACK_SIGN_UP_BUTTON_TEXT = 'Sign up'
+# Number of calendar days a sign-up summary covers, counting today as
+# day one: 1 is today only, 2 adds tomorrow, and so on.  The summary
+# replaces a same-day call for volunteers, so the default is today.
+SLACK_SUMMARY_DAYS = int(
+    getenv(
+        'SLACK_SUMMARY_DAYS',
+        '1'
+    )
+)
 
 # Amplify responses (sign-ups)
 # Public need-detail URL used for shift sign-up link buttons.

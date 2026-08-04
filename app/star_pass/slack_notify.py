@@ -341,8 +341,22 @@ class SlackNotifier:
 
             Returns:
                 response (Any | None):
-                    The Slack API response, or None in check mode.
+                    The Slack API response, or None when the summary is
+                    empty or the notifier is in check mode.
         """
+
+        # A summary with no shifts is not worth posting.  The summary
+        # covers a short day window, so an empty one means a day with
+        # nothing scheduled -- routine, not an error.  Skipping in check
+        # mode too keeps a dry run an accurate preview of a live run.
+        if not summary.get('shifts'):
+            message = (
+                'No shifts in the summary window; skipped posting to '
+                'Slack.'
+            )
+            logger.info(message)
+            self.helpers.printer(message=message)
+            return None
 
         # Build the message payload from the summary data
         blocks = build_summary_blocks(summary=summary)

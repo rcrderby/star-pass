@@ -34,7 +34,7 @@ USAGE = (
     '       star-pass -c -i INPUT_FILE [-C {true,false}] '
     '[-o {basic,simple,detailed}]\n'
     '       star-pass -s -N NEED_ID [-C {true,false}] '
-    '[-t TITLE] [-k CHANNEL]'
+    '[-d DAYS] [-t TITLE] [-k CHANNEL]'
 )
 
 # Initialize helper methods
@@ -153,9 +153,18 @@ def build_parser() -> argparse.ArgumentParser:
         help='Amplify need ID to summarize (required with -s).'
     )
     slack_group.add_argument(
+        '-d', '--days',
+        type=int,
+        default=None,
+        help=(
+            'Calendar days to summarize, counting today as day one; '
+            '1 is today only (default: SLACK_SUMMARY_DAYS, else 1).'
+        )
+    )
+    slack_group.add_argument(
         '-t', '--slack-title',
         default=None,
-        help='Message title (default: the need title).'
+        help='Message title (default: the summary window dates).'
     )
     slack_group.add_argument(
         '-k', '--slack-channel',
@@ -250,6 +259,7 @@ def _run(
                 args.input_file,
                 args.output_verbosity,
                 args.need_id,
+                args.days,
                 args.slack_title,
                 args.slack_channel,
                 args.check_mode
@@ -284,6 +294,7 @@ def _run(
             for value in (
                 args.gcal_name,
                 args.need_id,
+                args.days,
                 args.slack_title,
                 args.slack_channel
             )
@@ -328,6 +339,10 @@ def _run(
             parser.error(
                 '-s/--post-slack-summary requires -N/--need-id'
             )
+        if args.days is not None and args.days < 1:
+            parser.error(
+                '-d/--days must be 1 or greater (1 is today only)'
+            )
         if any(
             value is not None
             for value in (
@@ -365,7 +380,8 @@ def _run(
         # Build the sign-up summary and post it to Slack
         summary = AmplifyResponses().build_need_summary(
             need_id=args.need_id,
-            title=args.slack_title
+            title=args.slack_title,
+            days=args.days
         )
         SlackNotifier(
             channel=channel,

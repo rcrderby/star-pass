@@ -11,6 +11,9 @@
 from datetime import datetime, timedelta
 from unittest.mock import Mock
 
+# Imports - Third-Party
+import pytest
+
 # Imports - Local
 from star_pass.amplify_responses import (
     AmplifyResponses,
@@ -19,6 +22,8 @@ from star_pass.amplify_responses import (
     _max_numeric_id,
     _response_created_dt,
     _upcoming_shifts,
+    _window_end,
+    _window_title,
 )
 from star_pass import _defaults
 
@@ -36,6 +41,11 @@ SAMPLE_RESPONSES = [
 
 # A fixed 'now' keeps the upcoming-shift filter deterministic.
 NOW = datetime(2026, 7, 14, 9, 0, 0)
+# A window wide enough to reach every sample shift, used by the tests
+# that exercise composition, ordering, and counting rather than the day
+# window itself.  NOW is day one, so this reaches 2026-07-22.
+WIDE_DAYS = 9
+WIDE_WINDOW_END = datetime(2026, 7, 22, 23, 59, 59, 999999)
 
 
 def _mock_response(payload: dict) -> Mock:
@@ -115,14 +125,53 @@ class TestHelperFunctions:
             _shift('BAD', 'not-a-date', 'not-a-date'),
         ]
 
-        result = _upcoming_shifts(shifts, NOW)
+        result = _upcoming_shifts(shifts, NOW, WIDE_WINDOW_END)
 
         assert [shift['id'] for shift in result] == ['SOON', 'LATER']
 
     def test_upcoming_shifts_includes_a_shift_starting_now(self):
         shifts = [_shift('NOW', '2026-07-14 09:00:00', '2026-07-14 10:00:00')]
 
-        assert len(_upcoming_shifts(shifts, NOW)) == 1
+        assert len(_upcoming_shifts(shifts, NOW, WIDE_WINDOW_END)) == 1
+
+    def test_upcoming_shifts_excludes_a_shift_past_the_window(self):
+        # The window's last instant is inclusive; the next one is not.
+        shifts = [
+            _shift('IN', '2026-07-22 23:59:59', '2026-07-23 01:00:00'),
+            _shift('OUT', '2026-07-23 00:00:00', '2026-07-23 01:00:00'),
+        ]
+
+        result = _upcoming_shifts(shifts, NOW, WIDE_WINDOW_END)
+
+        assert [shift['id'] for shift in result] == ['IN']
+
+    def test_window_end_covers_the_rest_of_today(self):
+        # Day one is today, so the window ends at today's last instant.
+        assert _window_end(NOW, 1) == datetime(
+            2026, 7, 14, 23, 59, 59, 999999
+        )
+
+    def test_window_end_counts_today_as_day_one(self):
+        assert _window_end(NOW, 2) == datetime(
+            2026, 7, 15, 23, 59, 59, 999999
+        )
+
+    def test_window_end_rejects_a_window_shorter_than_a_day(self):
+        with pytest.raises(ValueError, match='at least one day'):
+            _window_end(NOW, 0)
+
+    def test_window_title_names_a_single_day(self):
+        title = _window_title(NOW, _window_end(NOW, 1))
+
+        assert title == 'Shift sign-ups for Tuesday, July 14 2026'
+
+    def test_window_title_names_a_date_range(self):
+        title = _window_title(NOW, _window_end(NOW, 2))
+
+        assert title == (
+            'Shift sign-ups for Tuesday, July 14 2026 - '
+            'Wednesday, July 15 2026'
+        )
 
 
 class TestGetRecentResponses:
@@ -274,6 +323,14 @@ class TestBuildNeedSummary:
         )
         return reader
 
+    def _wide_summary(self, monkeypatch, need):
+        # These tests cover composition, ordering, and counting; the day
+        # window has its own tests, so it is opened wide here.
+        reader = self._reader_with(monkeypatch, need, [])
+        return reader.build_need_summary(
+            need_id='1', now=NOW, days=WIDE_DAYS
+        )
+
     def test_composes_live_counts(self, monkeypatch):
         need = {
             'need_title': 'Adult Scrimmage Officials',
@@ -284,10 +341,14 @@ class TestBuildNeedSummary:
         }
         reader = self._reader_with(monkeypatch, need, SAMPLE_RESPONSES)
 
-        summary = reader.build_need_summary(need_id='628861', now=NOW)
+        summary = reader.build_need_summary(
+            need_id='628861', now=NOW, days=WIDE_DAYS
+        )
         shifts = summary['shifts']
 
-        assert summary['title'] == 'Adult Scrimmage Officials'
+        # The default title names the window, not the need: a summary
+        # can cover several needs at once.
+        assert summary['title'].startswith('Shift sign-ups for')
         assert 'as_of' in summary
         assert len(shifts) == 2
         # The inactive response is not counted.
@@ -308,9 +369,7 @@ class TestBuildNeedSummary:
                 _shift('NEW', '2026-07-20 18:00:00', '2026-07-20 19:00:00'),
             ]
         }
-        reader = self._reader_with(monkeypatch, need, [])
-
-        summary = reader.build_need_summary(need_id='1', now=NOW)
+        summary = self._wide_summary(monkeypatch, need)
 
         assert len(summary['shifts']) == 1
         assert 'July 20 2026' in summary['shifts'][0]['name']
@@ -323,9 +382,7 @@ class TestBuildNeedSummary:
                 _shift('A', '2026-07-15 18:00:00', '2026-07-15 19:00:00'),
             ]
         }
-        reader = self._reader_with(monkeypatch, need, [])
-
-        summary = reader.build_need_summary(need_id='1', now=NOW)
+        summary = self._wide_summary(monkeypatch, need)
         names = [shift['name'] for shift in summary['shifts']]
 
         assert 'July 15 2026' in names[0]
@@ -339,9 +396,7 @@ class TestBuildNeedSummary:
                 _shift('OK', '2026-07-20 18:00:00', '2026-07-20 19:00:00'),
             ]
         }
-        reader = self._reader_with(monkeypatch, need, [])
-
-        summary = reader.build_need_summary(need_id='1', now=NOW)
+        summary = self._wide_summary(monkeypatch, need)
 
         assert len(summary['shifts']) == 1
 
@@ -352,9 +407,7 @@ class TestBuildNeedSummary:
                 _shift('S9', '2026-07-20 18:00:00', '2026-07-20 20:45:00')
             ]
         }
-        reader = self._reader_with(monkeypatch, need, [])
-
-        summary = reader.build_need_summary(need_id='1', now=NOW)
+        summary = self._wide_summary(monkeypatch, need)
         assert summary['shifts'][0]['filled'] == 0
 
     def test_title_override(self, monkeypatch):
@@ -365,6 +418,71 @@ class TestBuildNeedSummary:
             need_id='1', title='Custom', now=NOW
         )
         assert summary['title'] == 'Custom'
+
+    def test_defaults_to_today_only(self, monkeypatch):
+        # The default window replaces the same-day post an admin used to
+        # write by hand, so tomorrow's shift must not appear.
+        need = {
+            'need_title': 'Scrimmages',
+            'shifts': [
+                _shift('TODAY', '2026-07-14 18:00:00', '2026-07-14 19:00:00'),
+                _shift(
+                    'TOMORROW',
+                    '2026-07-15 18:00:00',
+                    '2026-07-15 19:00:00'
+                )
+            ]
+        }
+        reader = self._reader_with(monkeypatch, need, [])
+
+        summary = reader.build_need_summary(need_id='1', now=NOW)
+
+        assert [shift['start'] for shift in summary['shifts']] == ['18:00']
+        assert 'July 14 2026' in summary['shifts'][0]['name']
+
+    def test_two_days_reaches_tomorrow(self, monkeypatch):
+        need = {
+            'need_title': 'Scrimmages',
+            'shifts': [
+                _shift('TODAY', '2026-07-14 18:00:00', '2026-07-14 19:00:00'),
+                _shift(
+                    'TOMORROW',
+                    '2026-07-15 18:00:00',
+                    '2026-07-15 19:00:00'
+                ),
+                _shift('LATER', '2026-07-16 18:00:00', '2026-07-16 19:00:00')
+            ]
+        }
+        reader = self._reader_with(monkeypatch, need, [])
+
+        summary = reader.build_need_summary(need_id='1', now=NOW, days=2)
+        names = [shift['name'] for shift in summary['shifts']]
+
+        assert len(names) == 2
+        assert 'July 14 2026' in names[0]
+        assert 'July 15 2026' in names[1]
+
+    def test_empty_window_yields_no_shifts(self, monkeypatch):
+        # A day with nothing scheduled is routine, not an error; the
+        # caller decides not to post.
+        need = {
+            'need_title': 'Quiet Day',
+            'shifts': [
+                _shift('LATER', '2026-07-20 18:00:00', '2026-07-20 19:00:00')
+            ]
+        }
+        reader = self._reader_with(monkeypatch, need, [])
+
+        summary = reader.build_need_summary(need_id='1', now=NOW)
+
+        assert summary['shifts'] == []
+        assert summary['title']
+
+    def test_rejects_a_window_shorter_than_a_day(self, monkeypatch):
+        reader = self._reader_with(monkeypatch, {'shifts': []}, [])
+
+        with pytest.raises(ValueError, match='at least one day'):
+            reader.build_need_summary(need_id='1', now=NOW, days=0)
 
     def test_passes_the_since_created_window(self, monkeypatch):
         # The window must be derived from 'now' and 'since_days'.
@@ -420,7 +538,9 @@ class TestWindowMarginLogging:
         )
 
         with caplog.at_level('WARNING'):
-            reader.build_need_summary(need_id='1', now=NOW)
+            reader.build_need_summary(
+                need_id='1', now=NOW, days=WIDE_DAYS
+            )
 
         assert 'AMPLIFY_RESPONSES_SINCE_DAYS' in caplog.text
 
@@ -432,7 +552,9 @@ class TestWindowMarginLogging:
         )
 
         with caplog.at_level('INFO'):
-            reader.build_need_summary(need_id='1', now=NOW)
+            reader.build_need_summary(
+                need_id='1', now=NOW, days=WIDE_DAYS
+            )
 
         assert 'margin is healthy' in caplog.text
         assert 'AMPLIFY_RESPONSES_SINCE_DAYS' not in caplog.text
@@ -453,6 +575,8 @@ class TestWindowMarginLogging:
         )
 
         with caplog.at_level('INFO'):
-            reader.build_need_summary(need_id='1', now=NOW)
+            reader.build_need_summary(
+                need_id='1', now=NOW, days=WIDE_DAYS
+            )
 
         assert 'margin' not in caplog.text

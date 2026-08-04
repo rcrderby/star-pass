@@ -58,7 +58,10 @@ through the Amplify API. It is run once per month.
 ./app/__main__.py -c -i gcal_shifts_<timestamp>.csv -C true
 
 # 3. Post a Slack sign-up summary for a need (-C true is a dry run).
+#    -d/--days sets the window, counting today as day one; the default
+#    is 1 (today only). Nothing in the window means nothing is posted.
 ./app/__main__.py -s -N <need_id> -C true
+./app/__main__.py -s -N <need_id> -d 2 -C true
 ```
 
 ## Development

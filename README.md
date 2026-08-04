@@ -103,11 +103,15 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     data model, so the review fallback assigned an empty ID. See
     [Unmatched event titles](#unmatched-event-titles) below.
 
-3. Post a shift sign-up summary to Slack (live counts per **upcoming** shift):
+3. Post a shift sign-up summary to Slack (live counts per shift, for
+   **today** by default):
 
     ```bash
     # Dry run (default): build and print the Block Kit message, no send
     ./app/__main__.py -s -N 879610
+
+    # Cover today and tomorrow instead of just today
+    ./app/__main__.py -s -N 879610 -d 2
 
     # Post live (needs SLACK_BOT_TOKEN); -k overrides the default
     # channel (SLACK_CHANNEL, else SLACK_DEV_CHANNEL)
@@ -119,14 +123,26 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
 
     Requires `SLACK_BOT_TOKEN` and a destination channel (`SLACK_CHANNEL` or `SLACK_DEV_CHANNEL`, or `-k`) in your `.env`; see `.env.example`.
 
-    The summary lists only shifts that start in the future, with a live
-    sign-up count for each. Counts come from the Amplify `/responses`
+    **The day window.** `-d`/`--days` sets how many calendar days the
+    summary covers, counting today as day one: `1` (the default) is today
+    only, `2` adds tomorrow. Set `SLACK_SUMMARY_DAYS` in `.env` to change
+    the default. Shifts that already started never appear, so a summary
+    posted at noon lists only what is still to come that day.
+
+    When nothing falls inside the window, the run logs that and posts
+    nothing. A day with no shifts is routine, so an empty summary is not
+    an error and does not produce a message.
+
+    Counts come from the Amplify `/responses`
     endpoint, which has no server-side filter for a need or for a shift's
     date, so the run reads the domain's recent responses and filters them
     to the need. `AMPLIFY_RESPONSES_SINCE_DAYS` (default 90) bounds how far
     back that read goes: a sign-up cannot predate the shift it is for, so a
     90-day window comfortably covers sign-ups for upcoming shifts. Each run
     logs how much margin the window had, and warns when it gets thin.
+    Note this is unrelated to `-d`/`--days`: it bounds when a *sign-up*
+    was created, not when a *shift* starts, so narrowing the day window
+    does not shorten that read.
 
 ## Unmatched event titles
 
