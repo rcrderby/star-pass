@@ -277,7 +277,7 @@ def _flatten(elements):
     return ''.join(element['text'] for element in elements)
 
 
-def _day_blocks(blocks):
+def _rich_text_blocks(blocks):
     return [
         block['elements'][0]['elements']
         for block in blocks if block['type'] == 'rich_text'
@@ -356,28 +356,42 @@ class TestBuildSummaryBlocks:
         assert '4:50 p.m.' in blocks[1]['elements'][0]['text']
         assert blocks[2] == {'type': 'divider'}
 
-    def test_one_block_per_day_plus_the_prompt(self, summary):
+    def test_one_shift_block_plus_the_prompt(self, summary):
         blocks = build_summary_blocks(summary)
-        days = _day_blocks(blocks)
+        rich_text = _rich_text_blocks(blocks)
         sections = [b for b in blocks if b['type'] == 'section']
 
-        # One day block, and the call to action as the lone section.  A
-        # block per day rather than per row keeps a long window inside
-        # Slack's 50-block cap.
-        assert len(days) == 1
+        # One block for the shifts, and the call to action as the lone
+        # section.  A single block rather than one per row keeps a long
+        # window inside Slack's 50-block cap.
+        assert len(rich_text) == 1
         assert len(sections) == 1
-        assert 'Juniors Scrimmages 6:00-7:00 p.m.' in _flatten(days[0])
+        assert 'Juniors Scrimmages 6:00-7:00 p.m.' in _flatten(rich_text[0])
 
-    def test_a_multi_day_summary_gets_a_block_per_day(self, summary):
+    def test_a_multi_day_summary_shares_one_block(self, summary):
         summary['multi_day'] = True
         summary['needs'][0]['shifts'][0]['day'] = 'Thursday, December 18'
         summary['needs'][0]['shifts'][0]['sort_key'] = '2025-12-18 19:00:00'
 
-        days = _day_blocks(build_summary_blocks(summary))
+        rich_text = _rich_text_blocks(build_summary_blocks(summary))
+        text = _flatten(rich_text[0])
 
-        assert len(days) == 2
-        assert _flatten(days[0]).startswith('Wednesday, December 17')
-        assert _flatten(days[1]).startswith('Thursday, December 18')
+        # Both days ride in one block so the gap between them is set
+        # here, not by Slack's tighter spacing between blocks.
+        assert len(rich_text) == 1
+        assert text.startswith('Wednesday, December 17')
+        assert 'Thursday, December 18' in text
+
+    def test_a_new_day_is_set_apart_more_than_a_row(self, summary):
+        summary['multi_day'] = True
+        summary['needs'][0]['shifts'][0]['day'] = 'Thursday, December 18'
+        summary['needs'][0]['shifts'][0]['sort_key'] = '2025-12-18 19:00:00'
+
+        text = _flatten(_rich_text_blocks(build_summary_blocks(summary))[0])
+        before_day, _, _ = text.partition('Thursday, December 18')
+
+        # Wider than the '\n\n' that separates rows within a day.
+        assert before_day.endswith('\n\n\n')
 
     def test_one_button_per_need_each_on_its_own_row(self, summary):
         blocks = build_summary_blocks(summary)
