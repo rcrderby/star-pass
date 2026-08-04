@@ -323,6 +323,14 @@ class TestBuildNeedSummary:
         )
         return reader
 
+    def _wide_summary(self, monkeypatch, need):
+        # These tests cover composition, ordering, and counting; the day
+        # window has its own tests, so it is opened wide here.
+        reader = self._reader_with(monkeypatch, need, [])
+        return reader.build_need_summary(
+            need_id='1', now=NOW, days=WIDE_DAYS
+        )
+
     def test_composes_live_counts(self, monkeypatch):
         need = {
             'need_title': 'Adult Scrimmage Officials',
@@ -361,11 +369,7 @@ class TestBuildNeedSummary:
                 _shift('NEW', '2026-07-20 18:00:00', '2026-07-20 19:00:00'),
             ]
         }
-        reader = self._reader_with(monkeypatch, need, [])
-
-        summary = reader.build_need_summary(
-            need_id='1', now=NOW, days=WIDE_DAYS
-        )
+        summary = self._wide_summary(monkeypatch, need)
 
         assert len(summary['shifts']) == 1
         assert 'July 20 2026' in summary['shifts'][0]['name']
@@ -378,11 +382,7 @@ class TestBuildNeedSummary:
                 _shift('A', '2026-07-15 18:00:00', '2026-07-15 19:00:00'),
             ]
         }
-        reader = self._reader_with(monkeypatch, need, [])
-
-        summary = reader.build_need_summary(
-            need_id='1', now=NOW, days=WIDE_DAYS
-        )
+        summary = self._wide_summary(monkeypatch, need)
         names = [shift['name'] for shift in summary['shifts']]
 
         assert 'July 15 2026' in names[0]
@@ -396,11 +396,7 @@ class TestBuildNeedSummary:
                 _shift('OK', '2026-07-20 18:00:00', '2026-07-20 19:00:00'),
             ]
         }
-        reader = self._reader_with(monkeypatch, need, [])
-
-        summary = reader.build_need_summary(
-            need_id='1', now=NOW, days=WIDE_DAYS
-        )
+        summary = self._wide_summary(monkeypatch, need)
 
         assert len(summary['shifts']) == 1
 
@@ -411,11 +407,7 @@ class TestBuildNeedSummary:
                 _shift('S9', '2026-07-20 18:00:00', '2026-07-20 20:45:00')
             ]
         }
-        reader = self._reader_with(monkeypatch, need, [])
-
-        summary = reader.build_need_summary(
-            need_id='1', now=NOW, days=WIDE_DAYS
-        )
+        summary = self._wide_summary(monkeypatch, need)
         assert summary['shifts'][0]['filled'] == 0
 
     def test_title_override(self, monkeypatch):
