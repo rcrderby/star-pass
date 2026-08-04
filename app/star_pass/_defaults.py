@@ -11,6 +11,17 @@ import sys
 from dotenv import load_dotenv
 from yaml import safe_load, YAMLError
 
+# The league's local time zone, as an IANA name.  Everything that has
+# to agree with a wall clock reads this: which calendar day a summary
+# covers, the 'as of' stamp on a summary, and the calendar search
+# window.  The host clock cannot be trusted for it -- a container or a
+# CI runner usually runs in UTC, where the local evening is already
+# tomorrow.
+LOCAL_TIMEZONE = getenv(
+    'LOCAL_TIMEZONE',
+    'America/Los_Angeles'
+)
+
 # Date and time formatting
 AMPLIFY_DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
 # Amplify returns shift/response datetimes with seconds.
@@ -175,7 +186,7 @@ GCAL_SINGLE_EVENTS = 'true'
 # own offset is used as written.
 GCAL_TIMEZONE = getenv(
     'GCAL_TIMEZONE',
-    'America/Los_Angeles'
+    LOCAL_TIMEZONE
 )
 GCAL_EVENTS_QUERY_STRINGS = _get_env_list(
     'GCAL_EVENTS_QUERY_STRINGS',
@@ -269,7 +280,7 @@ SLACK_SUMMARY_EMOJI = getenv(
 # without it forms a group of its own.
 SLACK_TITLE_SEPARATOR = getenv(
     'SLACK_TITLE_SEPARATOR',
-    ' - '
+    ': '
 )
 # Date prefix on a shift line when a summary spans more than one day.
 SLACK_SLOT_DATE_FORMAT = '%a %m/%d'

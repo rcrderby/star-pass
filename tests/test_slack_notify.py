@@ -13,6 +13,7 @@ from unittest.mock import Mock
 import pytest
 
 # Imports - Local
+from star_pass import slack_notify
 from star_pass.slack_notify import (
     SlackNotifier,
     build_summary_blocks,
@@ -63,22 +64,22 @@ def summary() -> dict:
         'as_of': '2026-07-06 12:00',
         'needs': [
             _need(
-                'Adult Scrimmages - Non-Skating Officials',
+                'Adult Scrimmages: Non-Skating Officials',
                 'https://example.org/need/1',
                 adult
             ),
             _need(
-                'Adult Scrimmages - Skating Officials',
+                'Adult Scrimmages: Skating Officials',
                 'https://example.org/need/2',
                 adult_skating
             ),
             _need(
-                'Juniors Scrimmages - Non-Skating Officials',
+                'Juniors Scrimmages: Non-Skating Officials',
                 'https://example.org/need/3',
                 juniors
             ),
             _need(
-                'Juniors Scrimmages - Skating Officials',
+                'Juniors Scrimmages: Skating Officials',
                 'https://example.org/need/4',
                 juniors_skating
             ),
@@ -87,8 +88,12 @@ def summary() -> dict:
 
 
 class TestSplitTitle:
+    def test_default_separator_matches_amplify_titles(self):
+        # Live titles read 'Adult Scrimmages: Skating Officials'.
+        assert slack_notify.TITLE_SEPARATOR == ': '
+
     def test_splits_on_the_separator(self):
-        event, role = _split_title('Adult Scrimmages - Skating Officials')
+        event, role = _split_title('Adult Scrimmages: Skating Officials')
         assert event == 'Adult Scrimmages'
         assert role == 'Skating Officials'
 
@@ -99,14 +104,14 @@ class TestSplitTitle:
         assert role == 'Bout Day Volunteers'
 
     def test_empty_role_falls_back_to_the_full_title(self):
-        event, role = _split_title('Trailing Separator - ')
-        assert event == 'Trailing Separator - '
-        assert role == 'Trailing Separator - '
+        event, role = _split_title('Trailing Separator: ')
+        assert event == 'Trailing Separator: '
+        assert role == 'Trailing Separator: '
 
     def test_only_the_first_separator_splits(self):
-        event, role = _split_title('Adult - Skating - Crew Chief')
+        event, role = _split_title('Adult: Skating: Crew Chief')
         assert event == 'Adult'
-        assert role == 'Skating - Crew Chief'
+        assert role == 'Skating: Crew Chief'
 
 
 class TestGroupNeeds:
@@ -218,7 +223,7 @@ class TestBuildSummaryBlocks:
         # Buttons follow the section order, so the juniors event leads
         # even though the adult opportunities come first in the summary.
         assert button['text']['text'] == (
-            'Juniors Scrimmages - Non-Skating Officials'
+            'Juniors Scrimmages: Non-Skating Officials'
         )
         assert button['url'] == 'https://example.org/need/3'
         # Slack rejects duplicate action_ids within a message.
@@ -232,10 +237,10 @@ class TestBuildSummaryBlocks:
         assert [
             block['elements'][0]['text']['text'] for block in actions
         ] == [
-            'Juniors Scrimmages - Non-Skating Officials',
-            'Juniors Scrimmages - Skating Officials',
-            'Adult Scrimmages - Non-Skating Officials',
-            'Adult Scrimmages - Skating Officials'
+            'Juniors Scrimmages: Non-Skating Officials',
+            'Juniors Scrimmages: Skating Officials',
+            'Adult Scrimmages: Non-Skating Officials',
+            'Adult Scrimmages: Skating Officials'
         ]
 
     def test_buttons_appear_after_every_section(self, summary):

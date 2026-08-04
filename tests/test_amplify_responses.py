@@ -10,6 +10,7 @@
 # Imports - Python Standard Library
 from datetime import datetime, timedelta
 from unittest.mock import Mock
+from zoneinfo import ZoneInfo
 
 # Imports - Third-Party
 import pytest
@@ -23,10 +24,12 @@ from star_pass.amplify_responses import (
     _max_numeric_id,
     _response_created_dt,
     _upcoming_shifts,
+    local_now,
     _window_end,
     _window_title,
 )
 from star_pass import _defaults
+from star_pass import amplify_responses
 
 # Constants
 PER_PAGE = _defaults.AMPLIFY_RESPONSES_PER_PAGE
@@ -135,6 +138,48 @@ class TestFormatSlotWhen:
     def test_placeholder_without_a_start(self):
         when = _format_slot_when({'start': None, 'end': None}, False)
         assert when == 'Time TBD'
+
+
+class TestLocalNow:
+    def test_returns_a_naive_datetime(self, monkeypatch):
+        # Amplify reports naive local datetimes, so the reference time
+        # must be naive to stay comparable.
+        monkeypatch.setattr(
+            amplify_responses, 'LOCAL_TIMEZONE', 'America/Los_Angeles'
+        )
+
+        assert local_now().tzinfo is None
+
+    def test_reads_the_configured_zone_not_the_host_clock(
+            self, monkeypatch
+    ):
+        # The regression this guards: a container or CI runner in UTC
+        # is already on tomorrow's date during a Portland evening, which
+        # would move a same-day summary onto the wrong day.
+        monkeypatch.setattr(amplify_responses, 'LOCAL_TIMEZONE', 'UTC')
+        as_utc = local_now()
+        monkeypatch.setattr(
+            amplify_responses, 'LOCAL_TIMEZONE', 'America/Los_Angeles'
+        )
+        as_pacific = local_now()
+
+        offset = abs((as_utc - as_pacific).total_seconds())
+        # Pacific is 7 or 8 hours behind UTC, depending on the season.
+        assert 7 * 3600 - 60 < offset < 8 * 3600 + 60
+
+    def test_matches_the_zone_it_is_given(self, monkeypatch):
+        monkeypatch.setattr(amplify_responses, 'LOCAL_TIMEZONE', 'UTC')
+        expected = datetime.now(tz=ZoneInfo('UTC')).replace(tzinfo=None)
+
+        assert abs((local_now() - expected).total_seconds()) < 5
+
+    def test_unknown_zone_raises_a_clear_error(self, monkeypatch):
+        monkeypatch.setattr(
+            amplify_responses, 'LOCAL_TIMEZONE', 'Mars/Olympus_Mons'
+        )
+
+        with pytest.raises(ValueError, match='LOCAL_TIMEZONE'):
+            local_now()
 
 
 class TestHelperFunctions:
@@ -520,6 +565,42 @@ class TestBuildSummary:
         assert [need['title'] for need in summary['needs']] == [
             'Running Today'
         ]
+
+    def test_strips_whitespace_from_titles(self, monkeypatch):
+        # Amplify titles are typed by hand; a stray trailing space would
+        # split a group in two and ride into the button text.
+        need = {
+            'need_title': 'Adult Scrimmages: Non-Skating Officials ',
+            'shifts': [
+                _shift('S1', '2026-07-14 19:00:00', '2026-07-14 20:00:00')
+            ]
+        }
+        reader = self._reader_with(monkeypatch, need, [])
+
+        summary = reader.build_summary(need_ids=['1'], now=NOW)
+
+        assert summary['needs'][0]['title'] == (
+            'Adult Scrimmages: Non-Skating Officials'
+        )
+
+    def test_defaults_now_to_the_local_zone(self, monkeypatch):
+        # Without this the day window follows the host clock, which is
+        # UTC in a container and lands on the wrong calendar day.
+        need = {'need_title': 'Anything', 'shifts': []}
+        reader = self._reader_with(monkeypatch, need, [])
+        called = []
+
+        def fake_local_now():
+            called.append(True)
+            return NOW
+
+        monkeypatch.setattr(
+            amplify_responses, 'local_now', fake_local_now
+        )
+
+        reader.build_summary(need_ids=['1'])
+
+        assert called
 
     def test_rejects_an_empty_need_list(self, monkeypatch):
         reader = self._reader_with(monkeypatch, {'shifts': []}, [])

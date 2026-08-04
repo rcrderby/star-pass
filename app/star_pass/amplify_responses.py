@@ -16,6 +16,7 @@
 
 # Imports - Python Standard Library
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import (
     Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 )
@@ -43,6 +44,7 @@ AMPLIFY_SHIFT_DATETIME_FORMAT = _defaults.AMPLIFY_SHIFT_DATETIME_FORMAT
 SIMPLE_DATE_FORMAT = _defaults.SIMPLE_DATE_FORMAT
 SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
 SLOT_DATE_FORMAT = _defaults.SLACK_SLOT_DATE_FORMAT
+LOCAL_TIMEZONE = _defaults.LOCAL_TIMEZONE
 
 # Only responses with this status count as a filled slot.
 ACTIVE_RESPONSE_STATUS = 'active'
@@ -136,6 +138,43 @@ def _max_numeric_id(
     ]
 
     return max(ids) if ids else None
+
+
+def local_now() -> datetime:
+    """ Return the current local wall-clock time, without a time zone.
+
+        The host clock cannot be trusted to be local: a container or a
+        CI runner usually runs in UTC, where a Portland evening is
+        already the next calendar day.  Reading 'now' in UTC would move
+        a same-day summary onto the wrong day entirely, not just
+        mislabel it.
+
+        Amplify reports shift times as naive local datetimes, so the
+        result is made naive too and stays directly comparable.
+
+        Raises:
+            ValueError:
+                If 'LOCAL_TIMEZONE' does not name a known time zone.
+
+        Returns:
+            now (datetime):
+                The current time in 'LOCAL_TIMEZONE', without tzinfo.
+    """
+
+    # 'ZoneInfoNotFoundError' subclasses KeyError, which reads as a
+    # missing dictionary key rather than a configuration error.
+    try:
+        timezone = ZoneInfo(LOCAL_TIMEZONE)
+    except (ZoneInfoNotFoundError, ValueError) as error:
+        message = (
+            f'LOCAL_TIMEZONE is not a known time zone: '
+            f'{LOCAL_TIMEZONE!r}.  Use an IANA name such as '
+            'America/Los_Angeles.'
+        )
+        logger.error(message)
+        raise ValueError(message) from error
+
+    return datetime.now(tz=timezone).replace(tzinfo=None)
 
 
 def _window_end(
@@ -698,7 +737,12 @@ class AmplifyResponses:
             )
             summary_needs.append(
                 {
-                    'title': need.get('need_title', f'Need {need_id}'),
+                    # Titles are entered by hand in Amplify and carry
+                    # stray whitespace; an untrimmed one would split a
+                    # group in two and ride into the button text.
+                    'title': need.get(
+                        'need_title', f'Need {need_id}'
+                    ).strip(),
                     'signup_url': (
                         f'{AMPLIFY_NEED_DETAIL_URL}?need_id={need_id}'
                     ),
@@ -768,7 +812,7 @@ class AmplifyResponses:
             raise ValueError('At least one need ID is required.')
 
         if now is None:
-            now = datetime.now()
+            now = local_now()
 
         if days is None:
             days = SUMMARY_DAYS
