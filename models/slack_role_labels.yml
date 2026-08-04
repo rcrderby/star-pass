@@ -1,0 +1,29 @@
+---
+# Short labels for opportunity roles in Slack sign-up summaries.
+#
+# A summary derives its labels from opportunity titles: the text after
+# SLACK_TITLE_SEPARATOR becomes the role. Those titles are written for
+# the Amplify website, where there is room for them, and are too long
+# for a Slack button, which truncates. Map them here to the short forms
+# the officials already use in their own posts.
+#
+# Keys are matched against the role exactly as it appears in the title,
+# so "Adult Scrimmages: Skating Officials" matches "Skating Officials".
+# A role with no entry keeps its full text, so this file only needs the
+# roles worth shortening.
+#
+# Entries are keyed on the ROLE, not the opportunity, so a new
+# opportunity using an existing role needs no change here.
+#
+# Write the plural form. A count of exactly one is made singular
+# automatically by dropping a trailing "s" ("SOs" reads as "1 x SO"),
+# so a label whose singular is not simply its plural minus an "s"
+# should be spelled out in full rather than abbreviated.
+labels:
+  Skating Officials: SOs
+  Non-Skating Officials: NSOs
+
+# Label used when an opportunity title carries no role at all, because
+# it has no separator. "Officials Practice" then reads "1 x Official"
+# rather than repeating the opportunity name on its own line.
+default: Officials

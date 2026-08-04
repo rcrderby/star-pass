@@ -139,22 +139,32 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
 
     ```text
     Juniors Scrimmages 6:00-7:00 p.m.
-    4 x Non-Skating Officials
-    6 x Skating Officials
+    4 x NSOs
+    6 x SOs
 
     Adult Scrimmages 7:00-8:00 p.m.
-    1 x Non-Skating Official
-    4 x Skating Officials
+    1 x NSO
+    4 x SOs
     ```
+
+    Role labels are shortened using `models/slack_role_labels.yml`, so
+    a summary reads `4 x NSOs` rather than
+    `4 x Non-Skating Officials`. Entries are keyed on the **role**, not
+    the opportunity, so a new opportunity using an existing role needs
+    no change there. A role with no entry keeps its full text. An
+    opportunity whose title has no role at all uses that file's
+    `default` label, so "Officials Practice" reads `1 x Official`.
 
     Each opportunity gets a sign-up button at the end, filled rather
     than outlined so it reads as a control on a phone, and ending in an
     arrow because it opens the opportunity in a browser rather than
     acting inside Slack. Set `SLACK_SIGN_UP_BUTTON_STYLE` to change the
-    style, or to empty for outlined buttons.
+    style, or to empty for outlined buttons, and
+    `SLACK_SIGN_UP_BUTTON_SUFFIX` to change the arrow. Slack truncates
+    a button that outgrows its width, which is why the role is
+    shortened there too.
 
-    A count of exactly one reads as a singular label ("1 x Non-Skating
-    Official"). Rows appear in chronological order, and so do the
+    A count of exactly one reads as a singular label ("1 x NSO"). Rows appear in chronological order, and so do the
     sign-up buttons at the end, so the message reads top to bottom as
     the day happens. When two events run at the same time, they follow
     the order their IDs were given in `-N` or `SLACK_SUMMARY_NEED_IDS`.

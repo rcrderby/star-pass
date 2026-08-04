@@ -262,6 +262,15 @@ SLACK_CHANNEL = getenv('SLACK_CHANNEL')
 SLACK_DEV_CHANNEL = getenv('SLACK_DEV_CHANNEL')
 # Displayed when a Slack post is skipped in check mode (dry run).
 SLACK_CHECK_MODE_MESSAGE = '\n** Slack Check Mode Run (no message sent) **'
+# Text appended to a sign-up button's label, marking that it opens a
+# browser rather than acting inside Slack.  A plain arrow rather than
+# ':arrow_upper_right:', which Slack renders as a full emoji tile with
+# a hover card and which crowds out the label on a narrow button.  Set
+# it empty for no suffix.
+SLACK_SIGN_UP_BUTTON_SUFFIX = getenv(
+    'SLACK_SIGN_UP_BUTTON_SUFFIX',
+    ' \u2192'
+)
 # Slack button style for the sign-up buttons: 'primary' fills them,
 # which reads as a control rather than a label on a phone.  Slack
 # also accepts 'danger'; an empty value leaves them outlined.
@@ -359,6 +368,12 @@ AMPLIFY_RESPONSES_MARGIN_WARN_DAYS = int(
 )
 
 # Amplify Shift lookup data model
+SLACK_ROLE_LABELS_FILE_NAME = 'slack_role_labels.yml'
+SLACK_ROLE_LABELS_FILE = Path.joinpath(
+    MODELS_DIR_PATH,
+    SLACK_ROLE_LABELS_FILE_NAME
+)
+
 SHIFTS_INFO_FILE_NAME = 'shift_info.yml'
 SHIFTS_INFO_FILE = Path.joinpath(
     MODELS_DIR_PATH,
@@ -391,3 +406,39 @@ except YAMLError as error:
         file=sys.stderr
     )
     raise SystemExit(1) from error
+
+# Read the Slack role label model.  Unlike the shift data model this one
+# is optional: without it a summary keeps the full role text from each
+# opportunity title, which is correct, only long.  Malformed YAML is
+# still an error, because a file that exists is meant to be used.
+try:
+    with open(
+        file=SLACK_ROLE_LABELS_FILE,
+        mode='rt',
+        encoding=FILE_ENCODING
+    ) as yaml_data:
+        _ROLE_LABEL_MODEL = safe_load(
+            stream=yaml_data.read()
+        ) or {}
+except FileNotFoundError:
+    _ROLE_LABEL_MODEL = {}
+except OSError as error:
+    print(
+        f'Cannot read the role label model "{SLACK_ROLE_LABELS_FILE}": '
+        f'{error}',
+        file=sys.stderr
+    )
+    raise SystemExit(1) from error
+except YAMLError as error:
+    print(
+        f'The role label model "{SLACK_ROLE_LABELS_FILE}" is not valid '
+        f'YAML: {error}',
+        file=sys.stderr
+    )
+    raise SystemExit(1) from error
+
+# Short label for each role, keyed on the role as it appears in an
+# opportunity title.  A role with no entry keeps its full text.
+SLACK_ROLE_LABELS = _ROLE_LABEL_MODEL.get('labels') or {}
+# Label for an opportunity whose title carries no role at all.
+SLACK_DEFAULT_ROLE_LABEL = _ROLE_LABEL_MODEL.get('default') or 'Officials'

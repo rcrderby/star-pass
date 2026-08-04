@@ -20,6 +20,7 @@ from star_pass.slack_notify import (
     _build_rows,
     _format_count,
     _format_day_text,
+    _short_role,
     _group_rows_by_day,
     _split_title,
 )
@@ -196,20 +197,54 @@ class TestGroupRowsByDay:
         assert len(days[1]['rows']) == 1
 
 
+class TestShortRole:
+    def test_shortens_a_mapped_role(self):
+        assert _short_role('Skating Officials') == 'SOs'
+
+    def test_leaves_an_unmapped_role_alone(self):
+        # The model only needs the roles worth shortening.
+        assert _short_role('Announcers') == 'Announcers'
+
+    def test_matching_is_exact(self):
+        # Keys match the role as written in the title, so a partial or
+        # differently cased role is not silently rewritten.
+        assert _short_role('skating officials') == 'skating officials'
+        assert _short_role('Skating Official') == 'Skating Official'
+
+    def test_the_shipped_model_covers_both_official_roles(self):
+        assert slack_notify.SLACK_ROLE_LABELS == {
+            'Skating Officials': 'SOs',
+            'Non-Skating Officials': 'NSOs'
+        }
+
+
 class TestFormatCount:
+    def test_shortens_a_mapped_role(self):
+        # The role label model turns the website-length title into the
+        # form the officials use in their own posts.
+        entry = {'label': 'Skating Officials', 'filled': 2}
+        assert _format_count(entry, 'Adult Scrimmages') == '2 x SOs'
+
     def test_singular_at_exactly_one(self):
-        # One volunteer is an Official, not Officials.
+        # Shortening runs first, so the singular rule sees the label a
+        # reader will: '1 x SO', never '1 x Skating Official'.
         entry = {'label': 'Skating Officials', 'filled': 1}
-        assert _format_count(entry, 'Adult Scrimmages') == (
-            '1 x Skating Official'
-        )
+        assert _format_count(entry, 'Adult Scrimmages') == '1 x SO'
+
+    def test_singular_of_the_other_mapped_role(self):
+        entry = {'label': 'Non-Skating Officials', 'filled': 1}
+        assert _format_count(entry, 'Adult Scrimmages') == '1 x NSO'
 
     def test_plural_at_any_other_count(self):
         for filled in (0, 2, 11):
-            entry = {'label': 'Skating Officials', 'filled': filled}
+            entry = {'label': 'Non-Skating Officials', 'filled': filled}
             assert _format_count(entry, 'Adult Scrimmages') == (
-                f'{filled} x Skating Officials'
+                f'{filled} x NSOs'
             )
+
+    def test_an_unmapped_role_keeps_its_full_text(self):
+        entry = {'label': 'Announcers', 'filled': 2}
+        assert _format_count(entry, 'Bout Day') == '2 x Announcers'
 
     def test_double_s_endings_are_left_alone(self):
         entry = {'label': 'Class', 'filled': 1}
@@ -219,10 +254,17 @@ class TestFormatCount:
         entry = {'label': 'Crew Chief', 'filled': 1}
         assert _format_count(entry, 'Event') == '1 x Crew Chief'
 
-    def test_label_matching_the_event_reports_a_bare_count(self):
-        # The label would just repeat the row heading.
-        entry = {'label': 'Bout Day Volunteers', 'filled': 3}
-        assert _format_count(entry, 'Bout Day Volunteers') == '3 signed up'
+    def test_a_title_with_no_role_uses_the_default_label(self):
+        # "Officials Practice" has no role, so the line names one
+        # generically rather than repeating the opportunity.
+        entry = {'label': 'Officials Practice', 'filled': 2}
+        assert _format_count(entry, 'Officials Practice') == (
+            '2 x Officials'
+        )
+
+    def test_the_default_label_is_singular_at_one(self):
+        entry = {'label': 'Officials Practice', 'filled': 1}
+        assert _format_count(entry, 'Officials Practice') == '1 x Official'
 
 
 class TestFormatDayText:
@@ -254,14 +296,14 @@ class TestFormatDayText:
 
         assert text == (
             '*Juniors Scrimmages 6:00-7:00 p.m.*\n'
-            '4 x Non-Skating Officials\n'
-            '6 x Skating Officials\n\n'
+            '4 x NSOs\n'
+            '6 x SOs\n\n'
             '*Adult Scrimmages 7:00-8:00 p.m.*\n'
-            '1 x Non-Skating Official\n'
-            '4 x Skating Officials\n\n'
+            '1 x NSO\n'
+            '4 x SOs\n\n'
             '*Adult Scrimmages 8:00-9:00 p.m.*\n'
-            '1 x Non-Skating Official\n'
-            '3 x Skating Officials'
+            '1 x NSO\n'
+            '3 x SOs'
         )
 
 
@@ -318,7 +360,7 @@ class TestBuildSummaryBlocks:
         # Buttons follow the section order, so the juniors event leads
         # even though the adult opportunities come first in the summary.
         assert button['text']['text'] == (
-            'Juniors Scrimmages: Non-Skating Officials :arrow_upper_right:'
+            'Juniors Scrimmages: NSOs \u2192'
         )
         assert button['url'] == 'https://example.org/need/3'
         # Slack rejects duplicate action_ids within a message.
@@ -332,10 +374,10 @@ class TestBuildSummaryBlocks:
         assert [
             block['elements'][0]['text']['text'] for block in actions
         ] == [
-            'Juniors Scrimmages: Non-Skating Officials :arrow_upper_right:',
-            'Juniors Scrimmages: Skating Officials :arrow_upper_right:',
-            'Adult Scrimmages: Non-Skating Officials :arrow_upper_right:',
-            'Adult Scrimmages: Skating Officials :arrow_upper_right:'
+            'Juniors Scrimmages: NSOs \u2192',
+            'Juniors Scrimmages: SOs \u2192',
+            'Adult Scrimmages: NSOs \u2192',
+            'Adult Scrimmages: SOs \u2192'
         ]
 
     def test_buttons_appear_after_every_section(self, summary):
@@ -365,9 +407,9 @@ class TestBuildSummaryBlocks:
         text = button['text']['text']
 
         assert len(text) == 75
-        # The title is trimmed, never the shortcode: a button ending
-        # mid-shortcode would show raw text instead of an arrow.
-        assert text.endswith(':arrow_upper_right:')
+        # The label is trimmed, never the suffix: a button losing its
+        # arrow to a long title would be the wrong thing to drop.
+        assert text.endswith('\u2192')
 
     def test_buttons_carry_the_configured_style(self, summary):
         blocks = build_summary_blocks(summary)
@@ -388,14 +430,26 @@ class TestBuildSummaryBlocks:
             'style' not in block['elements'][0] for block in actions
         )
 
-    def test_button_payload_stays_ascii(self, summary):
-        # Check mode prints the payload; a legacy Windows console
-        # encoding cannot represent the arrow character itself.
+    def test_the_suffix_can_be_turned_off(self, summary, monkeypatch):
+        # The escape hatch for a console that cannot print the arrow.
+        monkeypatch.setattr(
+            slack_notify, 'SLACK_SIGN_UP_BUTTON_SUFFIX', ''
+        )
+        blocks = build_summary_blocks(summary)
+        button = [
+            b for b in blocks if b['type'] == 'actions'
+        ][0]['elements'][0]
+
+        assert button['text']['text'] == 'Juniors Scrimmages: NSOs'
+
+    def test_buttons_shorten_the_role(self, summary):
+        # A full title truncates in Slack's button width; the short
+        # form fits.
         blocks = build_summary_blocks(summary)
         actions = [b for b in blocks if b['type'] == 'actions']
 
         assert all(
-            block['elements'][0]['text']['text'].isascii()
+            len(block['elements'][0]['text']['text']) < 30
             for block in actions
         )
 

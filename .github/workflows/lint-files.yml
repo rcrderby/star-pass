@@ -45,8 +45,13 @@ jobs:
 
       # Super Linter action documentation
       # https://github.com/marketplace/actions/super-linter
+      # The slim image drops language toolchains this repository does
+      # not lint (Rust, .NET, PowerShell, ARM templates), which makes
+      # the image the runner pulls smaller.  Every validator enabled
+      # below is present in it.  Same commit as the standard action;
+      # only the path differs.
       - name: Super Linter
-        uses: super-linter/super-linter@4ce20838b8ab83717e78138c5b3a1407148e0918  # v8
+        uses: super-linter/super-linter/slim@4ce20838b8ab83717e78138c5b3a1407148e0918  # v8
         # Configuration settings
         env:
           # Report status checks
