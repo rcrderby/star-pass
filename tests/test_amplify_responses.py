@@ -19,6 +19,7 @@ import pytest
 from star_pass.amplify_responses import (
     AmplifyResponses,
     count_signups_by_shift,
+    _format_day_heading,
     _format_slot_when,
     _format_time_range,
     _max_numeric_id,
@@ -113,31 +114,33 @@ class TestFormatTimeRange:
 
 
 class TestFormatSlotWhen:
-    def test_omits_the_date_for_a_single_day_window(self):
+    def test_formats_the_time_range_only(self):
+        # The date lives in the day heading, not on every line.
         when = _format_slot_when(
-            _shift('S1', '2025-12-17 18:00:00', '2025-12-17 19:00:00'),
-            show_date=False
+            _shift('S1', '2025-12-17 18:00:00', '2025-12-17 19:00:00')
         )
         assert when == '6:00-7:00 p.m.'
 
-    def test_includes_the_date_for_a_multi_day_window(self):
-        # Without it, two days of shifts would be indistinguishable.
-        when = _format_slot_when(
-            _shift('S1', '2025-12-17 18:00:00', '2025-12-17 19:00:00'),
-            show_date=True
-        )
-        assert when == 'Wed 12/17, 6:00-7:00 p.m.'
-
     def test_falls_back_to_the_raw_value_when_unparseable(self):
-        when = _format_slot_when(
-            _shift('S1', 'not-a-date', 'not-a-date'),
-            show_date=False
-        )
+        when = _format_slot_when(_shift('S1', 'not-a-date', 'not-a-date'))
         assert when == 'not-a-date'
 
     def test_placeholder_without_a_start(self):
-        when = _format_slot_when({'start': None, 'end': None}, False)
-        assert when == 'Time TBD'
+        assert _format_slot_when({'start': None, 'end': None}) == 'Time TBD'
+
+
+class TestFormatDayHeading:
+    def test_names_the_weekday_and_date(self):
+        heading = _format_day_heading(
+            _shift('S1', '2025-12-17 18:00:00', '2025-12-17 19:00:00')
+        )
+        assert heading == 'Wednesday, December 17'
+
+    def test_empty_when_the_start_cannot_be_parsed(self):
+        # An unreadable shift must not create a day heading of its own.
+        assert _format_day_heading(
+            _shift('S1', 'not-a-date', 'not-a-date')
+        ) == ''
 
 
 class TestLocalNow:
@@ -456,8 +459,8 @@ class TestBuildSummary:
         # The inactive response is not counted.
         assert shifts[0]['filled'] == 2
         assert shifts[1]['filled'] == 1
-        # A multi-day window dates each line.
-        assert shifts[0]['when'] == 'Mon 07/20, 6:00-8:45 p.m.'
+        assert shifts[0]['when'] == '6:00-8:45 p.m.'
+        assert shifts[0]['day'] == 'Monday, July 20'
 
     def test_covers_several_needs_in_one_summary(self, monkeypatch):
         needs = {
@@ -608,7 +611,7 @@ class TestBuildSummary:
         with pytest.raises(ValueError, match='At least one need ID'):
             reader.build_summary(need_ids=[], now=NOW)
 
-    def test_multi_day_window_dates_each_shift(self, monkeypatch):
+    def test_multi_day_window_flags_day_headings(self, monkeypatch):
         need = {
             'need_title': 'Two Days',
             'shifts': [
@@ -622,10 +625,27 @@ class TestBuildSummary:
             need_ids=['1'], now=NOW, days=2
         )
 
-        assert [shift['when'] for shift in self._shifts_of(summary)] == [
-            'Tue 07/14, 7:00-8:00 p.m.',
-            'Wed 07/15, 7:00-8:00 p.m.'
+        # The window spans days, so the message groups them under
+        # headings; each shift carries the day it belongs under.
+        assert summary['multi_day'] is True
+        assert [shift['day'] for shift in self._shifts_of(summary)] == [
+            'Tuesday, July 14',
+            'Wednesday, July 15'
         ]
+
+    def test_single_day_window_needs_no_day_headings(self, monkeypatch):
+        # The title already names the day a heading would repeat.
+        need = {
+            'need_title': 'One Day',
+            'shifts': [
+                _shift('S1', '2026-07-14 19:00:00', '2026-07-14 20:00:00')
+            ]
+        }
+        reader = self._reader_with(monkeypatch, need, [])
+
+        summary = reader.build_summary(need_ids=['1'], now=NOW)
+
+        assert summary['multi_day'] is False
 
     def test_excludes_past_shifts(self, monkeypatch):
         # A long-lived need carries hundreds of past shifts; only the
