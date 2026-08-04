@@ -31,8 +31,8 @@ SLACK_BOT_TOKEN = getenv(
 )
 
 # Deployment configuration
-SLACK_CHANNEL = _defaults.SLACK_CHANNEL
-SLACK_DEV_CHANNEL = _defaults.SLACK_DEV_CHANNEL
+SLACK_CHANNEL_ID = _defaults.SLACK_CHANNEL_ID
+SLACK_DEV_CHANNEL_ID = _defaults.SLACK_DEV_CHANNEL_ID
 SLACK_CHECK_MODE_MESSAGE = _defaults.SLACK_CHECK_MODE_MESSAGE
 SLACK_DEFAULT_ROLE_LABEL = _defaults.SLACK_DEFAULT_ROLE_LABEL
 SLACK_ROLE_LABELS = _defaults.SLACK_ROLE_LABELS
@@ -616,7 +616,7 @@ class SlackNotifier:
             Args:
                 channel (str, optional):
                     Destination channel ID.  Defaults to the
-                    'SLACK_CHANNEL' environment value.
+                    'SLACK_CHANNEL_ID' environment value.
 
                 check_mode (bool, optional):
                     When True (default), messages are built and
@@ -646,7 +646,7 @@ class SlackNotifier:
 
         # Resolve the token and destination channel
         self.token = token if token is not None else SLACK_BOT_TOKEN
-        self.channel = channel if channel is not None else SLACK_CHANNEL
+        self.channel = channel if channel is not None else SLACK_CHANNEL_ID
 
         # Slack Web API client (injectable for tests).  Constructing a
         # WebClient performs no network request, so this is safe even in
@@ -697,7 +697,7 @@ class SlackNotifier:
         # A destination channel is required in every mode
         if not target:
             message = (
-                'No Slack channel configured; set SLACK_CHANNEL or '
+                'No Slack channel configured; set SLACK_CHANNEL_ID or '
                 'pass a channel argument.'
             )
             logger.error(message)

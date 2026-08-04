@@ -572,7 +572,7 @@ class TestSlackNotifierPost:
             check_mode=True,
             client=Mock()
         )
-        # Instance channel resolves to None (no SLACK_CHANNEL in tests).
+        # Instance channel resolves to None (no SLACK_CHANNEL_ID here).
         notifier.channel = None
         with pytest.raises(ValueError):
             notifier.post(blocks=[])
