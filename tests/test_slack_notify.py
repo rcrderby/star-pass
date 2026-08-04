@@ -16,7 +16,9 @@ import pytest
 from star_pass.slack_notify import (
     SlackNotifier,
     build_summary_blocks,
-    _format_shift_text,
+    _format_group_text,
+    _group_needs,
+    _split_title,
 )
 
 # A fake bot value for live-post tests.  Bound to a non-secret-looking
@@ -27,79 +29,258 @@ FAKE_XOXB = 'xoxb-test'
 
 @pytest.fixture
 def summary() -> dict:
-    # A two-shift summary; the second shift omits optional fields.
+    # The 12/17 scrimmage night: two events, four opportunities, with
+    # the adult event running three back-to-back slots.
+    def _need(title, url, slots):
+        return {
+            'title': title,
+            'signup_url': url,
+            'shifts': [
+                {
+                    'when': when,
+                    'sort_key': sort_key,
+                    'filled': filled
+                }
+                for when, sort_key, filled in slots
+            ]
+        }
+
+    juniors = [('6:00-7:00 p.m.', '2025-12-17 18:00:00', 4)]
+    juniors_skating = [('6:00-7:00 p.m.', '2025-12-17 18:00:00', 6)]
+    adult = [
+        ('7:00-8:00 p.m.', '2025-12-17 19:00:00', 1),
+        ('8:00-9:00 p.m.', '2025-12-17 20:00:00', 1),
+        ('9:00-10:00 p.m.', '2025-12-17 21:00:00', 2),
+    ]
+    adult_skating = [
+        ('7:00-8:00 p.m.', '2025-12-17 19:00:00', 4),
+        ('8:00-9:00 p.m.', '2025-12-17 20:00:00', 3),
+        ('9:00-10:00 p.m.', '2025-12-17 21:00:00', 4),
+    ]
+
     return {
-        'title': 'Scrimmage Sign-Ups',
+        'title': 'Shift sign-ups for Wednesday, December 17 2025',
         'as_of': '2026-07-06 12:00',
-        'shifts': [
-            {
-                'name': 'Adult Scrimmage',
-                'start': '2026-07-10 18:00',
-                'end': '2026-07-10 20:45',
-                'filled': 5,
-                'slots': 8,
-                'signup_url': 'https://example.org/need/1'
-            },
-            {
-                'name': 'Juniors Scrimmage',
-                'filled': 0,
-                'slots': 8
-            }
+        'needs': [
+            _need(
+                'Adult Scrimmages - Non-Skating Officials',
+                'https://example.org/need/1',
+                adult
+            ),
+            _need(
+                'Adult Scrimmages - Skating Officials',
+                'https://example.org/need/2',
+                adult_skating
+            ),
+            _need(
+                'Juniors Scrimmages - Non-Skating Officials',
+                'https://example.org/need/3',
+                juniors
+            ),
+            _need(
+                'Juniors Scrimmages - Skating Officials',
+                'https://example.org/need/4',
+                juniors_skating
+            ),
         ]
     }
 
 
-class TestFormatShiftText:
-    def test_includes_name_window_and_count(self):
-        shift = {
-            'name': 'Adult Scrimmage',
-            'start': '2026-07-10 18:00',
-            'end': '2026-07-10 20:45',
-            'filled': 5,
-            'slots': 8
-        }
-        text = _format_shift_text(shift)
-        assert '*Adult Scrimmage*' in text
-        assert '2026-07-10 18:00 - 2026-07-10 20:45' in text
-        assert '5/8 filled' in text
+class TestSplitTitle:
+    def test_splits_on_the_separator(self):
+        event, role = _split_title('Adult Scrimmages - Skating Officials')
+        assert event == 'Adult Scrimmages'
+        assert role == 'Skating Officials'
 
-    def test_tolerates_missing_fields(self):
-        # No times and no slots -> placeholder window, bare count.
-        text = _format_shift_text({'name': 'Mystery'})
-        assert '*Mystery*' in text
-        assert 'Time TBD' in text
-        assert '0 filled' in text
+    def test_title_without_a_separator_is_its_own_group(self):
+        # Nothing to shorten, so the full title is used for both.
+        event, role = _split_title('Bout Day Volunteers')
+        assert event == 'Bout Day Volunteers'
+        assert role == 'Bout Day Volunteers'
+
+    def test_empty_role_falls_back_to_the_full_title(self):
+        event, role = _split_title('Trailing Separator - ')
+        assert event == 'Trailing Separator - '
+        assert role == 'Trailing Separator - '
+
+    def test_only_the_first_separator_splits(self):
+        event, role = _split_title('Adult - Skating - Crew Chief')
+        assert event == 'Adult'
+        assert role == 'Skating - Crew Chief'
+
+
+class TestGroupNeeds:
+    def test_groups_by_event_in_chronological_order(self, summary):
+        groups = _group_needs(summary['needs'])
+        # Juniors run first that night, so their group leads even though
+        # the adult opportunities are listed first.
+        assert [group['name'] for group in groups] == [
+            'Juniors Scrimmages',
+            'Adult Scrimmages'
+        ]
+
+    def test_merges_shared_time_slots(self, summary):
+        groups = _group_needs(summary['needs'])
+        juniors = groups[0]
+        # One slot that night, carrying both roles' counts.
+        assert len(juniors['slots']) == 1
+        assert juniors['slots'][0]['when'] == '6:00-7:00 p.m.'
+        assert [
+            (entry['label'], entry['filled'])
+            for entry in juniors['slots'][0]['entries']
+        ] == [
+            ('Non-Skating Officials', 4),
+            ('Skating Officials', 6)
+        ]
+
+    def test_orders_slots_within_a_group(self, summary):
+        groups = _group_needs(summary['needs'])
+        adult = groups[1]
+        assert [slot['when'] for slot in adult['slots']] == [
+            '7:00-8:00 p.m.',
+            '8:00-9:00 p.m.',
+            '9:00-10:00 p.m.'
+        ]
+
+    def test_handles_no_needs(self):
+        assert not _group_needs([])
+
+
+class TestFormatGroupText:
+    def test_names_the_event_and_lists_each_slot(self, summary):
+        groups = _group_needs(summary['needs'])
+        text = _format_group_text(groups[1])
+        lines = text.split('\n')
+
+        assert lines[0] == '*Adult Scrimmages*'
+        assert lines[1] == (
+            '7:00-8:00 p.m. - 1 x Non-Skating Officials, '
+            '4 x Skating Officials'
+        )
+        assert lines[3] == (
+            '9:00-10:00 p.m. - 2 x Non-Skating Officials, '
+            '4 x Skating Officials'
+        )
+
+    def test_unsplittable_title_reports_a_bare_count(self):
+        # The label would just repeat the heading, so it is dropped.
+        needs = [
+            {
+                'title': 'Bout Day Volunteers',
+                'signup_url': 'https://example.org/need/9',
+                'shifts': [
+                    {
+                        'when': '9:00 a.m.-1:00 p.m.',
+                        'sort_key': '2025-12-17 09:00:00',
+                        'filled': 3
+                    }
+                ]
+            }
+        ]
+        text = _format_group_text(_group_needs(needs)[0])
+
+        assert text == (
+            '*Bout Day Volunteers*\n9:00 a.m.-1:00 p.m. - 3 signed up'
+        )
 
 
 class TestBuildSummaryBlocks:
     def test_header_context_and_divider(self, summary):
         blocks = build_summary_blocks(summary)
         assert blocks[0]['type'] == 'header'
-        assert blocks[0]['text']['text'] == 'Scrimmage Sign-Ups'
+        assert blocks[0]['text']['text'] == (
+            'Shift sign-ups for Wednesday, December 17 2025'
+        )
         assert blocks[1]['type'] == 'context'
         assert 'As of 2026-07-06 12:00' in blocks[1]['elements'][0]['text']
         assert blocks[2] == {'type': 'divider'}
 
-    def test_one_section_per_shift(self, summary):
+    def test_one_section_per_event_plus_the_prompt(self, summary):
         blocks = build_summary_blocks(summary)
         sections = [b for b in blocks if b['type'] == 'section']
-        assert len(sections) == 2
+        # Two events, then the call to action.
+        assert len(sections) == 3
+        assert '*Juniors Scrimmages*' in sections[0]['text']['text']
+        assert '*Adult Scrimmages*' in sections[1]['text']['text']
 
-    def test_link_button_only_when_signup_url(self, summary):
+    def test_one_button_per_need_each_on_its_own_row(self, summary):
         blocks = build_summary_blocks(summary)
-        sections = [b for b in blocks if b['type'] == 'section']
-        # First shift has a signup_url -> link button with a URL.
-        assert sections[0]['accessory']['type'] == 'button'
-        assert sections[0]['accessory']['url'] == (
-            'https://example.org/need/1'
+        actions = [b for b in blocks if b['type'] == 'actions']
+        # A block each keeps Slack from wrapping them by client width.
+        assert len(actions) == 4
+        assert all(len(block['elements']) == 1 for block in actions)
+
+    def test_buttons_carry_the_full_title_and_url(self, summary):
+        blocks = build_summary_blocks(summary)
+        actions = [b for b in blocks if b['type'] == 'actions']
+        button = actions[0]['elements'][0]
+
+        # Buttons follow the section order, so the juniors event leads
+        # even though the adult opportunities come first in the summary.
+        assert button['text']['text'] == (
+            'Juniors Scrimmages - Non-Skating Officials'
         )
-        assert sections[0]['accessory']['action_id'] == 'signup_0'
-        # Second shift has no signup_url -> no accessory.
-        assert 'accessory' not in sections[1]
+        assert button['url'] == 'https://example.org/need/3'
+        # Slack rejects duplicate action_ids within a message.
+        ids = [block['elements'][0]['action_id'] for block in actions]
+        assert len(set(ids)) == 4
+
+    def test_button_order_matches_the_section_order(self, summary):
+        blocks = build_summary_blocks(summary)
+        actions = [b for b in blocks if b['type'] == 'actions']
+
+        assert [
+            block['elements'][0]['text']['text'] for block in actions
+        ] == [
+            'Juniors Scrimmages - Non-Skating Officials',
+            'Juniors Scrimmages - Skating Officials',
+            'Adult Scrimmages - Non-Skating Officials',
+            'Adult Scrimmages - Skating Officials'
+        ]
+
+    def test_buttons_appear_after_every_section(self, summary):
+        blocks = build_summary_blocks(summary)
+        types = [block['type'] for block in blocks]
+        assert types.index('actions') > max(
+            index for index, kind in enumerate(types) if kind == 'section'
+        )
+
+    def test_long_button_text_is_trimmed(self):
+        long_title = 'A' * 100
+        blocks = build_summary_blocks(
+            {
+                'title': 'Long',
+                'needs': [
+                    {
+                        'title': long_title,
+                        'signup_url': 'https://example.org/need/1',
+                        'shifts': []
+                    }
+                ]
+            }
+        )
+        button = [
+            b for b in blocks if b['type'] == 'actions'
+        ][0]['elements'][0]
+
+        assert len(button['text']['text']) == 75
+
+    def test_no_button_without_a_signup_url(self):
+        blocks = build_summary_blocks(
+            {
+                'title': 'No Link',
+                'needs': [{'title': 'Orphan', 'shifts': []}]
+            }
+        )
+        assert all(block['type'] != 'actions' for block in blocks)
 
     def test_omits_context_without_as_of(self):
         blocks = build_summary_blocks({'title': 'No Timestamp'})
         assert all(b['type'] != 'context' for b in blocks)
+
+    def test_no_prompt_without_needs(self):
+        blocks = build_summary_blocks({'title': 'Nothing'})
+        assert all(block['type'] != 'section' for block in blocks)
 
 
 class TestSlackNotifierPost:
@@ -196,7 +377,10 @@ class TestPostSummary:
         assert kwargs['channel'] == 'C123'
         assert kwargs['blocks'][0]['type'] == 'header'
         # Fallback text names the summary and the shift count.
-        assert kwargs['text'] == 'Scrimmage Sign-Ups - 2 shift(s)'
+        assert kwargs['text'] == (
+            'Shift sign-ups for Wednesday, December 17 2025 - '
+            '8 shift(s)'
+        )
 
 
 class TestPostSummarySkipsEmpty:
@@ -207,7 +391,7 @@ class TestPostSummarySkipsEmpty:
         return {
             'title': 'Shift sign-ups for Tuesday, July 14 2026',
             'as_of': '2026-07-14 09:00',
-            'shifts': []
+            'needs': []
         }
 
     def test_live_post_is_skipped(self):
