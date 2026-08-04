@@ -118,6 +118,9 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     # Cover today and tomorrow instead of just today
     ./app/__main__.py -s -N 879610 -d 2
 
+    # Posted on a Friday, covering Saturday and Sunday only
+    ./app/__main__.py -s -N 879610 -D 1 -d 2
+
     # Read the IDs from another command
     printf '879610 879611' | ./app/__main__.py -s -N -
 
@@ -202,6 +205,14 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     only, `2` adds tomorrow. Set `SLACK_SUMMARY_DAYS` in `.env` to change
     the default. Shifts that already started never appear, so a summary
     posted at noon lists only what is still to come that day.
+
+    `-D`/`--start-in-days` moves where the window begins: `0` (the
+    default) starts today, `1` starts tomorrow. This is what a notice
+    posted ahead of its shifts needs, so a Friday post covering the
+    weekend uses `-D 1 -d 2` and lists Saturday and Sunday without
+    Friday's own shifts. A window that starts on a later day carries
+    that day whole, from midnight. Set `SLACK_SUMMARY_START_IN_DAYS` in
+    `.env` to change the default.
 
     When nothing falls inside the window, the run logs that and posts
     nothing. A day with no shifts is routine, so an empty summary is not

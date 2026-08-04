@@ -314,6 +314,16 @@ SLACK_SUMMARY_DAYS = int(
         '1'
     )
 )
+# Days between today and the first day a sign-up summary covers: 0
+# starts today, 1 starts tomorrow.  A post made ahead of the shifts it
+# covers uses this to leave out the day it is sent, so a Friday notice
+# about the weekend lists Saturday and Sunday only.
+SLACK_SUMMARY_START_IN_DAYS = int(
+    getenv(
+        'SLACK_SUMMARY_START_IN_DAYS',
+        '0'
+    )
+)
 
 # Amplify responses (sign-ups)
 # Public need-detail URL used for shift sign-up link buttons.

@@ -163,7 +163,8 @@ class TestMainRunModeDispatch:
         assert 'Run mode is "Post Slack Summary"' in caplog.text
         app_main.AmplifyResponses.return_value.build_summary \
             .assert_called_once_with(
-                need_ids=['879610'], title=None, days=None
+                need_ids=['879610'], title=None, days=None,
+                start_in_days=None
             )
         # Dry run by default; channel falls back to the configured value
         # (None in the test environment).
@@ -188,7 +189,8 @@ class TestMainRunModeDispatch:
 
         app_main.AmplifyResponses.return_value.build_summary \
             .assert_called_once_with(
-                need_ids=['5'], title='Custom', days=3
+                need_ids=['5'], title='Custom', days=3,
+                start_in_days=None
             )
         app_main.SlackNotifier.assert_called_once_with(
             channel='C999',
@@ -202,7 +204,8 @@ class TestSlackNeedIdOptions:
 
         app_main.AmplifyResponses.return_value.build_summary \
             .assert_called_once_with(
-                need_ids=['1', '2'], title=None, days=None
+                need_ids=['1', '2'], title=None, days=None,
+                start_in_days=None
             )
 
     def test_comma_separated_option_reaches_the_builder(self, app_main):
@@ -210,7 +213,8 @@ class TestSlackNeedIdOptions:
 
         app_main.AmplifyResponses.return_value.build_summary \
             .assert_called_once_with(
-                need_ids=['1', '2'], title=None, days=None
+                need_ids=['1', '2'], title=None, days=None,
+                start_in_days=None
             )
 
     def test_configured_ids_allow_a_bare_run(self, app_main, monkeypatch):
@@ -220,8 +224,35 @@ class TestSlackNeedIdOptions:
 
         app_main.AmplifyResponses.return_value.build_summary \
             .assert_called_once_with(
-                need_ids=['4', '5'], title=None, days=None
+                need_ids=['4', '5'], title=None, days=None,
+                start_in_days=None
             )
+
+
+class TestSlackWindowOffset:
+    def test_the_offset_reaches_the_builder(self, app_main):
+        # The Friday notice covering Saturday and Sunday.
+        app_main.main(['-s', '-N', '5', '-D', '1', '-d', '2'])
+
+        app_main.AmplifyResponses.return_value.build_summary \
+            .assert_called_once_with(
+                need_ids=['5'], title=None, days=2, start_in_days=1
+            )
+
+    def test_zero_starts_today(self, app_main):
+        app_main.main(['-s', '-N', '5', '--start-in-days', '0'])
+
+        app_main.AmplifyResponses.return_value.build_summary \
+            .assert_called_once_with(
+                need_ids=['5'], title=None, days=None, start_in_days=0
+            )
+
+    def test_a_negative_offset_exits_nonzero(self, app_main):
+        with pytest.raises(SystemExit) as exc_info:
+            app_main.main(['-s', '-N', '5', '-D', '-1'])
+
+        assert exc_info.value.code != 0
+        app_main.AmplifyResponses.assert_not_called()
 
 
 class TestMainArgumentErrors:

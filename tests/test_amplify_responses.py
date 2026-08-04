@@ -19,20 +19,23 @@ import pytest
 from star_pass.amplify_responses import (
     AmplifyResponses,
     count_signups_by_shift,
+    _max_numeric_id,
+)
+from star_pass._summary_window import (
+    local_now,
     _format_day_heading,
     _format_long_date,
     _format_short_date,
     _format_slot_when,
     _format_time_range,
-    _max_numeric_id,
     _response_created_dt,
     _upcoming_shifts,
-    local_now,
     _window_end,
+    _window_start,
     _window_title,
 )
 from star_pass import _defaults
-from star_pass import amplify_responses
+from star_pass import amplify_responses, _summary_window
 
 # Constants
 PER_PAGE = _defaults.AMPLIFY_RESPONSES_PER_PAGE
@@ -170,7 +173,7 @@ class TestLocalNow:
         # Amplify reports naive local datetimes, so the reference time
         # must be naive to stay comparable.
         monkeypatch.setattr(
-            amplify_responses, 'LOCAL_TIMEZONE', 'America/Los_Angeles'
+            _summary_window, 'LOCAL_TIMEZONE', 'America/Los_Angeles'
         )
 
         assert local_now().tzinfo is None
@@ -181,10 +184,10 @@ class TestLocalNow:
         # A container or CI runner in UTC is already on tomorrow's
         # date during a Portland evening, which would move a same-day
         # summary onto the wrong day.
-        monkeypatch.setattr(amplify_responses, 'LOCAL_TIMEZONE', 'UTC')
+        monkeypatch.setattr(_summary_window, 'LOCAL_TIMEZONE', 'UTC')
         as_utc = local_now()
         monkeypatch.setattr(
-            amplify_responses, 'LOCAL_TIMEZONE', 'America/Los_Angeles'
+            _summary_window, 'LOCAL_TIMEZONE', 'America/Los_Angeles'
         )
         as_pacific = local_now()
 
@@ -193,14 +196,14 @@ class TestLocalNow:
         assert 7 * 3600 - 60 < offset < 8 * 3600 + 60
 
     def test_matches_the_zone_it_is_given(self, monkeypatch):
-        monkeypatch.setattr(amplify_responses, 'LOCAL_TIMEZONE', 'UTC')
+        monkeypatch.setattr(_summary_window, 'LOCAL_TIMEZONE', 'UTC')
         expected = datetime.now(tz=ZoneInfo('UTC')).replace(tzinfo=None)
 
         assert abs((local_now() - expected).total_seconds()) < 5
 
     def test_unknown_zone_raises_a_clear_error(self, monkeypatch):
         monkeypatch.setattr(
-            amplify_responses, 'LOCAL_TIMEZONE', 'Mars/Olympus_Mons'
+            _summary_window, 'LOCAL_TIMEZONE', 'Mars/Olympus_Mons'
         )
 
         with pytest.raises(ValueError, match='LOCAL_TIMEZONE'):
@@ -279,6 +282,45 @@ class TestHelperFunctions:
         assert title == (
             'Shift sign-ups for Tuesday, July 14, 2026 - '
             'Wednesday, July 15, 2026'
+        )
+
+    def test_window_start_is_now_when_it_starts_today(self):
+        # Shifts already under way are left out of a same-day summary.
+        assert _window_start(NOW, 0) == NOW
+
+    def test_window_start_is_midnight_when_it_starts_later(self):
+        # A later day is carried whole, from its first instant.
+        assert _window_start(NOW, 1) == datetime(2026, 7, 15, 0, 0, 0)
+
+    def test_window_start_rejects_a_past_start(self):
+        with pytest.raises(ValueError, match='cannot start in the past'):
+            _window_start(NOW, -1)
+
+    def test_an_offset_window_leaves_out_the_day_it_is_built(self):
+        # The Friday notice covering the weekend: Saturday and Sunday
+        # only, with Friday's own shifts excluded.
+        friday = datetime(2026, 8, 7, 12, 0, 0)
+        start = _window_start(friday, 1)
+        end = _window_end(start, 2)
+
+        shifts = [
+            _shift('FRI', '2026-08-07 18:00:00', '2026-08-07 20:00:00'),
+            _shift('SAT', '2026-08-08 10:00:00', '2026-08-08 11:00:00'),
+            _shift('SUN', '2026-08-09 14:00:00', '2026-08-09 15:00:00'),
+            _shift('MON', '2026-08-10 18:00:00', '2026-08-10 19:00:00'),
+        ]
+
+        result = _upcoming_shifts(shifts, start, end)
+
+        assert [shift['id'] for shift in result] == ['SAT', 'SUN']
+
+    def test_an_offset_window_title_names_the_days_it_covers(self):
+        friday = datetime(2026, 8, 7, 12, 0, 0)
+        start = _window_start(friday, 1)
+
+        assert _window_title(start, _window_end(start, 2)) == (
+            'Shift sign-ups for Saturday, August 8, 2026 - '
+            'Sunday, August 9, 2026'
         )
 
 
