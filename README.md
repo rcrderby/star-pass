@@ -122,7 +122,7 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     printf '879610 879611' | ./app/__main__.py -s -N -
 
     # Post live (needs SLACK_BOT_TOKEN); -k overrides the default
-    # channel (SLACK_CHANNEL, else SLACK_DEV_CHANNEL)
+    # channel (SLACK_CHANNEL_ID, else SLACK_DEV_CHANNEL_ID)
     ./app/__main__.py --post-slack-summary \
         --need-id 879610 \
         --slack-channel C0123ABC456 \
@@ -190,7 +190,7 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     separator keeps its full title as the row heading, and its lines
     report a bare count.
 
-    Requires `SLACK_BOT_TOKEN` and a destination channel (`SLACK_CHANNEL` or `SLACK_DEV_CHANNEL`, or `-k`) in your `.env`; see `.env.example`.
+    Requires `SLACK_BOT_TOKEN` and a destination channel (`SLACK_CHANNEL_ID` or `SLACK_DEV_CHANNEL_ID`, or `-k`) in your `.env`; see `.env.example`.
 
     Times, and the calendar day the window covers, are read in
     `LOCAL_TIMEZONE` rather than from the host clock: a container or a

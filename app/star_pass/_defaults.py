@@ -256,8 +256,8 @@ VERBOSITY_LEVELS = (
 # Slack configuration
 # Destination channel IDs (non-secret deployment config).  The bot
 # token itself is a secret and is read in slack_notify.py, not here.
-SLACK_CHANNEL = getenv('SLACK_CHANNEL')
-SLACK_DEV_CHANNEL = getenv('SLACK_DEV_CHANNEL')
+SLACK_CHANNEL_ID = getenv('SLACK_CHANNEL_ID')
+SLACK_DEV_CHANNEL_ID = getenv('SLACK_DEV_CHANNEL_ID')
 # Displayed when a Slack post is skipped in check mode (dry run).
 SLACK_CHECK_MODE_MESSAGE = '\n** Slack Check Mode Run (no message sent) **'
 # Text appended to a sign-up button's label, marking that it opens a
