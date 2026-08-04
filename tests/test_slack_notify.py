@@ -18,8 +18,8 @@ from star_pass.slack_notify import (
     SlackNotifier,
     build_summary_blocks,
     _build_rows,
+    _build_day_elements,
     _format_count,
-    _format_day_text,
     _short_role,
     _group_rows_by_day,
     _split_title,
@@ -267,44 +267,82 @@ class TestFormatCount:
         assert _format_count(entry, 'Officials Practice') == '1 x Official'
 
 
-class TestFormatDayText:
-    def test_row_heading_joins_event_and_time(self, summary):
-        rows = _build_rows(summary['needs'])
-        day = _group_rows_by_day(rows)[0]
-        text = _format_day_text(day, show_heading=False)
+def _day_elements(summary, show_heading=False):
+    rows = _build_rows(summary['needs'])
+    day = _group_rows_by_day(rows)[0]
+    return _build_day_elements(day, show_heading=show_heading)
 
-        assert text.split('\n')[0] == '*Juniors Scrimmages 6:00-7:00 p.m.*'
+
+def _flatten(elements):
+    return ''.join(element['text'] for element in elements)
+
+
+def _day_blocks(blocks):
+    return [
+        block['elements'][0]['elements']
+        for block in blocks if block['type'] == 'rich_text'
+    ]
+
+
+class TestBuildDayElements:
+    def test_row_heading_joins_event_and_time(self, summary):
+        elements = _day_elements(summary)
+
+        assert elements[0] == {
+            'type': 'text',
+            'text': 'Juniors Scrimmages 6:00-7:00 p.m.',
+            'style': {'bold': True}
+        }
+
+    def test_the_time_is_styled_not_marked_up(self, summary):
+        # Markup cannot bold a time range: Slack reads the ':...:' pair
+        # as an emoji shortcode candidate and splits the bold run.
+        elements = _day_elements(summary, show_heading=True)
+        text = _flatten(elements)
+
+        assert '*' not in text
+        assert any(
+            element.get('style', {}).get('bold') and ':' in element['text']
+            for element in elements
+        )
 
     def test_omits_the_date_heading_for_a_single_day(self, summary):
-        rows = _build_rows(summary['needs'])
-        day = _group_rows_by_day(rows)[0]
-        text = _format_day_text(day, show_heading=False)
-
-        assert 'December 17' not in text
+        assert 'December 17' not in _flatten(_day_elements(summary))
 
     def test_leads_with_the_date_heading_when_asked(self, summary):
-        rows = _build_rows(summary['needs'])
-        day = _group_rows_by_day(rows)[0]
-        text = _format_day_text(day, show_heading=True)
+        elements = _day_elements(summary, show_heading=True)
 
-        assert text.startswith('*Wednesday, December 17*')
+        assert elements[0] == {
+            'type': 'text',
+            'text': 'Wednesday, December 17',
+            'style': {'bold': True}
+        }
 
     def test_one_line_per_role_beneath_the_heading(self, summary):
-        rows = _build_rows(summary['needs'])
-        day = _group_rows_by_day(rows)[0]
-        text = _format_day_text(day, show_heading=False)
-
-        assert text == (
-            '*Juniors Scrimmages 6:00-7:00 p.m.*\n'
+        assert _flatten(_day_elements(summary)) == (
+            'Juniors Scrimmages 6:00-7:00 p.m.\n'
             '4 x NSOs\n'
             '6 x SOs\n\n'
-            '*Adult Scrimmages 7:00-8:00 p.m.*\n'
+            'Adult Scrimmages 7:00-8:00 p.m.\n'
             '1 x NSO\n'
             '4 x SOs\n\n'
-            '*Adult Scrimmages 8:00-9:00 p.m.*\n'
+            'Adult Scrimmages 8:00-9:00 p.m.\n'
             '1 x NSO\n'
             '3 x SOs'
         )
+
+    def test_every_row_heading_is_bold(self, summary):
+        elements = _day_elements(summary)
+        headings = [
+            element['text'] for element in elements
+            if element.get('style', {}).get('bold')
+        ]
+
+        assert headings == [
+            'Juniors Scrimmages 6:00-7:00 p.m.',
+            'Adult Scrimmages 7:00-8:00 p.m.',
+            'Adult Scrimmages 8:00-9:00 p.m.'
+        ]
 
 
 class TestBuildSummaryBlocks:
@@ -318,32 +356,28 @@ class TestBuildSummaryBlocks:
         assert '4:50 p.m.' in blocks[1]['elements'][0]['text']
         assert blocks[2] == {'type': 'divider'}
 
-    def test_one_section_per_day_plus_the_prompt(self, summary):
+    def test_one_block_per_day_plus_the_prompt(self, summary):
         blocks = build_summary_blocks(summary)
+        days = _day_blocks(blocks)
         sections = [b for b in blocks if b['type'] == 'section']
-        # One day, then the call to action.  A section per day rather
-        # than per row keeps a long window inside Slack's 50-block cap.
-        assert len(sections) == 2
-        assert '*Juniors Scrimmages 6:00-7:00 p.m.*' in (
-            sections[0]['text']['text']
-        )
 
-    def test_a_multi_day_summary_gets_a_section_per_day(self, summary):
+        # One day block, and the call to action as the lone section.  A
+        # block per day rather than per row keeps a long window inside
+        # Slack's 50-block cap.
+        assert len(days) == 1
+        assert len(sections) == 1
+        assert 'Juniors Scrimmages 6:00-7:00 p.m.' in _flatten(days[0])
+
+    def test_a_multi_day_summary_gets_a_block_per_day(self, summary):
         summary['multi_day'] = True
         summary['needs'][0]['shifts'][0]['day'] = 'Thursday, December 18'
         summary['needs'][0]['shifts'][0]['sort_key'] = '2025-12-18 19:00:00'
 
-        blocks = build_summary_blocks(summary)
-        sections = [b for b in blocks if b['type'] == 'section']
+        days = _day_blocks(build_summary_blocks(summary))
 
-        # Two days, then the call to action.
-        assert len(sections) == 3
-        assert sections[0]['text']['text'].startswith(
-            '*Wednesday, December 17*'
-        )
-        assert sections[1]['text']['text'].startswith(
-            '*Thursday, December 18*'
-        )
+        assert len(days) == 2
+        assert _flatten(days[0]).startswith('Wednesday, December 17')
+        assert _flatten(days[1]).startswith('Thursday, December 18')
 
     def test_one_button_per_need_each_on_its_own_row(self, summary):
         blocks = build_summary_blocks(summary)
