@@ -17,8 +17,10 @@ from star_pass import slack_notify
 from star_pass.slack_notify import (
     SlackNotifier,
     build_summary_blocks,
-    _format_group_text,
-    _group_needs,
+    _build_rows,
+    _format_count,
+    _format_day_text,
+    _group_rows_by_day,
     _split_title,
 )
 
@@ -31,7 +33,7 @@ FAKE_XOXB = 'xoxb-test'
 @pytest.fixture
 def summary() -> dict:
     # The 12/17 scrimmage night: two events, four opportunities, with
-    # the adult event running three back-to-back slots.
+    # the adult event running two back-to-back slots.
     def _need(title, url, slots):
         return {
             'title': title,
@@ -39,6 +41,7 @@ def summary() -> dict:
             'shifts': [
                 {
                     'when': when,
+                    'day': 'Wednesday, December 17',
                     'sort_key': sort_key,
                     'filled': filled
                 }
@@ -46,22 +49,19 @@ def summary() -> dict:
             ]
         }
 
-    juniors = [('6:00-7:00 p.m.', '2025-12-17 18:00:00', 4)]
-    juniors_skating = [('6:00-7:00 p.m.', '2025-12-17 18:00:00', 6)]
     adult = [
         ('7:00-8:00 p.m.', '2025-12-17 19:00:00', 1),
         ('8:00-9:00 p.m.', '2025-12-17 20:00:00', 1),
-        ('9:00-10:00 p.m.', '2025-12-17 21:00:00', 2),
     ]
     adult_skating = [
         ('7:00-8:00 p.m.', '2025-12-17 19:00:00', 4),
         ('8:00-9:00 p.m.', '2025-12-17 20:00:00', 3),
-        ('9:00-10:00 p.m.', '2025-12-17 21:00:00', 4),
     ]
 
     return {
         'title': 'Shift sign-ups for Wednesday, December 17 2025',
-        'as_of': '2026-07-06 12:00',
+        'as_of': '4:50 p.m. on Wednesday, December 17 2025',
+        'multi_day': False,
         'needs': [
             _need(
                 'Adult Scrimmages: Non-Skating Officials',
@@ -76,12 +76,12 @@ def summary() -> dict:
             _need(
                 'Juniors Scrimmages: Non-Skating Officials',
                 'https://example.org/need/3',
-                juniors
+                [('6:00-7:00 p.m.', '2025-12-17 18:00:00', 4)]
             ),
             _need(
                 'Juniors Scrimmages: Skating Officials',
                 'https://example.org/need/4',
-                juniors_skating
+                [('6:00-7:00 p.m.', '2025-12-17 18:00:00', 6)]
             ),
         ]
     }
@@ -114,78 +114,154 @@ class TestSplitTitle:
         assert role == 'Skating: Crew Chief'
 
 
-class TestGroupNeeds:
-    def test_groups_by_event_in_chronological_order(self, summary):
-        groups = _group_needs(summary['needs'])
-        # Juniors run first that night, so their group leads even though
+class TestBuildRows:
+    def test_orders_rows_by_start_time(self, summary):
+        rows = _build_rows(summary['needs'])
+        # Juniors run first that night, so their row leads even though
         # the adult opportunities are listed first.
-        assert [group['name'] for group in groups] == [
-            'Juniors Scrimmages',
-            'Adult Scrimmages'
+        assert [(row['event'], row['when']) for row in rows] == [
+            ('Juniors Scrimmages', '6:00-7:00 p.m.'),
+            ('Adult Scrimmages', '7:00-8:00 p.m.'),
+            ('Adult Scrimmages', '8:00-9:00 p.m.')
         ]
 
-    def test_merges_shared_time_slots(self, summary):
-        groups = _group_needs(summary['needs'])
-        juniors = groups[0]
-        # One slot that night, carrying both roles' counts.
-        assert len(juniors['slots']) == 1
-        assert juniors['slots'][0]['when'] == '6:00-7:00 p.m.'
+    def test_merges_roles_staffing_the_same_slot(self, summary):
+        rows = _build_rows(summary['needs'])
+        # One row for the juniors hour, carrying both roles' counts in
+        # the order their opportunities were given.
         assert [
             (entry['label'], entry['filled'])
-            for entry in juniors['slots'][0]['entries']
+            for entry in rows[0]['entries']
         ] == [
             ('Non-Skating Officials', 4),
             ('Skating Officials', 6)
         ]
 
-    def test_orders_slots_within_a_group(self, summary):
-        groups = _group_needs(summary['needs'])
-        adult = groups[1]
-        assert [slot['when'] for slot in adult['slots']] == [
-            '7:00-8:00 p.m.',
-            '8:00-9:00 p.m.',
-            '9:00-10:00 p.m.'
-        ]
-
-    def test_handles_no_needs(self):
-        assert not _group_needs([])
-
-
-class TestFormatGroupText:
-    def test_names_the_event_and_lists_each_slot(self, summary):
-        groups = _group_needs(summary['needs'])
-        text = _format_group_text(groups[1])
-        lines = text.split('\n')
-
-        assert lines[0] == '*Adult Scrimmages*'
-        assert lines[1] == (
-            '7:00-8:00 p.m. - 1 x Non-Skating Officials, '
-            '4 x Skating Officials'
-        )
-        assert lines[3] == (
-            '9:00-10:00 p.m. - 2 x Non-Skating Officials, '
-            '4 x Skating Officials'
-        )
-
-    def test_unsplittable_title_reports_a_bare_count(self):
-        # The label would just repeat the heading, so it is dropped.
-        needs = [
-            {
-                'title': 'Bout Day Volunteers',
-                'signup_url': 'https://example.org/need/9',
+    def test_same_time_events_follow_the_need_order(self):
+        # The tie-break a reader can control: the order of the need IDs.
+        def _need(title, filled):
+            return {
+                'title': title,
+                'signup_url': 'https://example.org/need/1',
                 'shifts': [
                     {
-                        'when': '9:00 a.m.-1:00 p.m.',
-                        'sort_key': '2025-12-17 09:00:00',
-                        'filled': 3
+                        'when': '6:00-7:00 p.m.',
+                        'day': 'Wednesday, December 17',
+                        'sort_key': '2025-12-17 18:00:00',
+                        'filled': filled
                     }
                 ]
             }
+
+        rows = _build_rows(
+            [
+                _need('Adult Scrimmages: Skating Officials', 1),
+                _need('Juniors Scrimmages: Skating Officials', 2)
+            ]
+        )
+        assert [row['event'] for row in rows] == [
+            'Adult Scrimmages',
+            'Juniors Scrimmages'
         ]
-        text = _format_group_text(_group_needs(needs)[0])
+
+        reversed_rows = _build_rows(
+            [
+                _need('Juniors Scrimmages: Skating Officials', 2),
+                _need('Adult Scrimmages: Skating Officials', 1)
+            ]
+        )
+        assert [row['event'] for row in reversed_rows] == [
+            'Juniors Scrimmages',
+            'Adult Scrimmages'
+        ]
+
+    def test_handles_no_needs(self):
+        assert not _build_rows([])
+
+
+class TestGroupRowsByDay:
+    def test_collects_rows_into_days_in_order(self):
+        rows = [
+            {'day': 'Wednesday, December 17', 'event': 'A', 'sort_key': '1'},
+            {'day': 'Wednesday, December 17', 'event': 'B', 'sort_key': '2'},
+            {'day': 'Thursday, December 18', 'event': 'C', 'sort_key': '3'},
+        ]
+        days = _group_rows_by_day(rows)
+
+        assert [day['day'] for day in days] == [
+            'Wednesday, December 17',
+            'Thursday, December 18'
+        ]
+        assert len(days[0]['rows']) == 2
+        assert len(days[1]['rows']) == 1
+
+
+class TestFormatCount:
+    def test_singular_at_exactly_one(self):
+        # One volunteer is an Official, not Officials.
+        entry = {'label': 'Skating Officials', 'filled': 1}
+        assert _format_count(entry, 'Adult Scrimmages') == (
+            '1 x Skating Official'
+        )
+
+    def test_plural_at_any_other_count(self):
+        for filled in (0, 2, 11):
+            entry = {'label': 'Skating Officials', 'filled': filled}
+            assert _format_count(entry, 'Adult Scrimmages') == (
+                f'{filled} x Skating Officials'
+            )
+
+    def test_double_s_endings_are_left_alone(self):
+        entry = {'label': 'Class', 'filled': 1}
+        assert _format_count(entry, 'Event') == '1 x Class'
+
+    def test_label_without_a_plural_is_unchanged(self):
+        entry = {'label': 'Crew Chief', 'filled': 1}
+        assert _format_count(entry, 'Event') == '1 x Crew Chief'
+
+    def test_label_matching_the_event_reports_a_bare_count(self):
+        # The label would just repeat the row heading.
+        entry = {'label': 'Bout Day Volunteers', 'filled': 3}
+        assert _format_count(entry, 'Bout Day Volunteers') == '3 signed up'
+
+
+class TestFormatDayText:
+    def test_row_heading_joins_event_and_time(self, summary):
+        rows = _build_rows(summary['needs'])
+        day = _group_rows_by_day(rows)[0]
+        text = _format_day_text(day, show_heading=False)
+
+        assert text.split('\n')[0] == '*Juniors Scrimmages 6:00-7:00 p.m.*'
+
+    def test_omits_the_date_heading_for_a_single_day(self, summary):
+        rows = _build_rows(summary['needs'])
+        day = _group_rows_by_day(rows)[0]
+        text = _format_day_text(day, show_heading=False)
+
+        assert 'December 17' not in text
+
+    def test_leads_with_the_date_heading_when_asked(self, summary):
+        rows = _build_rows(summary['needs'])
+        day = _group_rows_by_day(rows)[0]
+        text = _format_day_text(day, show_heading=True)
+
+        assert text.startswith('*Wednesday, December 17*')
+
+    def test_one_line_per_role_beneath_the_heading(self, summary):
+        rows = _build_rows(summary['needs'])
+        day = _group_rows_by_day(rows)[0]
+        text = _format_day_text(day, show_heading=False)
 
         assert text == (
-            '*Bout Day Volunteers*\n9:00 a.m.-1:00 p.m. - 3 signed up'
+            '*Juniors Scrimmages 6:00-7:00 p.m.*\n'
+            '4 x Non-Skating Officials\n'
+            '6 x Skating Officials\n\n'
+            '*Adult Scrimmages 7:00-8:00 p.m.*\n'
+            '1 x Non-Skating Official\n'
+            '4 x Skating Officials\n\n'
+            '*Adult Scrimmages 8:00-9:00 p.m.*\n'
+            '1 x Non-Skating Official\n'
+            '3 x Skating Officials'
         )
 
 
@@ -197,16 +273,35 @@ class TestBuildSummaryBlocks:
             'Shift sign-ups for Wednesday, December 17 2025'
         )
         assert blocks[1]['type'] == 'context'
-        assert 'As of 2026-07-06 12:00' in blocks[1]['elements'][0]['text']
+        assert '4:50 p.m.' in blocks[1]['elements'][0]['text']
         assert blocks[2] == {'type': 'divider'}
 
-    def test_one_section_per_event_plus_the_prompt(self, summary):
+    def test_one_section_per_day_plus_the_prompt(self, summary):
         blocks = build_summary_blocks(summary)
         sections = [b for b in blocks if b['type'] == 'section']
-        # Two events, then the call to action.
+        # One day, then the call to action.  A section per day rather
+        # than per row keeps a long window inside Slack's 50-block cap.
+        assert len(sections) == 2
+        assert '*Juniors Scrimmages 6:00-7:00 p.m.*' in (
+            sections[0]['text']['text']
+        )
+
+    def test_a_multi_day_summary_gets_a_section_per_day(self, summary):
+        summary['multi_day'] = True
+        summary['needs'][0]['shifts'][0]['day'] = 'Thursday, December 18'
+        summary['needs'][0]['shifts'][0]['sort_key'] = '2025-12-18 19:00:00'
+
+        blocks = build_summary_blocks(summary)
+        sections = [b for b in blocks if b['type'] == 'section']
+
+        # Two days, then the call to action.
         assert len(sections) == 3
-        assert '*Juniors Scrimmages*' in sections[0]['text']['text']
-        assert '*Adult Scrimmages*' in sections[1]['text']['text']
+        assert sections[0]['text']['text'].startswith(
+            '*Wednesday, December 17*'
+        )
+        assert sections[1]['text']['text'].startswith(
+            '*Thursday, December 18*'
+        )
 
     def test_one_button_per_need_each_on_its_own_row(self, summary):
         blocks = build_summary_blocks(summary)
@@ -384,7 +479,7 @@ class TestPostSummary:
         # Fallback text names the summary and the shift count.
         assert kwargs['text'] == (
             'Shift sign-ups for Wednesday, December 17 2025 - '
-            '8 shift(s)'
+            '6 shift(s)'
         )
 
 

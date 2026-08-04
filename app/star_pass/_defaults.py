@@ -282,8 +282,9 @@ SLACK_TITLE_SEPARATOR = getenv(
     'SLACK_TITLE_SEPARATOR',
     ': '
 )
-# Date prefix on a shift line when a summary spans more than one day.
-SLACK_SLOT_DATE_FORMAT = '%a %m/%d'
+# Date heading above a day's shifts when a summary spans more than one
+# day.  A single-day summary omits it, because the title names the day.
+SLACK_DAY_HEADING_FORMAT = '%A, %B %d'
 # Comma-separated Amplify need IDs summarized when -N is not supplied.
 SLACK_SUMMARY_NEED_IDS = _get_env_list(
     'SLACK_SUMMARY_NEED_IDS',

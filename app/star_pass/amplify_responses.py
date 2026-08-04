@@ -43,7 +43,7 @@ SUMMARY_DAYS = _defaults.SLACK_SUMMARY_DAYS
 AMPLIFY_SHIFT_DATETIME_FORMAT = _defaults.AMPLIFY_SHIFT_DATETIME_FORMAT
 SIMPLE_DATE_FORMAT = _defaults.SIMPLE_DATE_FORMAT
 SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
-SLOT_DATE_FORMAT = _defaults.SLACK_SLOT_DATE_FORMAT
+DAY_HEADING_FORMAT = _defaults.SLACK_DAY_HEADING_FORMAT
 LOCAL_TIMEZONE = _defaults.LOCAL_TIMEZONE
 
 # Only responses with this status count as a filled slot.
@@ -337,24 +337,21 @@ def _format_time_range(
 
 
 def _format_slot_when(
-        shift: Dict[str, Any],
-        show_date: bool
+        shift: Dict[str, Any]
 ) -> str:
     """ Format the time label for one shift line.
+
+        The date is not included: a day's shifts are shown under a date
+        heading, so repeating it on every line would be noise.
 
         Args:
             shift (Dict[str, Any]):
                 Shift object with 'start' and 'end' datetime strings.
 
-            show_date (bool):
-                Whether to prefix the date.  A single-day summary does
-                not need it -- the title already names the day -- but a
-                multi-day window does.
-
         Returns:
             when (str):
-                A time range, optionally prefixed with a short date.
-                Falls back to the raw start value when parsing fails.
+                A time range.  Falls back to the raw start value when
+                parsing fails.
     """
 
     start_dt = _parse_amplify_dt(shift.get('start'))
@@ -363,18 +360,36 @@ def _format_slot_when(
     if start_dt is None or end_dt is None:
         return shift.get('start') or 'Time TBD'
 
-    when = _format_time_range(start_dt=start_dt, end_dt=end_dt)
+    return _format_time_range(start_dt=start_dt, end_dt=end_dt)
 
-    if show_date is True:
-        return f'{start_dt.strftime(SLOT_DATE_FORMAT)}, {when}'
 
-    return when
+def _format_day_heading(
+        shift: Dict[str, Any]
+) -> str:
+    """ Format the date heading a shift belongs under.
+
+        Args:
+            shift (Dict[str, Any]):
+                Shift object with a 'start' datetime string.
+
+        Returns:
+            day (str):
+                The shift's date.  Empty when the start cannot be
+                parsed, which keeps an unreadable shift out of a day
+                heading of its own.
+    """
+
+    start_dt = _shift_start_dt(shift=shift)
+
+    if start_dt is None:
+        return ''
+
+    return start_dt.strftime(DAY_HEADING_FORMAT)
 
 
 def _build_need_shifts(
         shifts: List[Dict[str, Any]],
-        counts: Dict[str, int],
-        show_date: bool
+        counts: Dict[str, int]
 ) -> List[Dict[str, Any]]:
     """ Build the per-shift entries for one need in a summary.
 
@@ -385,25 +400,20 @@ def _build_need_shifts(
             counts (Dict[str, int]):
                 Active sign-up counts keyed by string shift ID.
 
-            show_date (bool):
-                Whether shift labels carry a date (see
-                '_format_slot_when').
-
         Returns:
             need_shifts (List[Dict[str, Any]]):
-                One entry per shift, with 'when' (the display label),
-                'sort_key' (the raw start, for ordering across needs),
-                and 'filled'.  A shift with no sign-ups reports zero.
+                One entry per shift, with 'when' (the time label), 'day'
+                (the date heading it belongs under), 'sort_key' (the raw
+                start, for ordering across needs), and 'filled'.  A
+                shift with no sign-ups reports zero.
     """
 
     need_shifts = []
     for shift in shifts:
         need_shifts.append(
             {
-                'when': _format_slot_when(
-                    shift=shift,
-                    show_date=show_date
-                ),
+                'when': _format_slot_when(shift=shift),
+                'day': _format_day_heading(shift=shift),
                 'sort_key': shift.get('start') or '',
                 'filled': counts.get(str(shift.get('id')), 0)
             }
@@ -689,8 +699,7 @@ class AmplifyResponses:
             need_ids: Sequence[str | int],
             counts: Dict[str, int],
             now: datetime,
-            window_end: datetime,
-            show_date: bool
+            window_end: datetime
     ) -> Tuple[List[Dict[str, Any]], Set[str]]:
         """ Build the per-need entries of a summary.
 
@@ -706,9 +715,6 @@ class AmplifyResponses:
 
                 window_end (datetime):
                     End of the shift window (see '_window_end').
-
-                show_date (bool):
-                    Whether shift labels carry a date.
 
             Returns:
                 result (Tuple[List[Dict[str, Any]], Set[str]]):
@@ -748,8 +754,7 @@ class AmplifyResponses:
                     ),
                     'shifts': _build_need_shifts(
                         shifts=upcoming,
-                        counts=counts,
-                        show_date=show_date
+                        counts=counts
                     )
                 }
             )
@@ -840,10 +845,7 @@ class AmplifyResponses:
             need_ids=need_ids,
             counts=counts,
             now=now,
-            window_end=window_end,
-            # A multi-day window needs the date on each shift line; a
-            # single-day one does not, because the title names the day.
-            show_date=days > 1
+            window_end=window_end
         )
 
         # Warn when the counts sit close to the window edge
@@ -862,5 +864,8 @@ class AmplifyResponses:
                 f'{_format_clock(value=now)} on '
                 f'{now.strftime(SIMPLE_DATE_FORMAT)}'
             ),
+            # A single-day summary needs no date headings: the title
+            # already names the day they would repeat.
+            'multi_day': days > 1,
             'needs': summary_needs
         }

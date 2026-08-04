@@ -134,24 +134,38 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     at all the IDs come from `SLACK_SUMMARY_NEED_IDS` in `.env`, so an
     unattended run needs no arguments.
 
-    **How the message reads.** Shifts are grouped by event, one line per
-    time slot, listing each role's sign-up count:
+    **How the message reads.** One row per event and time, with a line
+    per role beneath it:
 
     ```text
-    Juniors Scrimmages
-    6:00-7:00 p.m. - 4 x Non-Skating Officials, 6 x Skating Officials
+    Juniors Scrimmages 6:00-7:00 p.m.
+    4 x Non-Skating Officials
+    6 x Skating Officials
 
-    Adult Scrimmages
-    7:00-8:00 p.m. - 1 x Non-Skating Officials, 4 x Skating Officials
+    Adult Scrimmages 7:00-8:00 p.m.
+    1 x Non-Skating Official
+    4 x Skating Officials
     ```
+
+    A count of exactly one reads as a singular label ("1 x Non-Skating
+    Official"). Rows appear in chronological order, and so do the
+    sign-up buttons at the end, so the message reads top to bottom as
+    the day happens. When two events run at the same time, they follow
+    the order their IDs were given in `-N` or `SLACK_SUMMARY_NEED_IDS`.
+
+    When the window covers more than one day, each day's rows sit under
+    a date heading. A single-day summary has none, because the title
+    already names the day.
 
     The event heading and the shortened role labels are derived from the
     opportunity titles themselves, with no mapping file to maintain:
-    everything before `SLACK_TITLE_SEPARATOR` (default ` - `) becomes the
-    heading, and what follows becomes the label. An opportunity whose
-    title has no separator forms its own group and keeps its full title.
-    Groups and their sign-up buttons appear in chronological order, so
-    the message reads top to bottom as the day happens.
+    everything before `SLACK_TITLE_SEPARATOR` (a colon and a space by
+    default) becomes the
+    event, and what follows becomes the role label, so "Adult
+    Scrimmages: Skating Officials" contributes a "Skating Officials"
+    line to an "Adult Scrimmages" row. An opportunity whose title has no
+    separator keeps its full title as the row heading, and its lines
+    report a bare count.
 
     Requires `SLACK_BOT_TOKEN` and a destination channel (`SLACK_CHANNEL` or `SLACK_DEV_CHANNEL`, or `-k`) in your `.env`; see `.env.example`.
 

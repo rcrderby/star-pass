@@ -76,14 +76,20 @@ def _split_title(
     return (event.strip(), role.strip())
 
 
-def _group_needs(
+def _build_rows(
         needs: List[Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
-    """ Group a summary's needs by event, merging shared time slots.
+    """ Build one display row per event and time slot.
 
-        Needs staffing the same event are shown together, and the shifts
-        they share are merged onto one line per time slot so a reader
-        sees every role for that hour at once.
+        A row is what a reader scans: an event at a time, with a count
+        for each role staffing it.  Opportunities staffing the same
+        event at the same time merge into one row, so every role for
+        that hour appears together.
+
+        Rows are ordered by start time.  Two events at the same time are
+        ordered by where their opportunities appear in 'needs', which
+        follows the order the need IDs were given, so the order is
+        deterministic and the caller controls it.
 
         Args:
             needs (List[Dict[str, Any]]):
@@ -91,93 +97,168 @@ def _group_needs(
                 'amplify_responses.build_summary').
 
         Returns:
-            groups (List[Dict[str, Any]]):
-                One entry per event, ordered by its earliest shift, each
-                with 'name' and 'slots'.  Each slot has 'when' and
-                'entries' (label and filled count, in need order).
+            rows (List[Dict[str, Any]]):
+                One entry per event and time slot, each with 'event',
+                'when', 'day', 'sort_key', and 'entries' (label and
+                filled count, in need order).
     """
 
-    groups: Dict[str, Dict[str, Any]] = {}
+    rows: Dict[Any, Dict[str, Any]] = {}
+    event_order: Dict[str, int] = {}
 
     for need in needs:
         event, role = _split_title(title=need.get('title', 'Shifts'))
-        group = groups.setdefault(
-            event,
-            {'name': event, 'slots': {}, 'needs': []}
-        )
-        group['needs'].append(need)
+        event_order.setdefault(event, len(event_order))
 
         for shift in need.get('shifts', []):
-            # The label already encodes both start and end, so it keys
-            # the slot; 'sort_key' orders slots across needs.
-            when = shift.get('when', 'Time TBD')
-            slot = group['slots'].setdefault(
-                when,
+            sort_key = shift.get('sort_key', '')
+            row = rows.setdefault(
+                (sort_key, event),
                 {
-                    'when': when,
-                    'sort_key': shift.get('sort_key', ''),
+                    'event': event,
+                    'when': shift.get('when', 'Time TBD'),
+                    'day': shift.get('day', ''),
+                    'sort_key': sort_key,
                     'entries': []
                 }
             )
-            slot['entries'].append(
+            row['entries'].append(
                 {
                     'label': role,
                     'filled': shift.get('filled', 0)
                 }
             )
 
-    # Order slots within a group, then groups by their earliest slot
-    ordered = []
-    for group in groups.values():
-        slots = sorted(
-            group['slots'].values(),
-            key=lambda slot: slot['sort_key']
-        )
-        ordered.append(
-            {
-                'name': group['name'],
-                'slots': slots,
-                'needs': group['needs']
-            }
-        )
-
-    ordered.sort(
-        key=lambda group: group['slots'][0]['sort_key']
-        if group['slots'] else ''
+    return sorted(
+        rows.values(),
+        key=lambda row: (row['sort_key'], event_order[row['event']])
     )
 
-    return ordered
 
-
-def _format_group_text(
-        group: Dict[str, Any]
-) -> str:
-    """ Format one event group as a Block Kit 'mrkdwn' string.
+def _group_rows_by_day(
+        rows: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """ Collect rows into the day each belongs to, preserving order.
 
         Args:
-            group (Dict[str, Any]):
-                A group with 'name' and 'slots' (see '_group_needs').
+            rows (List[Dict[str, Any]]):
+                Display rows in order (see '_build_rows').
+
+        Returns:
+            days (List[Dict[str, Any]]):
+                One entry per day, each with 'day' and 'rows'.
+    """
+
+    days: Dict[str, Dict[str, Any]] = {}
+
+    for row in rows:
+        day = days.setdefault(
+            row['day'],
+            {'day': row['day'], 'rows': []}
+        )
+        day['rows'].append(row)
+
+    return list(days.values())
+
+
+def _format_count(
+        entry: Dict[str, Any],
+        event: str
+) -> str:
+    """ Format one role's sign-up count for a row.
+
+        Args:
+            entry (Dict[str, Any]):
+                A row entry with 'label' and 'filled'.
+
+            event (str):
+                The row's event name.
+
+        Returns:
+            count (str):
+                The count and its label, singular when exactly one
+                volunteer signed up.
+    """
+
+    filled = entry['filled']
+    label = entry['label']
+
+    # A title with no separator makes the label the event name, so
+    # repeating it on the line would just be noise.
+    if label == event:
+        return f'{filled} signed up'
+
+    # One volunteer is an Official, not Officials.  'ss' endings
+    # (Class) are left alone; an irregular plural would need a mapping,
+    # and opportunity titles do not use them.
+    if filled == 1 and label.endswith('s') and not label.endswith('ss'):
+        label = label[:-1]
+
+    return f'{filled} x {label}'
+
+
+def _format_day_text(
+        day: Dict[str, Any],
+        show_heading: bool
+) -> str:
+    """ Format one day's rows as a Block Kit 'mrkdwn' string.
+
+        Args:
+            day (Dict[str, Any]):
+                A day with 'day' and 'rows' (see '_group_rows_by_day').
+
+            show_heading (bool):
+                Whether to lead with the date.  A single-day summary
+                omits it, because the title already names the day.
 
         Returns:
             text (str):
-                The event name in bold, then one line per time slot.
+                The day's rows, each an event and time in bold followed
+                by one line per role.
     """
 
-    lines = [f'*{group["name"]}*']
+    blocks = []
 
-    for slot in group['slots']:
-        counts = []
-        for entry in slot['entries']:
-            # A title with no separator makes the label the event name,
-            # so repeating it on the line would just be noise.
-            if entry['label'] == group['name']:
-                counts.append(f'{entry["filled"]} signed up')
-            else:
-                counts.append(f'{entry["filled"]} x {entry["label"]}')
+    if show_heading is True and day['day']:
+        blocks.append(f'*{day["day"]}*')
 
-        lines.append(f'{slot["when"]} - {", ".join(counts)}')
+    for row in day['rows']:
+        counts = '\n'.join(
+            _format_count(entry=entry, event=row['event'])
+            for entry in row['entries']
+        )
+        blocks.append(f'*{row["event"]} {row["when"]}*\n{counts}')
 
-    return '\n'.join(lines)
+    return '\n\n'.join(blocks)
+
+
+def _event_position(
+        need: Dict[str, Any],
+        rows: List[Dict[str, Any]]
+) -> int:
+    """ Return where a need's event first appears among the rows.
+
+        Args:
+            need (Dict[str, Any]):
+                A summary need with a 'title'.
+
+            rows (List[Dict[str, Any]]):
+                Display rows in order (see '_build_rows').
+
+        Returns:
+            position (int):
+                The index of the first row for the need's event, or the
+                row count when the need has no rows, which sorts it
+                last.
+    """
+
+    event, _role = _split_title(title=need.get('title', 'Shifts'))
+
+    for index, row in enumerate(rows):
+        if row['event'] == event:
+            return index
+
+    return len(rows)
 
 
 def _heading_text(
@@ -264,27 +345,34 @@ def build_summary_blocks(
     blocks.append({'type': 'divider'})
 
     needs = summary.get('needs', [])
-    groups = _group_needs(needs=needs)
+    rows = _build_rows(needs=needs)
 
-    # One section per event, listing its time slots
-    for group in groups:
+    # One section per day, rather than per row: Slack caps a message at
+    # 50 blocks, which a week-long window would approach a row at a
+    # time.  A day's text stays far inside the 3000-character limit.
+    for day in _group_rows_by_day(rows=rows):
         blocks.append(
             {
                 'type': 'section',
                 'text': {
                     'type': 'mrkdwn',
-                    'text': _format_group_text(group=group)
+                    'text': _format_day_text(
+                        day=day,
+                        show_heading=summary.get('multi_day', False)
+                    )
                 }
             }
         )
 
-    # Buttons follow the same order as the sections above, so the
-    # message reads consistently top to bottom.
-    ordered_needs = [
-        need
-        for group in groups
-        for need in group['needs']
-    ]
+    # Buttons follow the order the events appear above, so the message
+    # reads consistently top to bottom.
+    ordered_needs = sorted(
+        needs,
+        key=lambda need: _event_position(
+            need=need,
+            rows=rows
+        )
+    )
 
     # Call to action, then one sign-up button per opportunity.  The
     # 'action_id' carries the loop index because Slack rejects duplicate
