@@ -69,8 +69,10 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     GCAL_WINDOW_END=2099-02-01
     ```
 
-    Local time means `GCAL_TIMEZONE`, which defaults to
-    `America/Los_Angeles`; set it to any IANA time zone name. A value
+    Local time means `GCAL_TIMEZONE`, which defaults to `LOCAL_TIMEZONE`
+    (itself `America/Los_Angeles`); set either to any IANA time zone
+    name. Set `LOCAL_TIMEZONE` for the league as a whole, and
+    `GCAL_TIMEZONE` only if the calendar differs from it. A value
     that carries its own UTC offset
     (`2099-01-01T00:00:00-08:00`) is honored as written. Prefer plain
     dates: writing the window in UTC shifts it eight hours earlier
@@ -152,6 +154,11 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     the message reads top to bottom as the day happens.
 
     Requires `SLACK_BOT_TOKEN` and a destination channel (`SLACK_CHANNEL` or `SLACK_DEV_CHANNEL`, or `-k`) in your `.env`; see `.env.example`.
+
+    Times, and the calendar day the window covers, are read in
+    `LOCAL_TIMEZONE` rather than from the host clock: a container or a
+    CI runner usually runs in UTC, where a Portland evening is already
+    the next day, which would summarize the wrong day.
 
     **The day window.** `-d`/`--days` sets how many calendar days the
     summary covers, counting today as day one: `1` (the default) is today
