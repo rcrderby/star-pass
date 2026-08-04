@@ -34,7 +34,10 @@ SLACK_BOT_TOKEN = getenv(
 SLACK_CHANNEL = _defaults.SLACK_CHANNEL
 SLACK_DEV_CHANNEL = _defaults.SLACK_DEV_CHANNEL
 SLACK_CHECK_MODE_MESSAGE = _defaults.SLACK_CHECK_MODE_MESSAGE
+SLACK_DEFAULT_ROLE_LABEL = _defaults.SLACK_DEFAULT_ROLE_LABEL
+SLACK_ROLE_LABELS = _defaults.SLACK_ROLE_LABELS
 SLACK_SIGN_UP_BUTTON_STYLE = _defaults.SLACK_SIGN_UP_BUTTON_STYLE
+SLACK_SIGN_UP_BUTTON_SUFFIX = _defaults.SLACK_SIGN_UP_BUTTON_SUFFIX
 SLACK_SIGN_UP_PROMPT = _defaults.SLACK_SIGN_UP_PROMPT
 SLACK_SUMMARY_EMOJI = _defaults.SLACK_SUMMARY_EMOJI
 TITLE_SEPARATOR = _defaults.SLACK_TITLE_SEPARATOR
@@ -42,11 +45,6 @@ TITLE_SEPARATOR = _defaults.SLACK_TITLE_SEPARATOR
 # Slack rejects button text longer than 75 characters.
 BUTTON_TEXT_LIMIT = 75
 
-# Trailing arrow marking a button that opens a browser.  Sent as a
-# shortcode so the payload stays ASCII: check mode prints it to the
-# terminal, where a legacy Windows console encoding would fail on the
-# character itself.
-BUTTON_TEXT_SUFFIX = ' :arrow_upper_right:'
 
 # Module logger
 logger = get_logger(__name__)
@@ -80,6 +78,27 @@ def _split_title(
         return (title, title)
 
     return (event.strip(), role.strip())
+
+
+def _short_role(
+        role: str
+) -> str:
+    """ Shorten a role using the role label model.
+
+        Opportunity titles are written for the Amplify website, where
+        there is room for them; a Slack button truncates them.  A role
+        with no entry in the model keeps its full text.
+
+        Args:
+            role (str):
+                The role as it appears in an opportunity title.
+
+        Returns:
+            label (str):
+                The short label, or the role unchanged.
+    """
+
+    return SLACK_ROLE_LABELS.get(role, role)
 
 
 def _build_rows(
@@ -182,21 +201,28 @@ def _format_count(
 
         Returns:
             count (str):
-                The count and its label, singular when exactly one
+                The count and its label, shortened where the role label
+                model has an entry, and singular when exactly one
                 volunteer signed up.
     """
 
     filled = entry['filled']
     label = entry['label']
 
-    # A title with no separator makes the label the event name, so
-    # repeating it on the line would just be noise.
     if label == event:
-        return f'{filled} signed up'
+        # A title with no separator makes the label the event name, so
+        # repeating it on the line would be noise; name the role
+        # generically instead.
+        label = SLACK_DEFAULT_ROLE_LABEL
+    else:
+        label = _short_role(role=label)
 
-    # One volunteer is an Official, not Officials.  'ss' endings
-    # (Class) are left alone; an irregular plural would need a mapping,
-    # and opportunity titles do not use them.
+    # Shortening happens first so that the singular rule sees the label
+    # a reader will: 'SOs' gives '1 x SO', not '1 x Skating Official'.
+    #
+    # One volunteer is an Official, not Officials.  'ss' endings (Class)
+    # are left alone; an irregular plural would need spelling out in the
+    # role label model rather than abbreviating.
     if filled == 1 and label.endswith('s') and not label.endswith('ss'):
         label = label[:-1]
 
@@ -272,14 +298,14 @@ def _button_text(
 ) -> str:
     """ Build a sign-up button's label.
 
-        The label ends with an arrow, the long-standing convention for a
-        control that leaves the current view: these buttons open the
-        opportunity in a browser rather than acting inside Slack.
+        The role is shortened, because Slack truncates a button that
+        outgrows its width, and the label ends with the configured
+        suffix, which marks that the button opens a browser rather than
+        acting inside Slack.
 
-        The arrow is sent as a Slack shortcode rather than the literal
-        character.  Check mode prints the payload to the terminal, and a
-        packaged Windows build writing to a legacy console encoding
-        cannot represent the character itself.
+        The suffix is plain text rather than an emoji shortcode: Slack
+        renders a shortcode as a full emoji tile with a hover card, and
+        it crowds out the label on a narrow button.
 
         Args:
             title (str):
@@ -287,15 +313,24 @@ def _button_text(
 
         Returns:
             text (str):
-                The title and the arrow, trimmed so that the whole label
-                stays inside Slack's 75-character limit.
+                The shortened title and the suffix, trimmed so that the
+                whole label stays inside Slack's 75-character limit.
     """
 
-    # Trim the title, not the suffix: a button that ends mid-shortcode
-    # would show the raw text instead of an arrow.
-    room = BUTTON_TEXT_LIMIT - len(BUTTON_TEXT_SUFFIX)
+    event, role = _split_title(title=title)
 
-    return f'{title[:room].rstrip()}{BUTTON_TEXT_SUFFIX}'
+    # A title with no role is its own event, so there is nothing to
+    # rejoin and nothing to shorten.
+    if role == title:
+        label = title
+    else:
+        label = f'{event}{TITLE_SEPARATOR}{_short_role(role=role)}'
+
+    # Trim the label, never the suffix: a button losing its arrow to a
+    # long opportunity title would be the wrong thing to drop.
+    room = BUTTON_TEXT_LIMIT - len(SLACK_SIGN_UP_BUTTON_SUFFIX)
+
+    return f'{label[:room].rstrip()}{SLACK_SIGN_UP_BUTTON_SUFFIX}'
 
 
 def _heading_text(
