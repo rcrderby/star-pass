@@ -157,6 +157,13 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     a date heading. A single-day summary has none, because the title
     already names the day.
 
+    Most of a run is spent waiting on Amplify, because the responses
+    endpoint has no server-side need or shift-date filter and the whole
+    domain's recent sign-ups have to be paged. A spinner reports
+    progress while that happens (`Reading recent sign-ups (page 4)`,
+    then `Reading opportunity 2 of 5`). It writes to stderr and only
+    when stderr is a terminal, so a scheduled run's log stays clean.
+
     The event heading and the shortened role labels are derived from the
     opportunity titles themselves, with no mapping file to maintain:
     everything before `SLACK_TITLE_SEPARATOR` (a colon and a space by

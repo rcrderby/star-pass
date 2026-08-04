@@ -18,13 +18,14 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import (
-    Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+    Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 )
 
 # Imports - Local
 from . import _defaults
 from ._helpers import Helpers, load_env_file
 from ._logging import get_logger
+from ._progress import Spinner
 from .amplify_shifts import BASE_AMPLIFY_HEADERS, BASE_AMPLIFY_URL
 
 # Load environment variables
@@ -41,9 +42,6 @@ RESPONSES_MARGIN_WARN_DAYS = _defaults.AMPLIFY_RESPONSES_MARGIN_WARN_DAYS
 AMPLIFY_NEED_DETAIL_URL = _defaults.AMPLIFY_NEED_DETAIL_URL
 SUMMARY_DAYS = _defaults.SLACK_SUMMARY_DAYS
 AMPLIFY_SHIFT_DATETIME_FORMAT = _defaults.AMPLIFY_SHIFT_DATETIME_FORMAT
-SIMPLE_DATE_FORMAT = _defaults.SIMPLE_DATE_FORMAT
-SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
-DAY_HEADING_FORMAT = _defaults.SLACK_DAY_HEADING_FORMAT
 LOCAL_TIMEZONE = _defaults.LOCAL_TIMEZONE
 
 # Only responses with this status count as a filled slot.
@@ -275,13 +273,55 @@ def _window_title(
                 the window covers more than one day.
     """
 
-    start_label = now.strftime(SIMPLE_DATE_FORMAT)
-    end_label = window_end.strftime(SIMPLE_DATE_FORMAT)
+    start_label = _format_long_date(value=now)
+    end_label = _format_long_date(value=window_end)
 
     if start_label == end_label:
         return f'Shift sign-ups for {start_label}'
 
     return f'Shift sign-ups for {start_label} - {end_label}'
+
+
+def _format_long_date(
+        value: datetime
+) -> str:
+    """ Format a date the way it would be written by hand.
+
+        The day is not zero padded and the year is set off by a comma,
+        so a heading reads 'Monday, August 3, 2026'.  The day is
+        inserted directly rather than through a '%-d' directive, which
+        is not supported on Windows.
+
+        Args:
+            value (datetime):
+                The date to format.
+
+        Returns:
+            date (str):
+                The weekday, month, day, and year.
+    """
+
+    return f'{value.strftime("%A, %B")} {value.day}, {value.year}'
+
+
+def _format_short_date(
+        value: datetime
+) -> str:
+    """ Format a date heading within a summary, without the year.
+
+        The summary title already carries the year, so a day heading
+        reads 'Wednesday, August 5'.
+
+        Args:
+            value (datetime):
+                The date to format.
+
+        Returns:
+            date (str):
+                The weekday, month, and day.
+    """
+
+    return f'{value.strftime("%A, %B")} {value.day}'
 
 
 def _format_clock(
@@ -384,7 +424,7 @@ def _format_day_heading(
     if start_dt is None:
         return ''
 
-    return start_dt.strftime(DAY_HEADING_FORMAT)
+    return _format_short_date(value=start_dt)
 
 
 def _build_need_shifts(
@@ -521,10 +561,53 @@ class AmplifyResponses:
 
         return self.helpers.response_json(response).get('data', {})
 
+    def _read_responses_page(
+            self,
+            since_created: str,
+            since_id: Optional[int]
+    ) -> List[Dict[str, Any]]:
+        """ Read one page of the top-level responses endpoint.
+
+            Args:
+                since_created (str):
+                    Lower bound for a response's creation datetime.
+
+                since_id (int | None):
+                    Page cursor, or None for the first page.
+
+            Returns:
+                page (List[Dict[str, Any]]):
+                    The page's response objects.
+        """
+
+        # Server-side filters: recent, active, one page at a time
+        params: Dict[str, Any] = {
+            'show_inactive': 'No',
+            'per_page': RESPONSES_PER_PAGE,
+            'since_created': since_created
+        }
+        if since_id is not None:
+            params['since_id'] = since_id
+
+        response = self.helpers.send_api_request(
+            api_request_data={
+                'method': 'GET',
+                'url': f'{BASE_AMPLIFY_URL}/responses',
+                'headers': BASE_AMPLIFY_HEADERS,
+                'json': None,
+                'timeout': RESPONSES_HTTP_TIMEOUT,
+                'params': params
+            },
+            display_request_status=False
+        )
+
+        return self.helpers.response_json(response).get('data') or []
+
     def get_recent_responses(
             self,
             since_created: str,
-            need_ids: Optional[Iterable[str | int]] = None
+            need_ids: Optional[Iterable[str | int]] = None,
+            progress: Optional[Callable[[str], None]] = None
     ) -> List[Dict[str, Any]]:
         """ Read recent responses through the paged top-level endpoint.
 
@@ -550,6 +633,11 @@ class AmplifyResponses:
                 need_ids (Iterable[str | int], optional):
                     When given, keep only responses for these needs.
 
+                progress (Callable[[str], None], optional):
+                    Called with a status line as each page is read.  The
+                    read takes tens of seconds, so a caller attached to
+                    a terminal can report where it has got to.
+
             Returns:
                 responses (List[Dict[str, Any]]):
                     Response objects, limited to 'need_ids' when given.
@@ -563,34 +651,18 @@ class AmplifyResponses:
             else None
         )
 
-        url = f'{BASE_AMPLIFY_URL}/responses'
         collected: List[Dict[str, Any]] = []
         since_id: Optional[int] = None
         pages = 0
 
         while pages < RESPONSES_MAX_PAGES:
-            # Server-side filters: recent, active, one page at a time
-            params: Dict[str, Any] = {
-                'show_inactive': 'No',
-                'per_page': RESPONSES_PER_PAGE,
-                'since_created': since_created
-            }
-            if since_id is not None:
-                params['since_id'] = since_id
+            if progress is not None:
+                progress(f'Reading recent sign-ups (page {pages + 1})')
 
-            api_request_data = {
-                'method': 'GET',
-                'url': url,
-                'headers': BASE_AMPLIFY_HEADERS,
-                'json': None,
-                'timeout': RESPONSES_HTTP_TIMEOUT,
-                'params': params
-            }
-            response = self.helpers.send_api_request(
-                api_request_data=api_request_data,
-                display_request_status=False
+            page = self._read_responses_page(
+                since_created=since_created,
+                since_id=since_id
             )
-            page = self.helpers.response_json(response).get('data') or []
             pages += 1
 
             # Client-side filter: keep only the target needs' rows
@@ -699,7 +771,8 @@ class AmplifyResponses:
             need_ids: Sequence[str | int],
             counts: Dict[str, int],
             now: datetime,
-            window_end: datetime
+            window_end: datetime,
+            progress: Optional[Callable[[str], None]] = None
     ) -> Tuple[List[Dict[str, Any]], Set[str]]:
         """ Build the per-need entries of a summary.
 
@@ -716,6 +789,9 @@ class AmplifyResponses:
                 window_end (datetime):
                     End of the shift window (see '_window_end').
 
+                progress (Callable[[str], None], optional):
+                    Called with a status line as each need is read.
+
             Returns:
                 result (Tuple[List[Dict[str, Any]], Set[str]]):
                     The needs that have shifts inside the window, and the
@@ -724,8 +800,12 @@ class AmplifyResponses:
 
         summary_needs = []
         upcoming_ids: Set[str] = set()
+        total = len(need_ids)
 
-        for need_id in need_ids:
+        for number, need_id in enumerate(need_ids, start=1):
+            if progress is not None:
+                progress(f'Reading opportunity {number} of {total}')
+
             need = self.get_need(need_id=need_id)
             upcoming = _upcoming_shifts(
                 shifts=need.get('shifts', []),
@@ -832,21 +912,27 @@ class AmplifyResponses:
         cutoff = now - timedelta(days=self.since_days)
         since_created = cutoff.strftime(RESPONSES_SINCE_FORMAT)
 
-        # One responses read serves every need: the endpoint has no
-        # server-side need filter, so paging per need would refetch the
-        # same domain-wide rows once per need.
-        responses = self.get_recent_responses(
-            since_created=since_created,
-            need_ids=need_ids
-        )
-        counts = count_signups_by_shift(responses=responses)
+        # Most of a run is spent waiting on these reads, so report
+        # progress while they happen.  The spinner is a no-op unless
+        # stderr is a terminal.
+        with Spinner(message='Reading recent sign-ups') as spinner:
+            # One responses read serves every need: the endpoint has no
+            # server-side need filter, so paging per need would refetch
+            # the same domain-wide rows once per need.
+            responses = self.get_recent_responses(
+                since_created=since_created,
+                need_ids=need_ids,
+                progress=spinner.update
+            )
+            counts = count_signups_by_shift(responses=responses)
 
-        summary_needs, upcoming_ids = self._summarize_needs(
-            need_ids=need_ids,
-            counts=counts,
-            now=now,
-            window_end=window_end
-        )
+            summary_needs, upcoming_ids = self._summarize_needs(
+                need_ids=need_ids,
+                counts=counts,
+                now=now,
+                window_end=window_end,
+                progress=spinner.update
+            )
 
         # Warn when the counts sit close to the window edge
         self._log_window_margin(
@@ -862,7 +948,7 @@ class AmplifyResponses:
             ),
             'as_of': (
                 f'{_format_clock(value=now)} on '
-                f'{now.strftime(SIMPLE_DATE_FORMAT)}'
+                f'{_format_long_date(value=now)}'
             ),
             # A single-day summary needs no date headings: the title
             # already names the day they would repeat.

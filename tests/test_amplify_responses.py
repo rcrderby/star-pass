@@ -20,6 +20,8 @@ from star_pass.amplify_responses import (
     AmplifyResponses,
     count_signups_by_shift,
     _format_day_heading,
+    _format_long_date,
+    _format_short_date,
     _format_slot_when,
     _format_time_range,
     _max_numeric_id,
@@ -127,6 +129,26 @@ class TestFormatSlotWhen:
 
     def test_placeholder_without_a_start(self):
         assert _format_slot_when({'start': None, 'end': None}) == 'Time TBD'
+
+
+class TestDateFormatting:
+    def test_long_date_has_no_padded_day_and_a_comma(self):
+        # Written the way a person would: "August 3, 2026", not
+        # "August 03 2026".
+        assert _format_long_date(datetime(2026, 8, 3)) == (
+            'Monday, August 3, 2026'
+        )
+
+    def test_long_date_keeps_a_two_digit_day(self):
+        assert _format_long_date(datetime(2025, 12, 17)) == (
+            'Wednesday, December 17, 2025'
+        )
+
+    def test_short_date_omits_the_year(self):
+        # The summary title already carries the year.
+        assert _format_short_date(datetime(2026, 8, 5)) == (
+            'Wednesday, August 5'
+        )
 
 
 class TestFormatDayHeading:
@@ -249,14 +271,14 @@ class TestHelperFunctions:
     def test_window_title_names_a_single_day(self):
         title = _window_title(NOW, _window_end(NOW, 1))
 
-        assert title == 'Shift sign-ups for Tuesday, July 14 2026'
+        assert title == 'Shift sign-ups for Tuesday, July 14, 2026'
 
     def test_window_title_names_a_date_range(self):
         title = _window_title(NOW, _window_end(NOW, 2))
 
         assert title == (
-            'Shift sign-ups for Tuesday, July 14 2026 - '
-            'Wednesday, July 15 2026'
+            'Shift sign-ups for Tuesday, July 14, 2026 - '
+            'Wednesday, July 15, 2026'
         )
 
 
@@ -405,7 +427,7 @@ class TestBuildSummary:
         monkeypatch.setattr(
             reader,
             'get_recent_responses',
-            lambda since_created, need_ids=None: responses
+            lambda since_created, need_ids=None, progress=None: responses
         )
         return reader
 
@@ -418,7 +440,7 @@ class TestBuildSummary:
         monkeypatch.setattr(
             reader,
             'get_recent_responses',
-            lambda since_created, need_ids=None: responses
+            lambda since_created, need_ids=None, progress=None: responses
         )
         return reader
 
@@ -785,7 +807,7 @@ class TestBuildSummary:
         )
         captured = {}
 
-        def fake_recent(since_created, need_ids=None):
+        def fake_recent(since_created, need_ids=None, **_kwargs):
             captured['since_created'] = since_created
             captured['need_ids'] = need_ids
             return []
@@ -821,7 +843,7 @@ class TestWindowMarginLogging:
         monkeypatch.setattr(
             reader,
             'get_recent_responses',
-            lambda since_created, need_ids=None: responses
+            lambda since_created, need_ids=None, progress=None: responses
         )
         return reader
 
@@ -866,7 +888,7 @@ class TestWindowMarginLogging:
         monkeypatch.setattr(
             reader,
             'get_recent_responses',
-            lambda since_created, need_ids=None: []
+            lambda since_created, need_ids=None, progress=None: []
         )
 
         with caplog.at_level('INFO'):
