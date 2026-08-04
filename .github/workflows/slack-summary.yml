@@ -1,0 +1,132 @@
+---
+# Post the Amplify shift sign-up summary to Slack on a schedule.
+#
+# The runner is ephemeral: GitHub creates it at the scheduled time, runs
+# the container once, and destroys it.  Nothing runs between posts, and
+# the application keeps no state across them.
+#
+# Two posts a week, each covering a different window.  A window with no
+# shifts in it posts nothing and exits 0, so a quiet week is silent
+# rather than noisy.
+
+# Name of the action
+name: Slack Sign-Up Summary
+
+# Events that trigger the action
+#
+# Times are UTC, which GitHub cron requires, so the local time shifts
+# by an hour at Daylight Saving: 19:12 UTC is 12:12 p.m. Pacific in
+# summer and 11:12 a.m. in winter.  Which calendar day a summary covers
+# is unaffected, because the application reads its clock from
+# LOCAL_TIMEZONE rather than from the runner.
+#
+# The minute is off the hour deliberately.  Scheduled runs are
+# best-effort and are delayed most at the top of the hour.
+on:
+  schedule:
+    # Wednesday, covering Wednesday's own shifts.
+    - cron: '12 19 * * 3'
+    # Friday, covering Saturday and Sunday but not Friday.
+    - cron: '12 19 * * 5'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Calendar days to cover, counting the first as one
+        default: '1'
+      start_in_days:
+        description: Days from today to the first day covered
+        default: '0'
+      check_mode:
+        description: Build the message without posting it
+        type: boolean
+        default: true
+
+# One post at a time.  A queued run waits rather than overlapping, and
+# is never cancelled, because a cancelled run is a missed post.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  post_summary:
+    name: Post the sign-up summary
+    runs-on: ubuntu-latest
+    # The Amplify read pages the domain's recent responses and is the
+    # slow part; this only has to stop a hung run.
+    timeout-minutes: 15
+
+    # Job permissions
+    permissions:
+      contents: read
+
+    steps:
+      # checkout action documentation
+      # https://github.com/marketplace/actions/checkout
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      # The container is the deployment target, so the post runs the
+      # same image 'build.yml' verifies rather than a separate
+      # dependency install.
+      - name: Build the container image
+        run: docker build -t star-pass:run .
+
+      # Each schedule covers a different window, and 'github.event.schedule'
+      # names the cron that fired.  A manual run takes its window from the
+      # dispatch inputs and is a dry run unless asked otherwise.
+      - name: Select the summary window
+        id: window
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_DAYS: ${{ inputs.days }}
+          INPUT_START_IN_DAYS: ${{ inputs.start_in_days }}
+          INPUT_CHECK_MODE: ${{ inputs.check_mode }}
+        run: |
+          case "${SCHEDULE}" in
+            '12 19 * * 5')
+              days=2
+              start_in_days=1
+              check_mode=false
+              ;;
+            '12 19 * * 3')
+              days=1
+              start_in_days=0
+              check_mode=false
+              ;;
+            *)
+              days="${INPUT_DAYS}"
+              start_in_days="${INPUT_START_IN_DAYS}"
+              check_mode="${INPUT_CHECK_MODE}"
+              ;;
+          esac
+          {
+            echo "days=${days}"
+            echo "start_in_days=${start_in_days}"
+            echo "check_mode=${check_mode}"
+          } >> "${GITHUB_OUTPUT}"
+
+      # The need IDs are a repository variable so that changing which
+      # opportunities are summarized needs no code change.  The channel
+      # is named explicitly: it is the destination that must never be
+      # wrong by default.
+      - name: Post the sign-up summary
+        env:
+          AMPLIFY_TOKEN: ${{ secrets.AMPLIFY_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_DEV_CHANNEL_ID }}
+          SLACK_SUMMARY_NEED_IDS: ${{ vars.SLACK_SUMMARY_NEED_IDS }}
+          DAYS: ${{ steps.window.outputs.days }}
+          START_IN_DAYS: ${{ steps.window.outputs.start_in_days }}
+          CHECK_MODE: ${{ steps.window.outputs.check_mode }}
+        run: |
+          docker run --rm \
+            -e AMPLIFY_TOKEN \
+            -e SLACK_BOT_TOKEN \
+            -e SLACK_CHANNEL_ID \
+            -e SLACK_SUMMARY_NEED_IDS \
+            star-pass:run \
+            python /app/__main__.py \
+              -s \
+              -C "${CHECK_MODE}" \
+              -d "${DAYS}" \
+              -D "${START_IN_DAYS}"
