@@ -16,7 +16,6 @@
 
 # Imports - Python Standard Library
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import (
     Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 )
@@ -26,6 +25,18 @@ from . import _defaults
 from ._helpers import Helpers, load_env_file
 from ._logging import get_logger
 from ._progress import Spinner
+from ._summary_window import (
+    local_now,
+    _format_clock,
+    _format_day_heading,
+    _format_long_date,
+    _format_slot_when,
+    _response_created_dt,
+    _upcoming_shifts,
+    _window_end,
+    _window_start,
+    _window_title
+)
 from .amplify_shifts import BASE_AMPLIFY_HEADERS, BASE_AMPLIFY_URL
 
 # Load environment variables
@@ -41,6 +52,7 @@ RESPONSES_SINCE_FORMAT = _defaults.AMPLIFY_RESPONSES_SINCE_FORMAT
 RESPONSES_MARGIN_WARN_DAYS = _defaults.AMPLIFY_RESPONSES_MARGIN_WARN_DAYS
 AMPLIFY_NEED_DETAIL_URL = _defaults.AMPLIFY_NEED_DETAIL_URL
 SUMMARY_DAYS = _defaults.SLACK_SUMMARY_DAYS
+SUMMARY_START_IN_DAYS = _defaults.SLACK_SUMMARY_START_IN_DAYS
 AMPLIFY_SHIFT_DATETIME_FORMAT = _defaults.AMPLIFY_SHIFT_DATETIME_FORMAT
 LOCAL_TIMEZONE = _defaults.LOCAL_TIMEZONE
 
@@ -49,70 +61,6 @@ ACTIVE_RESPONSE_STATUS = 'active'
 
 # Module logger
 logger = get_logger(__name__)
-
-
-def _parse_amplify_dt(
-        value: Any
-) -> Optional[datetime]:
-    """ Parse an Amplify datetime string, tolerating absent seconds.
-
-        Args:
-            value (Any):
-                A datetime string (a shift 'start'/'end' or a response
-                'created_at'/'response_date_added'), or None.
-
-        Returns:
-            parsed (datetime | None):
-                The parsed datetime, or None when 'value' is missing or
-                cannot be parsed.
-    """
-
-    for date_format in (AMPLIFY_SHIFT_DATETIME_FORMAT, '%Y-%m-%d %H:%M'):
-        try:
-            return datetime.strptime(value, date_format)
-        except (TypeError, ValueError):
-            continue
-
-    return None
-
-
-def _shift_start_dt(
-        shift: Dict[str, Any]
-) -> Optional[datetime]:
-    """ Return a shift's start as a datetime, or None when unparseable.
-
-        Args:
-            shift (Dict[str, Any]):
-                Shift object with a 'start' datetime string.
-
-        Returns:
-            start (datetime | None):
-                The parsed start datetime, or None.
-    """
-
-    return _parse_amplify_dt((shift or {}).get('start'))
-
-
-def _response_created_dt(
-        response: Dict[str, Any]
-) -> Optional[datetime]:
-    """ Return a response's creation datetime, or None.
-
-        The live API returns 'created_at'; the documented schema names
-        this field 'response_date_added'.  Either is accepted.
-
-        Args:
-            response (Dict[str, Any]):
-                An Amplify response object.
-
-        Returns:
-            created (datetime | None):
-                The parsed creation datetime, or None.
-    """
-
-    raw = response.get('created_at') or response.get('response_date_added')
-
-    return _parse_amplify_dt(raw)
 
 
 def _max_numeric_id(
@@ -136,295 +84,6 @@ def _max_numeric_id(
     ]
 
     return max(ids) if ids else None
-
-
-def local_now() -> datetime:
-    """ Return the current local wall-clock time, without a time zone.
-
-        The host clock cannot be trusted to be local: a container or a
-        CI runner usually runs in UTC, where a Portland evening is
-        already the next calendar day.  Reading 'now' in UTC would move
-        a same-day summary onto the wrong day entirely, not just
-        mislabel it.
-
-        Amplify reports shift times as naive local datetimes, so the
-        result is made naive too and stays directly comparable.
-
-        Raises:
-            ValueError:
-                If 'LOCAL_TIMEZONE' does not name a known time zone.
-
-        Returns:
-            now (datetime):
-                The current time in 'LOCAL_TIMEZONE', without tzinfo.
-    """
-
-    # 'ZoneInfoNotFoundError' subclasses KeyError, which reads as a
-    # missing dictionary key rather than a configuration error.
-    try:
-        timezone = ZoneInfo(LOCAL_TIMEZONE)
-    except (ZoneInfoNotFoundError, ValueError) as error:
-        message = (
-            f'LOCAL_TIMEZONE is not a known time zone: '
-            f'{LOCAL_TIMEZONE!r}.  Use an IANA name such as '
-            'America/Los_Angeles.'
-        )
-        logger.error(message)
-        raise ValueError(message) from error
-
-    return datetime.now(tz=timezone).replace(tzinfo=None)
-
-
-def _window_end(
-        now: datetime,
-        days: int
-) -> datetime:
-    """ Return the last instant of a summary window.
-
-        The window counts today as day one, so 'days=1' ends at the last
-        instant of today and 'days=2' ends at the last instant of
-        tomorrow.
-
-        Args:
-            now (datetime):
-                Reference time; its calendar date is day one.
-
-            days (int):
-                Number of calendar days to cover, one or greater.
-
-        Raises:
-            ValueError:
-                If 'days' is less than one.
-
-        Returns:
-            window_end (datetime):
-                The last instant of the final day in the window.
-    """
-
-    if days < 1:
-        raise ValueError(
-            f'Summary window must cover at least one day, got {days}.'
-        )
-
-    last_day = now + timedelta(days=days - 1)
-
-    return last_day.replace(
-        hour=23,
-        minute=59,
-        second=59,
-        microsecond=999999
-    )
-
-
-def _upcoming_shifts(
-        shifts: List[Dict[str, Any]],
-        now: datetime,
-        window_end: datetime
-) -> List[Dict[str, Any]]:
-    """ Select the shifts starting inside the window, ordered by start.
-
-        A long-lived need accumulates hundreds of past shifts that a
-        sign-up summary should not repeat, and a summary is a call for
-        volunteers over the next day or few, not a full backlog.  Shifts
-        that already started are excluded, as are shifts with an
-        unparseable start.
-
-        Args:
-            shifts (List[Dict[str, Any]]):
-                Shift objects from a need.
-
-            now (datetime):
-                Start of the window; shifts before this are past.
-
-            window_end (datetime):
-                End of the window (see '_window_end').
-
-        Returns:
-            upcoming (List[Dict[str, Any]]):
-                The shifts inside the window, earliest first.
-    """
-
-    dated = []
-    for shift in shifts:
-        start_dt = _shift_start_dt(shift=shift)
-        if start_dt is not None and now <= start_dt <= window_end:
-            dated.append((start_dt, shift))
-    dated.sort(key=lambda pair: pair[0])
-
-    return [shift for _start_dt, shift in dated]
-
-
-def _window_title(
-        now: datetime,
-        window_end: datetime
-) -> str:
-    """ Build a default summary title describing the window.
-
-        Args:
-            now (datetime):
-                Start of the window.
-
-            window_end (datetime):
-                End of the window (see '_window_end').
-
-        Returns:
-            title (str):
-                A title naming the window's date, or its date range when
-                the window covers more than one day.
-    """
-
-    start_label = _format_long_date(value=now)
-    end_label = _format_long_date(value=window_end)
-
-    if start_label == end_label:
-        return f'Shift sign-ups for {start_label}'
-
-    return f'Shift sign-ups for {start_label} - {end_label}'
-
-
-def _format_long_date(
-        value: datetime
-) -> str:
-    """ Format a date the way it would be written by hand.
-
-        The day is not zero padded and the year is set off by a comma,
-        so a heading reads 'Monday, August 3, 2026'.  The day is
-        inserted directly rather than through a '%-d' directive, which
-        is not supported on Windows.
-
-        Args:
-            value (datetime):
-                The date to format.
-
-        Returns:
-            date (str):
-                The weekday, month, day, and year.
-    """
-
-    return f'{value.strftime("%A, %B")} {value.day}, {value.year}'
-
-
-def _format_short_date(
-        value: datetime
-) -> str:
-    """ Format a date heading within a summary, without the year.
-
-        The summary title already carries the year, so a day heading
-        reads 'Wednesday, August 5'.
-
-        Args:
-            value (datetime):
-                The date to format.
-
-        Returns:
-            date (str):
-                The weekday, month, and day.
-    """
-
-    return f'{value.strftime("%A, %B")} {value.day}'
-
-
-def _format_clock(
-        value: datetime
-) -> str:
-    """ Format a time the way the sign-up posts are written by hand.
-
-        Args:
-            value (datetime):
-                The time to format.
-
-        Returns:
-            clock (str):
-                A 12-hour time with no leading zero, such as
-                '6:00 p.m.'.
-    """
-
-    hour = value.strftime('%I').lstrip('0') or '12'
-    meridiem = 'a.m.' if value.hour < 12 else 'p.m.'
-
-    return f'{hour}:{value.strftime("%M")} {meridiem}'
-
-
-def _format_time_range(
-        start_dt: datetime,
-        end_dt: datetime
-) -> str:
-    """ Format a shift's start and end as a single time range.
-
-        The meridiem is written once when both ends share it, matching
-        how the posts read ('6:00-7:00 p.m.').
-
-        Args:
-            start_dt (datetime):
-                Shift start.
-
-            end_dt (datetime):
-                Shift end.
-
-        Returns:
-            when (str):
-                A formatted time range.
-    """
-
-    start = _format_clock(value=start_dt)
-    end = _format_clock(value=end_dt)
-
-    # Drop the repeated meridiem from the start of a same-half range
-    if start.rsplit(' ', 1)[-1] == end.rsplit(' ', 1)[-1]:
-        start = start.rsplit(' ', 1)[0]
-
-    return f'{start}-{end}'
-
-
-def _format_slot_when(
-        shift: Dict[str, Any]
-) -> str:
-    """ Format the time label for one shift line.
-
-        The date is not included: a day's shifts are shown under a date
-        heading, so repeating it on every line would be noise.
-
-        Args:
-            shift (Dict[str, Any]):
-                Shift object with 'start' and 'end' datetime strings.
-
-        Returns:
-            when (str):
-                A time range.  Falls back to the raw start value when
-                parsing fails.
-    """
-
-    start_dt = _parse_amplify_dt(shift.get('start'))
-    end_dt = _parse_amplify_dt(shift.get('end'))
-
-    if start_dt is None or end_dt is None:
-        return shift.get('start') or 'Time TBD'
-
-    return _format_time_range(start_dt=start_dt, end_dt=end_dt)
-
-
-def _format_day_heading(
-        shift: Dict[str, Any]
-) -> str:
-    """ Format the date heading a shift belongs under.
-
-        Args:
-            shift (Dict[str, Any]):
-                Shift object with a 'start' datetime string.
-
-        Returns:
-            day (str):
-                The shift's date.  Empty when the start cannot be
-                parsed, which keeps an unreadable shift out of a day
-                heading of its own.
-    """
-
-    start_dt = _shift_start_dt(shift=shift)
-
-    if start_dt is None:
-        return ''
-
-    return _format_short_date(value=start_dt)
 
 
 def _build_need_shifts(
@@ -846,7 +505,8 @@ class AmplifyResponses:
             need_ids: Sequence[str | int],
             title: Optional[str] = None,
             now: Optional[datetime] = None,
-            days: Optional[int] = None
+            days: Optional[int] = None,
+            start_in_days: Optional[int] = None
     ) -> Dict[str, Any]:
         """ Build a sign-up summary covering one or more needs.
 
@@ -876,6 +536,12 @@ class AmplifyResponses:
                     'since_created' window, and the 'as_of' stamp.
                     Defaults to the current local time.
 
+                start_in_days (int, optional):
+                    Days between 'now' and the window's first day.  Zero
+                    starts today; one starts tomorrow, which leaves out
+                    the day a notice is posted.  Defaults to
+                    'SLACK_SUMMARY_START_IN_DAYS'.
+
                 days (int, optional):
                     Number of calendar days the summary covers, counting
                     today as day one.  Defaults to
@@ -902,9 +568,17 @@ class AmplifyResponses:
         if days is None:
             days = SUMMARY_DAYS
 
-        # The shift window: from now through the end of its final day
-        window_end = _window_end(
+        if start_in_days is None:
+            start_in_days = SUMMARY_START_IN_DAYS
+
+        # The shift window: from its first instant through the end of
+        # its final day
+        window_start = _window_start(
             now=now,
+            start_in_days=start_in_days
+        )
+        window_end = _window_end(
+            now=window_start,
             days=days
         )
 
@@ -929,7 +603,7 @@ class AmplifyResponses:
             summary_needs, upcoming_ids = self._summarize_needs(
                 need_ids=need_ids,
                 counts=counts,
-                now=now,
+                now=window_start,
                 window_end=window_end,
                 progress=spinner.update
             )
@@ -943,7 +617,7 @@ class AmplifyResponses:
 
         return {
             'title': title or _window_title(
-                now=now,
+                now=window_start,
                 window_end=window_end
             ),
             'as_of': (

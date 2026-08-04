@@ -36,7 +36,7 @@ USAGE = (
     '       star-pass -c -i INPUT_FILE [-C {true,false}] '
     '[-o {basic,simple,detailed}]\n'
     '       star-pass -s [-N NEED_ID ...] [-C {true,false}] '
-    '[-d DAYS] [-t TITLE] [-k CHANNEL_ID]'
+    '[-d DAYS] [-D START_IN_DAYS] [-t TITLE] [-k CHANNEL_ID]'
 )
 
 # Initialize helper methods
@@ -228,6 +228,16 @@ def build_parser() -> argparse.ArgumentParser:
         )
     )
     slack_group.add_argument(
+        '-D', '--start-in-days',
+        type=int,
+        default=None,
+        help=(
+            'Days from today to the first day covered; 0 starts today, '
+            '1 starts tomorrow (default: SLACK_SUMMARY_START_IN_DAYS, '
+            'else 0).'
+        )
+    )
+    slack_group.add_argument(
         '-t', '--slack-title',
         default=None,
         help='Message title (default: the summary window dates).'
@@ -412,6 +422,11 @@ def _run(
             parser.error(
                 '-d/--days must be 1 or greater (1 is today only)'
             )
+        if args.start_in_days is not None and args.start_in_days < 0:
+            parser.error(
+                '-D/--start-in-days must be 0 or greater '
+                '(0 starts today)'
+            )
         if any(
             value is not None
             for value in (
@@ -450,7 +465,8 @@ def _run(
         summary = AmplifyResponses().build_summary(
             need_ids=need_ids,
             title=args.slack_title,
-            days=args.days
+            days=args.days,
+            start_in_days=args.start_in_days
         )
         SlackNotifier(
             channel=channel,
