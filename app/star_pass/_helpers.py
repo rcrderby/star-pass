@@ -161,8 +161,7 @@ class Helpers:
         )
 
         # 'dateparser.parse' returns None rather than raising when it
-        # cannot make sense of the input, which used to surface as an
-        # AttributeError on the next line.  The shift CSV file is
+        # cannot make sense of the input.  The shift CSV file is
         # reviewed and edited by hand, so a typo here is expected input.
         if dt_object is None:
             raise ValueError(
@@ -485,7 +484,7 @@ class Helpers:
             Returns:
                 Dict:
                     The category config minus the internal 'aliases'
-                    key, preserving the historical need_details shape.
+                    key.
         """
 
         return {

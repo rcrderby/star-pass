@@ -211,10 +211,10 @@ class TestSearchWindowTimeZone:
 
 
 class TestOtherRunModesDoNotNeedTheWindow:
-    # Regression guard: the window is validated lazily, when a calendar
-    # request is about to run.  Reading it at import time would make the
-    # create-shifts and Slack run modes -- and the scheduled Slack job --
-    # require Google Calendar configuration they never use.
+    # The window is validated lazily, when a calendar request is about
+    # to run.  Reading it at import time would make the create-shifts
+    # and Slack run modes -- and the scheduled Slack job -- require
+    # Google Calendar configuration they never use.
 
     def test_importing_the_cli_without_the_window(self, monkeypatch):
         monkeypatch.delenv('GCAL_WINDOW_START', raising=False)
@@ -267,9 +267,9 @@ class TestGetShiftTimeData:
         assert result == ('2025-04-09', '18:00', 120)
 
     def test_event_spanning_more_than_a_day(self, gcal):
-        # Regression for the 'timedelta.seconds' bug: 'seconds' excludes
-        # the 'days' component, so a two-day event measured 0 minutes.
-        # 'total_seconds' gives the real 2880 minute span.
+        # 'timedelta.seconds' excludes the 'days' component, so a
+        # two-day event would measure 0 minutes.  'total_seconds' gives
+        # the real 2880 minute span.
         need = {'slots': 20, 'id': 628861}
         result = gcal._get_shift_time_data(
             need,
@@ -288,9 +288,9 @@ class TestGetShiftTimeData:
         assert result == ('2025-04-09', '18:00', 165)
 
     def test_negative_duration_exits(self, gcal, caplog):
-        # Regression for the 'timedelta.seconds' bug: an end time pulled
-        # before the start time reported ~1440 minutes instead of a
-        # negative value, so a nonsense shift was created silently.
+        # 'timedelta.seconds' is never negative, so an end time pulled
+        # before the start time reads as ~1440 minutes. The run must
+        # fail rather than create a nonsense shift.
         need = {
             'slots': 20,
             'id': 628861,
@@ -362,8 +362,8 @@ class TestFilterGcalItems:
         assert gcal.filter_gcal_items(items) == []
 
     def test_drops_all_day_events(self, gcal, caplog):
-        # Regression: an all-day event has no 'dateTime', which raised
-        # an uncaught KeyError while the shift was being built.
+        # An all-day event has no 'dateTime', so building a shift from
+        # one raises an uncaught KeyError.
         items = [_all_day_item('Board Retreat', '2099-01-05', '2099-01-06')]
 
         with caplog.at_level(logging.WARNING, logger='star_pass'):
@@ -374,8 +374,8 @@ class TestFilterGcalItems:
         assert 'all-day' in caplog.text
 
     def test_drops_untitled_events(self, gcal, caplog):
-        # Regression: an event with no 'summary' raised an uncaught
-        # KeyError while the shift was being built.
+        # An event with no 'summary' raises an uncaught KeyError while
+        # the shift is being built.
         items = [
             {
                 'start': {'dateTime': '2099-01-05T18:00:00-08:00'},
@@ -434,10 +434,9 @@ class TestCollectionPipeline:
     def test_unusable_and_excluded_events_never_reach_the_model(
         self, monkeypatch, tmp_path, caplog
     ):
-        # Regression for two coupled bugs: shifts were built before
-        # filtering, so an all-day or untitled event raised a KeyError,
-        # and every excluded event was matched against the shift data
-        # model first, logging a spurious review warning each run.
+        # Filtering runs before shifts are built, so an all-day or
+        # untitled event cannot raise a KeyError, and an excluded event
+        # never reaches the shift data model to log a review warning.
         items = [
             _timed_item(
                 'GNR v HH',

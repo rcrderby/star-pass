@@ -67,8 +67,7 @@ class TestDateTimeFormatting:
         assert helpers.format_date_time_amplify(value) == expected
 
     def test_format_shift_date_simple(self, helpers):
-        # The '%d' directive zero-pads the day. The docstring example
-        # used to disagree with this and has been corrected to match.
+        # The '%d' directive zero-pads the day.
         result = helpers.format_shift_date_simple('2025-04-09 11:30')
         assert result == 'Wednesday, April 09 2025'
 
@@ -96,8 +95,8 @@ class TestSearchShiftInfo:
     def test_need_ids_unchanged_after_refactor(
         self, helpers, key, expected_need_ids
     ):
-        # Every historical keyword must still resolve to the same
-        # need_ids after the data-model and matcher refactor.
+        # Every keyword in the shift data model resolves to the
+        # need_ids recorded in the fixture.
         gcal_name, need_name = key.split('|', 1)
         result = helpers.search_shift_info(
             gcal_name=gcal_name,
@@ -254,8 +253,8 @@ class TestSendApiRequestRedaction:
     ):
         # A realistic requests ConnectionError from an exhausted retry:
         # args[0] is a MaxRetryError whose reason is a ReadTimeoutError.
-        # The old handler assumed a '>: ' delimiter and raised
-        # IndexError on this exact shape -- this guards that regression.
+        # A handler that assumes a '>: ' delimiter raises IndexError
+        # on this exact shape.
         sentinel = 'TOPSECRET'
         reason = ReadTimeoutError(
             None,
