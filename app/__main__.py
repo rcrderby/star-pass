@@ -24,8 +24,8 @@ VERBOSITY_LEVELS = _defaults.VERBOSITY_LEVELS
 # the choices stay in sync with any deployment overrides.
 GCAL_NAMES = tuple(_defaults.GCAL_CALENDARS)
 # Slack destination channels (deployment config; may be None).
-SLACK_CHANNEL = _defaults.SLACK_CHANNEL
-SLACK_DEV_CHANNEL = _defaults.SLACK_DEV_CHANNEL
+SLACK_CHANNEL_ID = _defaults.SLACK_CHANNEL_ID
+SLACK_DEV_CHANNEL_ID = _defaults.SLACK_DEV_CHANNEL_ID
 # Need IDs summarized when -N is omitted (non-secret deployment config).
 SLACK_SUMMARY_NEED_IDS = _defaults.SLACK_SUMMARY_NEED_IDS
 
@@ -36,7 +36,7 @@ USAGE = (
     '       star-pass -c -i INPUT_FILE [-C {true,false}] '
     '[-o {basic,simple,detailed}]\n'
     '       star-pass -s [-N NEED_ID ...] [-C {true,false}] '
-    '[-d DAYS] [-t TITLE] [-k CHANNEL]'
+    '[-d DAYS] [-t TITLE] [-k CHANNEL_ID]'
 )
 
 # Initialize helper methods
@@ -235,9 +235,10 @@ def build_parser() -> argparse.ArgumentParser:
     slack_group.add_argument(
         '-k', '--slack-channel',
         default=None,
+        metavar='CHANNEL_ID',
         help=(
-            'Slack channel ID to post to (default: SLACK_CHANNEL, '
-            'else SLACK_DEV_CHANNEL).'
+            'Slack channel ID to post to (default: SLACK_CHANNEL_ID, '
+            'else SLACK_DEV_CHANNEL_ID).'
         )
     )
 
@@ -431,8 +432,8 @@ def _run(
         )
         channel = (
             args.slack_channel
-            or SLACK_CHANNEL
-            or SLACK_DEV_CHANNEL
+            or SLACK_CHANNEL_ID
+            or SLACK_DEV_CHANNEL_ID
         )
 
         # The summary is read from Amplify in both modes; the Slack
