@@ -34,13 +34,19 @@ SLACK_BOT_TOKEN = getenv(
 SLACK_CHANNEL = _defaults.SLACK_CHANNEL
 SLACK_DEV_CHANNEL = _defaults.SLACK_DEV_CHANNEL
 SLACK_CHECK_MODE_MESSAGE = _defaults.SLACK_CHECK_MODE_MESSAGE
-SLACK_SIGN_UP_BUTTON_TEXT = _defaults.SLACK_SIGN_UP_BUTTON_TEXT
+SLACK_SIGN_UP_BUTTON_STYLE = _defaults.SLACK_SIGN_UP_BUTTON_STYLE
 SLACK_SIGN_UP_PROMPT = _defaults.SLACK_SIGN_UP_PROMPT
 SLACK_SUMMARY_EMOJI = _defaults.SLACK_SUMMARY_EMOJI
 TITLE_SEPARATOR = _defaults.SLACK_TITLE_SEPARATOR
 
 # Slack rejects button text longer than 75 characters.
 BUTTON_TEXT_LIMIT = 75
+
+# Trailing arrow marking a button that opens a browser.  Sent as a
+# shortcode so the payload stays ASCII: check mode prints it to the
+# terminal, where a legacy Windows console encoding would fail on the
+# character itself.
+BUTTON_TEXT_SUFFIX = ' :arrow_upper_right:'
 
 # Module logger
 logger = get_logger(__name__)
@@ -52,7 +58,7 @@ def _split_title(
     """ Split an opportunity title into its event and role parts.
 
         Opportunity titles repeat the event across the roles that staff
-        it ('Adult Scrimmages - Skating Officials', 'Adult Scrimmages -
+        it ('Adult Scrimmages: Skating Officials', 'Adult Scrimmages:
         Non-Skating Officials').  Splitting on the separator groups
         those together and shortens each line to the part that differs,
         with no mapping file to maintain.  A title without the separator
@@ -261,6 +267,37 @@ def _event_position(
     return len(rows)
 
 
+def _button_text(
+        title: str
+) -> str:
+    """ Build a sign-up button's label.
+
+        The label ends with an arrow, the long-standing convention for a
+        control that leaves the current view: these buttons open the
+        opportunity in a browser rather than acting inside Slack.
+
+        The arrow is sent as a Slack shortcode rather than the literal
+        character.  Check mode prints the payload to the terminal, and a
+        packaged Windows build writing to a legacy console encoding
+        cannot represent the character itself.
+
+        Args:
+            title (str):
+                The opportunity title.
+
+        Returns:
+            text (str):
+                The title and the arrow, trimmed so that the whole label
+                stays inside Slack's 75-character limit.
+    """
+
+    # Trim the title, not the suffix: a button that ends mid-shortcode
+    # would show the raw text instead of an arrow.
+    room = BUTTON_TEXT_LIMIT - len(BUTTON_TEXT_SUFFIX)
+
+    return f'{title[:room].rstrip()}{BUTTON_TEXT_SUFFIX}'
+
+
 def _heading_text(
         title: str
 ) -> str:
@@ -393,26 +430,26 @@ def build_summary_blocks(
         if not signup_url:
             continue
 
+        button: Dict[str, Any] = {
+            'type': 'button',
+            'text': {
+                'type': 'plain_text',
+                'text': _button_text(title=need.get('title', 'Sign up')),
+                'emoji': True
+            },
+            'url': signup_url,
+            'action_id': f'signup_{index}'
+        }
+
+        # An empty style is invalid; Slack expects the key to be absent
+        # for a default button.
+        if SLACK_SIGN_UP_BUTTON_STYLE:
+            button['style'] = SLACK_SIGN_UP_BUTTON_STYLE
+
         blocks.append(
             {
                 'type': 'actions',
-                'elements': [
-                    {
-                        'type': 'button',
-                        'text': {
-                            'type': 'plain_text',
-                            # Slack rejects button text over 75
-                            # characters, so a long title is trimmed.
-                            'text': need.get(
-                                'title',
-                                SLACK_SIGN_UP_BUTTON_TEXT
-                            )[:BUTTON_TEXT_LIMIT],
-                            'emoji': True
-                        },
-                        'url': signup_url,
-                        'action_id': f'signup_{index}'
-                    }
-                ]
+                'elements': [button]
             }
         )
 

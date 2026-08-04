@@ -318,7 +318,7 @@ class TestBuildSummaryBlocks:
         # Buttons follow the section order, so the juniors event leads
         # even though the adult opportunities come first in the summary.
         assert button['text']['text'] == (
-            'Juniors Scrimmages: Non-Skating Officials'
+            'Juniors Scrimmages: Non-Skating Officials :arrow_upper_right:'
         )
         assert button['url'] == 'https://example.org/need/3'
         # Slack rejects duplicate action_ids within a message.
@@ -332,10 +332,10 @@ class TestBuildSummaryBlocks:
         assert [
             block['elements'][0]['text']['text'] for block in actions
         ] == [
-            'Juniors Scrimmages: Non-Skating Officials',
-            'Juniors Scrimmages: Skating Officials',
-            'Adult Scrimmages: Non-Skating Officials',
-            'Adult Scrimmages: Skating Officials'
+            'Juniors Scrimmages: Non-Skating Officials :arrow_upper_right:',
+            'Juniors Scrimmages: Skating Officials :arrow_upper_right:',
+            'Adult Scrimmages: Non-Skating Officials :arrow_upper_right:',
+            'Adult Scrimmages: Skating Officials :arrow_upper_right:'
         ]
 
     def test_buttons_appear_after_every_section(self, summary):
@@ -362,8 +362,42 @@ class TestBuildSummaryBlocks:
         button = [
             b for b in blocks if b['type'] == 'actions'
         ][0]['elements'][0]
+        text = button['text']['text']
 
-        assert len(button['text']['text']) == 75
+        assert len(text) == 75
+        # The title is trimmed, never the shortcode: a button ending
+        # mid-shortcode would show raw text instead of an arrow.
+        assert text.endswith(':arrow_upper_right:')
+
+    def test_buttons_carry_the_configured_style(self, summary):
+        blocks = build_summary_blocks(summary)
+        actions = [b for b in blocks if b['type'] == 'actions']
+
+        assert all(
+            block['elements'][0]['style'] == 'primary'
+            for block in actions
+        )
+
+    def test_an_empty_style_leaves_the_key_off(self, summary, monkeypatch):
+        # Slack rejects an empty 'style'; the key must be absent.
+        monkeypatch.setattr(slack_notify, 'SLACK_SIGN_UP_BUTTON_STYLE', '')
+        blocks = build_summary_blocks(summary)
+        actions = [b for b in blocks if b['type'] == 'actions']
+
+        assert all(
+            'style' not in block['elements'][0] for block in actions
+        )
+
+    def test_button_payload_stays_ascii(self, summary):
+        # Check mode prints the payload; a legacy Windows console
+        # encoding cannot represent the arrow character itself.
+        blocks = build_summary_blocks(summary)
+        actions = [b for b in blocks if b['type'] == 'actions']
+
+        assert all(
+            block['elements'][0]['text']['text'].isascii()
+            for block in actions
+        )
 
     def test_no_button_without_a_signup_url(self):
         blocks = build_summary_blocks(

@@ -262,8 +262,13 @@ SLACK_CHANNEL = getenv('SLACK_CHANNEL')
 SLACK_DEV_CHANNEL = getenv('SLACK_DEV_CHANNEL')
 # Displayed when a Slack post is skipped in check mode (dry run).
 SLACK_CHECK_MODE_MESSAGE = '\n** Slack Check Mode Run (no message sent) **'
-# Label for the sign-up link button attached to a shift.
-SLACK_SIGN_UP_BUTTON_TEXT = 'Sign up'
+# Slack button style for the sign-up buttons: 'primary' fills them,
+# which reads as a control rather than a label on a phone.  Slack
+# also accepts 'danger'; an empty value leaves them outlined.
+SLACK_SIGN_UP_BUTTON_STYLE = getenv(
+    'SLACK_SIGN_UP_BUTTON_STYLE',
+    'primary'
+)
 # Call to action shown above the sign-up buttons.
 SLACK_SIGN_UP_PROMPT = getenv(
     'SLACK_SIGN_UP_PROMPT',

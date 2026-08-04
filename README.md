@@ -147,6 +147,12 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     4 x Skating Officials
     ```
 
+    Each opportunity gets a sign-up button at the end, filled rather
+    than outlined so it reads as a control on a phone, and ending in an
+    arrow because it opens the opportunity in a browser rather than
+    acting inside Slack. Set `SLACK_SIGN_UP_BUTTON_STYLE` to change the
+    style, or to empty for outlined buttons.
+
     A count of exactly one reads as a singular label ("1 x Non-Skating
     Official"). Rows appear in chronological order, and so do the
     sign-up buttons at the end, so the message reads top to bottom as
