@@ -106,14 +106,18 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
 
       # The need IDs are a repository variable so that changing which
-      # opportunities are summarized needs no code change.  The channel
-      # is named explicitly: it is the destination that must never be
-      # wrong by default.
+      # opportunities are summarized needs no code change.
+      #
+      # The destination is SLACK_CHANNEL_ID when that secret is set and
+      # the dev channel otherwise, which matches how the application
+      # resolves a channel.  Setting or clearing the SLACK_CHANNEL_ID
+      # secret is what moves posts between the two, with no change
+      # here.
       - name: Post the sign-up summary
         env:
           AMPLIFY_TOKEN: ${{ secrets.AMPLIFY_TOKEN }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL_ID: ${{ secrets.SLACK_DEV_CHANNEL_ID }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID || secrets.SLACK_DEV_CHANNEL_ID }}
           SLACK_SUMMARY_NEED_IDS: ${{ vars.SLACK_SUMMARY_NEED_IDS }}
           DAYS: ${{ steps.window.outputs.days }}
           START_IN_DAYS: ${{ steps.window.outputs.start_in_days }}
