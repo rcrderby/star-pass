@@ -40,6 +40,13 @@ on:
         description: Build the message without posting it
         type: boolean
         default: true
+      channel:
+        description: Channel to post to
+        type: choice
+        options:
+          - dev
+          - live
+        default: dev
 
 # One post at a time.  A queued run waits rather than overlapping, and
 # is never cancelled, because a cancelled run is a missed post.
@@ -81,48 +88,71 @@ jobs:
           INPUT_DAYS: ${{ inputs.days }}
           INPUT_START_IN_DAYS: ${{ inputs.start_in_days }}
           INPUT_CHECK_MODE: ${{ inputs.check_mode }}
+          INPUT_CHANNEL: ${{ inputs.channel }}
         run: |
           case "${SCHEDULE}" in
             '12 19 * * 5')
               days=2
               start_in_days=1
               check_mode=false
+              channel=live
               ;;
             '12 19 * * 3')
               days=1
               start_in_days=0
               check_mode=false
+              channel=live
               ;;
             *)
               days="${INPUT_DAYS}"
               start_in_days="${INPUT_START_IN_DAYS}"
               check_mode="${INPUT_CHECK_MODE}"
+              channel="${INPUT_CHANNEL}"
               ;;
           esac
           {
             echo "days=${days}"
             echo "start_in_days=${start_in_days}"
             echo "check_mode=${check_mode}"
+            echo "channel=${channel}"
           } >> "${GITHUB_OUTPUT}"
 
       # The need IDs are a repository variable so that changing which
       # opportunities are summarized needs no code change.
       #
-      # The destination is SLACK_CHANNEL_ID when that secret is set and
-      # the dev channel otherwise, which matches how the application
-      # resolves a channel.  Setting or clearing the SLACK_CHANNEL_ID
-      # secret is what moves posts between the two, with no change
-      # here.
+      # A scheduled post goes to the live channel, falling back to the
+      # dev channel when no live secret is set.  A manual run goes
+      # wherever the 'channel' input says, defaulting to dev so that
+      # testing a real post never reaches the league.
+      #
+      # The choice is made here rather than in the 'env' block because
+      # both channel IDs have to be available to choose between.
       - name: Post the sign-up summary
         env:
           AMPLIFY_TOKEN: ${{ secrets.AMPLIFY_TOKEN }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID || secrets.SLACK_DEV_CHANNEL_ID }}
+          LIVE_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          DEV_CHANNEL_ID: ${{ secrets.SLACK_DEV_CHANNEL_ID }}
           SLACK_SUMMARY_NEED_IDS: ${{ vars.SLACK_SUMMARY_NEED_IDS }}
           DAYS: ${{ steps.window.outputs.days }}
           START_IN_DAYS: ${{ steps.window.outputs.start_in_days }}
           CHECK_MODE: ${{ steps.window.outputs.check_mode }}
+          CHANNEL: ${{ steps.window.outputs.channel }}
         run: |
+          if [ "${CHANNEL}" = 'dev' ]; then
+            SLACK_CHANNEL_ID="${DEV_CHANNEL_ID}"
+          else
+            SLACK_CHANNEL_ID="${LIVE_CHANNEL_ID:-${DEV_CHANNEL_ID}}"
+          fi
+          export SLACK_CHANNEL_ID
+
+          if [ -z "${SLACK_CHANNEL_ID}" ]; then
+            echo "No channel ID available for the '${CHANNEL}' channel." >&2
+            exit 1
+          fi
+
+          echo "Posting to the ${CHANNEL} channel (check mode: ${CHECK_MODE})."
+
           docker run --rm \
             -e AMPLIFY_TOKEN \
             -e SLACK_BOT_TOKEN \
