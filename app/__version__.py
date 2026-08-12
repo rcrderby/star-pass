@@ -1,4 +1,4 @@
 #!/usr/bin/env python3
 """ star_pass package version file. """
 
-__version__ = '1.16.0'
+__version__ = '1.16.1'
