@@ -41,11 +41,11 @@ on:
         type: boolean
         default: true
       channel:
-        description: Channel to post to
+        description: Slack channel to post to
         type: choice
         options:
           - dev
-          - live
+          - prod
         default: dev
 
 # One post at a time.  A queued run waits rather than overlapping, and
@@ -95,13 +95,13 @@ jobs:
               days=2
               start_in_days=1
               check_mode=false
-              channel=live
+              channel=prod
               ;;
             '12 19 * * 3')
               days=1
               start_in_days=0
               check_mode=false
-              channel=live
+              channel=prod
               ;;
             *)
               days="${INPUT_DAYS}"
@@ -120,8 +120,8 @@ jobs:
       # The need IDs are a repository variable so that changing which
       # opportunities are summarized needs no code change.
       #
-      # A scheduled post goes to the live channel, falling back to the
-      # dev channel when no live secret is set.  A manual run goes
+      # A scheduled post goes to the prod channel, falling back to the
+      # dev channel when no prod secret is set.  A manual run goes
       # wherever the 'channel' input says, defaulting to dev so that
       # testing a real post never reaches the league.
       #
@@ -131,7 +131,7 @@ jobs:
         env:
           AMPLIFY_TOKEN: ${{ secrets.AMPLIFY_TOKEN }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          LIVE_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          PROD_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
           DEV_CHANNEL_ID: ${{ secrets.SLACK_DEV_CHANNEL_ID }}
           SLACK_SUMMARY_NEED_IDS: ${{ vars.SLACK_SUMMARY_NEED_IDS }}
           DAYS: ${{ steps.window.outputs.days }}
@@ -142,7 +142,7 @@ jobs:
           if [ "${CHANNEL}" = 'dev' ]; then
             SLACK_CHANNEL_ID="${DEV_CHANNEL_ID}"
           else
-            SLACK_CHANNEL_ID="${LIVE_CHANNEL_ID:-${DEV_CHANNEL_ID}}"
+            SLACK_CHANNEL_ID="${PROD_CHANNEL_ID:-${DEV_CHANNEL_ID}}"
           fi
           export SLACK_CHANNEL_ID
 
