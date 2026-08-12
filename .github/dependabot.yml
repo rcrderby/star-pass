@@ -13,19 +13,10 @@
 version: 2
 
 updates:
-  # Python dependencies, across every requirements file in the directory
-  - package-ecosystem: pip
-    directory: /requirements
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    commit-message:
-      prefix: build
-    labels:
-      - dependencies
-
-  # The project metadata pins the same runtime versions as the
-  # requirements files, so it is tracked too and the two stay in step.
+  # Python dependencies.  Scanning from the repository root reaches
+  # pyproject.toml and every file under 'requirements', so a version
+  # pinned in both is raised in one pull request and the two stay in
+  # step.
   - package-ecosystem: pip
     directory: /
     schedule:
