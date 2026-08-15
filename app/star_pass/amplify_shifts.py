@@ -3,7 +3,7 @@
 
 # Imports - Python Standard Library
 from copy import copy
-from json import dumps, load
+from json import load
 from os import getenv
 from pathlib import Path
 from typing import Any, Dict
@@ -20,6 +20,7 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 from . import _defaults
 from ._exceptions import ValidationError
 from ._helpers import Helpers, load_env_file
+from ._reporting import Reporter
 from ._logging import get_logger
 from ._validation import validate_shift_columns, validate_shift_need_ids
 
@@ -61,7 +62,6 @@ START_TIME_COLUMN = _defaults.START_TIME_COLUMN
 KEEP_COLUMNS = _defaults.KEEP_COLUMNS.split(sep=', ')
 
 # Default output format verbosity
-VERBOSITY_LEVELS = _defaults.VERBOSITY_LEVELS
 
 # Module logger
 logger = get_logger(__name__)
@@ -76,7 +76,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             input_file: str,
             auto_prep_data: bool = True,
             check_mode: bool = True,
-            output_verbosity: str = VERBOSITY_LEVELS[0],
+            reporter: Reporter | None = None,
             **kwargs: Any
     ) -> None:
         """ CreateShifts initialization method.
@@ -132,10 +132,11 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                     Prepare HTTP API requests without sending the
                     requests.  Default value is True.
 
-                output_verbosity (str, optional):
-                    Verbosity level for output display.  Default value
-                    is the simplest format, which is the first index in
-                    VERBOSITY_LEVELS[0].
+                reporter (Reporter, optional):
+                    Receives progress and result events.  Defaults to
+                    None, which discards them: how the run is displayed
+                    is the caller's concern, and a caller that only
+                    wants the outcome passes nothing.
 
                 **kwargs (Any, optional):
                     Unspecified keyword arguments.
@@ -156,13 +157,9 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         else:
             self.check_mode = self.helpers.convert_to_bool(check_mode)
 
-        # Determine if the verbosity level is valid
-        if output_verbosity in VERBOSITY_LEVELS:
-            self.output_verbosity = output_verbosity
-
-        else:
-            # Set the simplest valid verbosity level
-            self.output_verbosity = VERBOSITY_LEVELS[0]
+        # Report progress nowhere unless the caller supplies a
+        # destination
+        self.reporter = reporter if reporter is not None else Reporter()
 
         # Set the base file name.
         # Use removesuffix (not rstrip, which strips a *character set*
@@ -234,10 +231,8 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """
 
         # Display preliminary status message
-        message = f'\nReading shift data from "{self.input_file}"...'
-        self.helpers.printer(
-            message=message,
-            end=''
+        self.reporter.step_started(
+            label=f'Reading shift data from "{self.input_file}"'
         )
 
         # Read CSV file.  A missing or unreadable file is an operator
@@ -249,7 +244,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                 dtype='string'
             )
         except FileNotFoundError as error:
-            self.helpers.printer(message='')
+            self.reporter.step_failed()
             message = (
                 f'No shift data file at "{self.input_file}".  Pass the '
                 'file name of a CSV file in the input directory with '
@@ -258,7 +253,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             logger.error(message)
             raise ValidationError(message) from error
         except pd.errors.EmptyDataError as error:
-            self.helpers.printer(message='')
+            self.reporter.step_failed()
             message = (
                 f'The shift data file "{self.input_file}" is empty.'
             )
@@ -269,8 +264,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         self._shift_data = shift_data
 
         # Display status message
-        message = "done."
-        self.helpers.printer(message=message)
+        self.reporter.step_finished()
 
         # Confirm the file has the columns the pipeline transforms
         validate_shift_columns(
@@ -303,11 +297,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """
 
         # Display preliminary status message
-        message = 'Removing duplicate shifts...'
-        self.helpers.printer(
-            message=message,
-            end=''
-        )
+        self.reporter.step_started(label='Removing duplicate shifts')
 
         # Drop duplicate rows in self._shift_data
         self._shift_data.drop_duplicates(
@@ -316,8 +306,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         )
 
         # Display status message
-        message = "done."
-        self.helpers.printer(message=message)
+        self.reporter.step_finished()
 
         return None
 
@@ -339,23 +328,18 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """
 
         # Display preliminary status message
-        message = 'Validating shift need IDs...'
-        self.helpers.printer(
-            message=message,
-            end=''
-        )
+        self.reporter.step_started(label='Validating shift need IDs')
 
-        # Close the status line first: the check writes its report to
-        # the log, which goes to stderr, when it finds a blank need ID.
-        self.helpers.printer(message='')
+        # Close the step first: the check writes its report to the log,
+        # which goes to stderr, when it finds a blank need ID.
+        self.reporter.step_failed()
         validate_shift_need_ids(
             shift_data=self._shift_data,
             input_file=self.input_file
         )
 
         # Display status message
-        message = "done."
-        self.helpers.printer(message=message)
+        self.reporter.step_finished()
 
         return None
 
@@ -386,10 +370,8 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """
 
         # Display preliminary status message
-        message = 'Combining shift start dates and times...'
-        self.helpers.printer(
-            message=message,
-            end=''
+        self.reporter.step_started(
+            label='Combining shift start dates and times'
         )
 
         # Add 'start' column with data from 'start_date' and 'start_time'
@@ -405,8 +387,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         )
 
         # Display status message
-        message = "done."
-        self.helpers.printer(message=message)
+        self.reporter.step_finished()
 
         return None
 
@@ -436,10 +417,9 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """
 
         # Display preliminary status message
-        message = 'Formatting shift start values for Amplify compatibility...'
-        self.helpers.printer(
-            message=message,
-            end=''
+        self.reporter.step_started(
+            label='Formatting shift start values for Amplify '
+                  'compatibility'
         )
 
         # Format the 'start' column for Amplify compatibility.  A value
@@ -452,7 +432,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                 lambda x: self.helpers.format_date_time_amplify(x)
             )
         except ValueError as error:
-            self.helpers.printer(message='')
+            self.reporter.step_failed()
             message = (
                 f'{error}  Check the {START_DATE_COLUMN} and '
                 f'{START_TIME_COLUMN} columns in '
@@ -462,8 +442,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             raise ValidationError(message) from error
 
         # Display status message
-        message = "done."
-        self.helpers.printer(message=message)
+        self.reporter.step_finished()
 
         return None
 
@@ -493,11 +472,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """
 
         # Display preliminary status message
-        message = 'Removing unused column data...'
-        self.helpers.printer(
-            message=message,
-            end=''
-        )
+        self.reporter.step_started(label='Removing unused column data')
 
         # Drop informational columns not required for an API POST request body
         self._shift_data.drop(
@@ -506,8 +481,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         )
 
         # Display status message
-        message = "done."
-        self.helpers.printer(message=message)
+        self.reporter.step_finished()
 
         return None
 
@@ -550,11 +524,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """
 
         # Display preliminary status message
-        message = 'Grouping shift data by opportunity...'
-        self.helpers.printer(
-            message=message,
-            end=''
-        )
+        self.reporter.step_started(label='Grouping shift data by opportunity')
 
         # Group shifts by 'need_id' and remove other columns from the POST body
         self._grouped_shift_data = self._shift_data.groupby(
@@ -563,8 +533,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         # Display status message ('groupby' raises rather than returning
         # None, so a failure never reaches this line)
-        message = "done."
-        self.helpers.printer(message=message)
+        self.reporter.step_finished()
 
         return None
 
@@ -599,10 +568,8 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """
 
         # Display preliminary status message
-        message = 'Organizing shift data for Amplify API compatibility...'
-        self.helpers.printer(
-            message=message,
-            end=''
+        self.reporter.step_started(
+            label='Organizing shift data for Amplify API compatibility'
         )
 
         # Insert a 'shifts' dict between the 'need_id' and the shift data
@@ -616,8 +583,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         # Display status message ('apply' raises rather than returning
         # None, so a failure never reaches this line)
-        message = "done."
-        self.helpers.printer(message=message)
+        self.reporter.step_finished()
 
         return None
 
@@ -656,11 +622,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """
 
         # Display preliminary status message
-        message = 'Converting shift data to JSON...'
-        self.helpers.printer(
-            message=message,
-            end=''
-        )
+        self.reporter.step_started(label='Converting shift data to JSON')
 
         if write_to_file is True:
             # Save grouped series to JSON data to a file
@@ -678,8 +640,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         # Display status message ('to_dict' raises rather than returning
         # None, so a failure never reaches this line)
-        message = "done."
-        self.helpers.printer(message=message)
+        self.reporter.step_finished()
 
         return None
 
@@ -701,10 +662,8 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         """
 
         # Display preliminary status message
-        message = 'Validating shift data compliance with JSON Schema...'
-        self.helpers.printer(
-            message=message,
-            end=''
+        self.reporter.step_started(
+            label='Validating shift data compliance with JSON Schema'
         )
 
         # Load JSON Schema file for shift data
@@ -738,14 +697,11 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                 }
             )
 
-        # Prepare status message
+        # Report the outcome
         if self._json_shift_data.get('valid') is True:
-            message = "done."
+            self.reporter.step_finished()
         else:
-            message = '\n\n** Error validating shift data **\n'
-
-        # Display status message
-        self.helpers.printer(message=message)
+            self.reporter.schema_validation_failed()
 
         return None
 
@@ -799,104 +755,6 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
 
         return opp_title
 
-    def _format_shift_output(
-            self,
-            index: int,
-            need_id: str | int,
-            url: str,
-            json: Dict | Any
-    ) -> str:
-        """ Format Amplify shift output for display.
-
-            Output verbosity level set by self.output_verbosity.
-
-            Args:
-                index (int):
-                    Loop iteration index number.
-
-                need_id (str | int):
-                    Opportunity ID to look up.
-
-                url (str):
-                    Opportunity Amplify API URL.
-
-                json (Dict):
-                    JSON body of shift data in an Amplify HTTP API
-                    request in a dictionary format.
-
-            Returns:
-                formatted_output (str):
-                    String of formatted shift output for display.
-        """
-
-        # Lookup opportunity title
-        opp_title = self._lookup_opportunity_title(
-            need_id=need_id
-        )
-
-        # Get the count of shifts
-        shift_count = len(json.get('shifts'))
-
-        # Determine whether to display 'shift' or 'shifts'
-        shift_noun = 'shifts'
-        if shift_count == 1:
-            shift_noun = 'shift'
-
-        # Basic output formatting
-        if self.output_verbosity == VERBOSITY_LEVELS[0]:
-
-            # Create the output message
-            output_message = (
-                f'{index}. {opp_title} - '
-                f'{shift_count} new {shift_noun}'
-            )
-
-        # Simple output formatting
-        if self.output_verbosity == VERBOSITY_LEVELS[1]:
-
-            # Create output message
-            output_message = (
-                f'Opportunity Title: {opp_title}\n'
-                f'URL: {url}\n'
-                f'Shift Count: {shift_count}\n'
-            )
-
-            for shift in json['shifts']:
-                # Get the shift date and time
-                date_time_string = shift.get('start')
-
-                # Convert the shift date to a simple format
-                simple_date = self.helpers.format_shift_date_simple(
-                    date_time_string=date_time_string
-                )
-
-                # Get the shift duration
-                shift_duration = shift.get('duration')
-
-                # Convert the shift start time to a simple start and end format
-                simple_time = self.helpers.format_shift_time_simple(
-                    date_time_string=date_time_string,
-                    shift_duration=shift_duration
-                )
-
-                # Update `output_message`
-                output_message += (
-                    f'{simple_date}: {simple_time}\n'
-                )
-
-        # Detailed output formatting
-        if self.output_verbosity == VERBOSITY_LEVELS[2]:
-
-            # Create output message
-            output_message = (
-                f'URL: {url}\n'
-                f'Opportunity Title: {opp_title}\n'
-                f'Shift Count: {shift_count}\n'
-                f'Payload:\n{dumps(json, indent=2)}'
-            )
-
-        return output_message
-
     def create_new_shifts(
             self,
             timeout: int = HTTP_TIMEOUT
@@ -917,19 +775,11 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
         # Only send the request if self._json_shift_data['valid'] is True
         if self._json_shift_data.get('valid') is True:
 
-            # Display status message
-            message = '\nSending shift data to Amplify...'
-            self.helpers.printer(
-                message=message
-            )
+            self.reporter.sending_started()
 
-            # Display a check_mode output message
+            # A dry run reports what it would have created
             if self.check_mode is True:
-                check_mode_heading = _defaults.HTTP_CHECK_MODE_MESSAGE
-                # Display output message
-                self.helpers.printer(
-                    message=check_mode_heading
-                )
+                self.reporter.check_mode()
 
             # Set HTTP request variables
             method = 'POST'
@@ -961,17 +811,15 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                         api_request_data=api_request_data
                     )
 
-                # Format output_message
-                output_message = self._format_shift_output(
+                # Report the batch; the renderer decides how much of
+                # it to show
+                self.reporter.shifts_sent(
                     index=index,
                     need_id=need_id,
+                    title=self._lookup_opportunity_title(need_id=need_id),
                     url=url,
-                    json=json
-                )
-
-                # Display output message
-                self.helpers.printer(
-                    message=output_message
+                    shifts=json.get('shifts'),
+                    payload=json
                 )
 
         # Display a message if self._json_shift_data['valid'] is not True
@@ -988,10 +836,13 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             if validation_error is not None:
                 output_message += f'\n\n{validation_error}'
 
-            # Report to the log and to the display
+            # Report to the log and to the caller's renderer
             logger.error(output_message)
-            self.helpers.printer(
-                message=f'{output_message}\n'
+            self.reporter.shift_data_invalid(
+                detail=(
+                    None if validation_error is None
+                    else str(validation_error)
+                )
             )
 
         return None

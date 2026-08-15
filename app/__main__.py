@@ -4,7 +4,8 @@
 # Imports - Python Standard Library
 import argparse
 import sys
-from typing import Optional, Sequence, TextIO
+from json import dumps
+from typing import Any, Dict, List, Optional, Sequence, TextIO
 
 # Imports - Third-Party
 from slack_sdk.errors import SlackApiError
@@ -17,6 +18,7 @@ from star_pass.slack_notify import SlackNotifier
 from star_pass._exceptions import StarPassError
 from star_pass._helpers import Helpers, require_env_vars
 from star_pass._logging import get_logger
+from star_pass._reporting import Reporter
 from star_pass import _defaults
 
 # Constants
@@ -45,6 +47,236 @@ helpers = Helpers()
 
 # Application logger
 logger = get_logger('star_pass.main')
+
+
+class TerminalReporter(Reporter):
+    """ Render core progress and results as terminal text.
+
+        Holds every decision the core used to make about display: the
+        trailing ellipsis on a step, the "done." that closes it, and how
+        much of a sent batch to show.  Verbosity lives here because how
+        much detail to display is a property of the display.
+    """
+
+    def __init__(
+            self,
+            verbosity: str = VERBOSITY_LEVELS[0]
+    ) -> None:
+        """ TerminalReporter initialization method.
+
+            Args:
+                verbosity (str, optional):
+                    One of VERBOSITY_LEVELS.  An unrecognized value
+                    falls back to the simplest, so a bad value shows
+                    less rather than failing a run that is otherwise
+                    fine.
+
+            Returns:
+                None.
+        """
+
+        if verbosity in VERBOSITY_LEVELS:
+            self.verbosity = verbosity
+        else:
+            self.verbosity = VERBOSITY_LEVELS[0]
+
+        # A blank line separates the first step from the command that
+        # started it.  The core does not know which step is first.
+        self._started = False
+
+        return None
+
+    def step_started(
+            self,
+            label: str
+    ) -> None:
+        """ Open a status line, leaving it for 'step_finished'.
+
+            Args:
+                label (str):
+                    Description of the work.
+
+            Returns:
+                None.
+        """
+
+        prefix = '' if self._started else '\n'
+        self._started = True
+        helpers.printer(
+            message=f'{prefix}{label}...',
+            end=''
+        )
+
+        return None
+
+    def step_finished(self) -> None:
+        """ Close an open status line.
+
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        helpers.printer(message='done.')
+
+        return None
+
+    def step_failed(self) -> None:
+        """ End an open status line without a result.
+
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        helpers.printer(message='')
+
+        return None
+
+    def schema_validation_failed(self) -> None:
+        """ Report shift data that did not match the JSON Schema.
+
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        helpers.printer(message='\n\n** Error validating shift data **\n')
+
+        return None
+
+    def sending_started(self) -> None:
+        """ Announce the send.
+
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        helpers.printer(message='\nSending shift data to Amplify...')
+
+        return None
+
+    def check_mode(self) -> None:
+        """ Announce that the run sends nothing.
+
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        helpers.printer(message=_defaults.HTTP_CHECK_MODE_MESSAGE)
+
+        return None
+
+    def shifts_sent(  # pylint: disable=unused-argument
+            self,
+            *,
+            index: int,
+            need_id: str | int,
+            title: str,
+            url: str,
+            shifts: List[Dict[str, Any]],
+            payload: Dict[str, Any]
+    ) -> None:
+        """ Render one opportunity's batch at the chosen verbosity.
+
+            Args:
+                index (int):
+                    Position of this opportunity in the run, from one.
+
+                need_id (str | int):
+                    Amplify need ID.  Not shown; the title names the
+                    opportunity in a way an operator recognizes.
+
+                title (str):
+                    Amplify opportunity title.
+
+                url (str):
+                    Amplify API URL for the opportunity's shifts.
+
+                shifts (List[Dict[str, Any]]):
+                    The individual shifts.
+
+                payload (Dict[str, Any]):
+                    The request body.
+
+            Returns:
+                None.
+        """
+
+        shift_count = len(shifts)
+        shift_noun = 'shift' if shift_count == 1 else 'shifts'
+
+        if self.verbosity == VERBOSITY_LEVELS[0]:
+            message = (
+                f'{index}. {title} - '
+                f'{shift_count} new {shift_noun}'
+            )
+
+        elif self.verbosity == VERBOSITY_LEVELS[1]:
+            message = (
+                f'Opportunity Title: {title}\n'
+                f'URL: {url}\n'
+                f'Shift Count: {shift_count}\n'
+            )
+
+            for shift in shifts:
+                date_time_string = shift.get('start')
+                simple_date = helpers.format_shift_date_simple(
+                    date_time_string=date_time_string
+                )
+                simple_time = helpers.format_shift_time_simple(
+                    date_time_string=date_time_string,
+                    shift_duration=shift.get('duration')
+                )
+                message += f'{simple_date}: {simple_time}\n'
+
+        else:
+            message = (
+                f'URL: {url}\n'
+                f'Opportunity Title: {title}\n'
+                f'Shift Count: {shift_count}\n'
+                f'Payload:\n{dumps(payload, indent=2)}'
+            )
+
+        helpers.printer(message=message)
+
+        return None
+
+    def shift_data_invalid(
+            self,
+            detail: str | None = None
+    ) -> None:
+        """ Report that no shifts were created.
+
+            Args:
+                detail (str, optional):
+                    The validation error, when there is one.
+
+            Returns:
+                None.
+        """
+
+        message = (
+            '** Unable to create shifts while shift data is invalid **'
+        )
+        if detail is not None:
+            message += f'\n\n{detail}'
+
+        helpers.printer(message=f'{message}\n')
+
+        return None
 
 
 # argparse boolean type converter
@@ -406,7 +638,7 @@ def _run(
         shifts = CreateShifts(
             input_file=args.input_file,
             check_mode=check_mode,
-            output_verbosity=output_verbosity
+            reporter=TerminalReporter(verbosity=output_verbosity)
         )
         # Create shifts
         shifts.create_new_shifts()
