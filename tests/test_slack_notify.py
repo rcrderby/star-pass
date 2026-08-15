@@ -13,7 +13,7 @@ from unittest.mock import Mock
 import pytest
 
 # Imports - Local
-from star_pass import slack_notify
+from star_pass import _models, slack_notify
 from star_pass._reporting import Reporter
 from star_pass.slack_notify import (
     SlackNotifier,
@@ -227,7 +227,7 @@ class TestShortRole:
         assert _short_role('Skating Official') == 'Skating Official'
 
     def test_the_shipped_model_covers_both_official_roles(self):
-        assert slack_notify.SLACK_ROLE_LABELS == {
+        assert _models.get_slack_role_labels() == {
             'Skating Officials': 'SOs',
             'Non-Skating Officials': 'NSOs'
         }

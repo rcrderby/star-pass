@@ -19,6 +19,7 @@ from urllib3.util.retry import Retry
 from . import _defaults
 from ._exceptions import ConfigurationError, UpstreamError
 from ._logging import get_logger
+from . import _models
 
 # Constants
 AMPLIFY_DATE_TIME_FORMAT = _defaults.AMPLIFY_DATE_TIME_FORMAT
@@ -29,7 +30,6 @@ GCAL_CALENDARS = _defaults.GCAL_CALENDARS
 HTTP_RETRY_BACKOFF_FACTOR = _defaults.HTTP_RETRY_BACKOFF_FACTOR
 HTTP_RETRY_STATUS_FORCELIST = _defaults.HTTP_RETRY_STATUS_FORCELIST
 HTTP_RETRY_TOTAL = _defaults.HTTP_RETRY_TOTAL
-SHIFTS_INFO = _defaults.SHIFTS_INFO
 SIMPLE_DATE_FORMAT = _defaults.SIMPLE_DATE_FORMAT
 SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
 
@@ -297,7 +297,7 @@ class Helpers:
                     matches with enough confidence.
         """
 
-        calendar = SHIFTS_INFO['calendar'][gcal_name]
+        calendar = _models.get_shifts_info()['calendar'][gcal_name]
         categories = calendar['categories']
 
         # Map each alias to its category configuration
