@@ -39,7 +39,8 @@ through the Amplify API. It is run once per month.
   layer stores and returns (`Run`, `Revision`, `Opportunity`, `Event`,
   `EventRole`, `LogEntry`).
 - `app/star_pass/_repository/` — runs, their revisions, the events in
-  each revision and the change log. Every statement that touches the
+  each revision and the `change_log` of edits made to them. Every
+  statement that touches the
   database is in this package and no SQL appears outside it, so the
   core stays testable without a database and a move to another one is
   contained. Only facts are stored: a run's current revision and the

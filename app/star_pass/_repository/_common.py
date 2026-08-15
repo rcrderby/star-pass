@@ -90,6 +90,32 @@ def check_identifiers(
     return None
 
 
+class Repository:
+    """ What every repository in the package is made of.
+
+        The connection is supplied rather than opened here, so that a
+        caller holding several repositories runs them against one
+        database, and a transaction opened around a group of calls
+        covers all of them.
+    """
+
+    def __init__(
+            self,
+            connection: sqlite3.Connection
+    ) -> None:
+        """ Store the connection the repository works on.
+
+            Args:
+                connection (sqlite3.Connection):
+                    An open connection from '_database.connect'.
+
+            Returns:
+                None.
+        """
+
+        self._connection = connection
+
+
 def utc_now() -> str:
     """ Return the current time as an ISO-8601 UTC timestamp.
 

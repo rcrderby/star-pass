@@ -9,7 +9,7 @@ from typing import List
 from .._database import execute, query
 from .._logging import get_logger
 from .._records import LogEntry
-from ._common import insert_statement, utc_now
+from ._common import insert_statement, Repository, utc_now
 
 # Module logger
 logger = get_logger(__name__)
@@ -39,29 +39,13 @@ def _to_log_entry(
     )
 
 
-class ChangeLogRepository:
+class ChangeLogRepository(Repository):
     """ A run's change log, appended to and never edited.
 
         The log is written where the change is made rather than
         assembled by whatever is displaying it, so it survives a reload
         and reads the same in a browser and a terminal.
     """
-
-    def __init__(
-            self,
-            connection: sqlite3.Connection
-    ) -> None:
-        """ Store the connection the repository works on.
-
-            Args:
-                connection (sqlite3.Connection):
-                    An open connection from '_database.connect'.
-
-            Returns:
-                None.
-        """
-
-        self._connection = connection
 
     def add(
             self,

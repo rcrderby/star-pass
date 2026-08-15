@@ -30,6 +30,41 @@ from star_pass._repository import (
 from star_pass._repository._common import copy_statement, insert_statement
 
 
+@pytest.fixture(name='collected')
+def fixture_collected(
+    events: EventRepository,
+    run_id: str,
+    revision: int,
+    make_event: Callable[..., Event]
+) -> str:
+    """ Return a run whose first revision holds one event. """
+    events.add(
+        run_id=run_id,
+        revision=revision,
+        event=make_event()
+    )
+
+    return run_id
+
+
+@pytest.fixture(name='edited')
+def fixture_edited(
+    events: EventRepository,
+    revisions: RevisionRepository,
+    collected: str,
+    make_event: Callable[..., Event]
+) -> str:
+    """ Return that run with a second revision moving the event. """
+    revisions.create(run_id=collected, label='Edited')
+    events.replace(
+        run_id=collected,
+        revision=2,
+        event=make_event(shift_start='19:45')
+    )
+
+    return collected
+
+
 class TestRuns:
     def test_a_new_run_is_stored_with_a_minted_id(
         self,
@@ -261,43 +296,21 @@ class TestRevisions:
         self,
         revisions: RevisionRepository,
         events: EventRepository,
-        run_id: str,
-        revision: int,
-        make_event: Callable[..., Event]
+        collected: str
     ) -> None:
-        events.add(
-            run_id=run_id,
-            revision=revision,
-            event=make_event()
-        )
-        revisions.create(run_id=run_id, label='Edited')
+        revisions.create(run_id=collected, label='Edited')
 
-        copied = events.list_all(run_id=run_id, revision=2)
+        copied = events.list_all(run_id=collected, revision=2)
 
-        assert copied == events.list_all(run_id=run_id, revision=revision)
+        assert copied == events.list_all(run_id=collected, revision=1)
 
     def test_editing_a_revision_leaves_the_earlier_one_alone(
         self,
-        revisions: RevisionRepository,
         events: EventRepository,
-        run_id: str,
-        revision: int,
-        make_event: Callable[..., Event]
+        edited: str
     ) -> None:
-        events.add(
-            run_id=run_id,
-            revision=revision,
-            event=make_event()
-        )
-        revisions.create(run_id=run_id, label='Edited')
-        events.replace(
-            run_id=run_id,
-            revision=2,
-            event=make_event(shift_start='19:45')
-        )
-
-        first = events.list_all(run_id=run_id, revision=revision)[0]
-        second = events.list_all(run_id=run_id, revision=2)[0]
+        first = events.list_all(run_id=edited, revision=1)[0]
+        second = events.list_all(run_id=edited, revision=2)[0]
 
         assert first.shift_start == '19:15'
         assert second.shift_start == '19:45'
@@ -336,33 +349,19 @@ class TestRevisions:
         self,
         revisions: RevisionRepository,
         events: EventRepository,
-        run_id: str,
-        revision: int,
-        make_event: Callable[..., Event]
+        edited: str
     ) -> None:
-        events.add(
-            run_id=run_id,
-            revision=revision,
-            event=make_event()
-        )
-        revisions.create(run_id=run_id, label='Edited')
-        events.replace(
-            run_id=run_id,
-            revision=2,
-            event=make_event(shift_start='19:45')
-        )
-
         reverted = revisions.revert_to(
-            run_id=run_id,
+            run_id=edited,
             number=1,
             label='Reverted to revision 1'
         )
-        listed = revisions.list_all(run_id=run_id)
+        listed = revisions.list_all(run_id=edited)
 
         assert reverted.number == 3
         assert [item.number for item in listed] == [1, 2, 3]
         assert events.list_all(
-            run_id=run_id,
+            run_id=edited,
             revision=3
         )[0].shift_start == '19:15'
 

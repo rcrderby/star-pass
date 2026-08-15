@@ -489,39 +489,38 @@ def query_one(
         statement: str,
         parameters: Sequence[Any] = ()
 ) -> Optional[sqlite3.Row]:
-    """ Run a query and return its first row, if there is one.
+    """ Run a query written to match one row, and return it.
+
+        A reading of 'query' for the statements that look something up
+        by its key, so that a caller expecting a single row does not
+        index into a list to say so.
 
         Args:
             connection (sqlite3.Connection):
-                The connection to run the query on.
+                Connection to run it on.
 
             statement (str):
-                SQL, with placeholders for every supplied value.
+                SQL matching at most one row.
 
             parameters (Sequence[Any], optional):
-                Values for the placeholders.  Defaults to an empty
-                sequence.
+                Placeholder values.  Defaults to none.
 
         Raises:
             UpstreamError:
-                If the query fails.
+                If it fails.
 
         Returns:
             row (sqlite3.Row | None):
-                The first row, or None when the query matched nothing.
+                The first row, or None when nothing matched.
     """
 
-    cursor = execute(
+    rows = query(
         connection=connection,
         statement=statement,
         parameters=parameters
     )
 
-    try:
-        return cursor.fetchone()
-
-    except sqlite3.Error as error:
-        raise _translated(error=error) from error
+    return rows[0] if rows else None
 
 
 def _translated(

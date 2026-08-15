@@ -14,6 +14,7 @@ from ._common import (
     EVENT_COLUMNS,
     EVENT_ROLE_COLUMNS,
     insert_statement,
+    Repository,
     require_row
 )
 
@@ -162,29 +163,13 @@ def _role_values(
     ]
 
 
-class EventRepository:
+class EventRepository(Repository):
     """ The events in one revision of a run.
 
         An event is read and written with its roles, because an event
         without them creates no shift and a role without its event
         belongs to nothing.
     """
-
-    def __init__(
-            self,
-            connection: sqlite3.Connection
-    ) -> None:
-        """ Store the connection the repository works on.
-
-            Args:
-                connection (sqlite3.Connection):
-                    An open connection from '_database.connect'.
-
-            Returns:
-                None.
-        """
-
-        self._connection = connection
 
     def add_all(
             self,

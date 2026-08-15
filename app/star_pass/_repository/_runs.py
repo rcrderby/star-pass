@@ -11,7 +11,12 @@ from .._database import execute, execute_many, query, query_one, transaction
 from .._exceptions import ValidationError
 from .._logging import get_logger
 from .._records import Opportunity, Run, RUN_STATUS_COLLECTING, RUN_STATUSES
-from ._common import insert_statement, require_row, utc_now
+from ._common import (
+    insert_statement,
+    Repository,
+    require_row,
+    utc_now
+)
 
 # Constants
 RUN_SELECT = """
@@ -98,29 +103,13 @@ def _to_opportunity(
     )
 
 
-class RunRepository:
+class RunRepository(Repository):
     """ Runs, and the opportunities each one resolved.
 
         The opportunities belong to the run rather than to a repository
         of their own: they are resolved once while the run is collected
         and are replaced as a set, never edited one at a time.
     """
-
-    def __init__(
-            self,
-            connection: sqlite3.Connection
-    ) -> None:
-        """ Store the connection the repository works on.
-
-            Args:
-                connection (sqlite3.Connection):
-                    An open connection from '_database.connect'.
-
-            Returns:
-                None.
-        """
-
-        self._connection = connection
 
     def create(
             self,

@@ -15,6 +15,7 @@ from ._common import (
     EVENT_COLUMNS,
     EVENT_ROLE_COLUMNS,
     insert_statement,
+    Repository,
     utc_now
 )
 
@@ -44,7 +45,7 @@ def _to_revision(
     )
 
 
-class RevisionRepository:
+class RevisionRepository(Repository):
     """ The numbered versions of a run's events.
 
         A revision is created by copying the current one, so editing
@@ -52,22 +53,6 @@ class RevisionRepository:
         forward step rather than an undo: it adds a revision holding a
         copy of the one being reverted to.
     """
-
-    def __init__(
-            self,
-            connection: sqlite3.Connection
-    ) -> None:
-        """ Store the connection the repository works on.
-
-            Args:
-                connection (sqlite3.Connection):
-                    An open connection from '_database.connect'.
-
-            Returns:
-                None.
-        """
-
-        self._connection = connection
 
     def create(
             self,
