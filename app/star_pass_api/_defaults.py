@@ -34,6 +34,12 @@ API_TOKEN_MINIMUM_LENGTH = 32
 # what writes it.
 API_PRINCIPAL_ID = 'static-token'
 
+# Encoding for the files this package writes and reads, which is the
+# committed specification and nothing else.  The same value the core
+# uses; named here so the service does not reach into the core's
+# settings for something that is not domain configuration.
+FILE_ENCODING = 'utf-8'
+
 # The path every endpoint lives under.  Versioned in the path so a
 # breaking change can be served alongside what it breaks, rather than
 # replacing it (D15).  Changes within a version are additive only.

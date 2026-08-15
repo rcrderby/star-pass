@@ -1,0 +1,121 @@
+{
+  "components": {
+    "schemas": {
+      "Health": {
+        "description": "The service's answer about itself. ",
+        "properties": {
+          "status": {
+            "description": "Always \"ok\": a reply at all is the health report.",
+            "examples": [
+              "ok"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "Version": {
+        "description": "The running version of the application. ",
+        "properties": {
+          "version": {
+            "description": "The star-pass release this service is running.",
+            "examples": [
+              "1.16.4"
+            ],
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "Version",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "Bearer token": {
+        "description": "The value of STAR_PASS_API_TOKEN.",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "The remote surface over the star-pass core. Everything the web interface can do is reachable here, and the command line client can do anything the web interface can.",
+    "summary": "Bulk volunteer shift operations for the Rose City Rollers.",
+    "title": "star-pass",
+    "version": "1.16.4"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "description": "Answers without authentication, for a container runtime or a proxy deciding whether to route to this process. It reports that the process is serving and does not check the database or any upstream service.",
+        "operationId": "get_health_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "summary": "Report that the service is serving",
+        "tags": [
+          "service"
+        ]
+      }
+    },
+    "/v1/version": {
+      "get": {
+        "description": "Return the running version.\n\nArgs:\n    principal (Principal):\n        The authenticated caller, which the dependency supplies\n        after checking the scope.\n\nReturns:\n    version (Version):\n        The version of the application that is serving.",
+        "operationId": "get_version_v1_version_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Version"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "config:read"
+            ]
+          }
+        ],
+        "summary": "Report the running version",
+        "tags": [
+          "service"
+        ]
+      }
+    }
+  }
+}

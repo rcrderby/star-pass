@@ -74,6 +74,8 @@ through the Amplify API. It is run once per month.
   package from `star_pass`, because the core knows nothing about HTTP
   and this package holds no domain logic. Run it with
   `uvicorn --factory star_pass_api:create_app`.
+- `docs/api/openapi.json` — the generated OpenAPI 3.1 contract,
+  written by `scripts/generate_openapi.py`.
 - `app/schema/amplify.shifts.schema.json` — JSON Schema for shift
   payloads.
 - `tests/` — pytest suite.
@@ -198,6 +200,12 @@ The notes below are the ones that are not obvious from the commands.
 - 401 with a `WWW-Authenticate` challenge means the service cannot
   identify the caller. 403 without one means it can, and the request
   was outside their scopes.
+- `docs/api/openapi.json` is generated, never edited. After changing a
+  route, a model, a scope or the version, run
+  `python scripts/generate_openapi.py` and commit the result;
+  `tests/test_api_spec.py` fails while it and the service disagree.
+  A version bump changes this file, which is intended: the contract
+  records which release it describes.
 - Prefer failing loudly over dropping data. A row that cannot become a
   correct shift stops the run and is named, rather than being skipped:
   a missing shift is invisible, and the operator only discovers it when
