@@ -186,6 +186,18 @@ The notes below are the ones that are not obvious from the commands.
   carry its reason: the caller is the one who can act on it.
 - Endpoints live under `/v1`. Changes within a version are additive;
   a breaking change is served at a new prefix alongside the old one.
+- `app/star_pass_api/_security.py` is the only module that reads the
+  API token or the `Authorization` header. A route declares the scopes
+  it needs with `requires(...)` and receives a `Principal`; it never
+  decides for itself whether a caller is allowed in. Keeping that in
+  one place is what makes replacing the static token with an identity
+  provider a change to that module rather than to every route.
+- Compare a credential with `secrets.compare_digest`, never `==`: a
+  comparison that stops at the first wrong character reports, in how
+  long it took, how much of the value was right.
+- 401 with a `WWW-Authenticate` challenge means the service cannot
+  identify the caller. 403 without one means it can, and the request
+  was outside their scopes.
 - Prefer failing loudly over dropping data. A row that cannot become a
   correct shift stops the run and is named, rather than being skipped:
   a missing shift is invisible, and the operator only discovers it when

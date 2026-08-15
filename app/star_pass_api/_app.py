@@ -20,6 +20,8 @@ from fastapi import FastAPI
 from . import _defaults
 from ._health import router as health_router
 from ._problems import add_problem_handlers, PROBLEM_MEDIA_TYPE
+from ._security import check_configuration
+from ._version import router as version_router
 
 
 def create_app() -> FastAPI:
@@ -28,11 +30,20 @@ def create_app() -> FastAPI:
         Args:
             None.
 
+        Raises:
+            ConfigurationError:
+                If the service is not configured to authenticate
+                anyone.  Raised here rather than at the first request,
+                so a deployment missing its token fails at startup
+                instead of when someone tries to use it.
+
         Returns:
             api (FastAPI):
                 The application, with its routes and error handling in
                 place.
     """
+
+    check_configuration()
 
     api = FastAPI(
         title=_defaults.API_TITLE,
@@ -54,9 +65,10 @@ def create_app() -> FastAPI:
 
     add_problem_handlers(api=api)
 
-    api.include_router(
-        health_router,
-        prefix=_defaults.API_VERSION_PREFIX
-    )
+    for router in (health_router, version_router):
+        api.include_router(
+            router,
+            prefix=_defaults.API_VERSION_PREFIX
+        )
 
     return api

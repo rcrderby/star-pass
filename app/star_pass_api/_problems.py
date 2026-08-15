@@ -20,6 +20,7 @@
 """
 
 # Imports - Python Standard Library
+from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any, Dict, Optional
 from uuid import uuid4
@@ -61,6 +62,43 @@ INTERNAL_DETAIL = (
     'when reporting it.'
 )
 
+
+@dataclass(frozen=True)
+class ProblemKind:
+    """ What kind of problem occurred, independent of the occasion.
+
+        The status, the type identifier and the title are one fact
+        about a category of failure; only the detail differs between
+        two occurrences of it.
+
+        Attributes:
+            status_code (int):
+                HTTP status the response carries.
+
+            problem_type (str):
+                URI identifying the problem type.
+
+            title (str):
+                Short summary of the type, stable across occurrences.
+    """
+
+    status_code: int
+    problem_type: str
+    title: str
+
+
+# The kinds that are not tied to one of the core's exceptions.
+VALIDATION_KIND = ProblemKind(
+    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+    problem_type=PROBLEM_TYPE_VALIDATION,
+    title='Unprocessable request'
+)
+UNEXPECTED_KIND = ProblemKind(
+    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    problem_type=PROBLEM_TYPE_UNEXPECTED,
+    title='Internal server error'
+)
+
 # How each of the core's exceptions is answered.  A configuration fault
 # is the deployment's, so it is a server error however it was reached;
 # supplied data that cannot be used is the caller's; an upstream that
@@ -71,20 +109,16 @@ INTERNAL_DETAIL = (
 # ValidationError for a value that is malformed and for one that names
 # nothing, and only the route knows which it asked for.
 CORE_EXCEPTION_PROBLEMS = {
-    ConfigurationError: (
-        status.HTTP_500_INTERNAL_SERVER_ERROR,
-        PROBLEM_TYPE_CONFIGURATION,
-        'Service configuration error'
+    ConfigurationError: ProblemKind(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        problem_type=PROBLEM_TYPE_CONFIGURATION,
+        title='Service configuration error'
     ),
-    ValidationError: (
-        status.HTTP_422_UNPROCESSABLE_CONTENT,
-        PROBLEM_TYPE_VALIDATION,
-        'Unprocessable request'
-    ),
-    UpstreamError: (
-        status.HTTP_502_BAD_GATEWAY,
-        PROBLEM_TYPE_UPSTREAM,
-        'Upstream service error'
+    ValidationError: VALIDATION_KIND,
+    UpstreamError: ProblemKind(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        problem_type=PROBLEM_TYPE_UPSTREAM,
+        title='Upstream service error'
     )
 }
 
@@ -138,13 +172,19 @@ def problem_document(
 
 
 def problem_response(
-        document: Dict[str, Any]
+        document: Dict[str, Any],
+        headers: Optional[Dict[str, str]] = None
 ) -> JSONResponse:
     """ Return a problem document as a response.
 
         Args:
             document (Dict[str, Any]):
                 The document to send.
+
+            headers (Dict[str, str], optional):
+                Headers the status requires.  Defaults to None.  A 401
+                has to carry a challenge naming the scheme it accepts,
+                and the body cannot do that.
 
         Returns:
             response (JSONResponse):
@@ -154,7 +194,8 @@ def problem_response(
     return JSONResponse(
         status_code=document['status'],
         content=document,
-        media_type=PROBLEM_MEDIA_TYPE
+        media_type=PROBLEM_MEDIA_TYPE,
+        headers=headers
     )
 
 
@@ -199,12 +240,11 @@ def _log_problem(
 
 def _answer(
         request: Request,
-        *,
-        status_code: int,
-        title: str,
+        kind: ProblemKind,
         reason: str,
-        problem_type: str = PROBLEM_TYPE_BLANK,
-        extra: Optional[Dict[str, Any]] = None
+        *,
+        extra: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None
 ) -> JSONResponse:
     """ Return a problem document and log the reason behind it.
 
@@ -216,34 +256,30 @@ def _answer(
             request (Request):
                 The request that failed.
 
-            status_code (int):
-                HTTP status the response carries.
-
-            title (str):
-                Summary of the problem type.
+            kind (ProblemKind):
+                What kind of problem it is.
 
             reason (str):
                 What went wrong, as the service knows it.
 
-            problem_type (str, optional):
-                URI identifying the problem type.  Defaults to
-                'about:blank'.
-
             extra (Dict[str, Any], optional):
                 Further members to include.  Defaults to None.
+
+            headers (Dict[str, str], optional):
+                Headers the status requires.  Defaults to None.
 
         Returns:
             response (JSONResponse):
                 The problem document.
     """
 
-    internal = status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR
+    internal = kind.status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR
 
     document = problem_document(
-        status_code=status_code,
-        title=title,
+        status_code=kind.status_code,
+        title=kind.title,
         detail=INTERNAL_DETAIL if internal else reason,
-        problem_type=problem_type,
+        problem_type=kind.problem_type,
         extra=extra
     )
     _log_problem(
@@ -252,7 +288,10 @@ def _answer(
         reason=reason
     )
 
-    return problem_response(document=document)
+    return problem_response(
+        document=document,
+        headers=headers
+    )
 
 
 async def _handle_core_error(
@@ -273,21 +312,10 @@ async def _handle_core_error(
                 The problem document.
     """
 
-    status_code, problem_type, title = CORE_EXCEPTION_PROBLEMS.get(
-        type(exc),
-        (
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-            PROBLEM_TYPE_UNEXPECTED,
-            'Internal server error'
-        )
-    )
-
     return _answer(
         request=request,
-        status_code=status_code,
-        title=title,
-        reason=str(exc),
-        problem_type=problem_type
+        kind=CORE_EXCEPTION_PROBLEMS.get(type(exc), UNEXPECTED_KIND),
+        reason=str(exc)
     )
 
 
@@ -311,9 +339,13 @@ async def _handle_http_error(
 
     return _answer(
         request=request,
-        status_code=exc.status_code,
-        title=_status_phrase(status_code=exc.status_code),
-        reason=str(exc.detail)
+        kind=ProblemKind(
+            status_code=exc.status_code,
+            problem_type=PROBLEM_TYPE_BLANK,
+            title=_status_phrase(status_code=exc.status_code)
+        ),
+        reason=str(exc.detail),
+        headers=getattr(exc, 'headers', None)
     )
 
 
@@ -351,10 +383,8 @@ async def _handle_request_validation_error(
 
     return _answer(
         request=request,
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-        title='Unprocessable request',
+        kind=VALIDATION_KIND,
         reason='The request did not match the endpoint.',
-        problem_type=PROBLEM_TYPE_VALIDATION,
         extra={'errors': errors}
     )
 
@@ -383,10 +413,8 @@ async def _handle_unexpected_error(
 
     return _answer(
         request=request,
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        title='Internal server error',
-        reason=f'{type(exc).__name__}: {exc}',
-        problem_type=PROBLEM_TYPE_UNEXPECTED
+        kind=UNEXPECTED_KIND,
+        reason=f'{type(exc).__name__}: {exc}'
     )
 
 
