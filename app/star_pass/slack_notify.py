@@ -8,7 +8,6 @@
 """
 
 # Imports - Python Standard Library
-from json import dumps
 from os import getenv
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -20,6 +19,7 @@ from slack_sdk.errors import SlackApiError
 from . import _defaults
 from ._helpers import Helpers, load_env_file
 from ._logging import get_logger
+from ._reporting import Reporter
 
 # Load environment variables
 load_env_file()
@@ -33,7 +33,6 @@ SLACK_BOT_TOKEN = getenv(
 # Deployment configuration
 SLACK_CHANNEL_ID = _defaults.SLACK_CHANNEL_ID
 SLACK_DEV_CHANNEL_ID = _defaults.SLACK_DEV_CHANNEL_ID
-SLACK_CHECK_MODE_MESSAGE = _defaults.SLACK_CHECK_MODE_MESSAGE
 SLACK_DEFAULT_ROLE_LABEL = _defaults.SLACK_DEFAULT_ROLE_LABEL
 SLACK_ROLE_LABELS = _defaults.SLACK_ROLE_LABELS
 SLACK_SIGN_UP_BUTTON_STYLE = _defaults.SLACK_SIGN_UP_BUTTON_STYLE
@@ -609,7 +608,8 @@ class SlackNotifier:
             channel: Optional[str] = None,
             check_mode: bool = True,
             token: Optional[str] = None,
-            client: Optional[WebClient] = None
+            client: Optional[WebClient] = None,
+            reporter: Optional[Reporter] = None
     ) -> None:
         """ Class initialization method.
 
@@ -631,12 +631,20 @@ class SlackNotifier:
                     injection point for tests; when omitted a client is
                     created from 'token'.
 
+                reporter (Reporter, optional):
+                    Receives progress and result events.  Defaults to
+                    None, which discards them.
+
             Returns:
                 None.
         """
 
         # Initialize helper methods
         self.helpers = Helpers()
+
+        # Report progress nowhere unless the caller supplies a
+        # destination
+        self.reporter = reporter if reporter is not None else Reporter()
 
         # Determine the value of 'check_mode' (dry run)
         if isinstance(check_mode, bool) is True:
@@ -703,10 +711,9 @@ class SlackNotifier:
             logger.error(message)
             raise ValueError(message)
 
-        # Dry run: display the payload and skip the API request
+        # Dry run: report the payload and skip the API request
         if self.check_mode is True:
-            self.helpers.printer(message=SLACK_CHECK_MODE_MESSAGE)
-            self.helpers.printer(message=dumps(blocks, indent=2))
+            self.reporter.slack_dry_run(payload=blocks)
             message = f'Slack check mode: skipped posting to {target}'
             logger.info(message)
             return None
@@ -770,7 +777,7 @@ class SlackNotifier:
                 'Slack.'
             )
             logger.info(message)
-            self.helpers.printer(message=message)
+            self.reporter.summary_skipped()
             return None
 
         # Build the message payload from the summary data

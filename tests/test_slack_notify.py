@@ -14,6 +14,7 @@ import pytest
 
 # Imports - Local
 from star_pass import slack_notify
+from star_pass._reporting import Reporter
 from star_pass.slack_notify import (
     SlackNotifier,
     build_summary_blocks,
@@ -86,6 +87,20 @@ def summary() -> dict:
             ),
         ]
     }
+
+
+class RecordingReporter(Reporter):
+    """ Record reported events instead of displaying them. """
+
+    def __init__(self) -> None:
+        self.dry_runs = []
+        self.skipped = False
+
+    def slack_dry_run(self, payload) -> None:
+        self.dry_runs.append(payload)
+
+    def summary_skipped(self) -> None:
+        self.skipped = True
 
 
 class TestSplitTitle:
@@ -647,20 +662,43 @@ class TestPostSummarySkipsEmpty:
         assert notifier.post_summary(summary=self._empty_summary()) is None
         client.chat_postMessage.assert_not_called()
 
-    def test_check_mode_is_skipped_too(self, capsys):
+    def test_check_mode_is_skipped_too(self):
         # A dry run must preview what a live run would do, including
-        # doing nothing.
+        # doing nothing.  Asserted on the reporter rather than on
+        # printed text: the notifier no longer decides how a dry run is
+        # displayed, so an assertion about output would pass whether or
+        # not the payload was reported.
         client = Mock()
+        reporter = RecordingReporter()
         notifier = SlackNotifier(
             channel='C123',
             check_mode=True,
-            client=client
+            client=client,
+            reporter=reporter
         )
 
         assert notifier.post_summary(summary=self._empty_summary()) is None
         client.chat_postMessage.assert_not_called()
-        # The Block Kit payload is not printed for an empty summary.
-        assert 'blocks' not in capsys.readouterr().out
+        assert not reporter.dry_runs
+        assert reporter.skipped is True
+
+    def test_a_dry_run_with_shifts_reports_the_payload(self, summary):
+        # The companion case: with something to post, the blocks a live
+        # run would have sent are handed to the reporter.
+        client = Mock()
+        reporter = RecordingReporter()
+        notifier = SlackNotifier(
+            channel='C123',
+            check_mode=True,
+            client=client,
+            reporter=reporter
+        )
+
+        assert notifier.post_summary(summary=summary) is None
+        client.chat_postMessage.assert_not_called()
+        assert reporter.skipped is False
+        assert len(reporter.dry_runs) == 1
+        assert reporter.dry_runs[0]
 
     def test_missing_shifts_key_is_treated_as_empty(self):
         client = Mock()

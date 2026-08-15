@@ -222,6 +222,34 @@ class TestSendReport:
         )
 
 
+class TestSlackEvents:
+    def test_a_dry_run_shows_the_banner_and_the_payload(
+        self, reporter_class, capsys
+    ):
+        reporter = reporter_class()
+        reporter.slack_dry_run(payload=[{'type': 'header'}])
+
+        assert capsys.readouterr().out == (
+            '\n** Slack Check Mode Run (no message sent) **\n'
+            '[\n'
+            '  {\n'
+            '    "type": "header"\n'
+            '  }\n'
+            ']\n'
+        )
+
+    def test_an_empty_window_says_nothing_was_posted(
+        self, reporter_class, capsys
+    ):
+        reporter = reporter_class()
+        reporter.summary_skipped()
+
+        assert capsys.readouterr().out == (
+            'No shifts in the summary window; skipped posting to '
+            'Slack.\n'
+        )
+
+
 class TestInvalidShiftData:
     def test_the_reason_is_appended_when_there_is_one(
         self, reporter_class, capsys

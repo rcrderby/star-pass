@@ -214,6 +214,44 @@ class TerminalReporter(Reporter):
 
         return None
 
+    def slack_dry_run(
+            self,
+            payload: List[Dict[str, Any]]
+    ) -> None:
+        """ Show the Block Kit payload a live run would have posted.
+
+            Args:
+                payload (List[Dict[str, Any]]):
+                    The blocks that would have been posted.
+
+            Returns:
+                None.
+        """
+
+        helpers.printer(message=_defaults.SLACK_CHECK_MODE_MESSAGE)
+        helpers.printer(message=dumps(payload, indent=2))
+
+        return None
+
+    def summary_skipped(self) -> None:
+        """ Say that the window held nothing to post.
+
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        helpers.printer(
+            message=(
+                'No shifts in the summary window; skipped posting to '
+                'Slack.'
+            )
+        )
+
+        return None
+
     def shifts_sent(  # pylint: disable=unused-argument
             self,
             *,
@@ -741,7 +779,8 @@ def _run(
         )
         SlackNotifier(
             channel=channel,
-            check_mode=check_mode
+            check_mode=check_mode,
+            reporter=TerminalReporter()
         ).post_summary(
             summary=summary
         )
