@@ -120,11 +120,12 @@ class TestMainRunModeDispatch:
             app_main.main(['-c', '-i', 'x.csv'])
 
         assert 'Run mode is "Create Amplify Shifts"' in caplog.text
-        app_main.CreateShifts.assert_called_once_with(
-            input_file='x.csv',
-            check_mode=True,
-            output_verbosity='basic'
-        )
+        # Verbosity is a property of the renderer now, so the call
+        # carries a reporter and the level is asserted on it.
+        kwargs = app_main.CreateShifts.call_args.kwargs
+        assert kwargs['input_file'] == 'x.csv'
+        assert kwargs['check_mode'] is True
+        assert kwargs['reporter'].verbosity == 'basic'
         app_main.CreateShifts.return_value.create_new_shifts \
             .assert_called_once()
 
@@ -138,11 +139,12 @@ class TestMainRunModeDispatch:
             ]
         )
 
-        app_main.CreateShifts.assert_called_once_with(
-            input_file='x.csv',
-            check_mode=False,
-            output_verbosity='simple'
-        )
+        # Verbosity is a property of the renderer now, so the call
+        # carries a reporter and the level is asserted on it.
+        kwargs = app_main.CreateShifts.call_args.kwargs
+        assert kwargs['input_file'] == 'x.csv'
+        assert kwargs['check_mode'] is False
+        assert kwargs['reporter'].verbosity == 'simple'
 
     def test_get_mode_short_flags(self, app_main, caplog):
         with caplog.at_level(logging.INFO, logger='star_pass'):
