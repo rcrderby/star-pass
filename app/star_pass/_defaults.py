@@ -5,11 +5,10 @@
 from os import getenv
 from pathlib import Path
 from typing import List
-import sys
 
 # Imports - Third-Party
 from dotenv import load_dotenv
-from yaml import safe_load, YAMLError
+
 
 # Environment
 # Encoding for file *content* (CSV, JSON, YAML, .env).  Not the
@@ -402,66 +401,3 @@ SHIFTS_INFO_FILE = Path.joinpath(
     MODELS_DIR_PATH,
     SHIFTS_INFO_FILE_NAME
 )
-
-# Read the Amplify shift info model to set the SHIFTS_INFO constant.
-# This runs at import, before logging is configured, so a missing or
-# malformed model is reported to stderr rather than as a traceback from
-# whichever module imported this one first.
-try:
-    with open(
-        file=SHIFTS_INFO_FILE,
-        mode='rt',
-        encoding=FILE_ENCODING
-    ) as yaml_data:
-        SHIFTS_INFO = safe_load(
-            stream=yaml_data.read()
-        )
-except OSError as error:
-    print(
-        f'Cannot read the shift data model "{SHIFTS_INFO_FILE}": {error}',
-        file=sys.stderr
-    )
-    raise SystemExit(1) from error
-except YAMLError as error:
-    print(
-        f'The shift data model "{SHIFTS_INFO_FILE}" is not valid YAML: '
-        f'{error}',
-        file=sys.stderr
-    )
-    raise SystemExit(1) from error
-
-# Read the Slack role label model.  Unlike the shift data model this one
-# is optional: without it a summary keeps the full role text from each
-# opportunity title, which is correct, only long.  Malformed YAML is
-# still an error, because a file that exists is meant to be used.
-try:
-    with open(
-        file=SLACK_ROLE_LABELS_FILE,
-        mode='rt',
-        encoding=FILE_ENCODING
-    ) as yaml_data:
-        _ROLE_LABEL_MODEL = safe_load(
-            stream=yaml_data.read()
-        ) or {}
-except FileNotFoundError:
-    _ROLE_LABEL_MODEL = {}
-except OSError as error:
-    print(
-        f'Cannot read the role label model "{SLACK_ROLE_LABELS_FILE}": '
-        f'{error}',
-        file=sys.stderr
-    )
-    raise SystemExit(1) from error
-except YAMLError as error:
-    print(
-        f'The role label model "{SLACK_ROLE_LABELS_FILE}" is not valid '
-        f'YAML: {error}',
-        file=sys.stderr
-    )
-    raise SystemExit(1) from error
-
-# Short label for each role, keyed on the role as it appears in an
-# opportunity title.  A role with no entry keeps its full text.
-SLACK_ROLE_LABELS = _ROLE_LABEL_MODEL.get('labels') or {}
-# Label for an opportunity whose title carries no role at all.
-SLACK_DEFAULT_ROLE_LABEL = _ROLE_LABEL_MODEL.get('default') or 'Officials'

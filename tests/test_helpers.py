@@ -19,8 +19,8 @@ import pytest
 from urllib3.exceptions import MaxRetryError, ReadTimeoutError
 
 # Imports - Local
-from star_pass import _helpers
-from star_pass._exceptions import UpstreamError
+from star_pass import _defaults, _models, _helpers
+from star_pass._exceptions import ConfigurationError, UpstreamError
 
 
 class TestConvertToBool:
@@ -233,6 +233,29 @@ def _send_and_expect_upstream_error(
                     'timeout': 3
                 }
             )
+
+
+class TestSearchShiftInfoNeedsTheModel:
+    # The model is read when a caller needs it, so a bad one surfaces
+    # as a ConfigurationError from the call that needed it rather than
+    # from an import.
+
+    def test_a_malformed_model_reaches_the_caller(
+        self, helpers, monkeypatch, tmp_path
+    ):
+        bad = tmp_path / 'bad.yml'
+        bad.write_text('calendar: [unclosed\n', encoding='utf-8')
+        monkeypatch.setattr(_defaults, 'SHIFTS_INFO_FILE', bad)
+        _models.get_shifts_info.cache_clear()
+
+        try:
+            with pytest.raises(ConfigurationError):
+                helpers.search_shift_info(
+                    gcal_name='events',
+                    need_name='GNR v HH'
+                )
+        finally:
+            _models.get_shifts_info.cache_clear()
 
 
 class TestSendApiRequestRedaction:

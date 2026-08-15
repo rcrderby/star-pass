@@ -19,6 +19,7 @@ from slack_sdk.errors import SlackApiError
 from . import _defaults
 from ._helpers import Helpers, load_env_file
 from ._logging import get_logger
+from . import _models
 from ._reporting import Reporter
 
 # Load environment variables
@@ -33,8 +34,6 @@ SLACK_BOT_TOKEN = getenv(
 # Deployment configuration
 SLACK_CHANNEL_ID = _defaults.SLACK_CHANNEL_ID
 SLACK_DEV_CHANNEL_ID = _defaults.SLACK_DEV_CHANNEL_ID
-SLACK_DEFAULT_ROLE_LABEL = _defaults.SLACK_DEFAULT_ROLE_LABEL
-SLACK_ROLE_LABELS = _defaults.SLACK_ROLE_LABELS
 SLACK_SIGN_UP_BUTTON_STYLE = _defaults.SLACK_SIGN_UP_BUTTON_STYLE
 SLACK_SIGN_UP_BUTTON_SUFFIX = _defaults.SLACK_SIGN_UP_BUTTON_SUFFIX
 SLACK_SIGN_UP_PROMPT = _defaults.SLACK_SIGN_UP_PROMPT
@@ -97,7 +96,7 @@ def _short_role(
                 The short label, or the role unchanged.
     """
 
-    return SLACK_ROLE_LABELS.get(role, role)
+    return _models.get_slack_role_labels().get(role, role)
 
 
 def _build_rows(
@@ -212,7 +211,7 @@ def _format_count(
         # A title with no separator makes the label the event name, so
         # repeating it on the line would be noise; name the role
         # generically instead.
-        label = SLACK_DEFAULT_ROLE_LABEL
+        label = _models.get_slack_default_role_label()
     else:
         label = _short_role(role=label)
 
