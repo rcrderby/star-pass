@@ -8,6 +8,7 @@
       "**/.github/workflows/**",
       "**/__snapshots__/**",
       "**/data/json/**",
+      "**/docs/api/**",
       "**/docs/design/**",
       "**/node_modules/**",
       "**/models/shift_info.yml",
