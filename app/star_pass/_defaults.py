@@ -11,6 +11,26 @@ import sys
 from dotenv import load_dotenv
 from yaml import safe_load, YAMLError
 
+# Environment
+# Encoding for file *content* (CSV, JSON, YAML, .env).  Not the
+# filesystem encoding, which describes path names and is not
+# guaranteed to be UTF-8; a non-ASCII event title needs this one.
+FILE_ENCODING = 'utf-8'
+# .env file path
+ENV_FILE_PATH = './.env'
+# Load environment variables before any setting is read, so every value
+# in this module can be supplied by the .env file as well as by the
+# process environment (twelve-factor config).  Values already present in
+# the environment win over the file.
+#
+# Nothing may call 'getenv' above this line.  A setting read before the
+# load binds to its default and the .env file has no effect on it, with
+# no error to say so.
+load_dotenv(
+    dotenv_path=ENV_FILE_PATH,
+    encoding=FILE_ENCODING
+)
+
 # The league's local time zone, as an IANA name.  Everything that has
 # to agree with a wall clock reads this: which calendar day a summary
 # covers, the 'as of' stamp on a summary, and the calendar search
@@ -31,19 +51,8 @@ SIMPLE_DATE_FORMAT = '%A, %B %d %Y'
 SIMPLE_TIME_FORMAT = '%H:%M'
 
 # Data file management
-# Encoding for file *content* (CSV, JSON, YAML, .env).  Not the
-# filesystem encoding, which describes path names and is not
-# guaranteed to be UTF-8; a non-ASCII event title needs this one.
-FILE_ENCODING = 'utf-8'
-# .env file path
-ENV_FILE_PATH = './.env'
-# Load environment variables so the deployment values defined below can
-# be overridden via the environment (twelve-factor config).  Values
-# already present in the environment are not overridden by the .env file.
-load_dotenv(
-    dotenv_path=ENV_FILE_PATH,
-    encoding=FILE_ENCODING
-)
+# 'FILE_ENCODING' and 'ENV_FILE_PATH' are defined with the .env load
+# above, which is the first thing this module does.
 
 
 def _get_env_list(
