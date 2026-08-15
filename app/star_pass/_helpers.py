@@ -5,9 +5,7 @@
 from datetime import datetime, timedelta
 from os import getenv
 from typing import Any, Dict
-from pprint import pprint as pp
 import re
-import sys
 
 # Imports - Third-Party
 from dateparser import parse
@@ -275,62 +273,6 @@ class Helpers:
             message = f'"{gcal_name}" is not a valid calendar name'
             logger.error(message)
             raise ConfigurationError(message) from error
-
-    def printer(
-            self,
-            message: Any,
-            end: str = '\n',
-            file=None,
-            pretty_print: bool = False
-    ) -> None:
-        """ Message printer.
-
-            Args:
-                message (Any):
-                    Pre-formatted content to print.
-
-                end (str):
-                    String appended at the end of the message.  Default
-                    is a new line.  Ignored when 'pretty_print' is
-                    'True', which always ends with a new line.
-
-                file (_io.TextIOWrapper, optional):
-                    Target for the output stream.  Default 'None', which
-                    resolves to the current 'sys.stdout' at call time so
-                    that stdout redirection (for example, pytest's capsys
-                    or capfd) is respected.
-
-                pretty_print (bool):
-                    Display the output using 'pprint.pprint'.  Default
-                    is 'False'.
-
-            Returns:
-                None.
-        """
-
-        # Resolve the output stream at call time rather than binding
-        # 'sys.stdout' once as a default argument value.
-        if file is None:
-            file = sys.stdout
-
-        # Print formatted output
-        if pretty_print is False:
-            # Standard print
-            print(
-                message,
-                end=end,
-                file=file
-            )
-        else:
-            # Pretty Print, to the same stream as a standard print so
-            # that redirected output (pytest's capsys, a shell
-            # redirection) captures both forms.
-            pp(
-                message,
-                stream=file
-            )
-
-        return None
 
     def search_shift_info(
             self,
