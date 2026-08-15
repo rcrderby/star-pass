@@ -68,6 +68,12 @@ through the Amplify API. It is run once per month.
   empty need ID cannot become a shift, so the `-c` run stops and names
   the affected rows rather than dropping them. See the "Unmatched event
   titles" section of `README.md` for the operator workflow.
+- `app/star_pass_api/` — the remote surface over the core: the
+  application factory (`create_app`), the service's own `_defaults.py`,
+  `_problems.py`, and a module per group of endpoints. A separate
+  package from `star_pass`, because the core knows nothing about HTTP
+  and this package holds no domain logic. Run it with
+  `uvicorn --factory star_pass_api:create_app`.
 - `app/schema/amplify.shifts.schema.json` — JSON Schema for shift
   payloads.
 - `tests/` — pytest suite.
@@ -169,6 +175,17 @@ The notes below are the ones that are not obvious from the commands.
 - Log a value by building the message first and passing the variable.
   A format string with arguments fails pylint, which is configured for
   `{}` style, and an f-string passed directly fails it as well.
+- Every failure the service returns is a problem document
+  (RFC 9457), assembled by `app/star_pass_api/_problems.py`. Do not
+  return an error body from a route; raise, and let the handlers shape
+  it.
+- A response with a status of 500 or above never carries the reason.
+  The reason is logged against the same `reference` the caller is
+  given, because an internal failure can carry a credential, a
+  volunteer's name, or an upstream body holding either. A 4xx does
+  carry its reason: the caller is the one who can act on it.
+- Endpoints live under `/v1`. Changes within a version are additive;
+  a breaking change is served at a new prefix alongside the old one.
 - Prefer failing loudly over dropping data. A row that cannot become a
   correct shift stops the run and is named, rather than being skipped:
   a missing shift is invisible, and the operator only discovers it when

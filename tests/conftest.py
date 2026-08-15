@@ -40,6 +40,8 @@ os.environ.setdefault('GCAL_WINDOW_END', '2099-01-31T00:00:00-00:00')
 
 # Imports - Third-Party
 import pytest  # noqa: E402
+from fastapi import FastAPI  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
 
 # Imports - Local
 from star_pass._database import connect  # noqa: E402
@@ -51,6 +53,7 @@ from star_pass._repository import (  # noqa: E402
     RevisionRepository,
     RunRepository
 )
+from star_pass_api import create_app  # noqa: E402
 
 
 @pytest.fixture
@@ -163,3 +166,23 @@ def fixture_make_opportunity() -> Callable[..., Opportunity]:
         return Opportunity(**fields)
 
     return build
+
+
+@pytest.fixture(name='api')
+def fixture_api() -> FastAPI:
+    """ Return a service of this test's own. """
+    return create_app()
+
+
+@pytest.fixture(name='client')
+def fixture_client(api: FastAPI) -> TestClient:
+    """ Return a client that returns problems rather than raising.
+
+        An unhandled exception is a response the service produces, so a
+        test has to be able to read it; the default re-raises it in the
+        test instead.
+    """
+    return TestClient(
+        app=api,
+        raise_server_exceptions=False
+    )

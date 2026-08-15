@@ -1,6 +1,7 @@
 # Application runtime dependencies -- required to import the modules
 # under test. The CI pytest job installs only this file, so the runtime
 # packages must be listed here alongside the test tooling.
+fastapi==0.141.1
 python_dotenv==1.2.2
 dateparser==1.4.2
 jsonschema==4.26.0
@@ -12,5 +13,8 @@ requests==2.34.2
 slack_sdk==3.43.0
 
 # Python testing
+# The Starlette test client uses httpx2; with httpx instead it
+# still works and warns on every request.
+httpx2==2.10.0
 pytest==9.1.1
 pytest-cov==7.1.0
