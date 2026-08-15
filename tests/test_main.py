@@ -151,12 +151,18 @@ class TestMainRunModeDispatch:
             app_main.main(['-g', '-n', 'events'])
 
         assert 'Run mode is "Get Google Calendar Events"' in caplog.text
-        app_main.GCALData.assert_called_once_with(gcal_name='events')
+        kwargs = app_main.GCALData.call_args.kwargs
+        assert kwargs['gcal_name'] == 'events'
+        # The run reports through a renderer the CLI supplies.
+        assert isinstance(kwargs['reporter'], app_main.TerminalReporter)
 
     def test_get_mode_long_flags(self, app_main):
         app_main.main(['--get-gcal-events', '--gcal-name', 'practices'])
 
-        app_main.GCALData.assert_called_once_with(gcal_name='practices')
+        kwargs = app_main.GCALData.call_args.kwargs
+        assert kwargs['gcal_name'] == 'practices'
+        # The run reports through a renderer the CLI supplies.
+        assert isinstance(kwargs['reporter'], app_main.TerminalReporter)
 
     def test_slack_mode_short_flags(self, app_main, caplog):
         with caplog.at_level(logging.INFO, logger='star_pass'):

@@ -85,6 +85,46 @@ class TestSteps:
         )
 
 
+class TestCollectionEvents:
+    def test_the_calendar_read_is_announced_on_its_own_line(
+        self, reporter_class, capsys
+    ):
+        # Announced rather than opened as a step: the read reports
+        # nothing until every configured query string has returned.
+        reporter = reporter_class()
+        reporter.calendar_read_started()
+
+        assert capsys.readouterr().out == (
+            '\nReading data from the Google Calendar service...\n'
+        )
+
+    def test_a_step_after_the_read_gets_no_second_blank_line(
+        self, reporter_class, capsys
+    ):
+        # The read is the first thing a collection run prints, so it
+        # takes the leading blank line and the next step must not.
+        reporter = reporter_class()
+        reporter.calendar_read_started()
+        reporter.step_started(label='Processing Google Calendar event data')
+        reporter.step_finished()
+
+        assert capsys.readouterr().out == (
+            '\nReading data from the Google Calendar service...\n'
+            'Processing Google Calendar event data...done.\n'
+        )
+
+    def test_the_written_file_is_named(self, reporter_class, capsys):
+        reporter = reporter_class()
+        reporter.step_started(label='Writing Amplify shift data to a CSV file')
+        reporter.step_finished()
+        reporter.csv_written(path='/data/csv/gcal_shifts_2099.csv')
+
+        assert capsys.readouterr().out == (
+            '\nWriting Amplify shift data to a CSV file...done.\n'
+            '\nWrote CSV data to "/data/csv/gcal_shifts_2099.csv"\n\n'
+        )
+
+
 class TestSendReport:
     def test_basic_names_the_opportunity_and_counts(
         self, reporter_class, capsys

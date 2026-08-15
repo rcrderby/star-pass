@@ -94,6 +94,42 @@ class Reporter:
 
         return None
 
+    def calendar_read_started(self) -> None:
+        """ The run began reading the Google Calendar service.
+
+            Announced rather than opened as a step: the read is one call
+            per configured query string and reports nothing until they
+            have all returned.
+
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        return None
+
+    def csv_written(
+            self,
+            path: str
+    ) -> None:
+        """ Collected shifts were written to a CSV file.
+
+            The path is the run's product: it is what the operator
+            passes to the create-shifts run, and what a service would
+            record as the run's output.
+
+            Args:
+                path (str):
+                    Full path to the file that was written.
+
+            Returns:
+                None.
+        """
+
+        return None
+
     def sending_started(self) -> None:
         """ The run began sending shift data to Amplify.
 
