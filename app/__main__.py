@@ -86,6 +86,33 @@ class TerminalReporter(Reporter):
 
         return None
 
+    @staticmethod
+    def _write(
+            message: str,
+            end: str = '\n'
+    ) -> None:
+        """ Write one piece of rendered output.
+
+            Args:
+                message (str):
+                    Text to write.
+
+                end (str, optional):
+                    Appended after the message.  Defaults to a newline;
+                    an empty string leaves a status line open for the
+                    result that closes it.
+
+            Returns:
+                None.
+        """
+
+        # Resolve the stream at call time rather than binding it once,
+        # so redirected output (pytest's capsys, a shell redirection) is
+        # captured.
+        print(message, end=end, file=sys.stdout)
+
+        return None
+
     def step_started(
             self,
             label: str
@@ -102,10 +129,7 @@ class TerminalReporter(Reporter):
 
         prefix = '' if self._started else '\n'
         self._started = True
-        helpers.printer(
-            message=f'{prefix}{label}...',
-            end=''
-        )
+        self._write(f'{prefix}{label}...', end='')
 
         return None
 
@@ -119,7 +143,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        helpers.printer(message='done.')
+        self._write('done.')
 
         return None
 
@@ -133,7 +157,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        helpers.printer(message='')
+        self._write('')
 
         return None
 
@@ -147,7 +171,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        helpers.printer(message='\n\n** Error validating shift data **\n')
+        self._write('\n\n** Error validating shift data **\n')
 
         return None
 
@@ -162,9 +186,7 @@ class TerminalReporter(Reporter):
         """
 
         self._started = True
-        helpers.printer(
-            message='\nReading data from the Google Calendar service...'
-        )
+        self._write('\nReading data from the Google Calendar service...')
 
         return None
 
@@ -182,7 +204,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        helpers.printer(message=f'\nWrote CSV data to "{path}"\n')
+        self._write(f'\nWrote CSV data to "{path}"\n')
 
         return None
 
@@ -196,7 +218,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        helpers.printer(message='\nSending shift data to Amplify...')
+        self._write('\nSending shift data to Amplify...')
 
         return None
 
@@ -210,7 +232,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        helpers.printer(message=_defaults.HTTP_CHECK_MODE_MESSAGE)
+        self._write(_defaults.HTTP_CHECK_MODE_MESSAGE)
 
         return None
 
@@ -228,8 +250,8 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        helpers.printer(message=_defaults.SLACK_CHECK_MODE_MESSAGE)
-        helpers.printer(message=dumps(payload, indent=2))
+        self._write(_defaults.SLACK_CHECK_MODE_MESSAGE)
+        self._write(dumps(payload, indent=2))
 
         return None
 
@@ -243,11 +265,8 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        helpers.printer(
-            message=(
-                'No shifts in the summary window; skipped posting to '
-                'Slack.'
-            )
+        self._write(
+            'No shifts in the summary window; skipped posting to Slack.'
         )
 
         return None
@@ -323,7 +342,7 @@ class TerminalReporter(Reporter):
                 f'Payload:\n{dumps(payload, indent=2)}'
             )
 
-        helpers.printer(message=message)
+        self._write(message)
 
         return None
 
@@ -347,7 +366,7 @@ class TerminalReporter(Reporter):
         if detail is not None:
             message += f'\n\n{detail}'
 
-        helpers.printer(message=f'{message}\n')
+        self._write(f'{message}\n')
 
         return None
 
