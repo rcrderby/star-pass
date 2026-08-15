@@ -116,22 +116,6 @@ def test_connect_reuses_an_existing_database(database_path: Path) -> None:
     assert row['id'] == 'kept'
 
 
-def test_connect_refuses_an_unknown_schema_version(
-    database_path: Path
-) -> None:
-    first = _database.connect(path=database_path)
-    _database.execute(
-        connection=first,
-        statement=f'PRAGMA user_version = {_database.SCHEMA_VERSION + 1}'
-    )
-    first.close()
-
-    with pytest.raises(ConfigurationError) as error:
-        _database.connect(path=database_path)
-
-    assert 'schema version' in str(error.value)
-
-
 def test_connect_reports_an_unusable_path(tmp_path: Path) -> None:
     blocking_file = tmp_path / 'not-a-directory'
     blocking_file.write_text(data='', encoding='utf-8')
@@ -248,3 +232,89 @@ def test_a_nested_transaction_leaves_the_commit_to_the_outer_one(
         assert connection.in_transaction is True
 
     assert connection.in_transaction is False
+
+
+class TestCarryingAnOlderDatabaseForward:
+    @staticmethod
+    def make_earlier_version(database_path: Path) -> None:
+        # Stands in for a database written before the job tables
+        # existed: the tables are dropped and the version wound back.
+        connection = _database.connect(path=database_path)
+        for table in ('job_events', 'jobs'):
+            _database.execute(
+                connection=connection,
+                statement=f'DROP TABLE {table}'
+            )
+        _database.execute(
+            connection=connection,
+            statement='PRAGMA user_version = 1'
+        )
+        connection.close()
+
+    def test_an_earlier_database_gains_what_it_lacked(
+        self,
+        database_path: Path
+    ) -> None:
+        self.make_earlier_version(database_path=database_path)
+
+        connection = _database.connect(path=database_path)
+        names = table_names(connection=connection)
+        connection.close()
+
+        assert {'jobs', 'job_events'} <= names
+
+    def test_an_earlier_database_is_recorded_at_the_new_version(
+        self,
+        database_path: Path
+    ) -> None:
+        self.make_earlier_version(database_path=database_path)
+
+        connection = _database.connect(path=database_path)
+        row = _database.query_one(
+            connection=connection,
+            statement='PRAGMA user_version'
+        )
+        connection.close()
+
+        assert row[0] == _database.SCHEMA_VERSION
+
+    def test_carrying_forward_keeps_what_was_there(
+        self,
+        database_path: Path
+    ) -> None:
+        # The upgrade adds; it must not rebuild a table that already
+        # holds rows.
+        first = _database.connect(path=database_path)
+        insert_run(
+            connection=first,
+            run_id='survives'
+        )
+        first.close()
+        self.make_earlier_version(database_path=database_path)
+
+        connection = _database.connect(path=database_path)
+        row = _database.query_one(
+            connection=connection,
+            statement='SELECT id FROM runs'
+        )
+        connection.close()
+
+        assert row['id'] == 'survives'
+
+    def test_a_newer_database_is_refused(
+        self,
+        database_path: Path
+    ) -> None:
+        # It holds a schema this release does not know how to read, and
+        # guessing at it is how data is lost.
+        first = _database.connect(path=database_path)
+        _database.execute(
+            connection=first,
+            statement=f'PRAGMA user_version = {_database.SCHEMA_VERSION + 1}'
+        )
+        first.close()
+
+        with pytest.raises(ConfigurationError) as error:
+            _database.connect(path=database_path)
+
+        assert 'newer than' in str(error.value)

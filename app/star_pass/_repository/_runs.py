@@ -8,12 +8,12 @@ from uuid import uuid4
 
 # Imports - Local
 from .._database import execute, execute_many, query, query_one, transaction
-from .._exceptions import ValidationError
 from .._logging import get_logger
 from .._records import Opportunity, Run, RUN_STATUS_COLLECTING, RUN_STATUSES
 from ._common import (
     insert_statement,
     Repository,
+    require_one_of,
     require_row,
     utc_now
 )
@@ -275,13 +275,11 @@ class RunRepository(Repository):
                 None.
         """
 
-        if status not in RUN_STATUSES:
-            message = (
-                f'"{status}" is not a run status. Use one of: '
-                f'{", ".join(RUN_STATUSES)}.'
-            )
-            logger.error(message)
-            raise ValidationError(message)
+        require_one_of(
+            value=status,
+            allowed=RUN_STATUSES,
+            description='a run status'
+        )
 
         cursor = execute(
             connection=self._connection,

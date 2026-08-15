@@ -39,7 +39,8 @@ through the Amplify API. It is run once per month.
   layer stores and returns (`Run`, `Revision`, `Opportunity`, `Event`,
   `EventRole`, `LogEntry`).
 - `app/star_pass/_repository/` — runs, their revisions, the events in
-  each revision and the `change_log` of edits made to them. Every
+  each revision, the `change_log` of edits made to them, and the jobs
+  that long operations are watched through. Every
   statement that touches the
   database is in this package and no SQL appears outside it, so the
   core stays testable without a database and a move to another one is
@@ -171,6 +172,17 @@ The notes below are the ones that are not obvious from the commands.
   opened is a `ConfigurationError`, a violated constraint or a write
   that matched no row is a `ValidationError`, and anything else is an
   `UpstreamError`.
+- The schema version lives in the database's own `user_version`
+  pragma, and `_database.py` carries an earlier database forward by
+  running its `CREATE ... IF NOT EXISTS` statements. That handles an
+  **additive** change only. A column whose type changed, one that was
+  removed, or data that has to be rewritten needs a migration step
+  written for it; bumping `SCHEMA_VERSION` alone would record that the
+  change happened without doing it.
+- A job left `queued` or `running` when the service stops is marked
+  `interrupted` at startup, never resumed automatically. Resuming is a
+  human action, because a send that resumed itself would write to a
+  live volunteer system from state rebuilt after a crash.
 - Times the repository layer records are ISO-8601 UTC, and window
   bounds are plain local dates. Convert for display; never use the
   host clock to decide a calendar day.

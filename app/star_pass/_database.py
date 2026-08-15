@@ -41,11 +41,12 @@ DATABASE_FILE = _defaults.DATABASE_FILE
 DATABASE_BUSY_TIMEOUT = _defaults.DATABASE_BUSY_TIMEOUT
 
 # Version of the schema this module creates, held in the database's
-# 'user_version' pragma.  An empty database is created at this version;
-# one already at it is used as it is.  Any other value means the file
-# was written by a different version of the application, which is a
-# deployment problem rather than something to guess at.
-SCHEMA_VERSION = 1
+# 'user_version' pragma.  An empty database is created at this version,
+# one already at it is used as it is, and an earlier one is carried
+# forward.  A later one means the file was written by a newer version
+# of the application, which is a deployment problem rather than
+# something to guess at.
+SCHEMA_VERSION = 2
 
 # Pragmas applied to every connection.  'foreign_keys' is off by
 # default and is per-connection rather than stored in the file, so
@@ -165,6 +166,42 @@ SCHEMA_STATEMENTS = (
     """
     CREATE INDEX IF NOT EXISTS ix_change_log_run
         ON change_log (run_id, id)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS jobs (
+        id            TEXT NOT NULL PRIMARY KEY,
+        run_id        TEXT NOT NULL
+                           REFERENCES runs (id) ON DELETE CASCADE,
+        kind          TEXT NOT NULL,
+        status        TEXT NOT NULL,
+        principal_id  TEXT NOT NULL,
+        created_at    TEXT NOT NULL,
+        started_at    TEXT,
+        finished_at   TEXT,
+        detail        TEXT
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_jobs_run
+        ON jobs (run_id, created_at)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_jobs_status
+        ON jobs (status)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS job_events (
+        id           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        job_id       TEXT    NOT NULL
+                             REFERENCES jobs (id) ON DELETE CASCADE,
+        recorded_at  TEXT    NOT NULL,
+        kind         TEXT    NOT NULL,
+        payload      TEXT    NOT NULL
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_job_events_job
+        ON job_events (job_id, id)
     """
 )
 
@@ -300,15 +337,24 @@ def _apply_schema(
     if version == SCHEMA_VERSION:
         return None
 
-    if version != 0:
+    if version > SCHEMA_VERSION:
         message = (
             f'The database "{database_path}" is at schema version '
-            f'{version}, and this version of star-pass reads version '
-            f'{SCHEMA_VERSION}.'
+            f'{version}, which is newer than the version '
+            f'{SCHEMA_VERSION} this release reads. Run the release '
+            'that wrote it.'
         )
         logger.error(message)
         raise ConfigurationError(message)
 
+    # Every statement above creates something only if it is not
+    # already there, so running them all against an earlier database
+    # adds what that version lacked and leaves the rest untouched.
+    #
+    # That carries an ADDITIVE change and nothing else.  A column whose
+    # type changed, one that was removed, or data that has to be
+    # rewritten needs a migration step here; bumping the version alone
+    # would record that it happened without doing it.
     with transaction(connection=connection):
         for statement in SCHEMA_STATEMENTS:
             execute(
@@ -326,6 +372,11 @@ def _apply_schema(
 
     message = (
         f'Created schema version {SCHEMA_VERSION} in "{database_path}"'
+        if version == 0
+        else (
+            f'Carried "{database_path}" from schema version {version} '
+            f'to {SCHEMA_VERSION}'
+        )
     )
     logger.debug(message)
 

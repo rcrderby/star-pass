@@ -56,6 +56,7 @@ from star_pass._records import Event, EventRole, Opportunity  # noqa: E402
 from star_pass._repository import (  # noqa: E402
     ChangeLogRepository,
     EventRepository,
+    JobRepository,
     RevisionRepository,
     RunRepository
 )
@@ -104,6 +105,12 @@ def fixture_events(connection: sqlite3.Connection) -> EventRepository:
 def fixture_change_log(connection: sqlite3.Connection) -> ChangeLogRepository:
     """ Return a change log repository on the test's database. """
     return ChangeLogRepository(connection=connection)
+
+
+@pytest.fixture(name='jobs')
+def fixture_jobs(connection: sqlite3.Connection) -> JobRepository:
+    """ Return a job repository on the test's database. """
+    return JobRepository(connection=connection)
 
 
 @pytest.fixture(name='run_id')

@@ -23,7 +23,7 @@
 
 # Imports - Python Standard Library
 from dataclasses import dataclass, field
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 # Statuses a run moves through, in the order it moves through them.
 # 'collecting' is set when the run is created, before any event exists;
@@ -330,3 +330,134 @@ class LogEntry:
     logged_at: str
     principal_id: str
     entry: str
+
+
+# What a job is doing.  One per operation that takes long enough that a
+# caller is given an identifier and told to watch it, rather than being
+# made to wait for it.
+JOB_KIND_COLLECT = 'collect'
+JOB_KIND_RECOLLECT = 'recollect'
+JOB_KIND_SEND = 'send'
+JOB_KINDS = (
+    JOB_KIND_COLLECT,
+    JOB_KIND_RECOLLECT,
+    JOB_KIND_SEND
+)
+
+# Where a job is in its life.  'interrupted' is the one that needs
+# explaining: it means the service stopped while the job was in hand,
+# so nobody knows how far it got.  It is separate from 'failed' because
+# a failure was observed and an interruption was not, and separate from
+# 'running' because nothing is running it now.  Resuming one is a human
+# action, never automatic, since a send that resumed itself would write
+# to a live volunteer system from state rebuilt after a crash.
+JOB_STATUS_QUEUED = 'queued'
+JOB_STATUS_RUNNING = 'running'
+JOB_STATUS_SUCCEEDED = 'succeeded'
+JOB_STATUS_FAILED = 'failed'
+JOB_STATUS_INTERRUPTED = 'interrupted'
+JOB_STATUSES = (
+    JOB_STATUS_QUEUED,
+    JOB_STATUS_RUNNING,
+    JOB_STATUS_SUCCEEDED,
+    JOB_STATUS_FAILED,
+    JOB_STATUS_INTERRUPTED
+)
+
+# Statuses a job does not leave on its own.  A job in one of these is
+# over: 'succeeded' and 'failed' for good, 'interrupted' until somebody
+# asks for it to be resumed.
+JOB_STATUSES_FINISHED = (
+    JOB_STATUS_SUCCEEDED,
+    JOB_STATUS_FAILED,
+    JOB_STATUS_INTERRUPTED
+)
+
+# Statuses a restart ends.  Whatever was running them is gone: the
+# process that held the work no longer exists, and a queued job was
+# waiting on the same process.
+JOB_STATUSES_UNFINISHED = (
+    JOB_STATUS_QUEUED,
+    JOB_STATUS_RUNNING
+)
+
+
+@dataclass(frozen=True)
+class Job:
+    """ One long operation, and where it got to.
+
+        Attributes:
+            id (str):
+                Server-minted identifier.  What a caller is given in
+                place of waiting, and what they come back with.
+
+            run_id (str):
+                Run the job is working on.
+
+            kind (str):
+                One of 'JOB_KINDS'.
+
+            status (str):
+                One of 'JOB_STATUSES'.
+
+            principal_id (str):
+                Who asked for it (D13).
+
+            created_at (str):
+                When it was asked for, as an ISO-8601 UTC timestamp.
+
+            started_at (str, optional):
+                When it began, or None while it is still queued.
+
+            finished_at (str, optional):
+                When it stopped, or None while it has not.
+
+            detail (str, optional):
+                Why it failed, as a summary safe to show a caller, or
+                None when it did not.
+    """
+
+    id: str
+    run_id: str
+    kind: str
+    status: str
+    principal_id: str
+    created_at: str
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+    detail: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class JobEvent:
+    """ Something a job reported while it ran.
+
+        Recorded rather than only streamed, so that a client which
+        connects late or reconnects can be given what it missed: the
+        identifier ascends, so "everything after the last one I saw" is
+        a query rather than a guess.
+
+        Attributes:
+            id (int):
+                Identifier, ascending in the order events were
+                recorded.
+
+            job_id (str):
+                Job that reported it.
+
+            recorded_at (str):
+                When it was reported, as an ISO-8601 UTC timestamp.
+
+            kind (str):
+                What happened, named by the reporting method that said
+                so.
+
+            payload (Dict[str, Any]):
+                What the event carried, which differs by kind.
+    """
+
+    id: int
+    job_id: str
+    recorded_at: str
+    kind: str
+    payload: Dict[str, Any]
