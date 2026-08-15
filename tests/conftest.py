@@ -32,6 +32,12 @@ os.environ.setdefault('GCAL_TOKEN', 'test-gcal-token')
 # Set so the run-mode credential preflight passes. Tests that exercise a
 # missing credential delete the variable with monkeypatch.
 os.environ.setdefault('SLACK_BOT_TOKEN', 'test-slack-not-a-real-token')
+# Long enough to pass the service's minimum-length check, which is
+# what a deployment's real token has to clear.
+os.environ.setdefault(
+    'STAR_PASS_API_TOKEN',
+    'test-star-pass-api-value-not-a-real-one'
+)
 os.environ.setdefault('GCAL_WINDOW_START', '2099-01-01T00:00:00-00:00')
 os.environ.setdefault('GCAL_WINDOW_END', '2099-01-31T00:00:00-00:00')
 
@@ -185,4 +191,23 @@ def fixture_client(api: FastAPI) -> TestClient:
     return TestClient(
         app=api,
         raise_server_exceptions=False
+    )
+
+
+@pytest.fixture(name='api_credential')
+def fixture_api_credential() -> str:
+    """ Return the token the test service authenticates against. """
+    return os.environ['STAR_PASS_API_TOKEN']
+
+
+@pytest.fixture(name='authenticated_client')
+def fixture_authenticated_client(
+    api: FastAPI,
+    api_credential: str
+) -> TestClient:
+    """ Return a client that presents a valid bearer token. """
+    return TestClient(
+        app=api,
+        raise_server_exceptions=False,
+        headers={'Authorization': f'Bearer {api_credential}'}
     )
