@@ -19,22 +19,6 @@ from star_pass._records import (
 )
 from star_pass._repository import JobRepository, RunRepository
 
-# Constants
-PRINCIPAL = 'static-token'
-
-
-@pytest.fixture(name='job_id')
-def fixture_job_id(
-    jobs: JobRepository,
-    run_id: str
-) -> str:
-    """ Return the ID of a queued collect job for the run. """
-    return jobs.create(
-        run_id=run_id,
-        kind=JOB_KIND_COLLECT,
-        principal_id=PRINCIPAL
-    ).id
-
 
 class TestAskingForAJob:
     def test_a_new_job_is_queued_and_not_started(
@@ -51,24 +35,26 @@ class TestAskingForAJob:
     def test_a_job_records_who_asked_for_it(
         self,
         jobs: JobRepository,
-        job_id: str
+        job_id: str,
+        job_principal: str
     ) -> None:
-        assert jobs.get(job_id=job_id).principal_id == PRINCIPAL
+        assert jobs.get(job_id=job_id).principal_id == job_principal
 
     def test_ids_are_not_reused_between_jobs(
         self,
         jobs: JobRepository,
-        run_id: str
+        run_id: str,
+        job_principal: str
     ) -> None:
         first = jobs.create(
             run_id=run_id,
             kind=JOB_KIND_COLLECT,
-            principal_id=PRINCIPAL
+            principal_id=job_principal
         )
         second = jobs.create(
             run_id=run_id,
             kind=JOB_KIND_COLLECT,
-            principal_id=PRINCIPAL
+            principal_id=job_principal
         )
 
         assert first.id != second.id
@@ -76,26 +62,28 @@ class TestAskingForAJob:
     def test_an_unknown_kind_is_refused(
         self,
         jobs: JobRepository,
-        run_id: str
+        run_id: str,
+        job_principal: str
     ) -> None:
         with pytest.raises(ValidationError) as error:
             jobs.create(
                 run_id=run_id,
                 kind='reticulate',
-                principal_id=PRINCIPAL
+                principal_id=job_principal
             )
 
         assert 'is not a job kind' in str(error.value)
 
     def test_a_job_needs_a_run_that_exists(
         self,
-        jobs: JobRepository
+        jobs: JobRepository,
+        job_principal: str
     ) -> None:
         with pytest.raises(ValidationError):
             jobs.create(
                 run_id='no-such-run',
                 kind=JOB_KIND_COLLECT,
-                principal_id=PRINCIPAL
+                principal_id=job_principal
             )
 
     def test_an_unknown_job_reads_as_nothing(
@@ -190,17 +178,18 @@ class TestTheLifeOfAJob:
         self,
         jobs: JobRepository,
         connection,
-        run_id: str
+        run_id: str,
+        job_principal: str
     ) -> None:
         older = jobs.create(
             run_id=run_id,
             kind=JOB_KIND_COLLECT,
-            principal_id=PRINCIPAL
+            principal_id=job_principal
         )
         newer = jobs.create(
             run_id=run_id,
             kind=JOB_KIND_SEND,
-            principal_id=PRINCIPAL
+            principal_id=job_principal
         )
         # The two are created in the same second, so the stored time
         # cannot order them on its own.

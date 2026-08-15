@@ -8,6 +8,7 @@
 # Imports - Python Standard Library
 import os
 import sqlite3
+from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
@@ -52,7 +53,12 @@ from fastapi.testclient import TestClient  # noqa: E402
 # Imports - Local
 from star_pass._database import connect  # noqa: E402
 from star_pass._helpers import Helpers  # noqa: E402
-from star_pass._records import Event, EventRole, Opportunity  # noqa: E402
+from star_pass._records import (  # noqa: E402
+    Event,
+    EventRole,
+    JOB_KIND_COLLECT,
+    Opportunity
+)
 from star_pass._repository import (  # noqa: E402
     ChangeLogRepository,
     EventRepository,
@@ -81,6 +87,18 @@ def fixture_connection(database_path: Path) -> Iterator[sqlite3.Connection]:
     open_connection = connect(path=database_path)
     yield open_connection
     open_connection.close()
+
+
+@pytest.fixture(name='connect_to_database')
+def fixture_connect_to_database(
+    database_path: Path
+) -> Callable[[], sqlite3.Connection]:
+    """ Return a way to open a connection to the test's database.
+
+        A connection belongs to the thread that opened it, so anything
+        working on another thread is given this rather than one.
+    """
+    return partial(connect, path=database_path)
 
 
 @pytest.fixture(name='runs')
@@ -133,6 +151,26 @@ def fixture_revision(
         run_id=run_id,
         label='As collected'
     ).number
+
+
+@pytest.fixture(name='job_principal')
+def fixture_job_principal() -> str:
+    """ Return the principal ID a test's jobs are asked for by. """
+    return 'static-token'
+
+
+@pytest.fixture(name='job_id')
+def fixture_job_id(
+    jobs: JobRepository,
+    run_id: str,
+    job_principal: str
+) -> str:
+    """ Return the ID of a queued collect job for the run. """
+    return jobs.create(
+        run_id=run_id,
+        kind=JOB_KIND_COLLECT,
+        principal_id=job_principal
+    ).id
 
 
 @pytest.fixture(name='make_event')

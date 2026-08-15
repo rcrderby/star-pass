@@ -136,6 +136,18 @@ DATABASE_FILE = Path(
         )
     )
 )
+# Jobs run at once.  One by default: the tool does one operation at a
+# time, Amplify is written to by exactly one of them, and SQLite takes
+# one writer, so a second worker would add contention without adding
+# throughput.  A job asked for while another runs waits its turn as a
+# queued job, which is a state a caller can see, rather than failing.
+JOB_WORKERS = int(
+    getenv(
+        'STAR_PASS_JOB_WORKERS',
+        '1'
+    )
+)
+
 # Seconds a statement waits for another connection to release its lock
 # before giving up.  SQLite takes one writer at a time, so a wait is
 # ordinary rather than a fault; failing immediately would turn two

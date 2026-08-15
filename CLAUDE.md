@@ -47,6 +47,11 @@ through the Amplify API. It is run once per month.
   contained. Only facts are stored: a run's current revision and the
   time it was last revised are derived, and so are shift length,
   duplicates and the counts on a run.
+- `app/star_pass/_job_runner.py` — `JobRunner`, which runs a job's
+  work on a thread and records how it ended, and `JobReporter`, a
+  `Reporter` that writes the core's progress calls to the job's event
+  log. Both are in the core, not the service: neither is about HTTP,
+  and the CLI runs the same operations locally.
 - `app/star_pass/_exceptions.py` — `StarPassError` and the three
   subclasses the core raises: `ConfigurationError`, `ValidationError`,
   `UpstreamError`. The core raises; the CLI decides the exit code.
@@ -179,6 +184,14 @@ The notes below are the ones that are not obvious from the commands.
   removed, or data that has to be rewritten needs a migration step
   written for it; bumping `SCHEMA_VERSION` alone would record that the
   change happened without doing it.
+- A SQLite connection belongs to the thread that opened it, so
+  anything working on another thread is given a way to open one, not a
+  connection to share. `JobRunner` opens one per job and closes it.
+- A job that fails records the reason only when it came from one of
+  the core's own exceptions, which are written for a person and
+  already redacted. Anything else records a fixed sentence and the
+  reason goes to the log, because what a job stores is read back over
+  the API.
 - A job left `queued` or `running` when the service stops is marked
   `interrupted` at startup, never resumed automatically. Resuming is a
   human action, because a send that resumed itself would write to a
