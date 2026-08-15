@@ -14,6 +14,7 @@ from pandas import DataFrame as df
 
 # Imports - Local
 from . import _defaults
+from ._exceptions import ConfigurationError, ValidationError
 from ._gcal_time import get_gcal_time_window
 from ._helpers import Helpers, load_env_file
 from ._logging import get_logger
@@ -345,8 +346,9 @@ class GCALData:
                     Google Shift end time in ISO format.
 
             Raises:
-                SystemExit:
-                    Through 'Helpers.exit_program', always.
+                ValidationError:
+                    Always; the caller has already established that the
+                    shift is invalid.
 
             Returns:
                 None.
@@ -363,9 +365,7 @@ class GCALData:
             'the shift data model, or the event times in the calendar.'
         )
         logger.error(message)
-        self.helpers.exit_program(status_code=1)
-
-        return None
+        raise ValidationError(message)
 
     def _get_shift_time_data(
             self,
@@ -394,9 +394,9 @@ class GCALData:
                     message.  Default is an empty string.
 
             Raises:
-                SystemExit:
-                    Through 'Helpers.exit_program', when the offsets
-                    produce a duration of zero or less.
+                ValidationError:
+                    When the offsets produce a duration of zero or
+                    less.
 
             Returns:
                 shift_timing (Tuple[str, str, int | str]):
@@ -512,7 +512,7 @@ class GCALData:
             # Log an error message and exit
             message = f'Invalid Google Calendar data for "{self.gcal_name}"'
             logger.error(message)
-            self.helpers.exit_program(status_code=1)
+            raise ConfigurationError(message)
 
         # Construct URL
         url = (

@@ -12,13 +12,13 @@
 """
 
 # Imports - Python Standard Library
-import sys
 
 # Imports - Third-Party
 from pandas.core import frame
 
 # Imports - Local
 from . import _defaults
+from ._exceptions import ValidationError
 from ._logging import get_logger
 
 # Constants
@@ -61,7 +61,7 @@ def validate_shift_columns(
                 Path to the file, for the error message.
 
         Raises:
-            SystemExit:
+            ValidationError:
                 When a required column is absent.
 
         Returns:
@@ -81,7 +81,7 @@ def validate_shift_columns(
             f'file requires: {", ".join(REQUIRED_COLUMNS)}.'
         )
         logger.error(message)
-        sys.exit(1)
+        raise ValidationError(message)
 
     return None
 
@@ -109,7 +109,7 @@ def validate_shift_need_ids(
                 Path to the file, for the error message.
 
         Raises:
-            SystemExit:
+            ValidationError:
                 When any row has a missing, empty, or whitespace-only
                 need ID.
 
@@ -146,4 +146,4 @@ def validate_shift_need_ids(
         'created.'
     )
     logger.error(message)
-    sys.exit(1)
+    raise ValidationError(message)

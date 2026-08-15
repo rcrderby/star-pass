@@ -25,6 +25,7 @@ import pytest
 
 # Imports - Local
 from star_pass import amplify_shifts
+from star_pass._exceptions import ValidationError
 from star_pass.amplify_shifts import CreateShifts
 
 # A CSV header matching the columns written by GCALData.generate_shift_csv.
@@ -165,10 +166,10 @@ class TestValidateShiftRows:
         )
 
         with caplog.at_level(logging.ERROR, logger='star_pass'):
-            with pytest.raises(SystemExit) as exc_info:
+            with pytest.raises(ValidationError) as exc_info:
                 CreateShifts(input_file=input_file)
 
-        assert exc_info.value.code == 1
+        assert exc_info.value.args
         # The operator needs the event title, the CSV line, and the file
         # to edit in order to act on the error.
         assert 'Jet City vs Cherry City' in caplog.text
@@ -184,7 +185,7 @@ class TestValidateShiftRows:
         )
 
         with caplog.at_level(logging.ERROR, logger='star_pass'):
-            with pytest.raises(SystemExit):
+            with pytest.raises(ValidationError):
                 CreateShifts(input_file=input_file)
 
         assert 'Unmatched Event' in caplog.text
@@ -200,7 +201,7 @@ class TestValidateShiftRows:
         )
 
         with caplog.at_level(logging.ERROR, logger='star_pass'):
-            with pytest.raises(SystemExit):
+            with pytest.raises(ValidationError):
                 CreateShifts(input_file=input_file)
 
         assert '2 shift row(s)' in caplog.text
@@ -211,10 +212,10 @@ class TestValidateShiftRows:
         # A mistyped -i value is an operator error, not a bug, so the
         # path is named instead of raising from inside pandas.
         with caplog.at_level(logging.ERROR, logger='star_pass'):
-            with pytest.raises(SystemExit) as exc_info:
+            with pytest.raises(ValidationError) as exc_info:
                 CreateShifts(input_file='does_not_exist.csv')
 
-        assert exc_info.value.code == 1
+        assert exc_info.value.args
         assert 'does_not_exist.csv' in caplog.text
         assert csv_dir is not None
 
@@ -229,7 +230,7 @@ class TestValidateShiftRows:
         )
 
         with caplog.at_level(logging.ERROR, logger='star_pass'):
-            with pytest.raises(SystemExit):
+            with pytest.raises(ValidationError):
                 CreateShifts(input_file='bad_columns.csv')
 
         assert 'duration' in caplog.text
@@ -243,10 +244,10 @@ class TestValidateShiftRows:
         )
 
         with caplog.at_level(logging.ERROR, logger='star_pass'):
-            with pytest.raises(SystemExit) as exc_info:
+            with pytest.raises(ValidationError) as exc_info:
                 CreateShifts(input_file=input_file)
 
-        assert exc_info.value.code == 1
+        assert exc_info.value.args
         assert 'not-a-date' in caplog.text
 
     def test_complete_data_does_not_exit(self, csv_dir, caplog):

@@ -19,6 +19,7 @@ import pytest
 
 # Imports - Local
 from star_pass import gcal_data
+from star_pass._exceptions import ValidationError
 from star_pass._helpers import Helpers
 from star_pass.gcal_data import GCALData, get_gcal_time_window
 
@@ -298,7 +299,7 @@ class TestGetShiftTimeData:
         }
 
         with caplog.at_level(logging.ERROR, logger='star_pass'):
-            with pytest.raises(SystemExit) as exc_info:
+            with pytest.raises(ValidationError) as exc_info:
                 gcal._get_shift_time_data(
                     need,
                     '2025-04-09T19:00:00-07:00',
@@ -306,7 +307,7 @@ class TestGetShiftTimeData:
                     need_name='Backwards Scrimmage'
                 )
 
-        assert exc_info.value.code == 1
+        assert exc_info.value.args
         assert 'Backwards Scrimmage' in caplog.text
         assert '-30 minute(s)' in caplog.text
         assert 'offset_end -90' in caplog.text
@@ -316,7 +317,7 @@ class TestGetShiftTimeData:
         need = {'slots': 20, 'id': 628861, 'offset_end': -60}
 
         with caplog.at_level(logging.ERROR, logger='star_pass'):
-            with pytest.raises(SystemExit):
+            with pytest.raises(ValidationError):
                 gcal._get_shift_time_data(
                     need,
                     '2025-04-09T19:00:00-07:00',
