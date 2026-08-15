@@ -30,6 +30,22 @@ through the Amplify API. It is run once per month.
   (`get_shifts_info`, `get_slack_role_labels`). Separate from
   `_defaults` because `_logging` reads its level from `_defaults`, so a
   reader there could not log without an import cycle.
+- `app/star_pass/_database.py` — SQLite connection, schema and the
+  helpers every statement goes through (`connect`, `transaction`,
+  `execute`, `query`). The database path comes from
+  `STAR_PASS_DATABASE_PATH`; the schema version lives in the file's
+  own `user_version` pragma.
+- `app/star_pass/_records.py` — the frozen dataclasses the repository
+  layer stores and returns (`Run`, `Revision`, `Opportunity`, `Event`,
+  `EventRole`, `LogEntry`).
+- `app/star_pass/_repository/` — runs, their revisions, the events in
+  each revision and the `change_log` of edits made to them. Every
+  statement that touches the
+  database is in this package and no SQL appears outside it, so the
+  core stays testable without a database and a move to another one is
+  contained. Only facts are stored: a run's current revision and the
+  time it was last revised are derived, and so are shift length,
+  duplicates and the counts on a run.
 - `app/star_pass/_exceptions.py` — `StarPassError` and the three
   subclasses the core raises: `ConfigurationError`, `ValidationError`,
   `UpstreamError`. The core raises; the CLI decides the exit code.
@@ -138,6 +154,21 @@ The notes below are the ones that are not obvious from the commands.
   typed exceptions above; display and process control belong to the
   client. Do not add a `print`, a `sys.exit`, or argument parsing under
   `app/star_pass/`.
+- Stored state is reached through `app/star_pass/_repository/` and
+  nowhere else. A caller passes records in and gets records back; do
+  not write SQL, open a connection, or import `sqlite3` outside that
+  package and `_database.py`.
+- A database failure reaches a caller as one of the three exceptions
+  above, chosen by what the caller can do: a database that cannot be
+  opened is a `ConfigurationError`, a violated constraint or a write
+  that matched no row is a `ValidationError`, and anything else is an
+  `UpstreamError`.
+- Times the repository layer records are ISO-8601 UTC, and window
+  bounds are plain local dates. Convert for display; never use the
+  host clock to decide a calendar day.
+- Log a value by building the message first and passing the variable.
+  A format string with arguments fails pylint, which is configured for
+  `{}` style, and an f-string passed directly fails it as well.
 - Prefer failing loudly over dropping data. A row that cannot become a
   correct shift stops the run and is named, rather than being skipped:
   a missing shift is invisible, and the operator only discovers it when
