@@ -5,8 +5,9 @@
     diagnostic and status output flows through the standard 'logging'
     framework instead of bare 'print' calls.  The log level is read from
     the 'LOG_LEVEL' environment variable (see _defaults), defaulting to
-    'INFO'.  User-facing report data (shift previews, JSON) is still
-    written with 'Helpers.printer'.
+    'INFO'.  User-facing report data (shift previews, JSON) goes to the
+    caller's 'Reporter' instead, which the CLI renders; the core does
+    not decide how anything is displayed.
 """
 
 # Imports - Python Standard Library
