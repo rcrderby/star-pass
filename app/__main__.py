@@ -14,6 +14,7 @@ from star_pass.amplify_responses import AmplifyResponses
 from star_pass.amplify_shifts import CreateShifts
 from star_pass.gcal_data import GCALData
 from star_pass.slack_notify import SlackNotifier
+from star_pass._exceptions import StarPassError
 from star_pass._helpers import Helpers, require_env_vars
 from star_pass._logging import get_logger
 from star_pass import _defaults
@@ -272,9 +273,11 @@ def main(
     """ Main application.
 
         Dispatches to a run mode and converts an expected failure into a
-        non-zero exit.  'get_gcal_time_window', 'SlackNotifier.post', and
-        the Slack Web API all log the cause before raising, so the
-        handler exits without repeating the message or printing a
+        non-zero exit.  The core raises 'StarPassError' rather than
+        exiting, so deciding the status code belongs here, where the
+        process is owned.  'get_gcal_time_window', 'SlackNotifier.post',
+        the Slack Web API and the core all log the cause before raising,
+        so the handler exits without repeating the message or printing a
         traceback over a report the operator has already been given.  An
         unexpected exception is deliberately left to propagate.
 
@@ -293,7 +296,7 @@ def main(
 
     try:
         _run(argv=argv)
-    except (ValueError, SlackApiError) as error:
+    except (StarPassError, ValueError, SlackApiError) as error:
         # Pre-format the message rather than passing logging arguments:
         # the pylint configuration sets 'logging-format-style=new', and
         # brace-style placeholders are not interpolated by the standard

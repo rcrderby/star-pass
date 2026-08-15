@@ -20,6 +20,7 @@ from urllib3.exceptions import MaxRetryError, ReadTimeoutError
 
 # Imports - Local
 from star_pass import _helpers
+from star_pass._exceptions import UpstreamError
 
 
 class TestConvertToBool:
@@ -215,6 +216,25 @@ class TestRedactSecrets:
         assert helpers.redact_secrets(text) == text
 
 
+def _send_and_expect_upstream_error(
+    helpers, monkeypatch, caplog, raise_conn_error
+):
+    # Force the session's HTTP call to raise, and capture the error
+    # record logged before the exception reaches the caller.  Shared by
+    # the redaction tests, which differ only in the error they raise.
+    monkeypatch.setattr(_helpers.Session, 'request', raise_conn_error)
+
+    with caplog.at_level(logging.ERROR, logger='star_pass'):
+        with pytest.raises(UpstreamError):
+            helpers.send_api_request(
+                api_request_data={
+                    'method': 'GET',
+                    'url': 'https://x/events',
+                    'timeout': 3
+                }
+            )
+
+
 class TestSendApiRequestRedaction:
     def test_error_repr_with_key_is_redacted(
             self, helpers, monkeypatch, caplog
@@ -228,22 +248,12 @@ class TestSendApiRequestRedaction:
                 f'Failed for url https://x/events?key={sentinel}'
             )
 
-        # Force the session's HTTP call to raise, and capture the error
-        # record that is logged before the program exits.
-        monkeypatch.setattr(
-            _helpers.Session, 'request', raise_conn_error
+        _send_and_expect_upstream_error(
+            helpers=helpers,
+            monkeypatch=monkeypatch,
+            caplog=caplog,
+            raise_conn_error=raise_conn_error
         )
-
-        # The real exit_program raises SystemExit after logging.
-        with caplog.at_level(logging.ERROR, logger='star_pass'):
-            with pytest.raises(SystemExit):
-                helpers.send_api_request(
-                    api_request_data={
-                        'method': 'GET',
-                        'url': 'https://x/events',
-                        'timeout': 3
-                    }
-                )
 
         assert sentinel not in caplog.text
         assert 'REDACTED' in caplog.text
@@ -272,19 +282,12 @@ class TestSendApiRequestRedaction:
         def raise_conn_error(_self, **_kwargs):
             raise conn_error
 
-        monkeypatch.setattr(
-            _helpers.Session, 'request', raise_conn_error
+        _send_and_expect_upstream_error(
+            helpers=helpers,
+            monkeypatch=monkeypatch,
+            caplog=caplog,
+            raise_conn_error=raise_conn_error
         )
-
-        with caplog.at_level(logging.ERROR, logger='star_pass'):
-            with pytest.raises(SystemExit):
-                helpers.send_api_request(
-                    api_request_data={
-                        'method': 'GET',
-                        'url': 'https://x/events',
-                        'timeout': 3
-                    }
-                )
 
         # Handled cleanly (no IndexError), logged, and redacted.
         assert 'An HTTP error occurred' in caplog.text
@@ -303,7 +306,7 @@ class TestResponseJson:
         response.json.side_effect = ValueError('Expecting value')
 
         with caplog.at_level(logging.ERROR, logger='star_pass'):
-            with pytest.raises(SystemExit):
+            with pytest.raises(UpstreamError):
                 helpers.response_json(response)
 
         assert 'not valid JSON' in caplog.text

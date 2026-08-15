@@ -19,6 +19,7 @@ from urllib3.util.retry import Retry
 
 # Imports - Local
 from . import _defaults
+from ._exceptions import ConfigurationError, UpstreamError
 from ._logging import get_logger
 
 # Constants
@@ -60,24 +61,6 @@ class Helpers:
         self._session: Session | None = None
 
         return None
-
-    def exit_program(
-            self,
-            status_code: int = 0
-    ):
-        """ Display a message and exit.
-
-            Args:
-                status_code (int, optional):
-                    System exit code passed to the 'sys.exit' method.
-
-            Returns:
-                N/A, `sys.exit` occurs before the method returns a
-                value.
-        """
-
-        # Exit the program
-        sys.exit(status_code)
 
     # Accepted string representations for each boolean value.
     _TRUE_STRINGS = frozenset({'true', 't', 'yes', 'y', '1'})
@@ -287,13 +270,11 @@ class Helpers:
         try:
             return GCAL_CALENDARS[gcal_name]
 
-        # Log an error and exit if the 'gcal_name' lookup fails
-        except KeyError:
+        # Report a 'gcal_name' the configuration does not name
+        except KeyError as error:
             message = f'"{gcal_name}" is not a valid calendar name'
             logger.error(message)
-            self.exit_program(status_code=1)
-
-        return None
+            raise ConfigurationError(message) from error
 
     def printer(
             self,
@@ -638,7 +619,7 @@ class Helpers:
             detail = self.redact_secrets(repr(error))
             message = f'An HTTP error occurred: {detail}'
             logger.error(message)
-            self.exit_program(status_code=1)
+            raise UpstreamError(message) from error
 
         # Check for HTTP errors
         try:
@@ -654,7 +635,7 @@ class Helpers:
                 f'({response.status_code}): {detail}'
             )
             logger.error(message)
-            self.exit_program(status_code=1)
+            raise UpstreamError(message) from error
 
         # Log the HTTP request status
         if display_request_status is True:
@@ -674,22 +655,21 @@ class Helpers:
 
     def response_json(
             self,
-            response: Response,
-            default: Any = None
+            response: Response
     ) -> Any:
         """ Parse an HTTP response body as JSON.
 
             Guards against a non-JSON body -- for example, an HTML
             gateway error page returned with a 2xx status.  The error is
-            logged with secrets redacted and the program exits.
+            logged with secrets redacted.
 
             Args:
                 response (requests.Response):
                     HTTP response whose body should be JSON.
 
-                default (Any, optional):
-                    Value returned if the program does not exit
-                    ('exit_program' normally raises SystemExit first).
+            Raises:
+                UpstreamError:
+                    If the body is not valid JSON.
 
             Returns:
                 data (Any):
@@ -704,8 +684,7 @@ class Helpers:
             detail = self.redact_secrets(repr(error))
             message = f'The response body was not valid JSON: {detail}'
             logger.error(message)
-            self.exit_program(status_code=1)
-            return default
+            raise UpstreamError(message) from error
 
 
 # Standalone functions
@@ -724,7 +703,7 @@ def require_env_vars(
                 Names of the environment variables to require.
 
         Raises:
-            SystemExit:
+            ConfigurationError:
                 When any named variable is unset or empty.
 
         Returns:
@@ -740,7 +719,7 @@ def require_env_vars(
             '(see .env.example).'
         )
         logger.error(message)
-        sys.exit(1)
+        raise ConfigurationError(message)
 
     return None
 

@@ -10,12 +10,15 @@ from typing import Any, Dict
 
 # Imports - Third-Party
 import pandas as pd
-from jsonschema import validate, ValidationError
+# Aliased so the name is free for the core's own ValidationError,
+# which is what this module raises; jsonschema's is only caught.
+from jsonschema import validate, ValidationError as SchemaValidationError
 from pandas.core import frame, series
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 # Imports - Local
 from . import _defaults
+from ._exceptions import ValidationError
 from ._helpers import Helpers, load_env_file
 from ._logging import get_logger
 from ._validation import validate_shift_columns, validate_shift_need_ids
@@ -245,7 +248,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                 filepath_or_buffer=f'{self.input_file}',
                 dtype='string'
             )
-        except FileNotFoundError:
+        except FileNotFoundError as error:
             self.helpers.printer(message='')
             message = (
                 f'No shift data file at "{self.input_file}".  Pass the '
@@ -253,14 +256,14 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                 '-i/--input-file.'
             )
             logger.error(message)
-            self.helpers.exit_program(status_code=1)
-        except pd.errors.EmptyDataError:
+            raise ValidationError(message) from error
+        except pd.errors.EmptyDataError as error:
             self.helpers.printer(message='')
             message = (
                 f'The shift data file "{self.input_file}" is empty.'
             )
             logger.error(message)
-            self.helpers.exit_program(status_code=1)
+            raise ValidationError(message) from error
 
         # Update self._shift_data
         self._shift_data = shift_data
@@ -327,7 +330,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                     removed.
 
             Raises:
-                SystemExit:
+                ValidationError:
                     Through 'validate_shift_need_ids', when any row has
                     a missing, empty, or whitespace-only need ID.
 
@@ -456,7 +459,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                 f'"{self.input_file}".'
             )
             logger.error(message)
-            self.helpers.exit_program(status_code=1)
+            raise ValidationError(message) from error
 
         # Display status message
         message = "done."
@@ -726,7 +729,7 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
             )
 
         # Indicate invalidate JSON shift data
-        except ValidationError as error:
+        except SchemaValidationError as error:
             # Update self._json_shift_data['valid'] and ['error'] to False
             self._json_shift_data.update(
                 {
