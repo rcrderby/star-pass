@@ -28,12 +28,14 @@
 # Imports - Local
 from ._change_log import ChangeLogRepository
 from ._events import EventRepository
+from ._jobs import JobRepository
 from ._revisions import RevisionRepository
 from ._runs import RunRepository
 
 __all__ = [
     'ChangeLogRepository',
     'EventRepository',
+    'JobRepository',
     'RevisionRepository',
     'RunRepository'
 ]

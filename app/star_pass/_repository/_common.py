@@ -116,6 +116,48 @@ class Repository:
         self._connection = connection
 
 
+def require_one_of(
+        value: str,
+        allowed: Sequence[str],
+        description: str
+) -> None:
+    """ Fail unless a value is one of a closed set.
+
+        The vocabularies the layer defines -- a run's status, a job's
+        kind, the status a job finishes in -- are checked here rather
+        than by the database, so that a value the caller chose badly
+        comes back as their error naming the alternatives, instead of
+        as a constraint violation naming a column.
+
+        Args:
+            value (str):
+                What the caller supplied.
+
+            allowed (Sequence[str]):
+                Every value the layer accepts.
+
+            description (str):
+                What the value is, for the message: "a run status".
+
+        Raises:
+            ValidationError:
+                If the value is not one of 'allowed'.
+
+        Returns:
+            None.
+    """
+
+    if value not in allowed:
+        message = (
+            f'"{value}" is not {description}. Use one of: '
+            f'{", ".join(allowed)}.'
+        )
+        logger.error(message)
+        raise ValidationError(message)
+
+    return None
+
+
 def utc_now() -> str:
     """ Return the current time as an ISO-8601 UTC timestamp.
 
