@@ -1,0 +1,2384 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="_ds/nocturne-86f7a329-0773-4364-9229-e663fccdcb07/styles.css">
+<script src="_ds/nocturne-86f7a329-0773-4364-9229-e663fccdcb07/_ds_bundle.js"></script>
+<style>
+  body { margin: 0; background: var(--color-bg); }
+  body:has([data-theme="day"]) { background: #f3f5fe; }
+  a { color: var(--color-accent); text-decoration: none; }
+  a:hover { color: var(--color-accent-300); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  :root {
+    --color-alert: #e0848c;
+    --color-alert-fill: #4d2e35;
+    --color-alert-text: #ffe6e8;
+  }
+  [data-theme="day"] {
+    --color-bg: #f3f5fe;
+    --color-surface: #fbfbfe;
+    --color-text: #292b31;
+    --color-accent: #5d5294;
+    --color-section: #e2e1f6;
+    --color-accent-300: #4d4380;
+    --color-accent-600: #5d5294;
+    --color-alert: #a3384a;
+    --color-alert-fill: #f7dfe2;
+    --color-alert-text: #6e2130;
+    --color-divider: color-mix(in srgb, #292b31 14%, transparent);
+    --shadow-sm: 0 0 0 1px #cfd3e5;
+    --shadow-md: 0 0 0 1px #e4e7f5, 0 6px 18px rgba(41,43,49,.10);
+    --shadow-lg: 0 0 0 1px #cfd3e5, 0 16px 40px rgba(41,43,49,.16);
+    --color-neutral-600: #b3b7cc;
+    --color-accent-200: #3a3268;
+    --color-accent-800: #cdc9ea;
+    --color-accent-900: #e9e6f9;
+  }
+  input.input::placeholder { color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+  select.input { appearance: none; padding-right: 26px; }
+  @keyframes omFade { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes omFadeUp { from { opacity: 0; transform: translateY(7px) } to { opacity: 1; transform: none } }
+  @keyframes omPop { from { opacity: 0; transform: translateY(-5px) scale(.98) } to { opacity: 1; transform: none } }
+  @keyframes omDrawer { from { transform: translateX(100%) } to { transform: none } }
+  @keyframes omSpin { to { transform: rotate(360deg) } }
+  button:focus-visible, [tabindex]:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  [data-motion] .btn,
+  [data-motion] .seg-opt,
+  [data-motion] .input,
+  [data-motion] .card,
+  [data-motion] .tag,
+  [data-motion] button {
+    transition: background-color .16s ease, box-shadow .16s ease, border-color .16s ease, color .16s ease, opacity .16s ease;
+  }
+  [data-theming="1"] * {
+    transition: background-color .3s ease, color .3s ease, box-shadow .3s ease, border-color .3s ease !important;
+  }
+  [data-motion="smooth"] * { animation-duration: .34s !important; transition-duration: .28s !important; }
+  [data-motion="off"] * { animation: none !important; transition: none !important; }
+  @media (prefers-reduced-motion: reduce) {
+    [data-motion] * { animation: none !important; transition: none !important; }
+  }
+</style>
+</helmet>
+
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+    <rect width="160" height="160" rx="18" fill="#161826" />
+    <g transform="translate(48 48)">
+      <path d="M32 0 L32 64 M0 32 L64 32 M9 9 L55 55 M55 9 L9 55" stroke="#9184d9" stroke-width="7" stroke-linecap="round" />
+    </g>
+  </svg>
+</template>
+
+<div data-theme="{{ resolved }}" data-motion="{{ motionMode }}" data-theming="{{ theming }}" style="min-height:100vh; background:var(--color-bg); color:var(--color-text); font-family:var(--font-body)">
+
+  <div class="nav" style="padding:16px 28px; gap:22px; background:linear-gradient(100deg, var(--color-section) 0%, color-mix(in srgb, var(--color-section) 45%, transparent) 42%, transparent 78%); box-shadow:inset 0 -1px 0 var(--color-divider)">
+    <span class="nav-brand" style="display:flex; align-items:center; gap:9px; margin-right:auto">
+      <i class="ph ph-asterisk" style="color:var(--color-accent); font-size:19px"></i>Star Pass
+      <span class="text-muted" style="font-size:13px; font-weight:400; font-family:var(--font-body)">/ Create Shifts</span>
+    </span>
+    <div class="seg">
+      <button class="seg-opt" onClick="{{ setAuto }}" style="{{ autoStyle }}"><i class="ph ph-circle-half-tilt"></i>Auto</button>
+      <button class="seg-opt" onClick="{{ setDay }}" aria-label="Day" style="{{ dayStyle }}"><i class="ph ph-sun"></i></button>
+      <button class="seg-opt" onClick="{{ setNight }}" aria-label="Night" style="{{ nightStyle }}"><i class="ph ph-moon"></i></button>
+    </div>
+    <button class="btn btn-secondary btn-icon" onClick="{{ goSettings }}" aria-label="Settings"><i class="ph ph-gear" style="font-size:17px"></i></button>
+  </div>
+
+  <sc-if value="{{ isEmptyApp }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:56px 28px 80px; display:flex; justify-content:center; animation:omFadeUp .2s ease-out both">
+    <div style="max-width:520px; display:flex; flex-direction:column; gap:13px">
+      <i class="ph ph-calendar-plus" style="font-size:26px; color:var(--color-accent)"></i>
+      <h3 style="margin:0">No runs yet</h3>
+      <p class="text-muted" style="margin:0; font-size:13px; text-wrap:pretty">A run is one collection, from one calendar, over one window of league dates. Collecting reads the calendar and builds a list of shifts for you to review — nothing reaches Amplify until you send it.</p>
+      <div style="display:flex; flex-direction:column; gap:9px; padding:14px 16px; border-radius:var(--radius-md); background:var(--color-surface); box-shadow:var(--shadow-sm)">
+        <span style="display:flex; align-items:flex-start; gap:9px; font-size:12px"><i class="ph ph-number-circle-one" style="color:var(--color-accent); margin-top:1px"></i><span class="text-muted" style="text-wrap:pretty">Pick a calendar and a window. The service reads the dates in league time.</span></span>
+        <span style="display:flex; align-items:flex-start; gap:9px; font-size:12px"><i class="ph ph-number-circle-two" style="color:var(--color-accent); margin-top:1px"></i><span class="text-muted" style="text-wrap:pretty">Review what was collected, and what was set aside and why.</span></span>
+        <span style="display:flex; align-items:flex-start; gap:9px; font-size:12px"><i class="ph ph-number-circle-three" style="color:var(--color-accent); margin-top:1px"></i><span class="text-muted" style="text-wrap:pretty">Preview the shifts, then send. Amplify is checked first, so nothing is created twice.</span></span>
+      </div>
+      <button class="btn btn-primary" onClick="{{ openDrawer }}" style="align-self:flex-start"><i class="ph ph-download-simple"></i>Collect from Google Calendar</button>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isRunView }}" hint-placeholder-val="{{ true }}">
+  <div style="padding:4px 28px 40px">
+
+    <div style="display:flex; align-items:flex-end; gap:24px; padding:18px 20px; margin:0 -20px 18px; background:linear-gradient(180deg, color-mix(in srgb, var(--color-section) 55%, transparent) 0%, transparent 100%)">
+      <div style="margin-right:auto; min-width:0; display:flex; flex-direction:column; gap:8px">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+          <div data-popover style="position:relative; flex:none">
+            <button onClick="{{ toggleRuns }}" aria-expanded="{{ showRuns }}" style="display:flex; align-items:center; gap:9px; padding:6px 11px 6px 12px; cursor:pointer; border:0; border-radius:7px; background:color-mix(in srgb, var(--color-accent) 12%, transparent); color:inherit; font:inherit; font-family:var(--font-heading); font-size:15px">
+              {{ runLabel }}<i class="ph ph-caret-down" style="font-size:12px; color:var(--color-accent)"></i>
+            </button>
+            <sc-if value="{{ showRuns }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute; z-index:40; top:38px; left:0; width:340px; animation:omPop .16s ease-out both; padding:6px; border-radius:var(--radius-md); background:var(--color-surface); box-shadow:var(--shadow-lg)">
+                <span class="text-muted" style="display:block; font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:6px 10px 4px">Runs</span>
+                <sc-for list="{{ runsList }}" as="run" hint-placeholder-count="3">
+                  <button onClick="{{ run.onOpen }}" style="{{ run.rowStyle }}">
+                    <span style="display:flex; flex-direction:column; gap:2px; margin-right:auto; min-width:0">
+                      <span style="font-size:13px">{{ run.label }}</span>
+                      <span class="text-muted" style="font-size:11px">{{ run.meta }}</span>
+                    </span>
+                    <span style="{{ run.statusStyle }}">{{ run.statusText }}</span>
+                  </button>
+                </sc-for>
+                <button onClick="{{ openDrawer }}" style="display:flex; align-items:center; gap:8px; width:100%; padding:9px 11px; margin-top:2px; cursor:pointer; text-align:left; border:0; border-radius:6px; background:transparent; color:var(--color-accent); font:inherit; font-size:13px"><i class="ph ph-plus"></i>New collection</button>
+              </div>
+            </sc-if>
+          </div>
+          <sc-if value="{{ hasSendStatus }}" hint-placeholder-val="{{ false }}">
+            <span style="{{ sendStatusStyle }}">{{ sendStatusText }}</span>
+          </sc-if>
+          <div class="seg" style="flex:none; align-self:center">
+            <button class="seg-opt" onClick="{{ showReview }}" style="{{ reviewTabStyle }}">Shifts to create</button>
+            <button class="seg-opt" onClick="{{ showDropped }}" style="{{ droppedTabStyle }}">Not collected <span class="mono" style="opacity:.75; margin-left:4px">{{ droppedCountLabel }}</span></button>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+          <span class="text-muted" style="font-size:12px">{{ runMeta }} · {{ eventCountLabel }} · {{ shiftCountLabel }}</span>
+          <div data-popover style="position:relative; flex:none">
+            <button onClick="{{ toggleRevs }}" aria-expanded="{{ showRevs }}" style="display:inline-flex; align-items:center; gap:6px; padding:2px 8px; cursor:pointer; border:0; border-radius:6px; background:transparent; box-shadow:inset 0 0 0 1px var(--color-divider); color:inherit; font:inherit; font-size:11.5px">
+              <i class="ph ph-clock-counter-clockwise" style="font-size:12px; color:var(--color-accent)"></i>{{ revLabel }}<i class="ph ph-caret-down" style="font-size:10px"></i>
+            </button>
+            <sc-if value="{{ showRevs }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute; z-index:40; top:30px; left:0; width:330px; animation:omPop .16s ease-out both; padding:6px; border-radius:var(--radius-md); background:var(--color-surface); box-shadow:var(--shadow-lg)">
+                <sc-for list="{{ revsList }}" as="rev" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:10px; padding:8px 10px">
+                    <span style="display:flex; flex-direction:column; gap:2px; margin-right:auto">
+                      <span style="font-size:12.5px">{{ rev.title }}</span>
+                      <span class="text-muted" style="font-size:11px">{{ rev.meta }}</span>
+                    </span>
+                    <sc-if value="{{ rev.canRevert }}" hint-placeholder-val="{{ true }}">
+                      <button class="btn btn-ghost" onClick="{{ rev.onRevert }}" style="font-size:11.5px; white-space:nowrap">Revert to this</button>
+                    </sc-if>
+                  </div>
+                </sc-for>
+                <button onClick="{{ saveRevision }}" style="display:flex; align-items:center; gap:8px; width:100%; padding:9px 10px; margin-top:2px; cursor:pointer; text-align:left; border:0; border-radius:6px; background:transparent; color:var(--color-accent); font:inherit; font-size:12.5px"><i class="ph ph-bookmark-simple"></i>Save a revision now</button>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; flex:none">
+        <button class="btn btn-secondary" onClick="{{ openDrawer }}" style="white-space:nowrap"><i class="ph ph-arrows-clockwise"></i>Collect again</button>
+        <button class="btn btn-primary" onClick="{{ goDry }}" style="padding:9px 18px; white-space:nowrap"><i class="ph ph-arrow-right"></i>Preview shifts</button>
+      </div>
+    </div>
+
+    <sc-if value="{{ runIsSent }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; align-items:center; gap:10px; padding:11px 14px; margin-bottom:14px; border-radius:var(--radius-md); animation:omFade .2s ease-out both; border-left:3px solid var(--color-accent); background:color-mix(in srgb, var(--color-accent) 10%, transparent)">
+        <i class="ph ph-check-circle" style="color:var(--color-accent); font-size:16px"></i>
+        <span style="font-size:13px; color:var(--color-accent-300)">{{ runSentNote }}</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hasExisting }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; align-items:flex-start; gap:10px; padding:11px 14px; margin-bottom:14px; border-radius:var(--radius-md); animation:omFade .2s ease-out both; border-left:3px solid var(--color-accent-600); background:color-mix(in srgb, var(--color-accent) 8%, transparent)">
+        <i class="ph ph-copy" style="color:var(--color-accent); font-size:16px; margin-top:1px"></i>
+        <span style="font-size:13px; color:var(--color-accent-300); text-wrap:pretty">{{ existingLabel }}</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isReview }}" hint-placeholder-val="{{ true }}">
+    <sc-if value="{{ hasBlockers }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex; align-items:center; gap:10px; padding:11px 14px; margin-bottom:14px; border-radius:var(--radius-md); animation:omFade .2s ease-out both; border-left:3px solid var(--color-alert); background:color-mix(in srgb, var(--color-alert) 12%, transparent)">
+        <i class="ph ph-warning-circle" style="color:var(--color-alert); font-size:16px"></i>
+        <span style="font-size:13px; color:var(--color-alert)">{{ blockerLabel }}</span>
+        <button class="btn" onClick="{{ toggleBlockingFilter }}" aria-pressed="{{ onlyBlocking }}" style="{{ blockingToggleStyle }}"><i class="{{ blockingToggleIcon }}"></i>{{ blockingToggleLabel }}</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hasFuzzy }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; align-items:center; gap:10px; padding:11px 14px; margin-bottom:14px; border-radius:var(--radius-md); animation:omFade .2s ease-out both; border-left:3px solid var(--color-accent-600); background:color-mix(in srgb, var(--color-accent) 8%, transparent)">
+        <i class="ph ph-magic-wand" style="color:var(--color-accent); font-size:16px"></i>
+        <span style="font-size:13px; color:var(--color-accent-300)">{{ fuzzyLabel }}</span>
+        <button class="btn" onClick="{{ toggleFuzzy }}" aria-pressed="{{ onlyFuzzy }}" style="{{ fuzzyToggleStyle }}"><i class="{{ fuzzyToggleIcon }}"></i>{{ fuzzyToggleLabel }}</button>
+      </div>
+    </sc-if>
+
+    <div style="height:1px; background:linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent)"></div>
+
+    <sc-if value="{{ noSelection }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 14px; margin:12px 0; border-radius:var(--radius-md); background:var(--color-surface); box-shadow:var(--shadow-sm)">
+        <button onClick="{{ toggleAll }}" role="checkbox" aria-checked="{{ allSelected }}" aria-label="Select all" style="width:16px; height:16px; padding:0; cursor:pointer; border:1px solid var(--color-neutral-600); border-radius:3px; background:transparent"></button>
+        <div style="position:relative; width:290px">
+          <i class="ph ph-magnifying-glass" style="position:absolute; left:10px; top:9px; font-size:14px; color:color-mix(in srgb, var(--color-text) 55%, transparent)"></i>
+          <input class="input" value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search calendar event names" style="padding-left:31px" />
+        </div>
+        <span class="text-muted" style="font-size:12px">{{ showingLabel }}</span>
+        <div style="display:flex; align-items:center; gap:8px; margin-left:auto">
+          <span class="tag tag-neutral"><i class="ph ph-pencil-simple" style="margin-right:5px"></i>{{ editLabel }}</span>
+          <button class="btn btn-ghost" onClick="{{ toggleLog }}" style="font-size:13px">Change log</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 14px; margin:10px 0; border-radius:var(--radius-md); animation:omFade .16s ease-out both; background:color-mix(in srgb, var(--color-accent) 9%, transparent)">
+        <button onClick="{{ clearSelection }}" aria-label="Clear selection" style="width:16px; height:16px; padding:0; cursor:pointer; border:1px solid var(--color-accent); border-radius:3px; background:var(--color-accent); display:grid; place-items:center"><i class="ph ph-minus" style="font-size:11px; color:var(--color-bg)"></i></button>
+        <span style="font-size:13px; color:var(--color-accent)">{{ selectionLabel }}</span>
+        <span style="width:1px; height:22px; background:var(--color-divider); margin:0 4px"></span>
+        <div style="position:relative">
+          <select class="input" value="{{ bulkCategoryValue }}" onChange="{{ onBulkCategory }}" style="width:230px; font-size:13px">
+            <option value="">Set opportunity for all</option>
+            <sc-for list="{{ categoryOptions }}" as="opt" hint-placeholder-count="5">
+              <option value="{{ opt.value }}">{{ opt.label }}</option>
+            </sc-for>
+          </select>
+          <i class="ph ph-caret-down" style="position:absolute; right:9px; top:10px; font-size:12px; pointer-events:none"></i>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px">
+          <span class="text-muted" style="font-size:12px">Move</span>
+          <button class="btn btn-secondary" onClick="{{ shiftEarlier }}" style="font-size:13px">15 min earlier</button>
+          <button class="btn btn-secondary" onClick="{{ shiftLater }}" style="font-size:13px">15 min later</button>
+        </div>
+        <button class="btn btn-secondary" onClick="{{ resetSlots }}" style="font-size:13px"><i class="ph ph-arrow-counter-clockwise"></i>Usual slots</button>
+        <button class="btn btn-secondary" onClick="{{ deleteSelected }}" style="font-size:13px; border-color:var(--color-alert); color:var(--color-alert)"><i class="ph ph-trash"></i>Remove</button>
+        <button class="btn btn-ghost" onClick="{{ clearSelection }}" style="font-size:13px; margin-left:auto">Clear selection</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showOffsetHelp }}" hint-placeholder-val="{{ false }}">
+      <p class="text-muted" style="max-width:880px; font-size:11px; margin:4px 0 10px">Shift times are set deliberately earlier or later than the RCR Calendar times, by the amount each opportunity calls for. The note under each time says what that opportunity's setting is, and it stays put when you edit a time. Changes save as you make them.</p>
+    </sc-if>
+    <sc-if value="{{ hideOffsetHelp }}" hint-placeholder-val="{{ true }}">
+      <p class="text-muted" style="max-width:880px; font-size:11px; margin:4px 0 10px">Shift times match the RCR Calendar times. Edit any time directly; changes save as you make them.</p>
+    </sc-if>
+
+    <div style="display:flex; gap:20px; align-items:flex-start">
+      <div style="flex:1; min-width:0; position:relative">
+      <sc-if value="{{ tableOverflow }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; top:0; right:0; bottom:0; width:44px; pointer-events:none; z-index:5; background:linear-gradient(to right, transparent, var(--color-bg))"></div>
+        <span class="text-muted" style="display:flex; align-items:center; gap:7px; font-size:11.5px; padding:2px 0 6px"><i class="ph ph-arrows-horizontal" style="color:var(--color-accent)"></i>The table is wider than the window. Scroll sideways for length and slots.</span>
+      </sc-if>
+      <div ref="{{ tableRef }}" style="overflow-x:auto"><div role="table" aria-label="Shifts to create, by day" aria-colcount="8" style="min-width:1180px; max-width:1520px">
+        <div role="row" style="display:grid; grid-template-columns:24px minmax(300px,700px) 240px 128px 128px 108px 32px 0.25fr; align-items:end; gap:14px; padding:8px 0; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:color-mix(in srgb, var(--color-text) 60%, transparent); background:linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat bottom / 100% 1px">
+          <span role="columnheader" aria-label="Select"></span><span role="columnheader">Calendar event</span><span role="columnheader">Opportunity</span><span role="columnheader">Shift start</span><span role="columnheader">Shift end</span><span role="columnheader">Length</span><span role="columnheader" aria-label="Remove"></span><span role="columnheader" aria-label="Undo changes"></span>
+        </div>
+
+
+        <sc-for list="{{ groups }}" as="group" hint-placeholder-count="3">
+          <div role="rowgroup">
+            <div role="row"><div role="cell" aria-colspan="8">
+            <button onClick="{{ group.onToggle }}" aria-expanded="{{ group.open }}" style="display:flex; align-items:center; gap:10px; width:100%; padding:8px 12px; margin:18px 0 10px; cursor:pointer; text-align:left; background:linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 16%, transparent), transparent 70%); border:0; border-radius:var(--radius-md); color:inherit; font:inherit">
+              <i class="{{ group.caret }}" style="font-size:13px; color:var(--color-accent)"></i>
+              <span style="font-family:var(--font-heading); font-size:14px; color:var(--color-accent-300)">{{ group.label }}</span>
+              <span class="text-muted" style="font-size:12px">{{ group.meta }}</span>
+            </button>
+            </div></div>
+            <div role="none" style="{{ group.bodyStyle }}"><div role="none" style="min-height:0">
+            <sc-for list="{{ group.rows }}" as="evt" hint-placeholder-count="3">
+              <div role="none" style="{{ evt.rowStyle }}">
+                <div role="row" style="display:grid; grid-template-columns:24px minmax(300px,700px) 240px 128px 128px 108px 32px 0.25fr; align-items:center; gap:14px; padding:11px 0">
+                  <span role="cell" style="display:flex"><button onClick="{{ evt.onSelect }}" role="checkbox" aria-checked="{{ evt.selected }}" aria-label="Select event" style="{{ evt.boxStyle }}"><i class="{{ evt.boxIcon }}" style="font-size:11px; color:var(--color-bg)"></i></button></span>
+                  <div role="cell" style="display:flex; flex-direction:column; gap:3px; min-width:0">
+                    <span style="font-size:14px">{{ evt.title }}</span>
+                    <span class="text-muted" style="font-size:11px">RCR Calendar times: <span class="mono">{{ evt.calendarTime }}</span></span>
+                    <span style="{{ evt.noteStyle }}">{{ evt.note }}</span>
+                    <sc-if value="{{ evt.isDuplicate }}" hint-placeholder-val="{{ false }}">
+                      <span style="display:inline-flex; align-items:flex-start; gap:6px; font-size:11px; color:var(--color-accent-300)"><i class="ph ph-copy" style="margin-top:2px"></i>{{ evt.dupNote }}</span>
+                    </sc-if>
+                  </div>
+                  <div role="cell" style="position:relative">
+                    <select class="input" value="{{ evt.category }}" onChange="{{ evt.onCategory }}" style="{{ evt.selectStyle }}">
+                      <option value="">Select an opportunity</option>
+                      <sc-for list="{{ categoryOptions }}" as="opt" hint-placeholder-count="5">
+                        <option value="{{ opt.value }}">{{ opt.label }}</option>
+                      </sc-for>
+                    </select>
+                    <i class="ph ph-caret-down" style="position:absolute; right:9px; top:10px; font-size:12px; pointer-events:none"></i>
+                  </div>
+                  <div role="cell" data-time-field="start" style="position:relative; display:flex; flex-direction:column; gap:3px">
+                    <input class="input mono" value="{{ evt.start }}" onChange="{{ evt.onStart }}" onFocus="{{ evt.openStartPicker }}" aria-label="Shift start" style="font-size:13px; cursor:pointer" />
+                    <span style="font-size:10px; color:var(--color-accent-300)">{{ evt.startNote }}</span>
+                    <sc-if value="{{ evt.startPickerOpen }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute; z-index:30; top:40px; left:0; width:132px; animation:omPop .14s ease-out both; padding:8px; border-radius:var(--radius-md); background:var(--color-surface); box-shadow:var(--shadow-lg)">
+                        <div style="display:flex; align-items:center; gap:6px; padding:0 4px 6px">
+                          <i class="ph ph-clock" style="color:var(--color-accent); font-size:13px"></i>
+                          <span class="text-muted" style="font-size:10px; letter-spacing:.08em; text-transform:uppercase; margin-right:auto">Start</span>
+                          <button class="btn btn-ghost" onClick="{{ evt.closePicker }}" aria-label="Close" style="padding:0 2px"><i class="ph ph-x" style="font-size:12px"></i></button>
+                        </div>
+                        <span class="text-muted" style="display:block; font-size:10px; padding:0 4px 6px">{{ evt.maxNote }}</span>
+                        <div ref="{{ evt.startListRef }}" style="max-height:186px; overflow:auto; display:flex; flex-direction:column; gap:2px">
+                          <sc-for list="{{ evt.startOptions }}" as="slot" hint-placeholder-count="8">
+                            <button class="mono" onClick="{{ slot.onPick }}" style="{{ slot.style }}">{{ slot.label }}</button>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
+                  <div role="cell" data-time-field="end" style="position:relative; display:flex; flex-direction:column; gap:3px">
+                    <input class="input mono" value="{{ evt.end }}" onChange="{{ evt.onEnd }}" onFocus="{{ evt.openEndPicker }}" aria-label="Shift end" style="font-size:13px; cursor:pointer" />
+                    <span style="font-size:10px; color:var(--color-accent-300)">{{ evt.endNote }}</span>
+                    <sc-if value="{{ evt.endPickerOpen }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute; z-index:30; top:40px; left:0; width:132px; animation:omPop .14s ease-out both; padding:8px; border-radius:var(--radius-md); background:var(--color-surface); box-shadow:var(--shadow-lg)">
+                        <div style="display:flex; align-items:center; gap:6px; padding:0 4px 6px">
+                          <i class="ph ph-clock" style="color:var(--color-accent); font-size:13px"></i>
+                          <span class="text-muted" style="font-size:10px; letter-spacing:.08em; text-transform:uppercase; margin-right:auto">End</span>
+                          <button class="btn btn-ghost" onClick="{{ evt.closePicker }}" aria-label="Close" style="padding:0 2px"><i class="ph ph-x" style="font-size:12px"></i></button>
+                        </div>
+                        <span class="text-muted" style="display:block; font-size:10px; padding:0 4px 6px">{{ evt.maxNote }}</span>
+                        <div ref="{{ evt.endListRef }}" style="max-height:186px; overflow:auto; display:flex; flex-direction:column; gap:2px">
+                          <sc-for list="{{ evt.endOptions }}" as="slot" hint-placeholder-count="8">
+                            <button class="mono" onClick="{{ slot.onPick }}" style="{{ slot.style }}">{{ slot.label }}</button>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
+                  <span role="cell" style="display:flex; flex-direction:column; gap:2px">
+                    <span class="mono" style="font-size:13px">{{ evt.length }}</span>
+                    <span class="text-muted" style="font-size:10px">{{ evt.lengthNote }}</span>
+                  </span>
+                  <span role="cell" style="display:flex"><button class="btn btn-ghost btn-icon" onClick="{{ evt.onRemove }}" aria-label="Remove this event" style="color:var(--color-alert); width:28px; height:28px"><i class="ph ph-trash" style="font-size:15px"></i></button></span>
+                  <span role="cell" style="justify-self:start">
+                    <sc-if value="{{ evt.isEdited }}" hint-placeholder-val="{{ false }}">
+                      <button class="btn btn-ghost" onClick="{{ evt.onUndo }}" style="font-size:11px; color:var(--color-accent)"><i class="ph ph-arrow-counter-clockwise"></i>Undo changes</button>
+                    </sc-if>
+                  </span>
+                </div>
+                <div role="row"><div role="cell" aria-colspan="8" style="padding:0 0 12px 40px; display:flex; flex-direction:column; gap:7px">
+                  <sc-for list="{{ evt.roles }}" as="role" hint-placeholder-count="2">
+                    <div style="display:grid; grid-template-columns:440px 250px 130px 110px; align-items:center; gap:14px">
+                      <span style="display:flex; align-items:center; gap:8px; font-size:13px">
+                        <i class="ph ph-arrow-elbow-down-right" style="font-size:13px; color:var(--color-accent-600)"></i>
+                        <span style="padding:3px 9px; border-radius:6px; background:var(--color-accent-900); color:var(--color-accent-200); font-size:12px; white-space:nowrap">{{ role.name }}</span>
+                        <a href="{{ role.url }}" target="_blank" rel="noreferrer" aria-label="Open this opportunity in Amplify"><i class="ph ph-arrow-square-out"></i></a>
+                      </span>
+                      <span class="mono text-muted" style="font-size:12px; white-space:nowrap">{{ role.time }}</span>
+                      <div style="display:flex; align-items:center; gap:7px">
+                        <input class="input mono" value="{{ role.slots }}" onChange="{{ role.onSlots }}" onBlur="{{ role.onSlotsBlur }}" placeholder="{{ role.slotsPlaceholder }}" aria-label="Slots" style="width:62px; font-size:13px" />
+                        <span class="text-muted" style="font-size:12px">slots</span>
+                      </div>
+                      <sc-if value="{{ role.edited }}" hint-placeholder-val="{{ false }}">
+                        <button class="btn btn-ghost" onClick="{{ role.onUndoSlots }}" style="font-size:10px; gap:5px; color:var(--color-accent)"><span style="width:5px; height:5px; border-radius:50%; background:var(--color-accent)"></span>edited, undo</button>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ evt.isBlocking }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+                      <span style="font-size:11px; color:var(--color-alert)">Pick an opportunity above and both officiating shifts appear here. Or remove this event if it should not create shifts.</span>
+                      <button class="btn btn-ghost" onClick="{{ evt.onLogTitle }}" style="font-size:11px; white-space:nowrap"><i class="ph ph-note-pencil"></i>{{ evt.logTitleLabel }}</button>
+                    </div>
+                  </sc-if>
+                </div></div>
+              </div>
+            </sc-for>
+            </div></div>
+          </div>
+        </sc-for>
+
+        <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:40px 0; text-align:left">
+            <span class="text-muted" style="font-size:13px">Nothing matches this search.</span>
+            <button class="btn btn-ghost" onClick="{{ clearFilters }}" style="font-size:13px">Clear filters</button>
+          </div>
+        </sc-if>
+      </div></div></div>
+
+      <sc-if value="{{ showLog }}" hint-placeholder-val="{{ false }}">
+        <div class="card elev-sm" style="width:340px; margin-top:44px; animation:omFadeUp .2s ease-out both">
+          <span class="card-kicker">Change log</span>
+          <div style="display:flex; flex-direction:column; gap:9px; font-size:12px">
+            <sc-for list="{{ log }}" as="entry" hint-placeholder-count="3">
+              <span style="display:flex; gap:8px"><i class="ph ph-dot-outline" style="color:var(--color-accent)"></i><span>{{ entry.text }} <span class="text-muted">· {{ entry.time }}</span></span></span>
+            </sc-for>
+          </div>
+          <button class="btn btn-ghost" onClick="{{ toggleLog }}" style="font-size:12px; align-self:flex-start">Hide</button>
+        </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isDropped }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:900px; animation:omFadeUp .2s ease-out both">
+        <p class="text-muted" style="font-size:12px; margin:0 0 20px; text-wrap:pretty">Everything in this window that will not become a shift, and why. Only events the calendar search never looked at can be added to the run by hand.</p>
+        <div style="display:flex; flex-direction:column; gap:26px">
+          <sc-for list="{{ droppedGroups }}" as="group" hint-placeholder-count="3">
+            <section>
+              <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:4px">
+                <h4 style="margin:0; font-size:15px">{{ group.label }}</h4>
+                <span class="mono text-muted" style="font-size:12px">{{ group.count }}</span>
+              </div>
+              <p class="text-muted" style="font-size:11.5px; margin:0 0 12px; max-width:700px; text-wrap:pretty">{{ group.note }}</p>
+              <div style="display:flex; flex-direction:column; gap:8px">
+                <sc-for list="{{ group.rows }}" as="row" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:11px 16px; border-radius:var(--radius-md); border-left:3px solid var(--color-accent-800); background:var(--color-surface); box-shadow:var(--shadow-sm)">
+                    <span style="{{ row.titleStyle }}">{{ row.title }}</span>
+                    <span class="mono text-muted" style="font-size:11.5px">{{ row.when }}</span>
+                    <sc-if value="{{ row.canAdd }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex; align-items:center; gap:8px; margin-left:auto">
+                        <button class="btn btn-ghost" onClick="{{ row.onLog }}" style="font-size:12px"><i class="ph ph-note-pencil"></i>{{ row.logLabel }}</button>
+                        <button class="btn btn-secondary" onClick="{{ row.onAdd }}" style="font-size:12px"><i class="ph ph-plus"></i>Add to run</button>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+          </sc-for>
+        </div>
+        <sc-if value="{{ hasNoted }}" hint-placeholder-val="{{ false }}">
+          <section style="margin-top:30px">
+            <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:4px">
+              <h4 style="margin:0; font-size:15px">Noted for the model</h4>
+              <span class="mono text-muted" style="font-size:12px">{{ notedCount }}</span>
+            </div>
+            <p class="text-muted" style="font-size:11.5px; margin:0 0 12px; max-width:700px; text-wrap:pretty">Titles you have flagged as ones the matching ought to learn. The list is for whoever changes the matching next — this app never edits the matching itself.</p>
+            <div style="display:flex; flex-direction:column; gap:8px">
+              <sc-for list="{{ notedRows }}" as="row" hint-placeholder-count="2">
+                <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:10px 16px; border-radius:var(--radius-md); border-left:3px solid var(--color-accent); background:var(--color-surface); box-shadow:var(--shadow-sm)">
+                  <span style="font-size:13px">{{ row.title }}</span>
+                  <span class="mono text-muted" style="font-size:11.5px">{{ row.when }}</span>
+                  <span class="text-muted" style="font-size:11.5px">{{ row.source }}</span>
+                  <button class="btn btn-ghost" onClick="{{ row.onRemove }}" style="font-size:12px; margin-left:auto">Remove note</button>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ noneDropped }}" hint-placeholder-val="{{ false }}">
+          <span class="text-muted" style="font-size:13px">Nothing was dropped in this window.</span>
+        </sc-if>
+      </div>
+    </sc-if>
+
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isDry }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:4px 28px 40px; display:flex; gap:32px; align-items:flex-start; animation:omFadeUp .2s ease-out both">
+    <div style="flex:1; min-width:0; max-width:820px">
+      <div style="display:flex; align-items:center; gap:10px">
+        <h3 style="margin:0">Preview</h3>
+        <span class="tag tag-outline">Nothing sent yet</span>
+      </div>
+      <p class="text-muted" style="font-size:13px; margin:4px 0 14px">{{ dryLine }}</p>
+      <table class="table">
+        <thead><tr><th>Opportunity</th><th>New shifts</th><th>Slots</th><th>Dates</th></tr></thead>
+        <tbody>
+          <sc-for list="{{ dryRows }}" as="row" hint-placeholder-count="4">
+            <tr><td><span style="display:flex; flex-direction:column; gap:3px"><span>{{ row.name }}</span><span class="text-muted" style="font-size:11px">{{ row.from }}</span><span style="font-size:11px; color:var(--color-accent-300)">{{ row.existingNote }}</span></span></td><td class="mono">{{ row.shifts }}</td><td class="mono">{{ row.slots }}</td><td class="mono text-muted">{{ row.dates }}</td></tr>
+          </sc-for>
+        </tbody>
+      </table>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:18px">
+        <button class="btn btn-primary" onClick="{{ openConfirm }}" disabled="{{ sendNotReady }}"><i class="ph ph-paper-plane-tilt"></i>{{ sendButtonLabel }}</button>
+        <button class="btn btn-secondary" onClick="{{ goReview }}">Back to review</button>
+        <sc-if value="{{ dupChecking }}" hint-placeholder-val="{{ false }}">
+          <span class="text-muted" style="display:inline-flex; align-items:center; gap:7px; font-size:12px"><i class="ph ph-circle-notch" style="animation:omSpin 1s linear infinite"></i>Checking Amplify first</span>
+        </sc-if>
+        <sc-if value="{{ dupFailed }}" hint-placeholder-val="{{ false }}">
+          <span style="display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:var(--color-alert)"><i class="ph ph-warning-circle"></i>{{ dupErrorText }}
+            <button class="btn btn-ghost" onClick="{{ copyDupRef }}" style="font-size:11px; padding:1px 6px; color:inherit"><i class="ph ph-copy"></i>{{ dupRefLabel }}</button>
+            <button class="btn btn-secondary" onClick="{{ retryDupCheck }}" style="font-size:12px"><i class="ph ph-arrow-clockwise"></i>Check again</button>
+          </span>
+        </sc-if>
+        <sc-if value="{{ sendBlocked }}" hint-placeholder-val="{{ false }}">
+          <span style="display:inline-flex; align-items:center; gap:7px; font-size:12px; color:var(--color-alert)"><i class="ph ph-warning-circle"></i>{{ sendBlockedReason }}</span>
+        </sc-if>
+        <span class="text-muted" style="flex-basis:100%; font-size:12px">Amplify has no undo. Shifts created here have to be removed in Amplify by hand.</span>
+      </div>
+    </div>
+    <div style="width:380px; display:flex; flex-direction:column; gap:12px">
+      <div class="card elev-sm">
+        <span class="card-kicker">Checks</span>
+        <div style="display:flex; flex-direction:column; gap:7px; font-size:12px">
+          <sc-for list="{{ checks }}" as="check" hint-placeholder-count="3">
+            <span style="display:flex; align-items:center; gap:8px"><i class="{{ check.icon }}" style="{{ check.style }}"></i>{{ check.text }}</span>
+          </sc-for>
+        </div>
+      </div>
+      <div class="card elev-sm">
+        <span class="card-kicker">Change log</span>
+        <div style="display:flex; flex-direction:column; gap:9px; font-size:12px">
+          <sc-for list="{{ log }}" as="entry" hint-placeholder-count="3">
+            <span>{{ entry.text }} <span class="text-muted">· {{ entry.time }}</span></span>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isCollecting }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:4px 28px 48px; animation:omFadeUp .2s ease-out both">
+    <div style="max-width:620px">
+      <h3 style="margin:0">{{ collectTitle }}</h3>
+      <p class="text-muted" style="font-size:13px; margin:5px 0 14px; text-wrap:pretty">{{ collectSubline }}</p>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 13px; margin-bottom:16px; border-radius:var(--radius-md); background:var(--color-surface); box-shadow:var(--shadow-sm)">
+        <span class="text-muted" style="font-size:11px; letter-spacing:.08em; text-transform:uppercase">Run</span>
+        <span class="mono" style="font-size:12.5px; color:var(--color-accent-300)">{{ collectRunRef }}</span>
+        <span class="text-muted" style="font-size:11.5px">{{ collectStartedNote }}</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px">
+        <sc-for list="{{ collectSteps }}" as="step" hint-placeholder-count="4">
+          <div style="{{ step.rowStyle }}">
+            <i class="{{ step.icon }}" style="{{ step.iconStyle }}"></i>
+            <span style="font-size:13px; margin-right:auto">{{ step.label }}</span>
+            <span class="mono text-muted" style="font-size:11.5px">{{ step.detail }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ collectFailed }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:16px; padding:13px 15px; border-radius:var(--radius-md); border-left:3px solid var(--color-alert); background:color-mix(in srgb, var(--color-alert) 12%, transparent)">
+          <span style="display:flex; align-items:flex-start; gap:9px; font-size:13px; color:var(--color-alert); text-wrap:pretty"><i class="ph ph-warning-circle" style="font-size:15px; margin-top:1px"></i>{{ collectErrorText }}</span>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+            <button class="btn btn-primary" onClick="{{ retryCollect }}"><i class="ph ph-arrow-clockwise"></i>Try again</button>
+            <button class="btn btn-secondary" onClick="{{ leaveCollect }}">Back to the run</button>
+            <button class="btn btn-ghost" onClick="{{ copyCollectRef }}" style="font-size:12px"><i class="ph ph-copy"></i>{{ collectRefLabel }}</button>
+            <span class="text-muted" style="flex-basis:100%; font-size:11.5px">Nothing was written, so the run you had open is untouched.</span>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ collectBusy }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:18px">
+          <button class="btn btn-secondary" onClick="{{ leaveCollect }}">Leave this running</button>
+          <button class="btn btn-ghost" onClick="{{ cancelCollect }}">Cancel</button>
+          <span class="text-muted" style="flex-basis:100%; font-size:12px; text-wrap:pretty">Leaving does not stop it — the collection is listed under Runs while it works, and reopening comes back here. Cancelling leaves no trace, because nothing has been written yet.</span>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isSending }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:4px 28px 48px; animation:omFadeUp .2s ease-out both">
+    <div style="max-width:760px">
+      <div style="display:flex; align-items:center; gap:12px">
+        <h3 style="margin:0">{{ sendHeading }}</h3>
+        <span style="{{ sendStatusStyle }}">{{ sendStatusText }}</span>
+      </div>
+      <p class="text-muted" style="font-size:13px; margin:5px 0 16px; text-wrap:pretty">{{ sendSubline }}</p>
+
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px">
+        <div style="flex:1; height:6px; border-radius:3px; background:color-mix(in srgb, var(--color-text) 10%, transparent)">
+          <div style="{{ sendBarStyle }}"></div>
+        </div>
+        <span class="mono text-muted" style="font-size:11.5px; white-space:nowrap">{{ sendProgressLabel }}</span>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:8px">
+        <sc-for list="{{ sendRows }}" as="row" hint-placeholder-count="4">
+          <div style="{{ row.rowStyle }}">
+            <i class="{{ row.icon }}" style="{{ row.iconStyle }}"></i>
+            <span style="display:flex; flex-direction:column; gap:3px; margin-right:auto; min-width:0">
+              <span style="font-size:13px">{{ row.title }}</span>
+              <span class="text-muted" style="font-size:11px">{{ row.skipNote }}</span>
+              <sc-if value="{{ row.hasError }}" hint-placeholder-val="{{ false }}">
+                <span style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; color:var(--color-alert)">{{ row.error }}
+                  <button class="btn btn-ghost" onClick="{{ row.onCopyRef }}" style="font-size:10.5px; padding:1px 6px; color:inherit"><i class="ph ph-copy"></i>{{ row.refLabel }}</button>
+                </span>
+              </sc-if>
+            </span>
+            <span style="{{ row.statusStyle }}">{{ row.statusText }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:20px">
+        <sc-if value="{{ sendHasFailures }}" hint-placeholder-val="{{ false }}">
+          <button class="btn btn-primary" onClick="{{ retryFailed }}" disabled="{{ sendBusy }}"><i class="ph ph-arrow-clockwise"></i>{{ sendRetryLabel }}</button>
+        </sc-if>
+        <button class="btn btn-secondary" onClick="{{ goReview }}">Back to the run</button>
+        <sc-if value="{{ sendBusy }}" hint-placeholder-val="{{ false }}">
+          <span class="text-muted" style="font-size:12px">Leaving is safe. The send keeps going and this page picks it back up.</span>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ showConfirm }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed; inset:0; z-index:60; display:grid; place-items:center; padding:20px; background:color-mix(in srgb, var(--color-neutral-900) 60%, transparent); animation:omFade .16s ease-out both">
+    <div ref="{{ dialogRef }}" role="dialog" aria-modal="true" aria-label="{{ confirmTitle }}" class="card elev-lg" style="width:540px; max-width:100%; gap:14px; animation:omPop .18s ease-out both">
+      <div>
+        <h4 style="margin:0 0 3px">{{ confirmTitle }}</h4>
+        <span class="text-muted" style="font-size:12px">{{ confirmWindow }}</span>
+      </div>
+      <p style="margin:0; font-size:13px; text-wrap:pretty">{{ confirmLine }}</p>
+      <div style="display:flex; flex-direction:column; gap:7px; padding:12px 14px; border-radius:var(--radius-md); background:var(--color-bg)">
+        <sc-for list="{{ confirmRows }}" as="row" hint-placeholder-count="3">
+          <span style="display:flex; align-items:baseline; gap:12px; font-size:12px">
+            <span style="margin-right:auto">{{ row.name }}</span>
+            <span class="mono">{{ row.shifts }}</span>
+          </span>
+        </sc-for>
+      </div>
+      <span style="display:flex; align-items:flex-start; gap:9px; font-size:12px; color:var(--color-alert); text-wrap:pretty"><i class="ph ph-warning-circle" style="font-size:14px; margin-top:2px"></i>Amplify has no undo. Removing any of these afterwards has to be done in Amplify by hand.</span>
+      <div style="display:flex; align-items:center; gap:10px">
+        <button class="btn btn-primary" onClick="{{ confirmSend }}"><i class="ph ph-paper-plane-tilt"></i>{{ confirmButtonLabel }}</button>
+        <button class="btn btn-secondary" onClick="{{ cancelConfirm }}">Cancel</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ showDrawer }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed; inset:0; background:color-mix(in srgb, var(--color-neutral-900) 55%, transparent); animation:omFade .18s ease-out both">
+    <div ref="{{ drawerRef }}" role="dialog" aria-modal="true" aria-label="Collect from Google Calendar" style="position:absolute; top:0; right:0; bottom:0; width:452px; animation:omDrawer .22s cubic-bezier(.22,.7,.3,1) both; padding:22px; overflow:auto; background:var(--color-surface); box-shadow:var(--shadow-lg); display:flex; flex-direction:column; gap:16px">
+      <div style="display:flex; align-items:flex-start; gap:12px">
+        <div style="margin-right:auto">
+          <h4 style="margin:0 0 2px">Collect from Google Calendar</h4>
+          <span class="text-muted" style="font-size:12px">Builds a fresh list to review. Nothing is sent to Amplify.</span>
+        </div>
+        <button class="btn btn-ghost btn-icon" onClick="{{ closeDrawer }}" aria-label="Close"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="field">
+        <label>Calendar</label>
+        <div class="seg" style="width:100%">
+          <button class="seg-opt" onClick="{{ pickEvents }}" style="{{ eventsCalStyle }}"><i class="ph ph-trophy"></i>Events</button>
+          <button class="seg-opt" onClick="{{ pickPractices }}" style="{{ practicesCalStyle }}"><i class="ph ph-hockey"></i>Practices</button>
+        </div>
+        <span class="text-muted" style="font-size:11px; display:block; margin-top:5px">One calendar per collection.</span>
+      </div>
+      <div class="field">
+        <label>Window, plus the first week of the month after</label>
+        <div class="seg" style="width:100%">
+          <sc-for list="{{ windowPresets }}" as="preset" hint-placeholder-count="3">
+            <button class="seg-opt" onClick="{{ preset.onPick }}" style="flex:1; justify-content:center; font-size:12px; {{ preset.style }}">{{ preset.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+        <div class="field"><label>First day</label><input class="input mono" type="date" value="{{ winStart }}" onChange="{{ onWinStart }}" style="font-size:13px" /></div>
+        <div class="field"><label>Last day</label><input class="input mono" type="date" value="{{ winEnd }}" onChange="{{ onWinEnd }}" style="font-size:13px" /></div>
+      </div>
+      <span style="display:flex; align-items:flex-start; gap:8px; font-size:11px; margin-top:-6px"><i class="ph ph-globe-hemisphere-west" style="color:var(--color-accent); margin-top:2px"></i><span class="text-muted" style="text-wrap:pretty">{{ tzNote }}</span></span>
+      <div style="padding:14px; border-radius:var(--radius-md); background:var(--color-bg); box-shadow:var(--shadow-md); display:flex; flex-direction:column; gap:10px">
+        <sc-if value="{{ windowBad }}" hint-placeholder-val="{{ false }}">
+          <span style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--color-alert)"><i class="ph ph-warning-circle"></i>The last day cannot come before the first day.</span>
+        </sc-if>
+        <div style="display:flex; align-items:baseline; gap:8px">
+          <i class="ph ph-calendar-check" style="color:var(--color-accent); font-size:14px"></i>
+          <span style="font-size:12px">{{ windowSummary }}</span>
+        </div>
+        <span class="mono text-muted" style="font-size:10.5px; word-break:break-all">{{ windowEnvLine }}</span>
+        <span class="text-muted" style="font-size:11px; text-wrap:pretty">The service reads these dates in the league time zone, so a late evening event lands on the day you expect. The day after your last day is what gets sent, which is how the last day is included.</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px; padding-top:2px">
+        <span style="display:flex; align-items:flex-start; gap:8px; font-size:11.5px"><i class="ph ph-funnel" style="color:var(--color-accent); margin-top:2px"></i><span class="text-muted" style="text-wrap:pretty">{{ searchNote }}</span></span>
+        <span style="display:flex; align-items:flex-start; gap:8px; font-size:11.5px"><i class="ph ph-prohibit" style="color:var(--color-accent); margin-top:2px"></i><span class="text-muted" style="text-wrap:pretty">{{ skipNote }}</span></span>
+      </div>
+      <sc-if value="{{ recollectRisk }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; align-items:flex-start; gap:9px; padding:11px 13px; border-radius:var(--radius-md); border-left:3px solid var(--color-alert); background:color-mix(in srgb, var(--color-alert) 12%, transparent)">
+          <i class="ph ph-warning-circle" style="color:var(--color-alert); font-size:15px; margin-top:1px"></i>
+          <span style="font-size:12px; color:var(--color-alert); text-wrap:pretty">{{ recollectRiskNote }}</span>
+        </div>
+      </sc-if>
+      <div style="margin-top:auto; display:flex; gap:8px">
+        <button class="btn btn-primary btn-block" onClick="{{ startCollect }}" disabled="{{ windowBad }}" style="margin:0"><i class="ph ph-download-simple"></i>{{ collectLabel }}</button>
+        <button class="btn btn-secondary" onClick="{{ closeDrawer }}" style="flex:none">Cancel</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:4px 28px 48px; animation:omFadeUp .2s ease-out both">
+    <div style="display:flex; align-items:flex-start; gap:14px; max-width:940px; margin-bottom:22px">
+      <button class="btn btn-secondary btn-icon" onClick="{{ leaveSettings }}" aria-label="Back to review"><i class="ph ph-arrow-left"></i></button>
+      <div>
+        <h3 style="margin:0 0 3px">Settings</h3>
+        <span class="text-muted" style="font-size:13px">What this service resolved at start up, and where its state lives.</span>
+      </div>
+    </div>
+
+    <div style="max-width:940px; display:flex; flex-direction:column; gap:34px">
+
+      <section>
+        <div style="display:flex; align-items:baseline; gap:12px; margin-bottom:6px">
+          <h4 style="margin:0">Credentials</h4>
+          <span class="tag tag-neutral">read only</span>
+        </div>
+        <p class="text-muted" style="font-size:12px; margin:0 0 14px; max-width:720px; text-wrap:pretty">Tokens are read once at start up from a file mounted into the service, at the path its environment names. Replacing one is done there and takes effect on restart — this screen cannot write a token, and nothing can read one back. What it can do is show the last four characters and check that a token still works.</p>
+        <div style="display:flex; flex-direction:column; gap:10px">
+          <sc-for list="{{ creds }}" as="cred" hint-placeholder-count="2">
+            <div style="padding:14px 16px; border-radius:var(--radius-md); background:var(--color-surface); box-shadow:var(--shadow-sm)">
+              <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap">
+                <div style="font-size:13px; white-space:nowrap">{{ cred.label }}</div>
+                <span class="mono text-muted" style="font-size:12px; white-space:nowrap">{{ cred.masked }}</span>
+                <span style="display:inline-flex; align-items:center; gap:6px; font-size:11px; white-space:nowrap; {{ cred.statusStyle }}"><i class="{{ cred.statusIcon }}"></i>{{ cred.statusText }}</span>
+                <button class="btn btn-secondary" onClick="{{ cred.onTest }}" disabled="{{ cred.testDisabled }}" style="font-size:12px; margin-left:auto"><i class="{{ cred.testIcon }}"></i>{{ cred.testLabel }}</button>
+              </div>
+              <span class="mono text-muted" style="display:block; font-size:11px; margin-top:7px">{{ cred.envVar }}</span>
+              <span class="text-muted" style="display:block; font-size:11px; margin-top:6px">{{ cred.need }}</span>
+              <span class="mono text-muted" style="display:block; font-size:10.5px; margin-top:4px">{{ cred.audit }}</span>
+              <span class="text-muted" style="display:block; font-size:10.5px; margin-top:3px">{{ cred.testNote }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section>
+        <div style="display:flex; align-items:baseline; gap:12px; margin-bottom:6px">
+          <h4 style="margin:0">Configuration</h4>
+          <span class="tag tag-neutral">read only</span>
+        </div>
+        <p class="text-muted" style="font-size:12px; margin:0 0 14px; max-width:720px; text-wrap:pretty">These come from the environment this service was started in. Change one there and restart; this screen reports what was resolved, so a surprising collection can be explained without reading a config file.</p>
+        <table class="table" style="font-size:13px">
+          <thead><tr><th>Setting</th><th>Value</th><th>Source</th></tr></thead>
+          <tbody>
+            <sc-for list="{{ configRows }}" as="row" hint-placeholder-count="6">
+              <tr>
+                <td>{{ row.name }}</td>
+                <td class="mono" style="font-size:12px">{{ row.value }}</td>
+                <td class="text-muted" style="font-size:12px; white-space:nowrap">{{ row.source }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h4 style="margin:0 0 6px">Where state lives</h4>
+        <p class="text-muted" style="font-size:12px; margin:0 0 14px; max-width:720px; text-wrap:pretty">All three sit on a mounted volume rather than inside the container, so the service can be rebuilt or replaced without losing a run in progress. How long each is kept is a setting rather than something fixed in the code.</p>
+        <div style="display:flex; flex-direction:column; gap:10px">
+          <sc-for list="{{ storeRows }}" as="row" hint-placeholder-count="3">
+            <div style="display:grid; grid-template-columns:250px 1fr; gap:16px; align-items:start; padding:13px 16px; border-radius:var(--radius-md); border-left:3px solid var(--color-accent-800); background:var(--color-surface); box-shadow:var(--shadow-sm)">
+              <div>
+                <div style="font-size:13px">{{ row.name }}</div>
+                <span class="mono text-muted" style="font-size:11px">{{ row.path }}</span>
+              </div>
+              <span class="text-muted" style="font-size:12px; text-wrap:pretty">{{ row.note }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:980},&quot;motion&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Off&quot;,&quot;Subtle&quot;,&quot;Smooth&quot;],&quot;default&quot;:&quot;Subtle&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Feel&quot;},&quot;failure&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;None&quot;,&quot;Collection&quot;,&quot;Preview read&quot;,&quot;Send&quot;],&quot;default&quot;:&quot;Send&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Show a state&quot;},&quot;startWith&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Existing runs&quot;,&quot;No runs yet&quot;],&quot;default&quot;:&quot;Existing runs&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Show a state&quot;}}">
+class Component extends DCLogic {
+  oppTitles = {
+    607810: 'Junior Scrimmages - SOs',
+    607934: 'Adult Scrimmages - SOs',
+    628861: 'Adult Scrimmages - NSOs',
+    628862: 'Junior Scrimmages - NSOs',
+    773454: 'Adult Officiating Practices',
+    868881: 'Junior Officiating Practices',
+    879609: 'Adult Games - NSOs',
+    879610: 'Adult Games - SOs',
+    892230: 'Adult Officiating Practices Coaches',
+    905196: 'Junior Games - NSOs',
+    905197: 'Junior Games - SOs',
+    968727: 'Junior Officiating Practices Coaches'
+  };
+
+  cats = {
+    adult_practice: { cal: 'practices', name: 'Adult Officiating Practices', max: null, os: 0, oe: 0, roles: [{ role: 'Attendees', id: 773454, slots: 20 }, { role: 'Coaches', id: 892230, slots: 2 }] },
+    junior_practice: { cal: 'practices', name: 'Junior Officiating Practices', max: null, os: 0, oe: 0, roles: [{ role: 'Attendees', id: 868881, slots: 20 }, { role: 'Coaches', id: 968727, slots: 2 }] },
+    adult_scrimmage: { cal: 'practices', name: 'Adult Scrimmages', max: null, os: 0, oe: 0, roles: [{ role: 'NSOs', id: 628861, slots: 20 }, { role: 'SOs', id: 607934, slots: 20 }] },
+    junior_scrimmage: { cal: 'practices', name: 'Junior Scrimmages', max: null, os: 0, oe: 0, roles: [{ role: 'NSOs', id: 628862, slots: 20 }, { role: 'SOs', id: 607810, slots: 20 }] },
+    adult_game: { cal: 'events', name: 'Adult Games', max: 165, os: 15, oe: 30, roles: [{ role: 'NSOs', id: 879609, slots: 12 }, { role: 'SOs', id: 879610, slots: 8 }] },
+    junior_game_petals: { cal: 'events', name: 'Rose Petals Games', max: 135, os: -15, oe: 30, roles: [{ role: 'NSOs', id: 905196, slots: 12 }, { role: 'SOs', id: 905197, slots: 8 }] },
+    junior_game_buds: { cal: 'events', name: 'Rose Buds HT Games', max: 165, os: 0, oe: 75, roles: [{ role: 'NSOs', id: 905196, slots: 12 }, { role: 'SOs', id: 905197, slots: 8 }] },
+    junior_game_buds_closed: { cal: 'events', name: 'Rose Buds Closed Scored Scrimmage', max: 165, os: -30, oe: 15, roles: [{ role: 'NSOs', id: 905196, slots: 12 }, { role: 'SOs', id: 905197, slots: 8 }] },
+    junior_game: { cal: 'events', name: 'Juniors Games', max: 165, os: 15, oe: 30, roles: [{ role: 'NSOs', id: 905196, slots: 12 }, { role: 'SOs', id: 905197, slots: 8 }] }
+  };
+
+  seed = [
+    ['Wreckers A/B/HT Scrimmage', '2026-08-12', '18:00', 60, 'adult_scrimmage', 'k:wreckers'],
+    ['Adult TT Scrimmage', '2026-08-12', '19:00', 120, 'adult_scrimmage', 'similar'],
+    ['Wreckers A/B/C Scrimmage', '2026-08-15', '10:00', 60, 'adult_scrimmage', 'k:wreckers'],
+    ['Officials', '2026-08-15', '12:00', 120, 'adult_practice', 'k:officials'],
+    ['Buds HT Scrimmage: RBB/DSDD', '2026-08-15', '14:00', 60, 'junior_scrimmage', 'k:buds'],
+    ['Buds HT Scrimmage:UA/BH', '2026-08-15', '15:00', 60, 'junior_scrimmage', 'k:buds'],
+    ['Petals HT Scrimmage', '2026-08-16', '12:00', 60, 'junior_scrimmage', 'k:petals'],
+    ['Wreckers A/B/HT Scrimmage', '2026-08-19', '18:00', 60, 'adult_scrimmage', 'k:wreckers'],
+    ['Adult TT Scrimmage', '2026-08-19', '19:00', 120, 'adult_scrimmage', 'similar'],
+    ['Wreckers A/B/C Scrimmage', '2026-08-22', '10:00', 60, 'adult_scrimmage', 'k:wreckers'],
+    ['Wreckers Modified Contact Scrimmage', '2026-08-22', '11:00', 90, 'adult_scrimmage', 'k:wreckers'],
+    ['Officials', '2026-08-22', '12:30', 90, 'adult_practice', 'k:officials'],
+    ['Buds HT Scrimmage: DSDD/BH', '2026-08-22', '14:00', 60, 'junior_scrimmage', 'k:buds'],
+    ['Buds HT Scrimmage: UA/RBB', '2026-08-22', '15:00', 60, 'junior_scrimmage', 'k:buds'],
+    ['Petals HT Scrimmage', '2026-08-23', '12:00', 60, 'junior_scrimmage', 'k:petals'],
+    ['Wreckers A/B/HT Scrimmage', '2026-08-26', '18:00', 60, 'adult_scrimmage', 'k:wreckers'],
+    ['Adult TT Scrimmage', '2026-08-26', '19:00', 120, 'adult_scrimmage', 'similar'],
+    ['Wreckers B/C Scrimmage', '2026-08-29', '10:00', 60, 'adult_scrimmage', 'k:wreckers'],
+    ['Wreckers A/B Scrimmage', '2026-08-29', '11:00', 60, 'adult_scrimmage', 'k:wreckers'],
+    ['Officials', '2026-08-29', '12:00', 120, 'adult_practice', 'k:officials'],
+    ['Buds HT Scrimmage: DSDD/UA', '2026-08-29', '14:00', 60, 'junior_scrimmage', 'k:buds'],
+    ['Buds HT Scrimmage: RBB/RH', '2026-08-29', '15:00', 60, 'junior_scrimmage', 'k:buds'],
+    ['Wreckers A/B/HT Scrimmage', '2026-09-02', '18:00', 60, 'adult_scrimmage', 'k:wreckers'],
+    ['Adult TT Scrimmage', '2026-09-02', '19:00', 120, 'adult_scrimmage', 'similar'],
+    ['Wreckers B/C Scrimmage', '2026-09-05', '10:00', 60, 'adult_scrimmage', 'k:wreckers'],
+    ['Wreckers A/B Scrimmage', '2026-09-05', '11:00', 60, 'adult_scrimmage', 'k:wreckers'],
+    ['Officials', '2026-09-05', '12:00', 120, 'adult_practice', 'k:officials'],
+    ['Buds HT Scrimmage: UA/BH', '2026-09-05', '14:00', 60, 'junior_scrimmage', 'k:buds'],
+    ['Buds HT Scrimmage: DSDD/RBB', '2026-09-05', '15:00', 60, 'junior_scrimmage', 'k:buds'],
+    ['Petals HT Scrimmage', '2026-09-06', '12:00', 60, 'junior_scrimmage', 'k:petals']
+  ];
+
+  seedGames = [
+    ['Wreckers v Sick Town', '2026-08-15', '19:15', 165, 'adult_game', 'k:wreckers']
+  ];
+
+  shiftDate(isoDate, days) {
+    if (!days) return isoDate;
+    const p = isoDate.split('-');
+    const d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]) + days);
+    return this.iso(d);
+  }
+
+  buildEvents(kind, limit, shiftDays) {
+    const all = kind === 'events' ? this.seedGames : this.seed;
+    const rows = limit ? all.slice(0, limit) : all;
+    return rows.map((row, i) => {
+      const cat = this.cats[row[4]];
+      const start = row[2];
+      const end = this.toHM(this.toMin(start) + row[3]);
+      const fuzzy = row[5] === 'similar';
+      const note = fuzzy
+        ? 'Matched to ' + cat.name + ' by wording alone, scoring 84 of 100. Worth a look.'
+        : 'Matched by the keyword "' + row[5].slice(2) + '"';
+      const e = {
+        id: 'e' + (i + 1),
+        title: row[0],
+        date: this.shiftDate(row[1], shiftDays),
+        cat: row[4],
+        fuzzy,
+        note,
+        calStart: this.toHM(this.toMin(start) - cat.os),
+        calEnd: this.toHM(this.toMin(end) - cat.oe),
+        cfgStart: cat.os,
+        cfgEnd: cat.oe,
+        start,
+        end,
+        slots: cat.roles.map(r => String(r.slots))
+      };
+      e.orig = { cat: e.cat, start: e.start, end: e.end, slots: e.slots.slice() };
+      return e;
+    });
+  }
+
+  state = {
+    theme: 'auto',
+    system: 'night',
+    theming: false,
+    tableOverflow: false,
+    view: 'review',
+    query: '',
+    onlyBlocking: false,
+    onlyFuzzy: false,
+    collapsed: [],
+    picker: null,
+    showLog: false,
+    showDrawer: false,
+    testing: null,
+    copied: null,
+    creds: {
+      amplify: { label: 'Amplify', last4: '4f21', ok: true, checked: 'today at 4:31 am', path: '/run/secrets/star-pass/amplify_token' },
+      gcal: { label: 'Google Calendar', last4: '9ab0', ok: true, checked: 'today at 4:31 am', path: '/run/secrets/star-pass/gcal_token' }
+    },
+    calendar: 'practices',
+    runId: 'p-aug',
+    runs: null,
+    draftCal: null,
+    collect: null,
+    showRuns: false,
+    showRevs: false,
+    revs: [
+      { n: 1, at: 'Aug 2, 4:31 am', label: 'As collected', changes: 0, snap: null },
+      { n: 2, at: 'Aug 4, 4:12 pm', label: 'Current', changes: 0, snap: null }
+    ],
+    dupCheck: { state: 'idle', existing: {}, ref: '' },
+    sentRecord: {},
+    send: null,
+    confirm: false,
+    dropAdded: [],
+    dropLogged: [],
+    preset: 'this',
+    winStart: '',
+    winEnd: '',
+    sel: [],
+    bulkSlots: '',
+    events: this.buildEvents('practices'),
+    oldEvents: [
+      { id: 'e1', title: 'Jet City vs Cherry City', date: '2026-09-05', cat: '', note: 'Unable to match to an opportunity', calStart: '09:00', calEnd: '11:00', cfgStart: 0, cfgEnd: 0, start: '09:00', end: '11:00', slots: [12, 8], edited: [] },
+      { id: 'e2', title: 'Rose Petals vs PTT', date: '2026-09-05', cat: 'junior_game_petals', note: 'Matched by the keyword "petals"', calStart: '12:00', calEnd: '14:00', cfgStart: -15, cfgEnd: 30, start: '11:45', end: '14:30', slots: [12, 10], edited: [1] },
+      { id: 'e3', title: 'Break Neck Betties vs Guns N Rollers', date: '2026-09-05', cat: 'adult_game', note: 'Matched by the keyword "gnr"', calStart: '15:00', calEnd: '17:00', cfgStart: 15, cfgEnd: 30, start: '15:15', end: '17:30', slots: [12, 8], edited: [] },
+      { id: 'e4', title: 'Wheels of Justice vs Rat City', date: '2026-09-05', cat: 'adult_game', note: 'Matched by the keyword "wheels"', calStart: '18:00', calEnd: '20:30', cfgStart: 15, cfgEnd: 30, start: '18:15', end: '21:00', slots: [12, 8], edited: [] },
+      { id: 'e5', title: 'Rose Buds HT vs NTT', date: '2026-09-13', cat: 'junior_game_buds', note: 'Matched by the keyword "buds"', calStart: '10:00', calEnd: '12:00', cfgStart: 0, cfgEnd: 75, start: '10:00', end: '13:15', slots: [12, 8], edited: [] },
+      { id: 'e6', title: 'Axles vs High Rollers', date: '2026-09-13', cat: 'adult_game', note: 'Matched by the keyword "axles"', calStart: '13:30', calEnd: '15:30', cfgStart: 15, cfgEnd: 30, start: '13:45', end: '16:00', slots: [12, 8], edited: [] },
+      { id: 'e7', title: 'Juniors Interleague Mixer', date: '2026-09-19', cat: 'junior_game', note: 'Matched to Juniors Games by similar wording. Worth a look.', calStart: '11:00', calEnd: '13:00', cfgStart: 15, cfgEnd: 30, start: '11:15', end: '13:30', slots: [12, 8], edited: [] },
+      { id: 'e8', title: 'Hollywood Hoydens vs Wreckers', date: '2026-09-19', cat: 'adult_game', note: 'Matched by the keyword "wreckers"', calStart: '17:00', calEnd: '19:00', cfgStart: 15, cfgEnd: 30, start: '17:15', end: '19:30', slots: [12, 8], edited: [] },
+      { id: 'e9', title: 'Buds Closed Scored Scrimmage', date: '2026-09-26', cat: 'junior_game_buds_closed', note: 'Matched by the keyword "buds closed scored scrimmage"', calStart: '09:30', calEnd: '11:30', cfgStart: -30, cfgEnd: 15, start: '09:00', end: '11:45', slots: [12, 8], edited: [] },
+      { id: 'e10', title: 'Guns N Rollers vs AOA', date: '2026-09-26', cat: 'adult_game', note: 'Matched by the keyword "aoa"', calStart: '19:00', calEnd: '21:00', cfgStart: 15, cfgEnd: 30, start: '19:15', end: '21:30', slots: [12, 8], edited: [] }
+    ],
+    log: []
+  };
+
+  componentDidMount() {
+    this.scrollMem = {};
+    this.lastScrollKey = this.scrollKey(this.state);
+    this.lastRunId = this.state.runId;
+    this.onScroll = () => {
+      if (!this.lastScrollKey) return;
+      this.scrollMem[this.lastScrollKey] = (document.scrollingElement || document.documentElement).scrollTop;
+    };
+    window.addEventListener('scroll', this.onScroll);
+    this.mq = window.matchMedia('(prefers-color-scheme: light)');
+    this.applyScheme = () => this.setState({ system: this.mq.matches ? 'day' : 'night' });
+    this.applyScheme();
+    this.mq.addEventListener('change', this.applyScheme);
+    this.onKey = ev => {
+      const S = this.state;
+      const layer = S.confirm ? this.dialogEl : (S.showDrawer ? this.drawerEl : null);
+      if (layer && ev.key === 'Tab') {
+        const f = Array.prototype.slice
+          .call(layer.querySelectorAll('button, [href], input, select, [tabindex]:not([tabindex="-1"])'))
+          .filter(x => !x.disabled && x.offsetParent !== null);
+        if (!f.length) return;
+        const first = f[0];
+        const last = f[f.length - 1];
+        const inside = layer.contains(document.activeElement);
+        if (ev.shiftKey && (!inside || document.activeElement === first)) {
+          ev.preventDefault();
+          last.focus();
+        } else if (!ev.shiftKey && (!inside || document.activeElement === last)) {
+          ev.preventDefault();
+          first.focus();
+        }
+        return;
+      }
+      if (ev.key === 'Escape') {
+        if (S.confirm) this.setState({ confirm: false });
+        else if (S.picker) this.setState({ picker: null });
+        else if (S.showRuns || S.showRevs) this.setState({ showRuns: false, showRevs: false });
+        else if (S.showDrawer) this.setState({ showDrawer: false });
+        else if (S.sel.length) this.setState({ sel: [] });
+        return;
+      }
+      if (!S.picker || (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp' && ev.key !== 'Enter')) return;
+      const e = S.events.filter(x => x.id === S.picker.id)[0];
+      if (!e) return;
+      if (ev.key === 'Enter') {
+        this.setState({ picker: null });
+        return;
+      }
+      ev.preventDefault();
+      const field = S.picker.field;
+      const cat = this.cats[e.cat];
+      const max = cat && cat.max ? cat.max : null;
+      const other = this.toMin(field === 'start' ? e.end : e.start);
+      const delta = ev.key === 'ArrowDown' ? 15 : -15;
+      const next = this.toMin(e[field]) + delta;
+      const span = field === 'start' ? other - next : next - other;
+      if (next < 0 || next > 1425 || span <= 0 || (max !== null && span > max)) return;
+      const patchObj = {};
+      patchObj[field] = this.toHM(next);
+      this.patch(e.id, x => Object.assign({}, x, patchObj), e.title + ' shift ' + field + ' set to ' + this.toHM(next));
+    };
+    document.addEventListener('keydown', this.onKey);
+
+    this.onDown = ev => {
+      const el = ev.target;
+      if (this.state.picker && !(el && el.closest && el.closest('[data-time-field]'))) this.setState({ picker: null });
+      if ((this.state.showRuns || this.state.showRevs) && !(el && el.closest && el.closest('[data-popover]'))) {
+        this.setState({ showRuns: false, showRevs: false });
+      }
+    };
+    document.addEventListener('mousedown', this.onDown);
+    this.startDupCheck();
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('scroll', this.onScroll);
+    document.removeEventListener('keydown', this.onKey);
+    document.removeEventListener('mousedown', this.onDown);
+    if (this.mq && this.applyScheme) this.mq.removeEventListener('change', this.applyScheme);
+    if (this.onResize) window.removeEventListener('resize', this.onResize);
+    clearTimeout(this.themeTimer);
+    clearTimeout(this.dupTimer);
+    clearTimeout(this.testTimer);
+    clearTimeout(this.copyTimer);
+  }
+
+  failMode() {
+    return this.props.failure || 'Send';
+  }
+
+  newRunRef() {
+    return 'r-' + Math.random().toString(36).slice(2, 6);
+  }
+
+  newRef() {
+    return 'ref ' + Math.random().toString(16).slice(2, 8);
+  }
+
+  layerRef(which) {
+    return el => {
+      this[which + 'El'] = el;
+      const flag = which + 'Open';
+      if (el && !this[flag]) {
+        this[flag] = true;
+        this[which + 'LastFocus'] = document.activeElement;
+        const first = el.querySelector('button, input, select');
+        if (first) first.focus();
+      } else if (!el && this[flag]) {
+        this[flag] = false;
+        const back = this[which + 'LastFocus'];
+        if (back && back.focus && document.contains(back)) back.focus();
+      }
+    };
+  }
+
+  copyRef(text) {
+    if (navigator.clipboard) navigator.clipboard.writeText(text);
+    this.setState({ copied: text });
+    clearTimeout(this.copyTimer);
+    this.copyTimer = setTimeout(() => this.setState({ copied: null }), 1500);
+  }
+
+  runsSeed = [
+    { id: 'p-aug', cal: 'practices', name: 'Practices', window: 'Aug 1 – Sep 7 2026', collected: 'Aug 2, 4:31 am', revisedAt: 'Aug 4, 4:12 pm', events: 30, shifts: 60, status: 'unsent' },
+    { id: 'e-aug', cal: 'events', name: 'Events', window: 'Aug 1 – Sep 7 2026', collected: 'Aug 2, 4:33 am', revisedAt: 'Aug 2, 4:35 am', events: 1, shifts: 2, status: 'unsent' },
+    { id: 'p-jul', cal: 'practices', name: 'Practices', window: 'Jul 1 – Aug 7 2026', collected: 'Jul 1, 6:02 am', revisedAt: 'Jul 1, 6:18 am', events: 26, shifts: 52, status: 'sent', sentAt: 'Jul 1, 6:20 am', limit: 26, shift: -42, dropLimit: 6 }
+  ];
+
+  dropped = {
+    practices: [
+      { id: 'd1', title: 'Rec League Skate', date: '2026-08-20', when: '7:00 to 9:00 pm', start: '19:00', end: '21:00', reason: 'search' },
+      { id: 'd2', title: 'Bout Prep Clinic', date: '2026-08-27', when: '6:30 to 8:00 pm', start: '18:30', end: '20:00', reason: 'search' },
+      { id: 'd3', title: 'Canceled: Wreckers A/B/C Scrimmage', date: '2026-08-22', when: '10:00 to 11:00 am', reason: 'excluded' },
+      { id: 'd4', title: 'CANCELLED - Officials', date: '2026-08-29', when: '12:00 to 2:00 pm', reason: 'excluded' },
+      { id: 'd5', title: 'Summer Camp', date: '2026-08-17', when: 'All day, five days', reason: 'excluded' },
+      { id: 'd6', title: 'Derby Daze', date: '2026-08-30', when: 'All day', reason: 'excluded' },
+      { id: 'd10', title: 'Officials Retreat', date: '2026-08-23', when: 'All day', reason: 'allday' },
+      { id: 'd7', title: '(no title)', date: '2026-08-25', when: '6:00 to 8:00 pm', reason: 'untitled' }
+    ],
+    events: [
+      { id: 'd8', title: 'CANCELED: Wreckers v Sick Town', date: '2026-08-22', when: '7:15 to 10:00 pm', reason: 'excluded' },
+      { id: 'd9', title: 'Derby Daze', date: '2026-08-30', when: 'All day', reason: 'excluded' }
+    ]
+  };
+
+  droppedGroupMeta = {
+    search: {
+      label: 'Outside the calendar search',
+      note: 'The Practices calendar is only searched for titles containing "officials" or "scrimmage". These sat in the same window and were found by a wider second look, so they can be added by hand.'
+    },
+    excluded: {
+      label: 'Excluded by title',
+      note: 'A title containing canceled, cancelled, derby daze or summer camp is never collected, whatever else is true about the event. These cannot be added to a run.'
+    },
+    allday: {
+      label: 'All day',
+      note: 'No start or end time, so there is nothing to build a shift from.'
+    },
+    untitled: {
+      label: 'Untitled',
+      note: 'No title, so there is nothing to match an opportunity on.'
+    }
+  };
+
+  iso(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  todayLeague() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  }
+
+  monthWindow(monthOffset) {
+    const p = this.todayLeague().split('-');
+    const start = new Date(Number(p[0]), Number(p[1]) - 1 + monthOffset, 1);
+    const end = new Date(Number(p[0]), Number(p[1]) - 1 + monthOffset + 1, 7);
+    return { start: this.iso(start), end: this.iso(end) };
+  }
+
+  dayAfter(isoDate) {
+    const p = isoDate.split('-');
+    const d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]) + 1);
+    return this.iso(d);
+  }
+
+  spanDays(a, b) {
+    const pa = a.split('-');
+    const pb = b.split('-');
+    const da = new Date(Number(pa[0]), Number(pa[1]) - 1, Number(pa[2]));
+    const db = new Date(Number(pb[0]), Number(pb[1]) - 1, Number(pb[2]));
+    return Math.round((db - da) / 86400000) + 1;
+  }
+
+  longDate(isoDate) {
+    const p = isoDate.split('-');
+    const d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  setTheme(theme) {
+    this.setState({ theme, theming: true });
+    clearTimeout(this.themeTimer);
+    this.themeTimer = setTimeout(() => this.setState({ theming: false }), 340);
+  }
+
+  scrollKey(s) {
+    return s.runId + '|' + (s.view === 'dropped' ? 'dropped' : s.view);
+  }
+
+  componentDidUpdate() {
+    if (!this.scrollMem) this.scrollMem = {};
+    const key = this.scrollKey(this.state);
+    if (this.lastScrollKey === undefined) {
+      this.lastScrollKey = key;
+      this.lastRunId = this.state.runId;
+      return;
+    }
+    if (key === this.lastScrollKey) return;
+    const runChanged = this.lastRunId !== this.state.runId;
+    const target = runChanged ? 0 : (this.scrollMem[key] || 0);
+    this.lastScrollKey = key;
+    this.lastRunId = this.state.runId;
+    window.scrollTo(0, target);
+  }
+
+  measureTable = el => {
+    if (el) this.tableEl = el;
+    const check = () => {
+      if (!this.tableEl) return;
+      const over = this.tableEl.scrollWidth > this.tableEl.clientWidth + 2;
+      if (over !== this.state.tableOverflow) this.setState({ tableOverflow: over });
+    };
+    check();
+    if (!this.resizeBound) {
+      this.resizeBound = true;
+      this.onResize = check;
+      window.addEventListener('resize', check);
+    }
+  };
+
+  now() {
+    return new Date()
+      .toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', minute: '2-digit' })
+      .toLowerCase();
+  }
+
+  note(text) {
+    this.setState(s => ({ log: [{ text, time: this.now() }].concat(s.log) }));
+  }
+
+  toMin(t) {
+    const p = String(t).split(':');
+    const h = parseInt(p[0], 10);
+    const m = parseInt(p[1], 10);
+    if (isNaN(h) || isNaN(m)) return null;
+    return h * 60 + m;
+  }
+
+  toHM(m) {
+    const x = ((m % 1440) + 1440) % 1440;
+    return String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0');
+  }
+
+  runList() {
+    if (this.state.runs) return this.state.runs;
+    return (this.props.startWith || 'Existing runs') === 'No runs yet' ? [] : this.runsSeed;
+  }
+
+  run() {
+    return this.runList().filter(r => r.id === this.state.runId)[0] || {};
+  }
+
+  windowLabel(start, end) {
+    return this.shortDate(start) + ' – ' + this.shortDate(end) + ' ' + start.split('-')[0];
+  }
+
+  startCollect() {
+    const cal = this.state.draftCal || this.state.calendar;
+    const seed = cal === 'events' ? this.seedGames : this.seed;
+    const setAside = (this.dropped[cal] || []).length;
+    const fuzzy = seed.filter(r => r[5] === 'similar').length;
+    const steps = [
+      { key: 'read', label: 'Reading the ' + (cal === 'events' ? 'Events' : 'Practices') + ' calendar', state: 'pending', detail: '' },
+      { key: 'filter', label: 'Filtering events', state: 'pending', detail: '' },
+      { key: 'match', label: 'Matching titles to opportunities', state: 'pending', detail: '' },
+      { key: 'write', label: 'Writing the CSV', state: 'pending', detail: '' }
+    ];
+    const outcomes = {
+      read: (seed.length + setAside) + ' events over 3 pages',
+      filter: setAside + (setAside === 1 ? ' event set aside, ' : ' events set aside, ') + seed.length + ' kept',
+      match: (seed.length - fuzzy) + ' by keyword, ' + fuzzy + ' by wording alone',
+      write: 'gcal_shifts_2026-08-13T06_41_08.csv'
+    };
+    const ref = this.newRunRef();
+    this.setState({ collect: { ref, steps, busy: true, cancelled: false, error: null, startedAt: this.now(), cal }, showDrawer: false, view: 'collecting' }, () => {
+      const setStep = (i, patch) => this.setState(s => ({
+        collect: Object.assign({}, s.collect, { steps: s.collect.steps.map((st, j) => (j === i ? Object.assign({}, st, patch) : st)) })
+      }));
+      const step = i => {
+        if (!this.state.collect || this.state.collect.cancelled) return;
+        if (i >= steps.length) {
+          this.finishCollect();
+          return;
+        }
+        setStep(i, { state: 'running', detail: i === 0 ? 'page 1' : '' });
+        if (i === 0) {
+          setTimeout(() => { if (this.state.collect && !this.state.collect.cancelled) setStep(0, { detail: 'page 2' }); }, 420);
+          setTimeout(() => { if (this.state.collect && !this.state.collect.cancelled) setStep(0, { detail: 'page 3' }); }, 840);
+        }
+        setTimeout(() => {
+          if (!this.state.collect || this.state.collect.cancelled) return;
+          if (this.failMode() === 'Collection' && i === 2) {
+            setStep(i, { state: 'failed', detail: '' });
+            this.setState(s => ({
+              collect: Object.assign({}, s.collect, {
+                busy: false,
+                error: { text: 'Google Calendar stopped answering part way through, after three attempts. The run was not created.', ref: this.newRef() }
+              })
+            }));
+            return;
+          }
+          setStep(i, { state: 'done', detail: outcomes[steps[i].key] });
+          step(i + 1);
+        }, i === 0 ? 1260 : 640);
+      };
+      step(0);
+    });
+  }
+
+  finishCollect() {
+    const S = this.state;
+    const cal = S.draftCal || S.calendar;
+    const seed = cal === 'events' ? this.seedGames : this.seed;
+    const start = S.winStart || this.monthWindow(0).start;
+    const end = S.winEnd || this.monthWindow(0).end;
+    const stamp = this.shortDate(this.todayLeague()) + ', ' + this.now();
+    const stillHere = S.view === 'collecting';
+    const run = {
+      id: (S.collect && S.collect.ref) || this.newRunRef(),
+      cal,
+      name: cal === 'events' ? 'Events' : 'Practices',
+      window: this.windowLabel(start, end),
+      collected: stamp,
+      revisedAt: stamp,
+      events: seed.length,
+      shifts: seed.length * 2,
+      status: 'unsent'
+    };
+    this.setState(s => ({ runs: [run].concat(s.runs || this.runsSeed) }), () => {
+      this.setState({ collect: null });
+      if (stillHere) this.openRun(run.id);
+    });
+  }
+
+  retryCollect() {
+    this.startCollect();
+  }
+
+  leaveCollect() {
+    this.setState({ view: 'review' });
+  }
+
+  cancelCollect() {
+    this.setState(s => ({ collect: Object.assign({}, s.collect, { cancelled: true, busy: false }) }));
+    setTimeout(() => this.setState({ collect: null, view: 'review' }), 260);
+  }
+
+  dupeMap() {
+    const dupes = {};
+    const seen = {};
+    this.state.events.forEach(e => {
+      if (!e.cat) return;
+      const key = [e.cat, e.date, e.start, e.end, e.slots.join(',')].join('|');
+      if (seen[key]) dupes[e.id] = seen[key];
+      else seen[key] = e.title;
+    });
+    return dupes;
+  }
+
+  oppCounts() {
+    const dupes = this.dupeMap();
+    const counts = {};
+    this.state.events.forEach(e => {
+      const cat = this.cats[e.cat];
+      if (!cat || dupes[e.id]) return;
+      cat.roles.forEach((r, ri) => {
+        const key = String(r.id);
+        if (!counts[key]) counts[key] = { title: this.oppTitles[key] || key, shifts: 0, slots: 0, first: e.date, last: e.date, from: {}, items: [] };
+        counts[key].shifts += 1;
+        counts[key].slots += parseInt(e.slots[ri] || 0, 10);
+        counts[key].items.push({ when: e.date + ' ' + e.start, slots: parseInt(e.slots[ri] || 0, 10) });
+        counts[key].from[cat.name] = (counts[key].from[cat.name] || 0) + 1;
+        if (e.date < counts[key].first) counts[key].first = e.date;
+        if (e.date > counts[key].last) counts[key].last = e.date;
+      });
+    });
+    const keys = Object.keys(counts).sort((a, b) => counts[a].title.localeCompare(counts[b].title));
+    return { counts, keys };
+  }
+
+  droppedFor() {
+    const run = this.run();
+    const all = this.dropped[run.cal] || [];
+    const rows = run.dropLimit ? all.slice(0, run.dropLimit) : all;
+    return rows
+      .filter(d => this.state.dropAdded.indexOf(d.id) === -1)
+      .map(d => Object.assign({}, d, { date: this.shiftDate(d.date, run.shift) }));
+  }
+
+  openRun(id) {
+    const run = this.runList().filter(r => r.id === id)[0];
+    if (!run) return;
+    this.setState({
+      runId: id,
+      calendar: run.cal,
+      events: this.buildEvents(run.cal, run.limit, run.shift),
+      revs: [
+        { n: 1, at: run.collected, label: 'As collected', changes: 0, snap: null },
+        { n: 2, at: run.revisedAt, label: 'Current', changes: 0, snap: null }
+      ],
+      sel: [],
+      log: [],
+      collapsed: [],
+      query: '',
+      onlyBlocking: false,
+      onlyFuzzy: false,
+      picker: null,
+      dropAdded: [],
+      dropLogged: [],
+      showRuns: false,
+      showRevs: false,
+      send: null,
+      sentRecord: {},
+      confirm: false,
+      dupCheck: { state: 'idle', existing: {}, ref: '' },
+      view: 'review'
+    }, () => this.startDupCheck());
+  }
+
+  seal(s) {
+    const revs = s.revs.slice();
+    const last = revs[revs.length - 1];
+    revs[revs.length - 1] = Object.assign({}, last, { changes: s.log.length, entries: s.log, snap: s.events });
+    revs.push({ n: last.n + 1, at: this.now(), label: 'Current', changes: 0, snap: null });
+    return revs;
+  }
+
+  cutRevision() {
+    this.setState(s => ({ revs: this.seal(s), log: [], showRevs: false }));
+  }
+
+  revertTo(n) {
+    const run = this.run();
+    const rev = this.state.revs.filter(r => r.n === n)[0];
+    const fromSnap = !!(rev && rev.snap);
+    const events = fromSnap ? rev.snap : this.buildEvents(run.cal, run.limit, run.shift);
+    this.setState(s => {
+      const next = { revs: this.seal(s), log: [], events, sel: [], picker: null, showRevs: false };
+      if (!fromSnap) next.dropAdded = [];
+      return next;
+    });
+    this.note('Reverted to revision ' + n + (fromSnap ? '' : ', the list as collected'));
+  }
+
+  startDupCheck(after) {
+    const ref = this.newRef();
+    this.setState({ dupCheck: { state: 'checking', existing: {}, ref: '' } });
+    clearTimeout(this.dupTimer);
+    this.dupTimer = setTimeout(() => {
+      if (this.failMode() === 'Preview read') {
+        this.setState({ dupCheck: { state: 'error', existing: {}, ref } });
+        return;
+      }
+      const cc = this.oppCounts();
+      const existing = {};
+      const pick = (k, idxs) => {
+        const c = cc.counts[k];
+        if (!c) return;
+        const items = c.items.slice().sort((a, b) => a.when.localeCompare(b.when));
+        const found = idxs.map(i => items[i]).filter(Boolean).map(it => it.when);
+        if (found.length) existing[k] = found;
+      };
+      pick('607934', [0, 3]);
+      pick('879610', [1]);
+      const record = this.state.sentRecord || {};
+      Object.keys(record).forEach(k => {
+        const merged = (existing[k] || []).concat(record[k] || []);
+        existing[k] = merged.filter((w, i) => merged.indexOf(w) === i);
+      });
+      this.setState({ dupCheck: { state: 'done', existing, ref: '' } }, () => { if (after) after(); });
+    }, 1200);
+  }
+
+  buildSendRows() {
+    const cc = this.oppCounts();
+    const ex = this.state.dupCheck.existing || {};
+    return cc.keys.map(k => {
+      const list = ex[k] || [];
+      const remaining = cc.counts[k].items.filter(it => list.indexOf(it.when) === -1);
+      return {
+        id: k,
+        title: cc.counts[k].title,
+        total: cc.counts[k].items.length,
+        existing: cc.counts[k].items.length - remaining.length,
+        willCreate: Math.max(0, remaining.length),
+        whens: remaining.map(it => it.when),
+        state: 'pending',
+        created: 0,
+        error: '',
+        ref: '',
+        failFirst: false
+      };
+    }).filter(r => r.willCreate > 0);
+  }
+
+  beginSend() {
+    this.setState({ confirm: false });
+    this.startDupCheck(() => {
+      const rows = this.buildSendRows();
+      if (!rows.length) return;
+      if (rows.length > 1 && this.failMode() === 'Send') rows[rows.length - 1].failFirst = true;
+      this.setState(
+        { view: 'send', send: { rows, startedAt: this.now(), finishedAt: null, busy: false } },
+        () => this.runSend(false)
+      );
+    });
+  }
+
+  setSendRow(id, patch) {
+    this.setState(s => ({
+      send: Object.assign({}, s.send, {
+        rows: s.send.rows.map(r => (r.id === id ? Object.assign({}, r, patch) : r))
+      })
+    }));
+  }
+
+  runSend(onlyFailed) {
+    const targets = this.state.send.rows
+      .filter(r => (onlyFailed ? r.state === 'failed' : r.state !== 'done'))
+      .map(r => r.id);
+    const step = i => {
+      if (i >= targets.length) {
+        this.setState(s => ({ send: Object.assign({}, s.send, { busy: false, finishedAt: this.now() }) }), () => this.startDupCheck());
+        return;
+      }
+      const id = targets[i];
+      this.setSendRow(id, { state: 'sending', error: '' });
+      setTimeout(() => {
+        const row = this.state.send.rows.filter(r => r.id === id)[0];
+        if (!onlyFailed && row.failFirst) {
+          this.setSendRow(id, { state: 'failed', error: 'Amplify stopped answering for this opportunity, after three attempts. Nothing was created for it.', ref: this.newRef() });
+        } else {
+          this.setSendRow(id, { state: 'done', created: row.willCreate, error: '', ref: '' });
+          this.setState(s => {
+            const rec = Object.assign({}, s.sentRecord);
+            const merged = (rec[id] || []).concat(row.whens || []);
+            rec[id] = merged.filter((w, i) => merged.indexOf(w) === i);
+            return { sentRecord: rec };
+          });
+        }
+        step(i + 1);
+      }, 660);
+    };
+    this.setState(s => ({ send: Object.assign({}, s.send, { busy: true, finishedAt: null }) }), () => step(0));
+  }
+
+  nudge(delta) {
+    const S = this.state;
+    let moved = 0;
+    let held = 0;
+    const events = S.events.map(e => {
+      if (S.sel.indexOf(e.id) === -1) return e;
+      const a = this.toMin(e.start) + delta;
+      const b = this.toMin(e.end) + delta;
+      if (a < 0 || b > 1439) {
+        held += 1;
+        return e;
+      }
+      moved += 1;
+      return Object.assign({}, e, { start: this.toHM(a), end: this.toHM(b) });
+    });
+    this.setState({ events });
+    const dir = delta < 0 ? 'earlier' : 'later';
+    let msg = moved + (moved === 1 ? ' event moved 15 minutes ' : ' events moved 15 minutes ') + dir;
+    if (held) msg += ', ' + held + (held === 1 ? ' left where it was' : ' left where they were') + ' at the edge of the day';
+    this.note(msg);
+  }
+
+  resetSlots() {
+    const S = this.state;
+    let n = 0;
+    const events = S.events.map(e => {
+      if (S.sel.indexOf(e.id) === -1) return e;
+      const cat = this.cats[e.cat];
+      if (!cat) return e;
+      n += 1;
+      return Object.assign({}, e, { slots: cat.roles.map(r => String(r.slots)) });
+    });
+    this.setState({ events });
+    this.note(n + (n === 1 ? ' event back to its usual slots' : ' events back to their usual slots'));
+  }
+
+  patch(id, fn, message) {
+    this.setState(s => ({ events: s.events.map(e => (e.id === id ? fn(e) : e)) }));
+    if (message) this.note(message);
+  }
+
+  num(v) {
+    const n = parseInt(String(v).replace(/[^0-9-]/g, ''), 10);
+    return isNaN(n) ? 0 : n;
+  }
+
+  offsetNote(mins, which) {
+    if (!mins) return '';
+    return 'Set ' + Math.abs(mins) + ' min ' + (mins > 0 ? 'after' : 'before') + ' calendar ' + which;
+  }
+
+  lengthOf(e) {
+    const a = this.toMin(e.start);
+    const b = this.toMin(e.end);
+    if (a === null || b === null) return { mins: 0, raw: 0, label: 'check times', note: '' };
+    let mins = b - a;
+    if (mins <= 0) return { mins: 0, raw: mins, label: 'ends first', note: 'End is before start' };
+    const cat = this.cats[e.cat];
+    if (cat && cat.max && mins > cat.max) {
+      return { mins: cat.max, raw: mins, label: mins + ' min', note: 'Created as ' + cat.max + ' min, the longest this opportunity allows' };
+    }
+    return { mins, raw: mins, label: mins + ' min', note: '' };
+  }
+
+  dateLabel(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  }
+
+  shortDate(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  visible() {
+    const q = this.state.query.trim().toLowerCase();
+    return this.state.events.filter(e => {
+      if (this.state.onlyBlocking && e.cat) return false;
+      if (this.state.onlyFuzzy && !(e.fuzzy && e.cat === e.orig.cat)) return false;
+      if (q && e.title.toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+  }
+
+  renderVals() {
+    const S = this.state;
+    const R = this.run();
+    const resolved = S.theme === 'auto' ? S.system : S.theme;
+    const segOn = 'cursor:pointer; background:transparent; font:inherit; font-size:13px; white-space:nowrap; color:var(--color-accent); box-shadow:inset 0 0 0 1px var(--color-accent)';
+    const segOff = 'cursor:pointer; background:transparent; font:inherit; font-size:13px; white-space:nowrap; color:inherit';
+    const blockers = S.events.filter(e => !e.cat);
+    const vis = this.visible();
+    const invalidEvents = S.events.filter(e => this.lengthOf(e).raw <= 0);
+    const trimmedEvents = S.events.filter(e => {
+      const L = this.lengthOf(e);
+      return L.raw > L.mins;
+    });
+
+    const dupes = this.dupeMap();
+    const dupCount = Object.keys(dupes).length;
+
+    const groups = [];
+    vis.forEach(e => {
+      let g = groups.find(x => x.date === e.date);
+      if (!g) {
+        g = { date: e.date, label: this.dateLabel(e.date), events: [] };
+        groups.push(g);
+      }
+      const cat = this.cats[e.cat];
+      const len = this.lengthOf(e);
+      const selected = S.sel.indexOf(e.id) !== -1;
+      const blocking = !e.cat;
+      const shiftStart = e.start;
+      const shiftEnd = e.end;
+      const pickerFor = f => (S.picker && S.picker.id === e.id && S.picker.field === f);
+      const max = cat && cat.max ? cat.max : null;
+      const options = (current, field) => {
+        const list = [];
+        for (let m = 0; m <= 1425; m += 15) list.push(this.toHM(m));
+        if (list.indexOf(current) === -1) list.push(current);
+        list.sort();
+        const other = this.toMin(field === 'start' ? e.end : e.start);
+        const allowed = list.filter(t => {
+          const m = this.toMin(t);
+          if (other === null || m === null) return true;
+          const span = field === 'start' ? other - m : m - other;
+          if (span <= 0) return false;
+          return max === null || span <= max;
+        });
+        return allowed.map(t => ({
+          label: t,
+          style: 'cursor:pointer; text-align:left; font-size:12px; padding:5px 8px; border:0; border-radius:5px; background:' +
+            (t === current ? 'color-mix(in srgb, var(--color-accent) 22%, transparent); color:var(--color-accent)' : 'transparent; color:inherit'),
+          onPick: () => {
+            const patchObj = {};
+            patchObj[field] = t;
+            this.setState({ picker: null });
+            this.patch(e.id, x => Object.assign({}, x, patchObj), e.title + ' shift ' + field + ' set to ' + t);
+          }
+        }));
+      };
+      const scrollTo = current => el => {
+        if (!el) return;
+        const list = [];
+        for (let m = 0; m <= 1425; m += 15) list.push(this.toHM(m));
+        const i = list.indexOf(current);
+        el.scrollTop = i > 2 ? (i - 2) * 27 : 0;
+      };
+      g.events.push({
+        id: e.id,
+        title: e.title,
+        selected,
+        logTitleLabel: S.dropLogged.indexOf(e.id) !== -1 ? 'Noted for the model' : 'Note for the model',
+        onLogTitle: () => {
+          this.setState(s => ({ dropLogged: s.dropLogged.indexOf(e.id) === -1 ? s.dropLogged.concat([e.id]) : s.dropLogged.filter(x => x !== e.id) }));
+        },
+        isDuplicate: !!dupes[e.id],
+        dupNote: dupes[e.id]
+          ? 'Identical to "' + dupes[e.id] + '" earlier in this run. Repeated rows are dropped, so this one creates nothing.'
+          : '',
+        note: blocking ? 'Unable to match to an opportunity. Pick one below.' : e.note,
+        noteStyle: blocking
+          ? 'font-size:11px; color:var(--color-alert)'
+          : (e.fuzzy && e.cat === e.orig.cat
+            ? 'font-size:11px; color:var(--color-accent-300)'
+            : 'font-size:11px; color:color-mix(in srgb, var(--color-text) 55%, transparent)'),
+        category: e.cat,
+        isBlocking: blocking,
+        start: shiftStart,
+        end: shiftEnd,
+        startPickerOpen: pickerFor('start'),
+        endPickerOpen: pickerFor('end'),
+        startOptions: pickerFor('start') ? options(shiftStart, 'start') : [],
+        endOptions: pickerFor('end') ? options(shiftEnd, 'end') : [],
+        startListRef: scrollTo(shiftStart),
+        endListRef: scrollTo(shiftEnd),
+        lengthNote: len.note,
+        maxNote: max ? 'Up to ' + max + ' min' : 'Any length',
+        isEdited: e.cat !== e.orig.cat || e.start !== e.orig.start || e.end !== e.orig.end || e.slots.join() !== e.orig.slots.join(),
+        onUndo: () => {
+          this.patch(e.id, x => Object.assign({}, x, {
+            cat: x.orig.cat,
+            start: x.orig.start,
+            end: x.orig.end,
+            slots: x.orig.slots.slice()
+          }), e.title + ' changes undone');
+        },
+        openStartPicker: () => this.setState({ picker: { id: e.id, field: 'start' } }),
+        openEndPicker: () => this.setState({ picker: { id: e.id, field: 'end' } }),
+        closePicker: () => this.setState({ picker: null }),
+        startNote: this.offsetNote(e.cfgStart, 'start'),
+        endNote: this.offsetNote(e.cfgEnd, 'end'),
+        calendarTime: e.calStart + ' to ' + e.calEnd,
+        length: len.label,
+        rowStyle: 'animation:omFadeUp .18s ease-out both; margin-bottom:8px; padding:2px 16px; border-radius:var(--radius-md); border-left:3px solid ' + (
+          blocking
+            ? 'var(--color-alert); background:color-mix(in srgb, var(--color-alert) ' + (selected ? '22' : '12') + '%, var(--color-surface)); box-shadow:var(--shadow-sm)'
+            : (selected
+              ? 'var(--color-accent); background:color-mix(in srgb, var(--color-accent) 14%, var(--color-surface)); box-shadow:var(--shadow-sm)'
+              : 'var(--color-accent-800); background:var(--color-surface); box-shadow:var(--shadow-sm)')
+        ),
+        boxStyle: 'width:16px; height:16px; padding:0; cursor:pointer; display:grid; place-items:center; border-radius:3px; border:1px solid ' +
+          (selected ? 'var(--color-accent); background:var(--color-accent)' : 'var(--color-neutral-600); background:transparent'),
+        boxIcon: selected ? 'ph ph-check' : 'ph',
+        selectStyle: 'width:100%; font-size:13px' + (blocking ? '; border-color:var(--color-alert); color:var(--color-alert)' : ''),
+        onSelect: () => this.setState(s => ({ sel: s.sel.indexOf(e.id) === -1 ? s.sel.concat([e.id]) : s.sel.filter(x => x !== e.id) })),
+        onCategory: ev => {
+          const key = ev.target.value;
+          const c = this.cats[key];
+          const name = c ? c.name : 'nothing';
+          this.patch(
+            e.id,
+            x => Object.assign({}, x, c
+              ? {
+                cat: key,
+                cfgStart: c.os,
+                cfgEnd: c.oe,
+                start: this.toHM(this.toMin(x.calStart) + c.os),
+                end: this.toHM(this.toMin(x.calEnd) + c.oe),
+                slots: c.roles.map((r, ri) => (x.slots[ri] == null || x.slots[ri] === '' ? String(r.slots) : x.slots[ri]))
+              }
+              : { cat: key }),
+            e.title + ' set to ' + name + (c ? ', its standard shift times applied' : '')
+          );
+        },
+        onStart: ev => {
+          const v = ev.target.value;
+          const m = this.toMin(v);
+          const endM = this.toMin(e.end);
+          if (m !== null && endM !== null && max && endM - m > max) {
+            const clamped = this.toHM(endM - max);
+            this.patch(e.id, x => Object.assign({}, x, { start: clamped }), e.title + ' shift start set to ' + clamped + ', the earliest this opportunity allows');
+            return;
+          }
+          this.patch(e.id, x => Object.assign({}, x, { start: v }), e.title + ' shift start set to ' + v);
+        },
+        onEnd: ev => {
+          const v = ev.target.value;
+          const m = this.toMin(v);
+          const startM = this.toMin(e.start);
+          if (m !== null && startM !== null && max && m - startM > max) {
+            const clamped = this.toHM(startM + max);
+            this.patch(e.id, x => Object.assign({}, x, { end: clamped }), e.title + ' shift end set to ' + clamped + ', the latest this opportunity allows');
+            return;
+          }
+          this.patch(e.id, x => Object.assign({}, x, { end: v }), e.title + ' shift end set to ' + v);
+        },
+        onRemove: () => {
+          this.setState(s => ({ events: s.events.filter(x => x.id !== e.id), sel: s.sel.filter(x => x !== e.id) }));
+          this.note(e.title + ' removed from this list');
+        },
+        roles: (cat ? cat.roles : []).map((r, i) => ({
+          name: this.oppTitles[r.id] || cat.name + ': ' + r.role,
+          url: 'https://rosecity.galaxydigital.com/need/detail/?need_id=' + r.id,
+          time: 'Shift ' + shiftStart + ' to ' + shiftEnd + ' (' + len.mins + ' min)',
+          slots: String(e.slots[i]),
+          slotsPlaceholder: String(r.slots),
+          edited: String(e.slots[i]) !== String(e.orig.slots[i]),
+          onSlots: ev => {
+            const v = ev.target.value.replace(/[^0-9]/g, '').slice(0, 3);
+            this.patch(e.id, x => {
+              const slots = x.slots.slice();
+              slots[i] = v;
+              return Object.assign({}, x, { slots });
+            }, v === '' ? null : e.title + ', ' + this.oppTitles[r.id] + ' slots set to ' + v);
+          },
+          onSlotsBlur: () => {
+            const current = String(e.slots[i]);
+            if (current !== '' && current !== '0') return;
+            this.patch(e.id, x => {
+              const slots = x.slots.slice();
+              slots[i] = String(r.slots);
+              return Object.assign({}, x, { slots });
+            }, e.title + ', ' + this.oppTitles[r.id] + ' slots back to the usual ' + r.slots);
+          },
+          onUndoSlots: () => {
+            this.patch(e.id, x => {
+              const slots = x.slots.slice();
+              slots[i] = x.orig.slots[i];
+              return Object.assign({}, x, { slots });
+            }, e.title + ', ' + this.oppTitles[r.id] + ' slots back to ' + e.orig.slots[i]);
+          }
+        }))
+      });
+    });
+    groups.forEach(g => {
+      const shifts = g.events.reduce((n, ev) => n + (ev.isDuplicate ? 0 : ev.roles.length), 0);
+      const filtering = S.onlyBlocking || S.onlyFuzzy || S.query.trim() !== '';
+      const open = filtering || S.collapsed.indexOf(g.date) === -1;
+      g.open = open;
+      g.caret = open ? 'ph ph-caret-down' : 'ph ph-caret-right';
+      g.rows = g.events;
+      g.bodyStyle = open
+        ? 'display:grid; grid-template-rows:1fr; overflow:hidden; visibility:visible; transition:grid-template-rows .26s ease, visibility 0s'
+        : 'display:grid; grid-template-rows:0fr; overflow:hidden; visibility:hidden; transition:grid-template-rows .26s ease, visibility 0s linear .26s';
+      g.meta = g.events.length + (g.events.length === 1 ? ' event, ' : ' events, ') + shifts + (shifts === 1 ? ' shift' : ' shifts');
+      g.onToggle = () => this.setState(s => ({
+        collapsed: s.collapsed.indexOf(g.date) === -1 ? s.collapsed.concat([g.date]) : s.collapsed.filter(d => d !== g.date)
+      }));
+    });
+
+    const cc = this.oppCounts();
+    const counts = cc.counts;
+    const oppKeys = cc.keys;
+    const sentJustNow = !!(S.send && !S.send.busy && S.send.finishedAt && S.send.rows.every(r => r.state === 'done'));
+    const exMap = S.dupCheck.existing || {};
+    const remainingFor = {};
+    oppKeys.forEach(k => {
+      const list = exMap[k] || [];
+      remainingFor[k] = counts[k].items.filter(it => list.indexOf(it.when) === -1);
+    });
+    const exTotal = oppKeys.reduce((n, k) => n + (counts[k].items.length - remainingFor[k].length), 0);
+    const netTotal = oppKeys.reduce((n, k) => n + remainingFor[k].length, 0);
+
+    const bulkApply = fn => {
+      this.setState(s => ({ events: s.events.map(e => (s.sel.indexOf(e.id) === -1 ? e : fn(e))) }));
+    };
+
+    return {
+      resolved,
+      motionMode: String(this.props.motion || 'Subtle').toLowerCase(),
+      isEmptyApp: this.runList().length === 0,
+      isRunView: this.runList().length > 0 && (S.view === 'review' || S.view === 'dropped'),
+      isReview: S.view === 'review',
+      isDropped: S.view === 'dropped',
+      isDry: S.view === 'dry',
+      showReview: () => this.setState({ view: 'review' }),
+      showDropped: () => this.setState({ view: 'dropped', sel: [] }),
+      reviewTabStyle: S.view === 'review' ? segOn : segOff,
+      droppedTabStyle: S.view === 'dropped' ? segOn : segOff,
+      droppedCountLabel: (() => {
+        const n = this.droppedFor().length;
+        return n === 0 ? '' : String(n);
+      })(),
+      droppedGroups: ['search', 'excluded', 'allday', 'untitled'].map(key => {
+        const meta = this.droppedGroupMeta[key];
+        const rows = this.droppedFor()
+          .filter(d => d.reason === key)
+          .map(d => ({
+            title: d.title,
+            when: this.shortDate(d.date) + ' · ' + d.when,
+            titleStyle: d.reason === 'untitled'
+              ? 'font-size:13px; color:color-mix(in srgb, var(--color-text) 60%, transparent); font-style:italic'
+              : 'font-size:13px',
+            canAdd: key === 'search',
+            logged: S.dropLogged.indexOf(d.id) !== -1,
+            logLabel: S.dropLogged.indexOf(d.id) !== -1 ? 'Noted for the model' : 'Note for the model',
+            onLog: () => {
+              this.setState(s => ({ dropLogged: s.dropLogged.indexOf(d.id) === -1 ? s.dropLogged.concat([d.id]) : s.dropLogged.filter(x => x !== d.id) }));
+            },
+            onAdd: () => {
+              const e = {
+                id: d.id,
+                title: d.title,
+                date: d.date,
+                cat: '',
+                note: 'Added by hand from the not collected list.',
+                calStart: d.start,
+                calEnd: d.end,
+                cfgStart: 0,
+                cfgEnd: 0,
+                start: d.start,
+                end: d.end,
+                slots: []
+              };
+              e.orig = { cat: '', start: e.start, end: e.end, slots: [] };
+              this.setState(s => ({
+                events: s.events.concat([e]).sort((x, y) => (x.date + x.start).localeCompare(y.date + y.start)),
+                dropAdded: s.dropAdded.concat([d.id]),
+                view: 'review'
+              }));
+              this.note(d.title + ' added to this run, needs an opportunity');
+            }
+          }));
+        return { label: meta.label, note: meta.note, rows, any: rows.length > 0, count: rows.length };
+      }).filter(g => g.any),
+      noneDropped: this.droppedFor().length === 0,
+      hasNoted: S.dropLogged.length > 0,
+      notedCount: String(S.dropLogged.length),
+      notedRows: S.dropLogged.map(id => {
+        const d = (this.dropped[R.cal] || []).filter(x => x.id === id)[0];
+        const e = S.events.filter(x => x.id === id)[0];
+        if (!d && !e) return null;
+        return {
+          title: d ? d.title : e.title,
+          when: d
+            ? this.shortDate(this.shiftDate(d.date, R.shift)) + ' · ' + d.when
+            : this.shortDate(e.date) + ' · ' + e.calStart + ' to ' + e.calEnd,
+          source: d ? 'Outside the calendar search' : 'Collected, but nothing matched',
+          onRemove: () => this.setState(s => ({ dropLogged: s.dropLogged.filter(x => x !== id) }))
+        };
+      }).filter(Boolean),
+      autoStyle: S.theme === 'auto' ? segOn : segOff,
+      dayStyle: S.theme === 'day' ? segOn : segOff,
+      nightStyle: S.theme === 'night' ? segOn : segOff,
+      setAuto: () => this.setTheme('auto'),
+      setDay: () => this.setTheme('day'),
+      setNight: () => this.setTheme('night'),
+      theming: S.theming ? '1' : '0',
+      tableRef: this.measureTable,
+      tableOverflow: S.tableOverflow,
+      goSettings: () => this.setState({ view: 'settings' }),
+      leaveSettings: () => this.setState({ view: 'review' }),
+      isSettings: S.view === 'settings',
+      creds: ['amplify', 'gcal'].map(k => {
+        const c = S.creds[k];
+        const testing = S.testing === k;
+        return {
+          label: c.label + ' token',
+          envVar: (k === 'amplify' ? 'AMPLIFY_TOKEN_FILE' : 'GCAL_TOKEN_FILE') + ' → ' + c.path,
+          masked: '•••••••••••••••••••• ends ' + c.last4,
+          need: k === 'amplify'
+            ? 'Read for a preview as well as a send: the preview asks Amplify for each opportunity title.'
+            : 'Read when collecting events from a calendar.',
+          statusText: testing ? 'Checking now' : (c.ok ? 'Working, checked ' + c.checked : 'Not verified'),
+          statusIcon: testing ? 'ph ph-circle-notch' : (c.ok ? 'ph ph-check-circle' : 'ph ph-warning-circle'),
+          statusStyle: c.ok || testing ? 'color:var(--color-accent)' : 'color:var(--color-alert)',
+          audit: 'Mounted read only · read at start up · last checked ' + (c.ok ? c.checked : 'never'),
+          testNote: 'A test makes one real call, so it is allowed once a minute.',
+          testLabel: testing ? 'Checking' : 'Test',
+          testIcon: testing ? 'ph ph-circle-notch' : 'ph ph-plugs-connected',
+          testDisabled: !!S.testing,
+          onTest: () => {
+            if (S.testing) return;
+            this.setState({ testing: k });
+            clearTimeout(this.testTimer);
+            this.testTimer = setTimeout(() => {
+              this.setState(s => ({
+                testing: null,
+                creds: Object.assign({}, s.creds, { [k]: Object.assign({}, s.creds[k], { ok: true, checked: 'just now' }) })
+              }));
+            }, 900);
+          }
+        };
+      }),
+      configRows: [
+        { name: 'League time zone', value: 'America/Los_Angeles', source: 'Default' },
+        { name: 'Calendar time zone', value: 'America/Los_Angeles', source: 'Follows the league time zone' },
+        { name: 'Collection window', value: 'Supplied per run by this app', source: 'Required, no default' },
+        { name: 'Practices calendar search terms', value: 'officials, scrimmage', source: 'Default' },
+        { name: 'Events calendar search terms', value: 'Every event on the calendar', source: 'Default' },
+        { name: 'Titles never collected', value: 'canceled, cancelled, derby daze, summer camp', source: 'Fixed in the tool' },
+        { name: 'Match confidence needed', value: '80 out of 100', source: 'Default' },
+        { name: 'Amplify API', value: 'api.galaxydigital.com/api', source: 'Default' },
+        { name: 'Google Calendar API', value: 'googleapis.com/calendar/v3', source: 'Default' },
+        { name: 'Practices calendar', value: 'rosecityrollers.com_1982…@resource.calendar.google.com', source: 'Default' },
+        { name: 'Events calendar', value: 'rosecityrollers.com_2d35…@resource.calendar.google.com', source: 'Default' },
+        { name: 'Request timeout', value: '10 seconds', source: 'Default' },
+        { name: 'Retry on a transient failure', value: '3 attempts, half-second backoff', source: 'Default' }
+      ],
+      storeRows: [
+        {
+          name: 'Runs and revisions',
+          path: 'data/csv',
+          note: 'One CSV per collection, and one per revision you save. A run is opened by the id the service gave it, never by file path. Kept 90 days; a revision replaced by a re-collection is deleted at once.'
+        },
+        {
+          name: 'Sent record, run status, unmatched titles',
+          path: 'data/state.db',
+          note: 'The sent record is kept shift by shift, which is what lets a retry cover only what failed. It is never purged, because that is what stops a shift being created twice. Run status lives here too, so a send in progress survives a closed tab.'
+        },
+        {
+          name: 'Credentials',
+          path: '/run/secrets/star-pass',
+          note: 'A read-only mount, readable only by the service account and read once at start up. Replacing a token is done there and takes effect on restart, not through this app.'
+        }
+      ],
+      openDrawer: () => this.setState(s => ({ showDrawer: true, showRuns: false, showRevs: false, draftCal: s.calendar })),
+      closeDrawer: () => this.setState({ showDrawer: false }),
+      showDrawer: S.showDrawer,
+      showLog: S.showLog,
+      toggleLog: () => this.setState(s => ({ showLog: !s.showLog })),
+      goDry: () => {
+        this.setState({ view: 'dry' });
+        this.startDupCheck();
+      },
+      isSending: S.view === 'send',
+      openConfirm: () => this.setState({ confirm: true }),
+      cancelConfirm: () => this.setState({ confirm: false }),
+      confirmSend: () => this.beginSend(),
+      showConfirm: S.confirm,
+      dialogRef: this.dialogRefFn || (this.dialogRefFn = this.layerRef('dialog')),
+      drawerRef: this.drawerRefFn || (this.drawerRefFn = this.layerRef('drawer')),
+      confirmTitle: netTotal === 1 ? 'Create 1 shift in Amplify?' : 'Create ' + netTotal + ' shifts in Amplify?',
+      confirmWindow: (R.name || '') + ' · ' + (R.window || ''),
+      confirmLine: (() => {
+        const opps = oppKeys.filter(k => remainingFor[k].length).length;
+        let line = netTotal + (netTotal === 1 ? ' shift across ' : ' shifts across ') + opps + (opps === 1 ? ' opportunity.' : ' opportunities.');
+        if (exTotal) line += ' ' + (exTotal === 1 ? '1 shift already in Amplify is left out.' : exTotal + ' shifts already in Amplify are left out.');
+        line += ' Amplify is checked once more as this starts, so nothing can be created twice.';
+        return line;
+      })(),
+      confirmRows: oppKeys.filter(k => remainingFor[k].length).map(k => ({ name: counts[k].title, shifts: remainingFor[k].length })),
+      confirmButtonLabel: netTotal === 1 ? 'Create 1 shift' : 'Create ' + netTotal + ' shifts',
+      sendButtonLabel: netTotal ? (netTotal === 1 ? 'Send 1 shift to Amplify' : 'Send ' + netTotal + ' shifts to Amplify') : 'Send to Amplify',
+      dupFailed: S.dupCheck.state === 'error',
+      dupErrorText: 'Amplify did not answer the check for shifts that already exist, so sending is held back.',
+      dupRefLabel: S.copied === S.dupCheck.ref ? 'Copied' : S.dupCheck.ref,
+      copyDupRef: () => this.copyRef(S.dupCheck.ref),
+      retryDupCheck: () => this.startDupCheck(),
+      retryFailed: () => this.runSend(true),
+      sendBusy: !!(S.send && S.send.busy),
+      sendRows: (S.send ? S.send.rows : []).map(r => {
+        const map = {
+          pending: { text: 'Waiting', icon: 'ph ph-circle-dashed', style: 'font-size:15px; color:color-mix(in srgb, var(--color-text) 45%, transparent)' },
+          sending: { text: 'Sending', icon: 'ph ph-circle-notch', style: 'font-size:15px; color:var(--color-accent); animation:omSpin 1s linear infinite' },
+          done: { text: r.created + (r.created === 1 ? ' shift created' : ' shifts created'), icon: 'ph ph-check-circle', style: 'font-size:15px; color:var(--color-accent)' },
+          failed: { text: 'Failed', icon: 'ph ph-warning-circle', style: 'font-size:15px; color:var(--color-alert)' }
+        };
+        const m = map[r.state];
+        return {
+          title: r.title,
+          statusText: m.text,
+          icon: m.icon,
+          iconStyle: m.style,
+          statusStyle: 'font-size:12px; white-space:nowrap; color:' + (r.state === 'failed' ? 'var(--color-alert)' : (r.state === 'done' ? 'var(--color-accent-300)' : 'color-mix(in srgb, var(--color-text) 60%, transparent)')),
+          skipNote: r.existing ? (r.existing === 1 ? '1 already in Amplify, skipped' : r.existing + ' already in Amplify, skipped') : '',
+          error: r.error,
+          hasError: !!r.error,
+          refLabel: S.copied === r.ref ? 'Copied' : r.ref,
+          onCopyRef: () => this.copyRef(r.ref),
+          rowStyle: 'display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:12px 16px; border-radius:var(--radius-md); animation:omFadeUp .18s ease-out both; background:var(--color-surface); box-shadow:var(--shadow-sm); border-left:3px solid ' +
+            (r.state === 'failed' ? 'var(--color-alert)' : (r.state === 'done' ? 'var(--color-accent)' : 'var(--color-accent-800)'))
+        };
+      }),
+      sendProgressLabel: (() => {
+        if (!S.send) return '';
+        const done = S.send.rows.filter(r => r.state === 'done').length;
+        return done + ' of ' + S.send.rows.length + (S.send.rows.length === 1 ? ' opportunity' : ' opportunities');
+      })(),
+      sendBarStyle: (() => {
+        if (!S.send) return 'width:0%';
+        const done = S.send.rows.filter(r => r.state === 'done').length;
+        const pct = Math.round((done / S.send.rows.length) * 100);
+        return 'width:' + pct + '%; height:100%; border-radius:3px; background:var(--color-accent); transition:width .4s ease';
+      })(),
+      sendHeading: (() => {
+        if (!S.send) return 'Sending';
+        if (S.send.busy) return 'Sending to Amplify';
+        const failed = S.send.rows.filter(r => r.state === 'failed').length;
+        if (failed) return 'Partly sent';
+        return 'Everything sent';
+      })(),
+      sendSubline: (() => {
+        if (!S.send) return '';
+        if (S.send.busy) return 'One request per opportunity. Leaving this page will not stop it, and the run remembers what is left.';
+        const failed = S.send.rows.filter(r => r.state === 'failed').length;
+        const created = S.send.rows.reduce((n, r) => n + (r.state === 'done' ? r.created : 0), 0);
+        if (failed) {
+          return created + (created === 1 ? ' shift was created. ' : ' shifts were created. ') +
+            (failed === 1 ? '1 opportunity failed and created nothing' : failed + ' opportunities failed and created nothing') +
+            '. Retrying sends only those, so nothing can be created twice.';
+        }
+        return created + (created === 1 ? ' shift created at ' : ' shifts created at ') + S.send.finishedAt + '. Removing any of them has to be done in Amplify by hand.';
+      })(),
+      sendHasFailures: !!(S.send && S.send.rows.filter(r => r.state === 'failed').length > 0),
+      sendRetryLabel: (() => {
+        if (!S.send) return 'Retry';
+        const failed = S.send.rows.filter(r => r.state === 'failed').length;
+        return failed === 1 ? 'Retry the 1 that failed' : 'Retry the ' + failed + ' that failed';
+      })(),
+      hasSendStatus: !!S.send,
+      sendStatusText: (() => {
+        if (!S.send) return '';
+        const done = S.send.rows.filter(r => r.state === 'done').length;
+        if (S.send.busy) return 'Sending';
+        return done === S.send.rows.length ? 'Sent' : done + ' of ' + S.send.rows.length + ' sent';
+      })(),
+      sendStatusStyle: (() => {
+        if (!S.send) return '';
+        const done = S.send.rows.filter(r => r.state === 'done').length;
+        const all = done === S.send.rows.length && !S.send.busy;
+        return 'font-size:11px; padding:3px 9px; border-radius:20px; white-space:nowrap; background:color-mix(in srgb, ' +
+          (all ? 'var(--color-accent)' : 'var(--color-alert)') + ' 16%, transparent); color:' +
+          (all ? 'var(--color-accent-300)' : 'var(--color-alert)');
+      })(),
+      dupChecking: S.dupCheck.state === 'checking',
+      sendNotReady: blockers.length > 0 || invalidEvents.length > 0 || S.dupCheck.state !== 'done' || netTotal === 0,
+      goReview: () => this.setState({ view: 'review' }),
+      shiftCount: oppKeys.reduce((n, k) => n + counts[k].shifts, 0),
+      eventCountLabel: S.events.length === 1 ? '1 event' : S.events.length + ' events',
+      shiftCountLabel: (() => {
+        const total = oppKeys.reduce((n, k) => n + counts[k].shifts, 0);
+        return total === 1 ? '1 shift' : total + ' shifts';
+      })(),
+      visibleCount: vis.length,
+      allSelected: vis.length > 0 && vis.every(e => S.sel.indexOf(e.id) !== -1),
+      hasExisting: S.dupCheck.state === 'done' && exTotal > 0,
+      existingLabel: exTotal === 1
+        ? '1 of these shifts is already in Amplify. It will be left out when you send, and the preview says which.'
+        : exTotal + ' of these shifts are already in Amplify. They will be left out when you send, and the preview says which.',
+      hasBlockers: blockers.length > 0,
+      blockerLabel: blockers.length === 1 ? '1 event needs an opportunity' : blockers.length + ' events need an opportunity',
+      query: S.query,
+      onQuery: ev => this.setState({ query: ev.target.value }),
+      onlyBlocking: S.onlyBlocking,
+      toggleBlockingFilter: () => this.setState(s => ({ onlyBlocking: !s.onlyBlocking })),
+      blockingToggleStyle: S.onlyBlocking
+        ? 'font-size:13px; margin-left:auto; border:1px solid var(--color-alert); background:color-mix(in srgb, var(--color-alert) 22%, transparent); color:var(--color-alert)'
+        : 'font-size:13px; margin-left:auto; border:1px solid var(--color-alert); background:transparent; color:var(--color-alert)',
+      blockingToggleIcon: S.onlyBlocking ? 'ph ph-check' : 'ph ph-funnel',
+      blockingToggleLabel: S.onlyBlocking ? 'Showing only these' : 'Show only these',
+      fuzzyCount: S.events.filter(e => e.fuzzy && e.cat === e.orig.cat).length,
+      hasFuzzy: S.events.filter(e => e.fuzzy && e.cat === e.orig.cat).length > 0,      fuzzyLabel: (() => {
+        const n = S.events.filter(e => e.fuzzy && e.cat === e.orig.cat).length;
+        return n === 1
+          ? '1 event was matched by wording rather than a keyword'
+          : n + ' events were matched by wording rather than a keyword';
+      })(),
+      onlyFuzzy: S.onlyFuzzy,
+      toggleFuzzy: () => this.setState(s => ({ onlyFuzzy: !s.onlyFuzzy, onlyBlocking: false })),
+      fuzzyToggleLabel: S.onlyFuzzy ? 'Showing only these' : 'Show only these',
+      fuzzyToggleIcon: S.onlyFuzzy ? 'ph ph-check' : 'ph ph-funnel',
+      fuzzyToggleStyle: 'font-size:13px; margin-left:auto; border:1px solid var(--color-accent); color:var(--color-accent); background:' +
+        (S.onlyFuzzy ? 'color-mix(in srgb, var(--color-accent) 20%, transparent)' : 'transparent'),
+      showingLabel: (S.onlyBlocking || S.onlyFuzzy || S.query.trim() !== '')
+        ? 'Showing ' + vis.length + ' of ' + S.events.length + ' events'
+        : '',
+      filterBlocking: () => this.setState(s => ({ onlyBlocking: true, query: '', sel: s.events.filter(e => !e.cat).map(e => e.id) })),
+      clearFilters: () => this.setState({ query: '', onlyBlocking: false, onlyFuzzy: false }),
+      isEmpty: vis.length === 0,
+      groups,
+      categoryOptions: Object.keys(this.cats).filter(k => this.cats[k].cal === S.calendar).map(k => ({ value: k, label: this.cats[k].name })),
+      editLabel: S.log.length === 1 ? '1 change' : S.log.length + ' changes',
+      log: S.log,
+      hasSelection: S.sel.length > 0,
+      noSelection: S.sel.length === 0,
+      selectionLabel: S.sel.length + (S.sel.length === 1 ? ' event selected' : ' events selected'),
+      clearSelection: () => this.setState({ sel: [] }),
+      toggleAll: () => {
+        const ids = vis.map(e => e.id);
+        const allOn = ids.length > 0 && ids.every(id => S.sel.indexOf(id) !== -1);
+        this.setState({ sel: allOn ? [] : ids });
+      },
+      bulkCategoryValue: '',
+      onBulkCategory: ev => {
+        const key = ev.target.value;
+        if (!key) return;
+        const c = this.cats[key];
+        bulkApply(e => Object.assign({}, e, {
+          cat: key,
+          cfgStart: c.os,
+          cfgEnd: c.oe,
+          start: this.toHM(this.toMin(e.calStart) + c.os),
+          end: this.toHM(this.toMin(e.calEnd) + c.oe),
+          slots: c.roles.map((r, ri) => (e.slots[ri] == null || e.slots[ri] === '' ? String(r.slots) : e.slots[ri]))
+        }));
+        this.note(S.sel.length + ' events set to ' + c.name + ', its standard shift times applied');
+      },
+      shiftEarlier: () => this.nudge(-15),
+      shiftLater: () => this.nudge(15),
+      resetSlots: () => this.resetSlots(),
+      deleteSelected: () => {
+        this.setState(s => ({ events: s.events.filter(e => s.sel.indexOf(e.id) === -1), sel: [] }));
+        this.note(S.sel.length + ' events removed from this list');
+      },
+      runLabel: (R.name || 'No run') + (R.window ? ' · ' + R.window : ''),
+      runIsSent: R.status === 'sent' || sentJustNow,
+      runSentNote: sentJustNow
+        ? 'Every shift in this run was sent at ' + S.send.finishedAt + '. Editing it now changes nothing in Amplify, and sending again would create duplicates.'
+        : 'Every shift in this run was sent on ' + (R.sentAt || '') + '. Editing it now changes nothing in Amplify.',
+      showRuns: S.showRuns,
+      toggleRuns: () => this.setState(s => ({ showRuns: !s.showRuns, showRevs: false })),
+      isCollecting: S.view === 'collecting',
+      collectRunRef: S.collect ? S.collect.ref : '',
+      collectStartedNote: S.collect ? 'Started ' + S.collect.startedAt + ' · the service assigned this id, and it stays with the run' : '',
+      collectFailed: !!(S.collect && S.collect.error),
+      collectErrorText: S.collect && S.collect.error ? S.collect.error.text : '',
+      collectRefLabel: S.collect && S.collect.error ? (S.copied === S.collect.error.ref ? 'Copied' : S.collect.error.ref) : '',
+      copyCollectRef: () => { if (S.collect && S.collect.error) this.copyRef(S.collect.error.ref); },
+      retryCollect: () => this.retryCollect(),
+      leaveCollect: () => this.leaveCollect(),
+      collectSteps: (S.collect ? S.collect.steps : []).map(st => ({
+        label: st.label,
+        detail: st.detail,
+        icon: st.state === 'done'
+          ? 'ph ph-check-circle'
+          : (st.state === 'running' ? 'ph ph-circle-notch' : (st.state === 'failed' ? 'ph ph-warning-circle' : 'ph ph-circle-dashed')),
+        iconStyle: st.state === 'done'
+          ? 'font-size:15px; color:var(--color-accent)'
+          : (st.state === 'running'
+            ? 'font-size:15px; color:var(--color-accent); animation:omSpin 1s linear infinite'
+            : (st.state === 'failed'
+              ? 'font-size:15px; color:var(--color-alert)'
+              : 'font-size:15px; color:color-mix(in srgb, var(--color-text) 40%, transparent)')),
+        rowStyle: 'display:flex; align-items:center; gap:13px; padding:12px 16px; border-radius:var(--radius-md); animation:omFadeUp .18s ease-out both; background:var(--color-surface); box-shadow:var(--shadow-sm); border-left:3px solid ' +
+          (st.state === 'done' ? 'var(--color-accent)' : (st.state === 'failed' ? 'var(--color-alert)' : 'var(--color-accent-800)'))
+      })),
+      collectTitle: 'Collecting from the ' + ((S.draftCal || S.calendar) === 'events' ? 'Events' : 'Practices') + ' calendar',
+      collectSubline: 'Nothing is sent to Amplify by a collection. You can leave this page and come back to it, and when it finishes the new run opens for review.',
+      collectBusy: !!(S.collect && S.collect.busy),
+      startCollect: () => this.startCollect(),
+      cancelCollect: () => this.cancelCollect(),
+      runsList: (S.collect && S.collect.busy ? [{
+        label: ((S.draftCal || S.calendar) === 'events' ? 'Events' : 'Practices') + ' · collecting now',
+        meta: 'Started ' + S.collect.startedAt + ' · ' + S.collect.ref,
+        statusText: 'Collecting',
+        statusStyle: 'font-size:10px; padding:2px 8px; border-radius:20px; white-space:nowrap; background:color-mix(in srgb, var(--color-accent) 16%, transparent); color:var(--color-accent-300)',
+        rowStyle: 'display:flex; align-items:center; gap:12px; width:100%; padding:9px 11px; cursor:pointer; text-align:left; border:0; border-radius:6px; font:inherit; color:inherit; background:transparent',
+        onOpen: () => this.setState({ view: 'collecting', showRuns: false })
+      }] : []).concat(this.runList().map(r => ({
+        label: r.name + ' · ' + r.window,
+        meta: 'Collected ' + r.collected + ' · ' + r.events + (r.events === 1 ? ' event' : ' events'),
+        statusText: r.status === 'sent' ? 'Sent' : 'Not sent',
+        statusStyle: r.status === 'sent'
+          ? 'font-size:10px; padding:2px 8px; border-radius:20px; white-space:nowrap; background:color-mix(in srgb, var(--color-accent) 16%, transparent); color:var(--color-accent-300)'
+          : 'font-size:10px; padding:2px 8px; border-radius:20px; white-space:nowrap; box-shadow:inset 0 0 0 1px var(--color-divider); color:color-mix(in srgb, var(--color-text) 62%, transparent)',
+        rowStyle: 'display:flex; align-items:center; gap:12px; width:100%; padding:9px 11px; cursor:pointer; text-align:left; border:0; border-radius:6px; font:inherit; color:inherit; background:' +
+          (r.id === S.runId ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'transparent'),
+        onOpen: () => this.openRun(r.id)
+      }))),
+      showRevs: S.showRevs,
+      toggleRevs: () => this.setState(s => ({ showRevs: !s.showRevs, showRuns: false })),
+      revLabel: 'Revision ' + S.revs[S.revs.length - 1].n + ' of ' + S.revs.length,
+      revsList: S.revs.slice().reverse().map((r, i) => ({
+        title: i === 0 ? 'Revision ' + r.n + ', editing now' : 'Revision ' + r.n + (r.n === 1 ? ', as collected' : ''),
+        meta: (i === 0 ? 'Started ' + r.at + ' · ' : r.at + ' · ') + (i === 0 ? S.log.length : r.changes) + ((i === 0 ? S.log.length : r.changes) === 1 ? ' change' : ' changes'),
+        canRevert: i !== 0,
+        onRevert: () => this.revertTo(r.n)
+      })),
+      saveRevision: () => this.cutRevision(),
+      recollectRisk: S.log.length > 0,
+      recollectRiskNote: S.log.length === 1
+        ? 'Collecting again replaces this run. 1 change you have made will be deleted, along with earlier revisions.'
+        : 'Collecting again replaces this run. ' + S.log.length + ' changes you have made will be deleted, along with earlier revisions.',
+      collectLabel: S.log.length > 0 ? 'Replace and collect' : 'Collect events',
+      calendar: S.calendar,
+      showOffsetHelp: S.calendar === 'events',
+      hideOffsetHelp: S.calendar !== 'events',
+      tzNote: 'These are league dates, in Portland time — not your device\u2019s time zone. The service reads them the same way the command line does.',
+      runMeta: sentJustNow
+        ? 'Collected ' + R.collected + ' · sent ' + S.send.finishedAt
+        : (R.status === 'sent'
+          ? 'Collected ' + R.collected + ' · sent ' + R.sentAt
+          : 'Collected ' + R.collected + ', changes save as you make them'),
+      eventsCalStyle: (S.draftCal || S.calendar) === 'events' ? 'flex:1; justify-content:center; ' + segOn : 'flex:1; justify-content:center; ' + segOff,
+      practicesCalStyle: (S.draftCal || S.calendar) === 'practices' ? 'flex:1; justify-content:center; ' + segOn : 'flex:1; justify-content:center; ' + segOff,
+      pickEvents: () => this.setState({ draftCal: 'events' }),
+      pickPractices: () => this.setState({ draftCal: 'practices' }),
+      winStart: S.winStart || this.monthWindow(0).start,
+      winEnd: S.winEnd || this.monthWindow(0).end,
+      onWinStart: ev => this.setState({ winStart: ev.target.value, preset: 'custom' }),
+      onWinEnd: ev => this.setState({ winEnd: ev.target.value, preset: 'custom' }),
+      windowPresets: [
+        { key: 'this', label: 'This month' },
+        { key: 'next', label: 'Next month' },
+        { key: 'custom', label: 'Custom' }
+      ].map(p => ({
+        label: p.label,
+        style: S.preset === p.key ? segOn : segOff,
+        onPick: () => {
+          if (p.key === 'custom') {
+            this.setState({ preset: 'custom' });
+            return;
+          }
+          const w = this.monthWindow(p.key === 'next' ? 1 : 0);
+          this.setState({ preset: p.key, winStart: w.start, winEnd: w.end });
+        }
+      })),
+      windowSummary: (() => {
+        const a = S.winStart || this.monthWindow(0).start;
+        const b = S.winEnd || this.monthWindow(0).end;
+        const n = this.spanDays(a, b);
+        if (n <= 0) return '';
+        return this.longDate(a) + ' to ' + this.longDate(b) + ' · ' + n + ' days, last day included';
+      })(),
+      windowEnvLine: (() => {
+        const a = S.winStart || this.monthWindow(0).start;
+        const b = S.winEnd || this.monthWindow(0).end;
+        return 'GCAL_WINDOW_START=' + a + '   GCAL_WINDOW_END=' + this.dayAfter(b);
+      })(),
+      windowBad: this.spanDays(S.winStart || this.monthWindow(0).start, S.winEnd || this.monthWindow(0).end) < 1,
+      searchNote: (S.draftCal || S.calendar) === 'practices'
+        ? 'Only events whose title contains "officials" or "scrimmage" are collected from the Practices calendar.'
+        : 'Every event on the Events calendar is collected.',
+      skipNote: 'Titles containing canceled, cancelled, derby daze or summer camp are never collected, and neither are all-day or untitled events. They are listed after the collection.',
+      dryLine: (() => {
+        const shifts = netTotal;
+        const matched = S.events.filter(e => this.cats[e.cat] && !dupes[e.id]).length;
+        let line = shifts + (shifts === 1 ? ' shift' : ' shifts') + ' across ' + oppKeys.length +
+          (oppKeys.length === 1 ? ' opportunity' : ' opportunities') + ', from ' + matched +
+          (matched === 1 ? ' event.' : ' events.');
+        if (blockers.length) {
+          line += ' ' + (blockers.length === 1
+            ? '1 event still needs an opportunity and is not included.'
+            : blockers.length + ' events still need an opportunity and are not included.');
+        }
+        if (exTotal) {
+          line += ' ' + (exTotal === 1
+            ? '1 shift is already in Amplify and is left out of that count.'
+            : exTotal + ' shifts are already in Amplify and are left out of that count.');
+        }
+        if (dupCount) {
+          line += ' ' + (dupCount === 1
+            ? '1 repeated row is left out, because it would create the same shift twice.'
+            : dupCount + ' repeated rows are left out, because they would create the same shifts twice.');
+        }
+        return line;
+      })(),
+      dryRows: oppKeys.map(k => {
+        const remaining = remainingFor[k];
+        const ex = counts[k].items.length - remaining.length;
+        const dates = remaining.map(it => it.when.split(' ')[0]).sort();
+        return {
+          name: counts[k].title,
+          from: Object.keys(counts[k].from).length > 1
+            ? Object.keys(counts[k].from).map(n => n + ' ' + counts[k].from[n]).join('  ·  ')
+            : '',
+          existingNote: ex
+            ? (ex === 1 ? '1 identical shift is already in Amplify, so it will be skipped' : ex + ' identical shifts are already in Amplify, so they will be skipped')
+            : '',
+          shifts: remaining.length,
+          slots: remaining.reduce((n, it) => n + it.slots, 0),
+          dates: dates.length
+            ? (dates[0] === dates[dates.length - 1]
+              ? this.shortDate(dates[0])
+              : this.shortDate(dates[0]) + ' to ' + this.shortDate(dates[dates.length - 1]))
+            : 'nothing left to create'
+        };
+      }),
+      sendBlocked: blockers.length > 0 || invalidEvents.length > 0 || (S.dupCheck.state === 'done' && netTotal === 0),
+      sendBlockedReason: (() => {
+        if (S.dupCheck.state === 'done' && netTotal === 0) {
+          return 'Every shift in this run is already in Amplify. There is nothing left to send.';
+        }
+        const parts = [];
+        if (blockers.length) parts.push(blockers.length === 1 ? '1 event has no opportunity' : blockers.length + ' events have no opportunity');
+        if (invalidEvents.length) parts.push(invalidEvents.length === 1 ? '1 shift ends before it starts' : invalidEvents.length + ' shifts end before they start');
+        if (!parts.length) return '';
+        return parts.join(', and ') + ', so nothing can be sent. Go back and resolve them.';
+      })(),
+      checks: (() => {
+        const ok = 'color:var(--color-accent)';
+        const bad = 'color:var(--color-alert)';
+        const trimmed = trimmedEvents;
+        const invalid = invalidEvents;
+        const list = [];
+        list.push(S.dupCheck.state === 'checking'
+          ? { text: 'Checking Amplify for shifts that already exist', icon: 'ph ph-circle-notch', style: ok + '; animation:omSpin 1s linear infinite' }
+          : (S.dupCheck.state === 'error'
+            ? { text: 'Amplify could not be checked for shifts that already exist', icon: 'ph ph-warning-circle', style: bad }
+            : (exTotal
+              ? {
+                text: exTotal === 1
+                  ? '1 of these shifts is already in Amplify and will be skipped'
+                  : exTotal + ' of these shifts are already in Amplify and will be skipped',
+                icon: 'ph ph-info',
+                style: ok
+              }
+              : { text: 'None of these shifts is in Amplify yet', icon: 'ph ph-check-circle', style: ok })));
+        list.push(blockers.length
+          ? { text: blockers.length === 1 ? '1 event still needs an opportunity' : blockers.length + ' events still need an opportunity', icon: 'ph ph-warning-circle', style: bad }
+          : { text: 'Every event has an opportunity', icon: 'ph ph-check-circle', style: ok });
+        list.push(invalid.length
+          ? { text: invalid.length === 1 ? '1 shift ends before it starts' : invalid.length + ' shifts end before they start', icon: 'ph ph-warning-circle', style: bad }
+          : { text: 'Every shift ends after it starts', icon: 'ph ph-check-circle', style: ok });
+        list.push(dupCount
+          ? {
+            text: dupCount === 1
+              ? '1 repeated row will not be created twice'
+              : dupCount + ' repeated rows will not be created twice',
+            icon: 'ph ph-copy',
+            style: ok
+          }
+          : { text: 'No repeated rows', icon: 'ph ph-check-circle', style: ok });
+        const trimmedShifts = trimmed.reduce((n, e) => n + this.cats[e.cat].roles.length, 0);
+        list.push(trimmedShifts
+          ? {
+            text: trimmedShifts === 1
+              ? '1 shift will be created shorter than its calendar length, to fit its opportunity'
+              : trimmedShifts + ' shifts will be created shorter than their calendar length, to fit their opportunity',
+            icon: 'ph ph-info',
+            style: ok
+          }
+          : { text: 'Every shift fits the length its opportunity allows', icon: 'ph ph-check-circle', style: ok });
+        list.push({
+          text: S.log.length === 1 ? '1 change recorded in this review' : S.log.length + ' changes recorded in this review',
+          icon: 'ph ph-clock-counter-clockwise',
+          style: ok
+        });
+        return list;
+      })()
+    };
+  }
+}
+</script>
+</body>
+</html>
