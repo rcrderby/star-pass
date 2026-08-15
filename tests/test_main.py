@@ -176,9 +176,11 @@ class TestMainRunModeDispatch:
             )
         # Dry run by default; channel falls back to the configured value
         # (None in the test environment).
-        app_main.SlackNotifier.assert_called_once_with(
-            channel=None,
-            check_mode=True
+        kwargs = app_main.SlackNotifier.call_args.kwargs
+        assert kwargs['channel'] is None
+        assert kwargs['check_mode'] is True
+        assert isinstance(
+            kwargs['reporter'], app_main.TerminalReporter
         )
         app_main.SlackNotifier.return_value.post_summary \
             .assert_called_once()
@@ -200,9 +202,11 @@ class TestMainRunModeDispatch:
                 need_ids=['5'], title='Custom', days=3,
                 start_in_days=None
             )
-        app_main.SlackNotifier.assert_called_once_with(
-            channel='C999',
-            check_mode=False
+        kwargs = app_main.SlackNotifier.call_args.kwargs
+        assert kwargs['channel'] == 'C999'
+        assert kwargs['check_mode'] is False
+        assert isinstance(
+            kwargs['reporter'], app_main.TerminalReporter
         )
 
 

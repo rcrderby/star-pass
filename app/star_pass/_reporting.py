@@ -154,6 +154,41 @@ class Reporter:
 
         return None
 
+    def slack_dry_run(
+            self,
+            payload: List[Dict[str, Any]]
+    ) -> None:
+        """ A Slack post was prepared but not sent.
+
+            The payload is passed rather than a rendering of it: what a
+            dry run is for is seeing what would have been posted, and
+            how to show that is the renderer's decision.
+
+            Args:
+                payload (List[Dict[str, Any]]):
+                    The Block Kit blocks that would have been posted.
+
+            Returns:
+                None.
+        """
+
+        return None
+
+    def summary_skipped(self) -> None:
+        """ There was nothing in the window, so nothing was posted.
+
+            Routine rather than an error: the summary covers a short day
+            window, and an empty one means a day with nothing scheduled.
+
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        return None
+
     def shifts_sent(
             self,
             *,
