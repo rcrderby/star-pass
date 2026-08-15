@@ -151,6 +151,41 @@ class TerminalReporter(Reporter):
 
         return None
 
+    def calendar_read_started(self) -> None:
+        """ Announce the calendar read.
+
+            Args:
+                None.
+
+            Returns:
+                None.
+        """
+
+        self._started = True
+        helpers.printer(
+            message='\nReading data from the Google Calendar service...'
+        )
+
+        return None
+
+    def csv_written(
+            self,
+            path: str
+    ) -> None:
+        """ Name the file the run produced.
+
+            Args:
+                path (str):
+                    Full path to the file that was written.
+
+            Returns:
+                None.
+        """
+
+        helpers.printer(message=f'\nWrote CSV data to "{path}"\n')
+
+        return None
+
     def sending_started(self) -> None:
         """ Announce the send.
 
@@ -591,7 +626,8 @@ def _run(
         )
         # Create GCALData object
         GCALData(
-            gcal_name=args.gcal_name
+            gcal_name=args.gcal_name,
+            reporter=TerminalReporter()
         )
 
     # Run the application in 'create_amplify_shifts' mode

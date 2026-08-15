@@ -21,6 +21,7 @@ import pytest
 from star_pass import gcal_data
 from star_pass._exceptions import ValidationError
 from star_pass._helpers import Helpers
+from star_pass._reporting import Reporter
 from star_pass.gcal_data import GCALData, get_gcal_time_window
 
 
@@ -488,6 +489,93 @@ class TestCollectionPipeline:
         csv_text = self._run_pipeline(monkeypatch, tmp_path, items)
 
         assert 'GNR v HH' in csv_text
+
+
+class TestCollectionReporting:
+    # The run reports what it is doing to whatever the caller supplies.
+    # The text those events produce is pinned in
+    # tests/test_terminal_reporter.py; what matters here is that the
+    # pipeline emits them, in order, and names the file it wrote.
+
+    class RecordingReporter(Reporter):
+        """ Record the event sequence instead of displaying it. """
+
+        def __init__(self) -> None:
+            self.events = []
+            self.csv_path = None
+
+        def calendar_read_started(self) -> None:
+            self.events.append('read')
+
+        def step_started(self, label: str) -> None:
+            self.events.append(f'start:{label}')
+
+        def step_finished(self) -> None:
+            self.events.append('finish')
+
+        def csv_written(self, path: str) -> None:
+            self.events.append('written')
+            self.csv_path = path
+
+    @staticmethod
+    def _serve_one_event(monkeypatch, tmp_path):
+        # One page holding one usable event, written to tmp_path, with
+        # no network call.
+        monkeypatch.setattr(gcal_data, 'INPUT_DIR_PATH', tmp_path)
+        pages = iter([_mock_response({'items': [
+            _timed_item(
+                'GNR v HH',
+                '2099-01-05T18:00:00-08:00',
+                '2099-01-05T20:00:00-08:00'
+            )
+        ]})])
+        monkeypatch.setattr(
+            Helpers,
+            'send_api_request',
+            lambda _self, **_kwargs: next(pages)
+        )
+
+    def test_the_pipeline_reports_every_step_in_order(
+        self, monkeypatch, tmp_path
+    ):
+        self._serve_one_event(monkeypatch, tmp_path)
+
+        reporter = self.RecordingReporter()
+        GCALData(gcal_name='events', reporter=reporter)
+
+        # Filtering precedes processing: an unusable event is dropped
+        # before anything tries to build a shift from it.
+        assert reporter.events == [
+            'read',
+            'start:Filtering event data', 'finish',
+            'start:Processing Google Calendar event data', 'finish',
+            'start:Converting Google Calendar events to Amplify shifts',
+            'finish',
+            'start:Writing Amplify shift data to a CSV file', 'finish',
+            'written'
+        ]
+
+    def test_the_reported_path_is_the_file_that_was_written(
+        self, monkeypatch, tmp_path
+    ):
+        self._serve_one_event(monkeypatch, tmp_path)
+
+        reporter = self.RecordingReporter()
+        GCALData(gcal_name='events', reporter=reporter)
+
+        written = list(tmp_path.glob('gcal_shifts_*.csv'))
+        assert reporter.csv_path == str(written[0])
+
+    def test_a_run_with_no_reporter_still_completes(
+        self, monkeypatch, tmp_path
+    ):
+        # The default discards events, so a caller that only wants the
+        # CSV file passes nothing.
+        self._serve_one_event(monkeypatch, tmp_path)
+
+        GCALData(gcal_name='events')
+
+        assert len(list(tmp_path.glob('gcal_shifts_*.csv'))) == 1
 
 
 class TestGetGcalShiftData:
