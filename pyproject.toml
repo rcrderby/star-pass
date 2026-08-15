@@ -51,15 +51,16 @@ requires-python = ">= 3.12"
 [project.urls]
 Repository = "https://github.com/rcrderby/star-pass.git"
 
-[tool.setuptools]
-# Declare the packages explicitly.  Automatic flat-layout discovery
-# fails on this repository ("Multiple top-level packages discovered in
-# a flat-layout: ['app', 'data', 'models']") because the data and model
-# directories sit alongside the import root.
-packages = [
-  "app",
-  "app.star_pass"
-]
+[tool.setuptools.packages.find]
+# Find the packages under the import root rather than listing them.
+# Automatic flat-layout discovery fails on this repository ("Multiple
+# top-level packages discovered in a flat-layout: ['app', 'data',
+# 'models']") because the data and model directories sit alongside the
+# import root, so discovery is pointed at 'app' and everything below
+# it.  Discovery rather than a written list because a list has to be
+# extended whenever a subpackage is added, and a build that misses one
+# still succeeds -- the package is simply absent from the wheel.
+include = ["app", "app.*"]
 
 [tool.setuptools.dynamic]
 # 'readme' is declared statically in [project] above, so it must not be
