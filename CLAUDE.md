@@ -23,10 +23,23 @@ through the Amplify API. It is run once per month.
   (`CreateShifts`).
 - `app/star_pass/_helpers.py` — shared helpers (`Helpers`), including
   `send_api_request`.
-- `app/star_pass/_defaults.py` — central configuration and constants.
+- `app/star_pass/_defaults.py` — central configuration and constants,
+  including the data-model file paths.
+- `app/star_pass/_models.py` — reads `shift_info.yml` and
+  `slack_role_labels.yml` on first use and caches them
+  (`get_shifts_info`, `get_slack_role_labels`). Separate from
+  `_defaults` because `_logging` reads its level from `_defaults`, so a
+  reader there could not log without an import cycle.
+- `app/star_pass/_exceptions.py` — `StarPassError` and the three
+  subclasses the core raises: `ConfigurationError`, `ValidationError`,
+  `UpstreamError`. The core raises; the CLI decides the exit code.
+- `app/star_pass/_reporting.py` — `Reporter`, which accepts progress
+  and result events and discards them. The default, so the core runs
+  unobserved; the CLI passes `TerminalReporter` from `__main__.py`.
 - `app/star_pass/_logging.py` — package logger setup (`get_logger`);
   level via the `LOG_LEVEL` environment variable. Diagnostics and status
-  flow through `logging`; report data still uses `Helpers.printer`.
+  flow through `logging`; report data goes to the caller's
+  `Reporter` (`app/star_pass/_reporting.py`), which the CLI renders.
 - `app/star_pass/_validation.py` — shift input file checks, run before
   the transformation pipeline.
 - `models/shift_info.yml` — shift data model: per calendar, `categories`
@@ -121,6 +134,10 @@ The notes below are the ones that are not obvious from the commands.
 - Check mode (`-C true`) does not create or send anything, but it is not
   request-free: the shift preview reads each opportunity title with a
   `GET /needs/{id}`, so `AMPLIFY_TOKEN` is required in both modes.
+- The core neither prints nor exits. It returns values and raises the
+  typed exceptions above; display and process control belong to the
+  client. Do not add a `print`, a `sys.exit`, or argument parsing under
+  `app/star_pass/`.
 - Prefer failing loudly over dropping data. A row that cannot become a
   correct shift stops the run and is named, rather than being skipped:
   a missing shift is invisible, and the operator only discovers it when
