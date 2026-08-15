@@ -71,4 +71,12 @@ jobs:
           # Language-specific configuration
           YAML_ERROR_ON_WARNING: true
           # Exclusions
-          FILTER_REGEX_EXCLUDE: .*\.devcontainer/devcontainer\.json$
+          # 'docs/design' holds a received design handoff: planning
+          # documents, an API surface sketch, and the authoring files
+          # behind a prototype.  They are a record of what was decided,
+          # so they are kept as delivered rather than rewritten to this
+          # repository's prose and formatting rules.  Per-validator
+          # excludes are not honored by this version, so the exclusion
+          # is global; GITLEAKS scans the repository rather than the
+          # filtered file list, so the directory stays covered by it.
+          FILTER_REGEX_EXCLUDE: (.*\.devcontainer/devcontainer\.json$|.*docs/design/.*)
