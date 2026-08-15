@@ -53,6 +53,7 @@ jobs:
           import star_pass.amplify_shifts
           import star_pass.gcal_data
           import star_pass.slack_notify
+          import star_pass_api
           print('All star_pass modules imported.')
           "
 
