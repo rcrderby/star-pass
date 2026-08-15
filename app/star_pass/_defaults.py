@@ -120,6 +120,33 @@ JSON_SCHEMA_SHIFT_FILE = Path.joinpath(
 INPUT_FILE_EXTENSION = '.csv'
 OUTPUT_FILE_EXTENSION = '.json'
 
+# SQLite database file path.  Holds the state the repository layer
+# owns: runs, the revisions of each one, their events and the change
+# log.  Named by an environment variable because it is an attached
+# resource (twelve-factor), so a deployment points it at a mounted
+# volume without a code change.
+DATABASE_FILE = Path(
+    getenv(
+        'STAR_PASS_DATABASE_PATH',
+        str(
+            Path.joinpath(
+                DATA_DIR_PATH,
+                'star_pass.db'
+            )
+        )
+    )
+)
+# Seconds a statement waits for another connection to release its lock
+# before giving up.  SQLite takes one writer at a time, so a wait is
+# ordinary rather than a fault; failing immediately would turn two
+# overlapping requests into an error the caller has to retry.
+DATABASE_BUSY_TIMEOUT = float(
+    getenv(
+        'STAR_PASS_DATABASE_BUSY_TIMEOUT',
+        '5'
+    )
+)
+
 # HTTP request configuration
 BASE_HEADERS = {
     'Accept': 'application/json',

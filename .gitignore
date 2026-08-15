@@ -153,3 +153,10 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# star-pass database
+# The write-ahead log and shared-memory files sit beside the database
+# and are as much local state as it is.
+data/*.db
+data/*.db-shm
+data/*.db-wal

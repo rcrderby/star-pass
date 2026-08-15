@@ -7,6 +7,9 @@
 
 # Imports - Python Standard Library
 import os
+import sqlite3
+from pathlib import Path
+from typing import Any, Callable, Iterator
 
 # Imports - Third-Party
 import dotenv
@@ -39,10 +42,124 @@ os.environ.setdefault('GCAL_WINDOW_END', '2099-01-31T00:00:00-00:00')
 import pytest  # noqa: E402
 
 # Imports - Local
+from star_pass._database import connect  # noqa: E402
 from star_pass._helpers import Helpers  # noqa: E402
+from star_pass._records import Event, EventRole, Opportunity  # noqa: E402
+from star_pass._repository import (  # noqa: E402
+    ChangeLogRepository,
+    EventRepository,
+    RevisionRepository,
+    RunRepository
+)
 
 
 @pytest.fixture
 def helpers() -> Helpers:
     """ Return a fresh Helpers instance for each test. """
     return Helpers()
+
+
+@pytest.fixture(name='database_path')
+def fixture_database_path(tmp_path: Path) -> Path:
+    """ Return a path for a database that does not exist yet. """
+    return tmp_path / 'state' / 'star_pass.db'
+
+
+@pytest.fixture(name='connection')
+def fixture_connection(database_path: Path) -> Iterator[sqlite3.Connection]:
+    """ Return a connection to an empty database of this test's own. """
+    open_connection = connect(path=database_path)
+    yield open_connection
+    open_connection.close()
+
+
+@pytest.fixture(name='runs')
+def fixture_runs(connection: sqlite3.Connection) -> RunRepository:
+    """ Return a run repository on the test's database. """
+    return RunRepository(connection=connection)
+
+
+@pytest.fixture(name='revisions')
+def fixture_revisions(connection: sqlite3.Connection) -> RevisionRepository:
+    """ Return a revision repository on the test's database. """
+    return RevisionRepository(connection=connection)
+
+
+@pytest.fixture(name='events')
+def fixture_events(connection: sqlite3.Connection) -> EventRepository:
+    """ Return an event repository on the test's database. """
+    return EventRepository(connection=connection)
+
+
+@pytest.fixture(name='change_log')
+def fixture_change_log(connection: sqlite3.Connection) -> ChangeLogRepository:
+    """ Return a change log repository on the test's database. """
+    return ChangeLogRepository(connection=connection)
+
+
+@pytest.fixture(name='run_id')
+def fixture_run_id(runs: RunRepository) -> str:
+    """ Return the ID of a run stored with a one-month window. """
+    return runs.create(
+        calendar='practices',
+        window_start='2026-09-01',
+        window_end='2026-10-01'
+    ).id
+
+
+@pytest.fixture(name='revision')
+def fixture_revision(
+    revisions: RevisionRepository,
+    run_id: str
+) -> int:
+    """ Return the number of a first, empty revision of the run. """
+    return revisions.create(
+        run_id=run_id,
+        label='As collected'
+    ).number
+
+
+@pytest.fixture(name='make_event')
+def fixture_make_event() -> Callable[..., Event]:
+    """ Return a factory building an event, with fields overridable. """
+
+    def build(**overrides: Any) -> Event:
+        """ Return an event, replacing any field named in 'overrides'. """
+        fields: dict = {
+            'id': 'event-1',
+            'title': 'Adult Scrimmages',
+            'date': '2026-09-03',
+            'calendar_start': '19:00',
+            'calendar_end': '21:00',
+            'shift_start': '19:15',
+            'shift_end': '21:30',
+            'category': 'scrimmage',
+            'roles': (EventRole(need_id='905196', slots=4),)
+        }
+        fields.update(overrides)
+
+        return Event(**fields)
+
+    return build
+
+
+@pytest.fixture(name='make_opportunity')
+def fixture_make_opportunity() -> Callable[..., Opportunity]:
+    """ Return a factory building an opportunity, fields overridable. """
+
+    def build(**overrides: Any) -> Opportunity:
+        """ Return an opportunity, replacing any overridden field. """
+        fields: dict = {
+            'need_id': '905196',
+            'title': 'Adult Scrimmages: Skating Officials',
+            'url': 'https://example.test/need/detail/905196',
+            'max_length': 240,
+            'offset_start': 15,
+            'offset_end': 30,
+            'default_slots': 4
+        }
+        fields.update(overrides)
+
+        return Opportunity(**fields)
+
+    return build
