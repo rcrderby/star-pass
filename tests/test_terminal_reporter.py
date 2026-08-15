@@ -6,9 +6,8 @@
     says.
 
     'app/__main__.py' is normally executed as a script, so it is loaded
-    by file path.  Unlike the entry-point tests, the module's real
-    'helpers' is left in place: 'printer' writing to the real stdout is
-    what capsys captures.
+    by file path.  The renderer writes to the real stdout, which is what
+    capsys captures.
 """
 # pylint: disable=missing-function-docstring,missing-class-docstring
 # pylint: disable=redefined-outer-name
