@@ -2,9 +2,7 @@
 """ Amplify shift management classes and methods. """
 
 # Imports - Python Standard Library
-from copy import copy
 from json import load
-from os import getenv
 from pathlib import Path
 from typing import Any, Dict
 
@@ -19,25 +17,18 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 # Imports - Local
 from . import _defaults
 from ._exceptions import ValidationError
-from ._helpers import Helpers, load_env_file
+from ._helpers import amplify_headers, Helpers, load_env_file
 from ._reporting import Reporter, ShiftBatch
 from ._logging import get_logger
+from ._opportunities import read_title
 from ._validation import validate_shift_columns, validate_shift_need_ids
 
 # Load environment variables
 load_env_file()
 
 # Constants
-# Authentication
-AMPLIFY_TOKEN = getenv(
-    key='AMPLIFY_TOKEN'
-)
-
 # HTTP request configuration
-BASE_AMPLIFY_HEADERS = copy(_defaults.BASE_HEADERS)
-BASE_AMPLIFY_HEADERS.update(
-    {'Authorization': f'Bearer {AMPLIFY_TOKEN}'}
-)
+BASE_AMPLIFY_HEADERS = amplify_headers()
 BASE_AMPLIFY_URL = _defaults.BASE_AMPLIFY_URL
 HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
@@ -724,36 +715,11 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                     Opportunity title.
         """
 
-        # Set HTTP request variables
-        method = 'GET'
-        headers = BASE_AMPLIFY_HEADERS
-
-        # Construct URL and JSON payload
-        url = f'{BASE_AMPLIFY_URL}/needs/{need_id}'
-
-        # Construct API request data
-        api_request_data = {
-            'method': method,
-            'url': url,
-            'headers': headers,
-            'json': None,
-            'timeout': timeout
-        }
-
-        # Send API request
-        response = self.helpers.send_api_request(
-            api_request_data=api_request_data,
-            display_request_status=False
+        return read_title(
+            helpers=self.helpers,
+            need_id=need_id,
+            timeout=timeout
         )
-
-        # Parse opportunity title from response (guarding a non-JSON
-        # body and a missing 'data' key)
-        response_data = self.helpers.response_json(response)
-        opp_title = response_data.get('data', {}).get(
-            'need_title', 'Unknown'
-        )
-
-        return opp_title
 
     def create_new_shifts(
             self,

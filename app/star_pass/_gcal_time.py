@@ -28,7 +28,7 @@ GCAL_TIMEZONE = _defaults.GCAL_TIMEZONE
 logger = get_logger(__name__)
 
 
-def _get_gcal_timezone() -> ZoneInfo:
+def gcal_timezone() -> ZoneInfo:
     """ Read the time zone applied to offset-less window values.
 
         Raises:
@@ -159,17 +159,66 @@ def get_gcal_time_window() -> Tuple[str, str]:
         logger.error(message)
         raise ValueError(message)
 
+    return resolve_window(
+        start=window_start,
+        end=window_end,
+        start_name='GCAL_WINDOW_START',
+        end_name='GCAL_WINDOW_END'
+    )
+
+
+def resolve_window(
+        start: str,
+        end: str,
+        start_name: str,
+        end_name: str
+) -> Tuple[str, str]:
+    """ Return a search window as the values a request carries.
+
+        Below both callers: the environment supplies one window and a
+        request supplies another, and a window read one way and one
+        read the other must select the same days.  Only where the two
+        values come from differs, which is why that is all the caller
+        above decides.
+
+        Args:
+            start (str):
+                First moment the window covers, as an ISO 8601 date or
+                datetime.
+
+            end (str):
+                Moment the window stops covering, exclusive.
+
+            start_name (str):
+                What to call the first value in a message, so a reader
+                is told which of theirs is wrong.
+
+            end_name (str):
+                What to call the second value in a message.
+
+        Raises:
+            ValueError:
+                If either value cannot be read, if the window does not
+                move forward in time, or if 'GCAL_TIMEZONE' does not
+                name a known time zone.
+
+        Returns:
+            window (Tuple[str, str]):
+                The two values as ISO 8601 strings with an explicit UTC
+                offset, ready to send as request parameters.
+    """
+
     # A malformed value fails the same way a stale one does, silently,
     # so reject it here rather than send it to the API.
-    timezone = _get_gcal_timezone()
+    timezone = gcal_timezone()
     parsed_start = _parse_gcal_time(
-        name='GCAL_WINDOW_START',
-        value=window_start,
+        name=start_name,
+        value=start,
         timezone=timezone
     )
     parsed_end = _parse_gcal_time(
-        name='GCAL_WINDOW_END',
-        value=window_end,
+        name=end_name,
+        value=end,
         timezone=timezone
     )
 
@@ -177,8 +226,8 @@ def get_gcal_time_window() -> Tuple[str, str]:
     # with an offset value is ordered correctly.
     if parsed_start >= parsed_end:
         message = (
-            f'GCAL_WINDOW_START ({window_start}) must be earlier than '
-            f'GCAL_WINDOW_END ({window_end}); the current values select an '
+            f'{start_name} ({start}) must be earlier than '
+            f'{end_name} ({end}); the current values select an '
             'empty search window.'
         )
         logger.error(message)
