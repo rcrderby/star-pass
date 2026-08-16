@@ -1,6 +1,27 @@
 {
   "components": {
     "schemas": {
+      "BlockerView": {
+        "description": "One reason one event cannot become a shift. ",
+        "properties": {
+          "eventId": {
+            "description": "Event that cannot be sent.",
+            "title": "Eventid",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Why: no_opportunity, ends_before_start, no_slots. An event with two things wrong with it appears once for each, so fixing one does not reveal another.",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "eventId",
+          "reason"
+        ],
+        "title": "BlockerView",
+        "type": "object"
+      },
       "EventRoleView": {
         "description": "One opportunity an event creates a shift for. ",
         "properties": {
@@ -379,6 +400,116 @@
           "defaultSlots"
         ],
         "title": "OpportunityView",
+        "type": "object"
+      },
+      "PreviewRowView": {
+        "description": "What one Amplify opportunity would receive. ",
+        "properties": {
+          "firstDate": {
+            "description": "Earliest day a shift would be created on.",
+            "title": "Firstdate",
+            "type": "string"
+          },
+          "lastDate": {
+            "description": "Latest day a shift would be created on. Of the shifts that would be created, not of every event under this opportunity: these are the days about to arrive in Amplify.",
+            "title": "Lastdate",
+            "type": "string"
+          },
+          "needId": {
+            "description": "Amplify need ID the shifts would be created under.",
+            "title": "Needid",
+            "type": "string"
+          },
+          "slots": {
+            "description": "Volunteers wanted across those shifts.",
+            "title": "Slots",
+            "type": "integer"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The opportunity's title, or null when the run stored no opportunity for this need ID, which means collection did not resolve one.",
+            "title": "Title"
+          },
+          "willCreate": {
+            "description": "Shifts this opportunity would receive.",
+            "title": "Willcreate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "needId",
+          "willCreate",
+          "slots",
+          "firstDate",
+          "lastDate"
+        ],
+        "title": "PreviewRowView",
+        "type": "object"
+      },
+      "PreviewTotalsView": {
+        "description": "What a send would do, in four numbers. ",
+        "properties": {
+          "blockingEvents": {
+            "description": "Events that cannot be sent. Above zero means nothing can be sent at all: the run stops and names them rather than dropping them, because a missing shift is invisible until volunteers cannot sign up.",
+            "title": "Blockingevents",
+            "type": "integer"
+          },
+          "repeatedRows": {
+            "description": "How many shifts the revision asks for more than once. They create one shift, not several; the figure is here so a reader is told rather than left to wonder why the total is below the number of rows they can see.",
+            "title": "Repeatedrows",
+            "type": "integer"
+          },
+          "willCreate": {
+            "description": "Shifts that would be created. Counted by identity -- need ID, date, start and end -- so two events asking for the same row count once.",
+            "title": "Willcreate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "willCreate",
+          "repeatedRows",
+          "blockingEvents"
+        ],
+        "title": "PreviewTotalsView",
+        "type": "object"
+      },
+      "PreviewView": {
+        "description": "What sending the current revision would create.\n\nGrouped by opportunity and never by category: several\ncategories share one Amplify listing, so grouping by category\nwould show that listing twice under two names and split a\ntotal the reader is about to check against Amplify.",
+        "properties": {
+          "blockers": {
+            "description": "Every reason an event cannot be sent, in the order the events are shown.",
+            "items": {
+              "$ref": "#/components/schemas/BlockerView"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "rows": {
+            "description": "One per opportunity that would receive a shift, by need ID. An opportunity the run resolved but would send nothing to has no row.",
+            "items": {
+              "$ref": "#/components/schemas/PreviewRowView"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/PreviewTotalsView",
+            "description": "What a send would do, in four numbers."
+          }
+        },
+        "required": [
+          "totals",
+          "rows",
+          "blockers"
+        ],
+        "title": "PreviewView",
         "type": "object"
       },
       "RevisionView": {
@@ -896,6 +1027,54 @@
           }
         ],
         "summary": "Read one run in full",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/preview": {
+      "get": {
+        "description": "What a send would do, grouped by Amplify opportunity and never by category: several categories share one listing, so grouping by category would show it twice under two names and split a total the reader is about to check against Amplify.\n\nShifts are counted by identity -- need ID, date, start and end -- so two events asking for the same row count once, and a reader is told how many rows repeat rather than left to wonder why the total is below what they can see.\n\nAn event that cannot become a shift stops the whole send and is named with every reason it cannot, so fixing one does not reveal another.\n\n**This does not yet say which shifts Amplify already has.** That needs a read of the live opportunity, which arrives with the send path that re-checks the same thing inside its transaction, so that both ask the question the same way. Until then the totals describe what the stored revision would create, and some of it may already exist.",
+        "operationId": "get_preview_v1_runs__run_id__preview_get",
+        "parameters": [
+          {
+            "description": "Identifier the run was created with.",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the run was created with.",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:read"
+            ]
+          }
+        ],
+        "summary": "Report what sending this run would create",
         "tags": [
           "runs"
         ]

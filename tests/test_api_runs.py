@@ -19,7 +19,12 @@ from fastapi.testclient import TestClient
 
 # Imports - Local
 from star_pass._defaults import LOCAL_TIMEZONE
-from star_pass._records import Event, Match, Opportunity
+from star_pass._preview import (
+    BLOCKER_ENDS_BEFORE_START,
+    BLOCKER_NO_OPPORTUNITY,
+    BLOCKER_NO_SLOTS
+)
+from star_pass._records import Event, EventRole, Match, Opportunity
 from star_pass._repository import (
     ChangeLogRepository,
     EventRepository,
@@ -42,6 +47,11 @@ def run_path(run_id: str) -> str:
 def revisions_path(run_id: str) -> str:
     """ Return the address of one run's revisions. """
     return f'{run_path(run_id=run_id)}/revisions'
+
+
+def preview_path(run_id: str) -> str:
+    """ Return the address of one run's preview. """
+    return f'{run_path(run_id=run_id)}/preview'
 
 
 @pytest.fixture(name='read_run')
@@ -70,6 +80,23 @@ def fixture_first_event(
     def read(run_id: str) -> Dict[str, Any]:
         """ Read the run and return the first event it holds. """
         return read_run(run_id)['events'][0]
+
+    return read
+
+
+@pytest.fixture(name='read_preview')
+def fixture_read_preview(
+    running_client: TestClient
+) -> Callable[[str], Dict[str, Any]]:
+    """ Return a way to read one run's preview. """
+
+    def read(run_id: str) -> Dict[str, Any]:
+        """ Read the preview, failing the test if it was not found. """
+        response = running_client.get(preview_path(run_id=run_id))
+
+        assert response.status_code == 200
+
+        return response.json()
 
     return read
 
@@ -616,3 +643,147 @@ class TestWhatWasDoneInARevision:
         listed = running_client.get(revisions_path(run_id=run_id)).json()
 
         assert [item['changes'] for item in listed] == [0]
+
+
+class TestPreviewingASend:
+    def test_a_preview_reports_what_would_be_created(
+        self,
+        read_preview: Callable[[str], Dict[str, Any]],
+        collected: str
+    ) -> None:
+        assert read_preview(collected)['totals'] == {
+            'willCreate': 1,
+            'repeatedRows': 0,
+            'blockingEvents': 0
+        }
+
+    def test_a_preview_groups_its_rows_by_opportunity(
+        self,
+        read_preview: Callable[[str], Dict[str, Any]],
+        labelled: str,
+        add_second_event: Callable[..., None]
+    ) -> None:
+        # Several categories share one Amplify listing, so grouping by
+        # category would show that listing twice under two names.
+        add_second_event(date='2026-09-10', category='junior_game')
+
+        rows = read_preview(labelled)['rows']
+
+        assert [
+            (row['needId'], row['title'], row['willCreate'])
+            for row in rows
+        ] == [
+            ('905196', 'Adult Scrimmages: Skating Officials', 2)
+        ]
+
+    def test_a_row_names_the_days_its_shifts_fall_on(
+        self,
+        read_preview: Callable[[str], Dict[str, Any]],
+        collected: str,
+        add_second_event: Callable[..., None]
+    ) -> None:
+        add_second_event(date='2026-09-10')
+
+        row = read_preview(collected)['rows'][0]
+
+        assert row['firstDate'] == '2026-09-03'
+        assert row['lastDate'] == '2026-09-10'
+
+    def test_two_events_sending_the_same_row_count_once(
+        self,
+        read_preview: Callable[[str], Dict[str, Any]],
+        collected: str,
+        add_second_event: Callable[..., None]
+    ) -> None:
+        # Counted by identity, never by how many events there are.
+        add_second_event()
+
+        assert read_preview(collected)['totals'] == {
+            'willCreate': 1,
+            'repeatedRows': 1,
+            'blockingEvents': 0
+        }
+
+    def test_an_event_that_cannot_be_sent_is_named(
+        self,
+        read_preview: Callable[[str], Dict[str, Any]],
+        collected: str,
+        add_second_event: Callable[..., None]
+    ) -> None:
+        add_second_event(category=None, roles=())
+
+        document = read_preview(collected)
+
+        assert document['blockers'] == [
+            {'eventId': 'event-2', 'reason': BLOCKER_NO_OPPORTUNITY}
+        ]
+        assert document['totals']['blockingEvents'] == 1
+
+    def test_an_event_with_two_things_wrong_is_named_twice(
+        self,
+        read_preview: Callable[[str], Dict[str, Any]],
+        collected: str,
+        add_second_event: Callable[..., None]
+    ) -> None:
+        # Fixing one should not reveal another.
+        add_second_event(
+            shift_start='21:30',
+            shift_end='19:15',
+            roles=(EventRole(need_id='905196', slots=0),)
+        )
+
+        reasons = [
+            item['reason']
+            for item in read_preview(collected)['blockers']
+        ]
+
+        assert reasons == [
+            BLOCKER_ENDS_BEFORE_START,
+            BLOCKER_NO_SLOTS
+        ]
+
+    def test_a_run_with_no_events_would_create_nothing(
+        self,
+        read_preview: Callable[[str], Dict[str, Any]],
+        run_id: str
+    ) -> None:
+        document = read_preview(run_id)
+
+        assert document['totals']['willCreate'] == 0
+        assert document['rows'] == []
+        assert document['blockers'] == []
+
+    def test_a_preview_reads_the_current_revision(
+        self,
+        read_preview: Callable[[str], Dict[str, Any]],
+        events: EventRepository,
+        edited: str,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # Revision 2 moved the event and holds one more; revision 1 is
+        # history and is not what a send would work from.
+        events.add(
+            run_id=edited,
+            revision=2,
+            event=make_event(id='event-2', date='2026-09-10')
+        )
+
+        assert read_preview(edited)['totals']['willCreate'] == 2
+
+    def test_an_unknown_run_is_not_found(
+        self,
+        running_client: TestClient
+    ) -> None:
+        response = running_client.get(preview_path(run_id='no-such-run'))
+
+        assert response.status_code == 404
+        assert response.headers['content-type'] == PROBLEM_MEDIA_TYPE
+
+    def test_previewing_needs_a_credential(
+        self,
+        anonymous_client: TestClient,
+        run_id: str
+    ) -> None:
+        assert anonymous_client.get(
+            preview_path(run_id=run_id)
+        ).status_code == 401
