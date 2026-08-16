@@ -1,6 +1,158 @@
 {
   "components": {
     "schemas": {
+      "EventRoleView": {
+        "description": "One opportunity an event creates a shift for. ",
+        "properties": {
+          "edited": {
+            "description": "Whether a person changed the count from the opportunity's default. Recorded rather than compared against the default now, because the default can change.",
+            "title": "Edited",
+            "type": "boolean"
+          },
+          "needId": {
+            "description": "Amplify need ID the shift is created under.",
+            "title": "Needid",
+            "type": "string"
+          },
+          "slots": {
+            "description": "Volunteers wanted.",
+            "title": "Slots",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "needId",
+          "slots",
+          "edited"
+        ],
+        "title": "EventRoleView",
+        "type": "object"
+      },
+      "EventView": {
+        "description": "One calendar event, as the current revision holds it. ",
+        "properties": {
+          "addedByHand": {
+            "description": "Whether a person pulled the event in rather than the search finding it.",
+            "title": "Addedbyhand",
+            "type": "boolean"
+          },
+          "blocking": {
+            "description": "Whether this event stops the run being sent. True when it has no opportunity to create a shift under. The run stops rather than dropping it, because a missing shift is invisible until volunteers cannot sign up.",
+            "title": "Blocking",
+            "type": "boolean"
+          },
+          "calendarEnd": {
+            "description": "End time on the calendar, in the run's zone.",
+            "title": "Calendarend",
+            "type": "string"
+          },
+          "calendarStart": {
+            "description": "Start time on the calendar, in the run's zone.",
+            "title": "Calendarstart",
+            "type": "string"
+          },
+          "cappedAt": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The opportunity maximum that shortened this shift, or null when nothing did. Present so a reader is told which number decided the length rather than left wondering why the shift is shorter than the event.",
+            "title": "Cappedat"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Data model category the title matched, or null when nothing matched.",
+            "title": "Category"
+          },
+          "date": {
+            "description": "Day of the event, as an ISO date.",
+            "title": "Date",
+            "type": "string"
+          },
+          "duplicateOf": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of an earlier event in this revision that would create the same shift, or null when none would. Sameness is the row Amplify receives -- need ID, date, start and end -- so two events at one hour under different opportunities are two shifts, not a repeat.",
+            "title": "Duplicateof"
+          },
+          "id": {
+            "description": "Identifier, unique within the revision.",
+            "title": "Id",
+            "type": "string"
+          },
+          "lengthMinutes": {
+            "description": "How long the shift lasts, which is the duration Amplify is given. Not above zero means the shift ends before it starts, which blocks the send.",
+            "title": "Lengthminutes",
+            "type": "integer"
+          },
+          "match": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How the category was reached, or null when the event was added by hand or matched nothing. Stored as it happened, because the data model can change between the day a run is collected and the day it is read."
+          },
+          "roles": {
+            "description": "The opportunities this event creates shifts for.",
+            "items": {
+              "$ref": "#/components/schemas/EventRoleView"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "shiftEnd": {
+            "description": "End time of the shift to create.",
+            "title": "Shiftend",
+            "type": "string"
+          },
+          "shiftStart": {
+            "description": "Start time of the shift to create, which is the calendar time plus the opportunity's offset.",
+            "title": "Shiftstart",
+            "type": "string"
+          },
+          "title": {
+            "description": "Event title, as the calendar gave it.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "date",
+          "calendarStart",
+          "calendarEnd",
+          "shiftStart",
+          "shiftEnd",
+          "lengthMinutes",
+          "addedByHand",
+          "roles",
+          "blocking"
+        ],
+        "title": "EventView",
+        "type": "object"
+      },
       "Health": {
         "description": "The service's answer about itself. ",
         "properties": {
@@ -94,6 +246,353 @@
         "title": "JobView",
         "type": "object"
       },
+      "LogEntryView": {
+        "description": "One line of a run's change log. ",
+        "properties": {
+          "entry": {
+            "description": "What changed, written for a reader.",
+            "title": "Entry",
+            "type": "string"
+          },
+          "id": {
+            "description": "Identifier, ascending in the order entries were written.",
+            "title": "Id",
+            "type": "integer"
+          },
+          "loggedAt": {
+            "description": "When the change was made, as an ISO-8601 UTC time.",
+            "title": "Loggedat",
+            "type": "string"
+          },
+          "principalId": {
+            "description": "Who made it. One value while the credential is a static token, and a real subject once an identity provider issues one, with no change to what records it.",
+            "title": "Principalid",
+            "type": "string"
+          },
+          "revision": {
+            "description": "Revision that was current when the change was made.",
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "loggedAt",
+          "principalId",
+          "entry"
+        ],
+        "title": "LogEntryView",
+        "type": "object"
+      },
+      "MatchView": {
+        "description": "How an event's title was matched to a category. ",
+        "properties": {
+          "keyword": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The alias that matched, or null for a fuzzy match.",
+            "title": "Keyword"
+          },
+          "kind": {
+            "description": "How it matched: \"keyword\" for an alias whose words all appear in the title, or \"fuzzy\" for the fallback.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fuzzy confidence from 0 to 100, or null for a keyword match, which is not scored.",
+            "title": "Score"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "MatchView",
+        "type": "object"
+      },
+      "OpportunityView": {
+        "description": "An Amplify opportunity a run creates shifts under. ",
+        "properties": {
+          "defaultSlots": {
+            "description": "Volunteers wanted per shift, before any edit.",
+            "title": "Defaultslots",
+            "type": "integer"
+          },
+          "maxLength": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Longest shift the opportunity accepts, in minutes, or null when it sets no maximum.",
+            "title": "Maxlength"
+          },
+          "needId": {
+            "description": "Amplify need ID.",
+            "title": "Needid",
+            "type": "string"
+          },
+          "offsetEnd": {
+            "description": "Minutes added to an event's end to reach the shift's.",
+            "title": "Offsetend",
+            "type": "integer"
+          },
+          "offsetStart": {
+            "description": "Minutes added to an event's start to reach the shift's.",
+            "title": "Offsetstart",
+            "type": "integer"
+          },
+          "title": {
+            "description": "Amplify opportunity title, as displayed.",
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "description": "Public address of the opportunity.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "needId",
+          "title",
+          "url",
+          "offsetStart",
+          "offsetEnd",
+          "defaultSlots"
+        ],
+        "title": "OpportunityView",
+        "type": "object"
+      },
+      "RunCountsView": {
+        "description": "What the run's current revision holds. ",
+        "properties": {
+          "events": {
+            "description": "Events in the current revision.",
+            "title": "Events",
+            "type": "integer"
+          },
+          "shifts": {
+            "description": "Shifts a send would create. Counted per role rather than per event, because an event serving both skating and non-skating officials creates two.",
+            "title": "Shifts",
+            "type": "integer"
+          },
+          "unmatched": {
+            "description": "Events that would create no shift at all, and so stop the run being sent. A title that matched nothing has no opportunity to create a shift under, and a category that resolved to no need ID leaves the same absence.",
+            "title": "Unmatched",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "events",
+          "shifts",
+          "unmatched"
+        ],
+        "title": "RunCountsView",
+        "type": "object"
+      },
+      "RunDetailView": {
+        "description": "A run with everything the review screen reads at once.\n\nThe events, the opportunities labelling them and the change\nlog arrive together because a screen showing one shows all\nthree, and reading them separately would let them disagree:\neach read would see the state at a different moment.",
+        "properties": {
+          "activeJobId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of the job still working on this run, or null when nothing is. What makes a run somebody walked away from reattachable: read the job, or follow its events.",
+            "title": "Activejobid"
+          },
+          "calendar": {
+            "description": "Which configured calendar was collected.",
+            "title": "Calendar",
+            "type": "string"
+          },
+          "collectedAt": {
+            "description": "When it was created, as an ISO-8601 UTC time.",
+            "title": "Collectedat",
+            "type": "string"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/RunCountsView",
+            "description": "What the current revision holds."
+          },
+          "currentRevision": {
+            "description": "Number of the revision now being edited, or 0 before the first one exists.",
+            "title": "Currentrevision",
+            "type": "integer"
+          },
+          "events": {
+            "description": "The current revision's events, by date and start time.",
+            "items": {
+              "$ref": "#/components/schemas/EventView"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "id": {
+            "description": "Identifier the run is addressed by. Minted by the server, and never the path of a file the run produced.",
+            "title": "Id",
+            "type": "string"
+          },
+          "log": {
+            "description": "Every change made to the run, oldest first. Written where the change is made rather than assembled by whatever displays it, so it survives a reload and reads the same in a browser and a terminal.",
+            "items": {
+              "$ref": "#/components/schemas/LogEntryView"
+            },
+            "title": "Log",
+            "type": "array"
+          },
+          "opportunities": {
+            "description": "Amplify titles for every need ID this run touches, resolved while the run was collected and stored with it. Every review row is labelled with one, so they are not a lookup deferred to preview time.",
+            "items": {
+              "$ref": "#/components/schemas/OpportunityView"
+            },
+            "title": "Opportunities",
+            "type": "array"
+          },
+          "revisedAt": {
+            "description": "When it last changed, as an ISO-8601 UTC time. The time it was collected, for a run nothing has changed yet.",
+            "title": "Revisedat",
+            "type": "string"
+          },
+          "sentAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When its shifts reached Amplify, or null while they have not.",
+            "title": "Sentat"
+          },
+          "status": {
+            "description": "Where the run is: collecting, unsent, partly_sent, sent.",
+            "title": "Status",
+            "type": "string"
+          },
+          "window": {
+            "$ref": "#/components/schemas/WindowView",
+            "description": "The days the run covers."
+          }
+        },
+        "required": [
+          "id",
+          "calendar",
+          "window",
+          "status",
+          "collectedAt",
+          "revisedAt",
+          "currentRevision",
+          "counts",
+          "events",
+          "opportunities",
+          "log"
+        ],
+        "title": "RunDetailView",
+        "type": "object"
+      },
+      "RunView": {
+        "description": "One collection of calendar events, as a caller sees it. ",
+        "properties": {
+          "activeJobId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of the job still working on this run, or null when nothing is. What makes a run somebody walked away from reattachable: read the job, or follow its events.",
+            "title": "Activejobid"
+          },
+          "calendar": {
+            "description": "Which configured calendar was collected.",
+            "title": "Calendar",
+            "type": "string"
+          },
+          "collectedAt": {
+            "description": "When it was created, as an ISO-8601 UTC time.",
+            "title": "Collectedat",
+            "type": "string"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/RunCountsView",
+            "description": "What the current revision holds."
+          },
+          "currentRevision": {
+            "description": "Number of the revision now being edited, or 0 before the first one exists.",
+            "title": "Currentrevision",
+            "type": "integer"
+          },
+          "id": {
+            "description": "Identifier the run is addressed by. Minted by the server, and never the path of a file the run produced.",
+            "title": "Id",
+            "type": "string"
+          },
+          "revisedAt": {
+            "description": "When it last changed, as an ISO-8601 UTC time. The time it was collected, for a run nothing has changed yet.",
+            "title": "Revisedat",
+            "type": "string"
+          },
+          "sentAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When its shifts reached Amplify, or null while they have not.",
+            "title": "Sentat"
+          },
+          "status": {
+            "description": "Where the run is: collecting, unsent, partly_sent, sent.",
+            "title": "Status",
+            "type": "string"
+          },
+          "window": {
+            "$ref": "#/components/schemas/WindowView",
+            "description": "The days the run covers."
+          }
+        },
+        "required": [
+          "id",
+          "calendar",
+          "window",
+          "status",
+          "collectedAt",
+          "revisedAt",
+          "currentRevision",
+          "counts"
+        ],
+        "title": "RunView",
+        "type": "object"
+      },
       "Version": {
         "description": "The running version of the application. ",
         "properties": {
@@ -110,6 +609,33 @@
           "version"
         ],
         "title": "Version",
+        "type": "object"
+      },
+      "WindowView": {
+        "description": "The days a run covers, and the zone they are read in. ",
+        "properties": {
+          "end": {
+            "description": "Day after the last day the run covers, as an ISO date. Exclusive, so a run covering one day carries two consecutive dates.",
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "description": "First day the run covers, as an ISO date.",
+            "title": "Start",
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Zone the two dates are read in. The server's zone is the authoritative one: a client displays these dates and never works a window out in the zone of whoever is looking at it.",
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "timezone"
+        ],
+        "title": "WindowView",
         "type": "object"
       }
     },
@@ -246,6 +772,93 @@
         "summary": "Follow what a job reports, as it reports it",
         "tags": [
           "jobs"
+        ]
+      }
+    },
+    "/v1/runs": {
+      "get": {
+        "description": "Every run the service holds, most recently collected first, including one still being collected. Each carries what its current revision holds and the job still working on it, so the list is enough to decide what to open without reading each run in turn.",
+        "operationId": "list_runs_v1_runs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunView"
+                  },
+                  "title": "Response List Runs V1 Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:read"
+            ]
+          }
+        ],
+        "summary": "List the runs, newest first",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}": {
+      "get": {
+        "description": "The run, the events of its current revision, the Amplify opportunities labelling them, and the log of everything done to it. Read together because a screen showing one shows all of them, and separate reads could disagree.\n\nEach event carries what its stored row does not say: how long the shift is, the maximum that shortened it, whether an earlier event would create the same shift, and whether it blocks the send.",
+        "operationId": "get_run_v1_runs__run_id__get",
+        "parameters": [
+          {
+            "description": "Identifier the run was created with.",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the run was created with.",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDetailView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:read"
+            ]
+          }
+        ],
+        "summary": "Read one run in full",
+        "tags": [
+          "runs"
         ]
       }
     },

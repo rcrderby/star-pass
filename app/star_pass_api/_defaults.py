@@ -91,3 +91,4 @@ JOB_EVENT_HEARTBEAT_SECONDS = float(
 # are for rather than listing them in definition order.
 API_TAG_SERVICE = 'service'
 API_TAG_JOBS = 'jobs'
+API_TAG_RUNS = 'runs'
