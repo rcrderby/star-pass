@@ -504,11 +504,22 @@ class RunRepository(Repository):
             Used by the retention policy, which is the only thing that
             removes a run: a caller cannot ask for one to be deleted.
 
+            A run that sent shifts is not deletable.  The record of
+            what a send created is never purged (D12), and its
+            reference to the run does not cascade, so the deletion
+            fails rather than taking the record with it.  A retention
+            policy therefore chooses among runs that sent nothing; the
+            alternative is a policy that quietly decides how long
+            duplicate safety lasts.
+
             Args:
                 run_id (str):
                     Identifier of the run to delete.
 
             Raises:
+                ValidationError:
+                    If the run sent shifts, whose record outlives it.
+
                 UpstreamError:
                     If the run cannot be deleted.
 

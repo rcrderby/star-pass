@@ -39,8 +39,15 @@ through the Amplify API. It is run once per month.
   layer stores and returns (`Run`, `Revision`, `Opportunity`, `Event`,
   `EventRole`, `LogEntry`).
 - `app/star_pass/_repository/` — runs, their revisions, the events in
-  each revision, the `change_log` of edits made to them, and the jobs
-  that long operations are watched through. Every
+  each revision, the `change_log` of edits made to them, the jobs
+  that long operations are watched through, the shifts a send put into
+  Amplify, and the reservations made against idempotency keys. The last
+  two are separate because they answer different questions — which rows
+  a run has already created, and what an already-made request answered
+  — and one key covers many shifts, so neither fits inside the other.
+  A sent shift is keyed by the run plus the four columns a shift is
+  identified by (D16), and its reference to the run does not cascade,
+  because that record is never purged (D12). Every
   statement that touches the
   database is in this package and no SQL appears outside it, so the
   core stays testable without a database and a move to another one is

@@ -33,8 +33,8 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
 # Imports - Local
-from ._derived import shift_identity, ShiftIdentity, shift_length
-from ._records import Event, Opportunity
+from ._derived import shift_identity, shift_length
+from ._records import Event, Opportunity, ShiftIdentity
 
 # Why an event cannot become a shift.  Each is a thing the person
 # reviewing the run has to fix; the run stops rather than dropping the

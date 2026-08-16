@@ -191,7 +191,8 @@ def placeholders(
 
 def insert_statement(
         table: str,
-        columns: Sequence[str]
+        columns: Sequence[str],
+        or_ignore: bool = False
 ) -> str:
     """ Return an insert statement for a table and its columns.
 
@@ -201,6 +202,15 @@ def insert_statement(
 
             columns (Sequence[str]):
                 Columns to write, in the order values are supplied.
+
+            or_ignore (bool, optional):
+                Whether a row already there should leave the statement
+                doing nothing instead of failing.  Defaults to False.
+                A caller that asks for this is one for which a row
+                already there is an answer rather than a fault, and it
+                reads the cursor's row count to tell the two apart.
+                It gives way to the primary key and nothing else: a
+                foreign key violation is still raised.
 
         Raises:
             ValidationError:
@@ -213,8 +223,10 @@ def insert_statement(
 
     check_identifiers(names=(table, *columns))
 
+    verb = 'INSERT OR IGNORE INTO' if or_ignore else 'INSERT INTO'
+
     return (
-        f'INSERT INTO {table} ({", ".join(columns)}) '  # nosec B608
+        f'{verb} {table} ({", ".join(columns)}) '  # nosec B608
         f'VALUES ({placeholders(columns)})'
     )
 
