@@ -22,7 +22,46 @@
 # pylint: disable=unused-argument
 
 # Imports - Python Standard Library
+from dataclasses import dataclass
 from typing import Any, Dict, List
+
+
+@dataclass(frozen=True)
+class ShiftBatch:
+    """ One opportunity's shifts, as they were sent.
+
+        A record rather than six parameters, because they describe one
+        thing and always travel together.  Every reporter would
+        otherwise repeat the same long signature, and adding a seventh
+        field would mean editing each of them.
+
+        Attributes:
+            index (int):
+                Position of this opportunity in the run, from one.
+
+            need_id (str | int):
+                Amplify need ID the shifts were created under.
+
+            title (str):
+                Amplify opportunity title.
+
+            url (str):
+                Amplify API URL for the opportunity's shifts.
+
+            shifts (List[Dict[str, Any]]):
+                The individual shifts, each with a start and a
+                duration.
+
+            payload (Dict[str, Any]):
+                The request body, for a renderer that shows it.
+    """
+
+    index: int
+    need_id: str | int
+    title: str
+    url: str
+    shifts: List[Dict[str, Any]]
+    payload: Dict[str, Any]
 
 
 class Reporter:
@@ -191,13 +230,7 @@ class Reporter:
 
     def shifts_sent(
             self,
-            *,
-            index: int,
-            need_id: str | int,
-            title: str,
-            url: str,
-            shifts: List[Dict[str, Any]],
-            payload: Dict[str, Any]
+            batch: ShiftBatch
     ) -> None:
         """ A batch of shifts was created for one opportunity.
 
@@ -208,24 +241,8 @@ class Reporter:
             checking.
 
             Args:
-                index (int):
-                    Position of this opportunity in the run, from one.
-
-                need_id (str | int):
-                    Amplify need ID the shifts were created under.
-
-                title (str):
-                    Amplify opportunity title.
-
-                url (str):
-                    Amplify API URL for the opportunity's shifts.
-
-                shifts (List[Dict[str, Any]]):
-                    The individual shifts, each with a start and a
-                    duration.
-
-                payload (Dict[str, Any]):
-                    The request body, for a renderer that shows it.
+                batch (ShiftBatch):
+                    The opportunity, and the shifts created under it.
 
             Returns:
                 None.

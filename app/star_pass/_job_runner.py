@@ -37,7 +37,7 @@ from ._records import (
     JOB_STATUS_FAILED,
     JOB_STATUS_SUCCEEDED
 )
-from ._reporting import Reporter
+from ._reporting import Reporter, ShiftBatch
 from ._repository import JobRepository
 
 # Constants
@@ -261,63 +261,33 @@ class JobReporter(Reporter):
 
         return self._record(kind='summary_skipped')
 
-    # An override repeats the signature it overrides, and this one
-    # is long enough that the repetition reads as copied code to
-    # the duplicate check.  Changing the shape would mean changing
-    # what the core reports through, which is a wider decision than
-    # this class.
-    # jscpd:ignore-start
     def shifts_sent(
             self,
-            *,
-            index: int,
-            need_id: str | int,
-            title: str,
-            url: str,
-            shifts: List[Dict[str, Any]],
-            payload: Dict[str, Any]
+            batch: ShiftBatch
     ) -> None:
         """ A batch of shifts was created for one opportunity.
 
-            The base class defines what each of these is; what follows
-            says what this reporter does with it.
+            The request body is not recorded.  It is built from the
+            shifts, so storing both keeps two copies of one fact, and
+            the shifts are the half a reader can act on.  The need ID
+            is recorded as text, so that a reader is not given a number
+            by one run and a string by the next.
 
             Args:
-                index (int):
-                    Recorded unchanged.
-
-                need_id (str | int):
-                    Recorded as text, so that a reader is not given a
-                    number by one run and a string by the next.
-
-                title (str):
-                    Recorded unchanged.
-
-                url (str):
-                    Recorded unchanged.
-
-                shifts (List[Dict[str, Any]]):
-                    Recorded unchanged.
-
-                payload (Dict[str, Any]):
-                    Not recorded.  It is built from the shifts, so
-                    storing both keeps two copies of one fact, and the
-                    shifts are the half a reader can act on.
+                batch (ShiftBatch):
+                    The opportunity, and the shifts created under it.
 
             Returns:
                 None.
         """
-        # jscpd:ignore-end
-
-        del payload
 
         return self._record(
             kind='shifts_sent',
-            index=index,
-            need_id=str(need_id),
-            title=title,
-            url=url,
-            shifts=shifts
+            index=batch.index,
+            need_id=str(batch.need_id),
+            title=batch.title,
+            url=batch.url,
+            shifts=batch.shifts
         )
 
     def shift_data_invalid(
