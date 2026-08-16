@@ -17,7 +17,7 @@ from star_pass._records import (
     JOB_STATUS_SUCCEEDED
 )
 from star_pass._repository import JobRepository
-from star_pass_api import _defaults, create_app
+from star_pass_api import _defaults
 from star_pass_api._problems import PROBLEM_MEDIA_TYPE
 from star_pass_api._security import SCOPE_RUNS_READ
 
@@ -92,18 +92,12 @@ class TestReadingAJob:
 
     def test_reading_a_job_needs_a_credential(
         self,
-        service_database: Path,
+        anonymous_client: TestClient,
         job_id: str
     ) -> None:
-        del service_database
-
-        with TestClient(
-            app=create_app(),
-            raise_server_exceptions=False
-        ) as client:
-            assert client.get(
-                job_path(job_id=job_id)
-            ).status_code == 401
+        assert anonymous_client.get(
+            job_path(job_id=job_id)
+        ).status_code == 401
 
 
 class TestWhatARestartDoesToAJob:

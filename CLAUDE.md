@@ -218,6 +218,10 @@ The notes below are the ones that are not obvious from the commands.
 - Field names are camelCase on the wire and snake_case in Python.
   Every published shape inherits from `ApiModel` in `_schemas.py`,
   which does the translation once.
+- The job event stream reads the job's status *before* its events.
+  The other order loses an event written between the two reads: the
+  events read would not hold it, and the status read after it would
+  end the stream.
 - The service never holds a connection across a request: a connection
   belongs to the thread that opened it, and a synchronous dependency
   and the endpoint using it can run on different threads. Pass the
