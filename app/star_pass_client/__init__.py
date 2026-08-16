@@ -10,10 +10,13 @@
 # Imports - Local
 from ._client import ApiProblem, Client
 from ._local import LocalClient, LocalOperationUnavailable
+from ._stream import StreamEvent, StreamProtocolError
 
 __all__ = [
     'ApiProblem',
     'Client',
     'LocalClient',
-    'LocalOperationUnavailable'
+    'LocalOperationUnavailable',
+    'StreamEvent',
+    'StreamProtocolError'
 ]

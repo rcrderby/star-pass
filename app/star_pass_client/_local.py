@@ -49,6 +49,7 @@ from star_pass_contract import (
 )
 from ._client import ApiProblem
 from ._operations import Operations
+from ._stream import StreamEvent
 
 # Constants
 # Which handler answers which operation.  Keyed on what the generated
@@ -198,7 +199,7 @@ class LocalClient(Operations):
             method: str,
             path: str,
             **parameters: Any
-    ) -> Iterator[str]:
+    ) -> Iterator[StreamEvent]:
         """ Refuse to follow an operation over time, locally.
 
             Args:
