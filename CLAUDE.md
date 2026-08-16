@@ -65,6 +65,18 @@ through the Amplify API. It is run once per month.
   the same figures the web interface does. A run's own figures are
   derived in the repository instead, because they are counts over rows
   the caller has not read.
+- `app/star_pass/_collect.py` — turning a calendar window into a
+  stored run: read the calendar, match each title to a category, and
+  write the events, their roles and the opportunities they name. What
+  the CSV path does to a file, in the shape a revision holds. An event
+  that cannot become a correct shift stops the run and is named,
+  including two cases about what a stored event can express: a
+  category whose need IDs disagree about their offsets, and a shift
+  that would run past midnight.
+- `app/star_pass/_opportunities.py` — reading an Amplify opportunity's
+  title, and building the public address it is published at. Below
+  both callers, because collection stores the title on the run and the
+  shift preview reads the same one.
 - `app/star_pass/_preview.py` — what sending a revision would create,
   worked out before it does: totals, a row per Amplify opportunity,
   and every reason an event cannot be sent. Grouped by opportunity and

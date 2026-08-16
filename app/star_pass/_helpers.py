@@ -39,6 +39,33 @@ SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
 logger = get_logger(__name__)
 
 
+def amplify_headers() -> Dict[str, str]:
+    """ Return the headers an Amplify request carries.
+
+        Here rather than beside any one caller: attaching the
+        credential is the same rule for every request, and a second
+        copy of it is a second place to forget.
+
+        Read when a request is about to be made rather than held from
+        import time, so a deployment that rotates the credential and
+        restarts nothing still sends the current one.
+
+        Args:
+            None.
+
+        Returns:
+            headers (Dict[str, str]):
+                The base headers plus the bearer credential.
+    """
+
+    headers = dict(_defaults.BASE_HEADERS)
+    headers.update(
+        {'Authorization': f'Bearer {getenv("AMPLIFY_TOKEN")}'}
+    )
+
+    return headers
+
+
 @dataclass(frozen=True)
 class CategoryMatch:
     """ Which category a title matched, and how it got there.
