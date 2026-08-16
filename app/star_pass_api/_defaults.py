@@ -67,3 +67,4 @@ API_OPENAPI_PATH = f'{API_VERSION_PREFIX}/openapi.json'
 # Tags, so the generated documentation groups endpoints by what they
 # are for rather than listing them in definition order.
 API_TAG_SERVICE = 'service'
+API_TAG_JOBS = 'jobs'

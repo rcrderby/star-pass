@@ -76,7 +76,9 @@ through the Amplify API. It is run once per month.
   titles" section of `README.md` for the operator workflow.
 - `app/star_pass_api/` — the remote surface over the core: the
   application factory (`create_app`), the service's own `_defaults.py`,
-  `_problems.py`, and a module per group of endpoints. A separate
+  `_problems.py`, `_schemas.py` (the shapes that cross the wire),
+  `_storage.py` (how it reaches the database), and a module per group
+  of endpoints. A separate
   package from `star_pass`, because the core knows nothing about HTTP
   and this package holds no domain logic. Run it with
   `uvicorn --factory star_pass_api:create_app`.
@@ -213,6 +215,14 @@ The notes below are the ones that are not obvious from the commands.
   carry its reason: the caller is the one who can act on it.
 - Endpoints live under `/v1`. Changes within a version are additive;
   a breaking change is served at a new prefix alongside the old one.
+- Field names are camelCase on the wire and snake_case in Python.
+  Every published shape inherits from `ApiModel` in `_schemas.py`,
+  which does the translation once.
+- The service never holds a connection across a request: a connection
+  belongs to the thread that opened it, and a synchronous dependency
+  and the endpoint using it can run on different threads. Pass the
+  work to `_storage.read` instead, which opens, uses and closes one
+  inside a single call.
 - `app/star_pass_api/_security.py` is the only module that reads the
   API token or the `Authorization` header. A route declares the scopes
   it needs with `requires(...)` and receives a `Principal`; it never
