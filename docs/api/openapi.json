@@ -454,7 +454,7 @@
         "type": "object"
       },
       "PreviewTotalsView": {
-        "description": "What a send would do, in four numbers. ",
+        "description": "What a send would do, totalled over the whole revision. ",
         "properties": {
           "blockingEvents": {
             "description": "Events that cannot be sent. Above zero means nothing can be sent at all: the run stops and names them rather than dropping them, because a missing shift is invisible until volunteers cannot sign up.",
@@ -501,7 +501,7 @@
           },
           "totals": {
             "$ref": "#/components/schemas/PreviewTotalsView",
-            "description": "What a send would do, in four numbers."
+            "description": "What a send would do, totalled over the whole revision rather than per opportunity."
           }
         },
         "required": [
