@@ -6,29 +6,22 @@
     everything the review screen reads at once, the numbered versions
     its events have been through, and what sending it would create.
 
-    No domain logic lives here.  What a run holds is counted by the
-    repository, and what an event does not say is worked out by the
-    core's '_derived'; this module reads those answers and shapes them
-    for the wire (D1).
+    No domain logic lives here, and no shaping either.  A route
+    decides what to read and what a failure looks like; '_views' turns
+    what was read into what a caller is shown, because the command
+    line client shows the same answers from the same database and the
+    two must not drift (D1, D2).
 """
 
 # Imports - Python Standard Library
 import sqlite3
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 # Imports - Third-Party
 from fastapi import APIRouter, HTTPException, Path, status
 
 # Imports - Local
-from star_pass._defaults import LOCAL_TIMEZONE
-from star_pass._derived import (
-    blocks_the_run,
-    capping_maximum,
-    repeated,
-    shift_length
-)
-from star_pass._preview import preview
 from star_pass._records import (
     Event,
     LogEntry,
@@ -44,23 +37,19 @@ from star_pass._repository import (
 )
 from . import _defaults
 from ._schemas import (
-    BlockerView,
-    EventRoleView,
-    EventView,
-    LogEntryView,
-    MatchView,
-    OpportunityView,
-    PreviewRowView,
-    PreviewTotalsView,
     PreviewView,
     RevisionView,
-    RunCountsView,
     RunDetailView,
-    RunView,
-    WindowView
+    RunView
 )
 from ._security import Principal, requires, SCOPE_RUNS_READ
 from ._storage import read
+from ._views import (
+    to_detail_view,
+    to_preview_view,
+    to_revision_views,
+    to_run_view
+)
 
 router = APIRouter(tags=[_defaults.API_TAG_RUNS])
 
@@ -239,160 +228,6 @@ def _missing(
     )
 
 
-def _to_run_view(
-        run: Run
-) -> RunView:
-    """ Return a run as a caller sees it.
-
-        Args:
-            run (Run):
-                The stored run.
-
-        Returns:
-            view (RunView):
-                The run, shaped for the wire.
-    """
-
-    return RunView(
-        id=run.id,
-        calendar=run.calendar,
-        window=WindowView(
-            start=run.window_start,
-            end=run.window_end,
-            timezone=LOCAL_TIMEZONE
-        ),
-        status=run.status,
-        collected_at=run.collected_at,
-        sent_at=run.sent_at,
-        revised_at=run.revised_at,
-        current_revision=run.current_revision,
-        counts=RunCountsView(
-            events=run.event_count,
-            shifts=run.shift_count,
-            unmatched=run.unmatched_count
-        ),
-        active_job_id=run.active_job_id
-    )
-
-
-def _to_event_view(
-        event: Event,
-        opportunities: Dict[str, Opportunity],
-        repeats: Dict[str, str]
-) -> EventView:
-    """ Return an event as a caller sees it.
-
-        Args:
-            event (Event):
-                The stored event.
-
-            opportunities (Dict[str, Opportunity]):
-                The run's opportunities, by need ID, which the cap is
-                worked out against.
-
-            repeats (Dict[str, str]):
-                Which events repeat which, worked out once for the
-                whole revision rather than per event.
-
-        Returns:
-            view (EventView):
-                The event, shaped for the wire.
-    """
-
-    match = event.match
-
-    return EventView(
-        id=event.id,
-        title=event.title,
-        date=event.date,
-        calendar_start=event.calendar_start,
-        calendar_end=event.calendar_end,
-        shift_start=event.shift_start,
-        shift_end=event.shift_end,
-        length_minutes=shift_length(event=event),
-        capped_at=capping_maximum(
-            event=event,
-            opportunities=opportunities
-        ),
-        category=event.category,
-        match=(
-            MatchView(
-                kind=match.kind,
-                keyword=match.keyword,
-                score=match.score
-            )
-            if match is not None
-            else None
-        ),
-        added_by_hand=event.added_by_hand,
-        roles=[
-            EventRoleView(
-                need_id=role.need_id,
-                slots=role.slots,
-                edited=role.edited
-            )
-            for role in event.roles
-        ],
-        duplicate_of=repeats.get(event.id),
-        blocking=blocks_the_run(event=event)
-    )
-
-
-def _to_detail_view(
-        detail: _Detail
-) -> RunDetailView:
-    """ Return a run and everything beside it, as a caller sees it.
-
-        Args:
-            detail (_Detail):
-                What one read of the run gathered.
-
-        Returns:
-            view (RunDetailView):
-                The run in full, shaped for the wire.
-    """
-
-    by_need_id = {
-        opportunity.need_id: opportunity
-        for opportunity in detail.opportunities
-    }
-    repeats = repeated(events=detail.events)
-
-    return RunDetailView(
-        **_to_run_view(run=detail.run).model_dump(),
-        events=[
-            _to_event_view(
-                event=event,
-                opportunities=by_need_id,
-                repeats=repeats
-            )
-            for event in detail.events
-        ],
-        opportunities=[
-            OpportunityView(
-                need_id=opportunity.need_id,
-                title=opportunity.title,
-                url=opportunity.url,
-                max_length=opportunity.max_length,
-                offset_start=opportunity.offset_start,
-                offset_end=opportunity.offset_end,
-                default_slots=opportunity.default_slots
-            )
-            for opportunity in detail.opportunities
-        ],
-        log=[
-            LogEntryView(
-                id=entry.id,
-                revision=entry.revision,
-                logged_at=entry.logged_at,
-                principal_id=entry.principal_id,
-                entry=entry.entry
-            )
-            for entry in detail.log
-        ]
-    )
-
-
 @router.get(
     '/runs',
     summary='List the runs, newest first',
@@ -428,7 +263,7 @@ async def list_runs(
         ).list_all()
     )
 
-    return [_to_run_view(run=run) for run in runs]
+    return [to_run_view(run=run) for run in runs]
 
 
 @router.get(
@@ -483,7 +318,12 @@ async def get_run(
     if detail is None:
         raise _missing(run_id=run_id)
 
-    return _to_detail_view(detail=detail)
+    return to_detail_view(
+        run=detail.run,
+        events=detail.events,
+        opportunities=detail.opportunities,
+        log=detail.log
+    )
 
 
 @router.get(
@@ -543,16 +383,7 @@ async def list_revisions(
 
     run, revisions = history
 
-    return [
-        RevisionView(
-            number=revision.number,
-            created_at=revision.created_at,
-            label=revision.label,
-            changes=revision.change_count,
-            current=revision.number == run.current_revision
-        )
-        for revision in revisions
-    ]
+    return to_revision_views(run=run, revisions=revisions)
 
 
 @router.get(
@@ -617,36 +448,8 @@ async def get_preview(
         raise _missing(run_id=run_id)
 
     events, opportunities = gathered
-    result = preview(
-        events=events,
-        opportunities={
-            opportunity.need_id: opportunity
-            for opportunity in opportunities
-        }
-    )
 
-    return PreviewView(
-        totals=PreviewTotalsView(
-            will_create=result.will_create,
-            repeated_rows=result.repeated_rows,
-            blocking_events=result.blocking_events
-        ),
-        rows=[
-            PreviewRowView(
-                need_id=row.need_id,
-                title=row.title,
-                will_create=row.will_create,
-                slots=row.slots,
-                first_date=row.first_date,
-                last_date=row.last_date
-            )
-            for row in result.rows
-        ],
-        blockers=[
-            BlockerView(
-                event_id=blocker.event_id,
-                reason=blocker.reason
-            )
-            for blocker in result.blockers
-        ]
+    return to_preview_view(
+        events=events,
+        opportunities=opportunities
     )
