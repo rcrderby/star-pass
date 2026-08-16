@@ -12,10 +12,8 @@
 # pylint: disable=redefined-outer-name
 
 # Imports - Python Standard Library
-import importlib.util
 import io
 import logging
-from pathlib import Path
 from unittest.mock import Mock
 
 # Imports - Third-Party
@@ -23,9 +21,7 @@ import pytest
 
 # Imports - Local
 from star_pass._helpers import Helpers
-
-# Path to the entry-point module.
-_MAIN_PATH = Path(__file__).resolve().parent.parent / 'app' / '__main__.py'
+from conftest import load_entry_point
 
 
 @pytest.fixture
@@ -33,11 +29,7 @@ def app_main():
     # Load app/__main__.py as an importable module. Loading under a name
     # other than '__main__' means the module-level guard does not run
     # main() on import.
-    spec = importlib.util.spec_from_file_location(
-        'star_pass_main', _MAIN_PATH
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = load_entry_point()
 
     # Replace collaborators so main() performs no real work. Preserve the
     # real convert_to_bool so argparse validates --check-mode as in

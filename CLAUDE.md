@@ -119,6 +119,14 @@ through the Amplify API. It is run once per month.
   callers, because the service and the local client ask the same
   questions and a mode that read one fewer thing than the other would
   answer differently with nothing saying so.
+- `app/star_pass_cli/` — the run-based commands (`star-pass runs
+  list`), which read the local database by default and a service when
+  `--api-url` or `STAR_PASS_API_URL` names one (D2). Separate from
+  `__main__.py`, which holds the three CSV-based run modes: those
+  cannot be reached over HTTP, because the contract deliberately
+  publishes nothing addressed by a file path, so they stay local. A
+  command renders the answer a client gave and never knows which mode
+  produced it — that is what makes one renderer correct for both.
 - `app/star_pass_client/` — the client the command line client uses
   to reach a remote service, and the local half that answers the same
   operations from the database in this process (D2). Both inherit the
@@ -263,6 +271,10 @@ The notes below are the ones that are not obvious from the commands.
   given, because an internal failure can carry a credential, a
   volunteer's name, or an upstream body holding either. A 4xx does
   carry its reason: the caller is the one who can act on it.
+- The window crosses the wire with an exclusive `end` and is
+  *displayed* by the last day it covers. The conversion happens in
+  `star_pass_cli/_render.py` and nowhere else, so the authoritative
+  value stays unconverted everywhere it is stored, sent or compared.
 - Endpoints live under `/v1`. Changes within a version are additive;
   a breaking change is served at a new prefix alongside the old one.
 - Field names are camelCase on the wire and snake_case in Python.
