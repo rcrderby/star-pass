@@ -104,6 +104,16 @@ through the Amplify API. It is run once per month.
 - `docs/api/openapi.json` — the generated OpenAPI 3.1 contract,
   written by `scripts/generate_contract.py`, which also writes the
   client generated from it.
+- `app/star_pass_contract/` — the shapes the contract publishes
+  (`_schemas.py`) and how stored records become them (`_views.py`). Its
+  own package between the core and the two things that speak the
+  contract: the service answers over HTTP and the command line client
+  answers from the same database in the same process (D2), and both
+  must produce the same answer, so the conversion belongs to neither.
+  **Nothing here imports the web framework**, and a test holds that
+  true — importing anything from `star_pass_api` runs its `__init__`
+  and pulls in FastAPI, which would give the command line client a
+  server as a dependency to read a run locally.
 - `app/star_pass_client/` — the client the command line client uses
   to reach a remote service. `_operations.py` is **generated** from
   the committed contract, one method per operation, so an endpoint the
@@ -245,8 +255,12 @@ The notes below are the ones that are not obvious from the commands.
 - Endpoints live under `/v1`. Changes within a version are additive;
   a breaking change is served at a new prefix alongside the old one.
 - Field names are camelCase on the wire and snake_case in Python.
-  Every published shape inherits from `ApiModel` in `_schemas.py`,
-  which does the translation once.
+  Every published shape inherits from `ApiModel` in
+  `star_pass_contract`, which does the translation once.
+- A route decides what to read and what a failure looks like. What an
+  answer *contains* is decided once, in `star_pass_contract._views`,
+  because the command line client shows the same answers from the same
+  database and two copies of that conversion would drift (D2).
 - A run's window crosses the wire as a `start` and an **exclusive**
   `end`, the pair the repository stores, plus the zone they are read
   in. The server's zone is authoritative: a client displays those
