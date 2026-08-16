@@ -114,9 +114,11 @@ through the Amplify API. It is run once per month.
   titles" section of `README.md` for the operator workflow.
 - `app/star_pass_api/` — the remote surface over the core: the
   application factory (`create_app`), the service's own `_defaults.py`,
-  `_problems.py`, `_schemas.py` (the shapes that cross the wire),
+  `_problems.py`, `_security.py`,
   `_storage.py` (how it reaches the database), and a module per group
-  of endpoints. A separate
+  of endpoints. The shapes that cross the wire are not here: they are
+  in `star_pass_contract`, because the command line client sends and
+  receives the same ones. A separate
   package from `star_pass`, because the core knows nothing about HTTP
   and this package holds no domain logic. Run it with
   `uvicorn --factory star_pass_api:create_app`.

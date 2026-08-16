@@ -34,19 +34,28 @@ from requests import Response, Session
 from requests.adapters import BaseAdapter
 
 # Imports - Local
+from star_pass._exceptions import ValidationError as CoreValidationError
+from star_pass._repository import JobRepository
+from star_pass_api._defaults import API_PRINCIPAL_ID
 from star_pass_client import (
     ApiProblem,
     Client,
     LocalClient,
     LocalOperationUnavailable
 )
-from star_pass_client._local import HANDLERS, UNAVAILABLE
 from star_pass_client._generator import specification
+from star_pass_client._local import HANDLERS, UNAVAILABLE
 
 # Constants
 # Where the in-process application answers.  A name rather than a host:
 # nothing resolves it, because nothing sends to it.
 SERVICE_URL = 'http://star-pass.test'
+
+# What both modes are asked to collect.
+A_COLLECTION = {
+    'calendar': 'events',
+    'window': {'start': '2026-09-01', 'end': '2026-10-01'}
+}
 
 
 class InProcessAdapter(BaseAdapter):
@@ -126,6 +135,28 @@ def fixture_local_client(
 ) -> LocalClient:
     """ Return a local client on the same database. """
     return LocalClient(connect_to=connect_to_database)
+
+
+@pytest.fixture(name='collecting_service')
+def fixture_collecting_service(
+    monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ Replace the collecting itself in both modes.
+
+        What a collection does is pinned in 'test_collect.py'.  What
+        these tests ask is whether the two modes create the same
+        things and refuse the same requests, which the reading of a
+        calendar would only slow down.
+    """
+
+    def nothing(connection: Any, run_id: str, reporter: Any) -> None:
+        """ Stand in for the collection. """
+        del connection, run_id, reporter
+
+    monkeypatch.setattr('star_pass_api._runs.collect', nothing)
+    monkeypatch.setattr('star_pass_client._local.collect', nothing)
+
+    return None
 
 
 @pytest.fixture(name='both')
@@ -297,6 +328,120 @@ class TestTheTwoModesFailTheSame:
             )
 
             assert local.detail == remote.detail, operation
+
+
+class TestTheTwoModesCollectTheSame:
+    def test_a_collection_answers_with_the_same_kind_of_job(
+        self,
+        both: Callable[..., Tuple[Any, Any]],
+        collecting_service: None
+    ) -> None:
+        del collecting_service
+        local, remote = both('collect_run', body=A_COLLECTION)
+
+        assert local['kind'] == remote['kind'] == 'collect'
+        assert local['runId'] != remote['runId']
+
+    def test_each_collection_produces_a_run_of_its_own(
+        self,
+        both: Callable[..., Tuple[Any, Any]],
+        collecting_service: None,
+        local_client: LocalClient
+    ) -> None:
+        del collecting_service
+        both('collect_run', body=A_COLLECTION)
+
+        assert len(local_client.list_runs()) == 2
+
+    def test_a_local_collection_records_who_asked(
+        self,
+        local_client: LocalClient,
+        collecting_service: None,
+        connection: sqlite3.Connection
+    ) -> None:
+        # The column exists so that two writers can be told apart
+        # (D13), and a local run is not the service acting.
+        del collecting_service
+        answered = local_client.collect_run(body=A_COLLECTION)
+
+        recorded = JobRepository(connection=connection).get(
+            job_id=answered['id']
+        ).principal_id
+
+        assert recorded == 'local-cli'
+        assert recorded != API_PRINCIPAL_ID
+
+    def test_a_local_collection_is_over_when_it_answers(
+        self,
+        local_client: LocalClient,
+        collecting_service: None
+    ) -> None:
+        # The process that would run the job is the one about to
+        # return, so the work happens in the call.
+        del collecting_service
+        answered = local_client.collect_run(body=A_COLLECTION)
+
+        assert answered['status'] == 'succeeded'
+        assert answered['finishedAt'] is not None
+
+    def test_a_local_run_whose_job_cannot_be_written_is_not_created(
+        self,
+        local_client: LocalClient,
+        collecting_service: None,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        del collecting_service
+
+        def refuse(*_: Any, **__: Any) -> None:
+            raise CoreValidationError('The job could not be written.')
+
+        monkeypatch.setattr(JobRepository, 'create', refuse)
+
+        with pytest.raises(CoreValidationError):
+            local_client.collect_run(body=A_COLLECTION)
+
+        assert local_client.list_runs() == []
+
+    def test_a_calendar_neither_mode_reads_fails_the_same(
+        self,
+        local_client: LocalClient,
+        remote_client: Client
+    ) -> None:
+        asked = {**A_COLLECTION, 'calendar': 'knitting'}
+        local = problem_from(local_client, 'collect_run', body=asked)
+        remote = problem_from(remote_client, 'collect_run', body=asked)
+
+        assert local.status == remote.status == 422
+        assert local.detail == remote.detail
+        assert 'knitting' in local.detail
+
+    def test_a_window_neither_mode_accepts_fails_the_same(
+        self,
+        local_client: LocalClient,
+        remote_client: Client
+    ) -> None:
+        asked = {
+            **A_COLLECTION,
+            'window': {'start': '2026-10-01', 'end': '2026-09-01'}
+        }
+        local = problem_from(local_client, 'collect_run', body=asked)
+        remote = problem_from(remote_client, 'collect_run', body=asked)
+
+        assert local.status == remote.status == 422
+        assert local.detail == remote.detail
+
+    def test_a_refused_collection_creates_no_run_in_either_mode(
+        self,
+        local_client: LocalClient,
+        remote_client: Client
+    ) -> None:
+        asked = {**A_COLLECTION, 'calendar': 'knitting'}
+
+        for client in (local_client, remote_client):
+            with pytest.raises(ApiProblem):
+                client.collect_run(body=asked)
+
+        assert local_client.list_runs() == []
 
 
 class TestWhatLocalModeCannotDo:

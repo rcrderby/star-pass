@@ -13,7 +13,7 @@
 """
 
 # Imports - Python Standard Library
-from typing import Any, Callable, Iterator
+from typing import Any, Callable, Dict, Iterator
 
 # Imports - Local
 from ._stream import StreamEvent
@@ -32,6 +32,32 @@ class Operations:
     # alone can see it.
     _call: Callable[..., Any]
     _stream: Callable[..., Iterator[StreamEvent]]
+
+    def collect_run(
+            self,
+            body: Dict[str, Any]
+    ) -> Any:
+        """ Collect a calendar window into a new run.
+
+            Args:
+                body (Dict[str, Any]):
+                    What the operation is sent, shaped as the
+                    contract publishes it.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='POST',
+            path='/v1/runs',
+            body=body
+        )
 
     def get_health(
             self

@@ -15,32 +15,47 @@
 """
 
 # Imports - Python Standard Library
-from typing import List
+import sqlite3
+from typing import List, Tuple
 
 # Imports - Third-Party
-from fastapi import APIRouter, HTTPException, Path, status
+from fastapi import APIRouter, HTTPException, Path, Request, status
 
 # Imports - Local
+from star_pass._collect import collect
+from star_pass._database import transaction
+from star_pass._defaults import GCAL_CALENDARS
+from star_pass._gcal_time import resolve_window
 from star_pass._reading import (
     read_run_detail,
     read_run_for_send,
     read_run_history
 )
-from star_pass._repository import RunRepository
+from star_pass._records import JOB_KIND_COLLECT, Run
+from star_pass._reporting import Reporter
+from star_pass._repository import JobRepository, RunRepository
 from star_pass_contract import (
+    CollectRequest,
+    JobView,
     no_such_run,
     PreviewView,
     RevisionView,
     RunDetailView,
     RunView,
     to_detail_view,
+    to_job_view,
     to_preview_view,
     to_revision_views,
     to_run_view
 )
 from . import _defaults
-from ._security import Principal, requires, SCOPE_RUNS_READ
-from ._storage import read
+from ._security import (
+    Principal,
+    requires,
+    SCOPE_RUNS_READ,
+    SCOPE_RUNS_WRITE
+)
+from ._storage import in_database, read
 
 router = APIRouter(tags=[_defaults.API_TAG_RUNS])
 
@@ -290,3 +305,217 @@ async def get_preview(
         events=events,
         opportunities=opportunities
     )
+
+
+def _checked_calendar(
+        calendar: str
+) -> str:
+    """ Return a calendar name the deployment configured.
+
+        Checked here rather than left to the core, which reports an
+        unconfigured name as a configuration error -- a 500, which
+        deliberately carries no reason.  The caller chose this value
+        and is the one who can correct it, so it is a 422 naming the
+        alternatives.
+
+        Args:
+            calendar (str):
+                What the caller asked for.
+
+        Raises:
+            HTTPException:
+                422 when the name is not configured.
+
+        Returns:
+            calendar (str):
+                The name, unchanged.
+    """
+
+    if calendar in GCAL_CALENDARS:
+        return calendar
+
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail=(
+            f'"{calendar}" is not a calendar this service reads. '
+            f'Use one of: {", ".join(sorted(GCAL_CALENDARS))}.'
+        )
+    )
+
+
+def _checked_window(
+        window: CollectRequest
+) -> Tuple[str, str]:
+    """ Return a window that names days a search can cover.
+
+        The values are checked before a run is created, so a window
+        nobody could collect is a refusal the caller reads rather than
+        a run that exists and a job that fails.
+
+        Args:
+            window (CollectRequest):
+                What the caller asked for.
+
+        Raises:
+            HTTPException:
+                422 when the window cannot be read or does not move
+                forward in time.
+
+        Returns:
+            window (Tuple[str, str]):
+                The two dates, unchanged.  What is returned is what the
+                caller sent, not the resolved instants: a run stores
+                plain local dates, and the resolution happens again
+                when the calendar is read.
+    """
+
+    try:
+        resolve_window(
+            start=window.window.start,
+            end=window.window.end,
+            start_name='The window start',
+            end_name='the window end'
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(error)
+        ) from error
+
+    return window.window.start, window.window.end
+
+
+def _started(
+        connection: sqlite3.Connection,
+        calendar: str,
+        window: Tuple[str, str],
+        principal_id: str
+) -> Tuple[Run, str]:
+    """ Create the run a collection fills in, and the job that does it.
+
+        Both in one transaction.  A run with no job would be one
+        nothing is working on and nothing will; a job with no run
+        cannot be written at all, because a job is recorded against
+        one.
+
+        Args:
+            connection (sqlite3.Connection):
+                The database to write to.
+
+            calendar (str):
+                Which calendar the run collects.
+
+            window (Tuple[str, str]):
+                The first day and the day after the last.
+
+            principal_id (str):
+                Who asked (D13).
+
+        Raises:
+            ValidationError:
+                If either cannot be written.
+
+        Returns:
+            started (Tuple[Run, str]):
+                The run, and the identifier of the job filling it in.
+    """
+
+    with transaction(connection=connection):
+        run = RunRepository(connection=connection).create(
+            calendar=calendar,
+            window_start=window[0],
+            window_end=window[1]
+        )
+        job = JobRepository(connection=connection).create(
+            run_id=run.id,
+            kind=JOB_KIND_COLLECT,
+            principal_id=principal_id
+        )
+
+    return run, job.id
+
+
+@router.post(
+    '/runs',
+    status_code=status.HTTP_202_ACCEPTED,
+    summary='Collect a calendar window into a new run',
+    description=(
+        'Reads the calendar over the days given and stores what it '
+        'finds as a new run, ready to review. The identifier is minted '
+        'here and is never the path of a file.\n\n'
+        'Answers as soon as the run exists, with the job doing the '
+        'work: reading a calendar and naming every opportunity it '
+        'finds takes longer than a request should be held open. Read '
+        'the job, or follow its events, to see how far it has got. The '
+        'run is in the list from the moment this answers, so a person '
+        'who closed the page can find it again.\n\n'
+        'The window is a first day and the day after the last, read in '
+        'the server\'s time zone, and there is no limit on its length. '
+        'An event that cannot become a correct shift does not stop the '
+        'collection: it is stored, named as unmatched, and stops the '
+        '**send** instead, so a reviewer sees everything the calendar '
+        'held rather than a run with holes in it.'
+    ),
+    response_model=JobView
+)
+async def collect_run(
+        request: Request,
+        collection: CollectRequest,
+        principal: Principal = requires(SCOPE_RUNS_WRITE)
+) -> JobView:
+    """ Create a run and start collecting into it.
+
+        Args:
+            request (Request):
+                The request, which carries the runner that jobs are
+                given to.
+
+            collection (CollectRequest):
+                Which calendar to read, and over which days.
+
+            principal (Principal):
+                The authenticated caller, which the dependency supplies
+                after checking the scope.
+
+        Raises:
+            HTTPException:
+                422 when the calendar is not configured, or the window
+                does not name days a search can cover.
+
+        Returns:
+            job (JobView):
+                The job collecting the run, queued.
+    """
+
+    calendar = _checked_calendar(calendar=collection.calendar)
+    window = _checked_window(window=collection)
+
+    run, job_id = await read(
+        lambda connection: _started(
+            connection=connection,
+            calendar=calendar,
+            window=window,
+            principal_id=principal.id
+        )
+    )
+
+    def work(reporter: Reporter) -> None:
+        """ Collect, on a connection belonging to the job's thread. """
+        in_database(
+            lambda connection: collect(
+                connection=connection,
+                run_id=run.id,
+                reporter=reporter
+            )
+        )
+
+    request.app.state.runner.submit(job_id=job_id, work=work)
+
+    job = await read(
+        lambda connection: JobRepository(
+            connection=connection
+        ).get(job_id=job_id)
+    )
+
+    return to_job_view(job=job)
