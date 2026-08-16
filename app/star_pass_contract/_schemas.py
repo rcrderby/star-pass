@@ -543,3 +543,47 @@ class PreviewView(ApiModel):
             'events are shown.'
         )
     )
+
+
+class WindowRequest(ApiModel):
+    """ The days a collection is asked to cover.
+
+        No zone, unlike the window a run answers with.  The server's
+        zone is the authoritative one, and a client that sent its own
+        would be deciding which days a run covers from wherever the
+        person happened to be sitting (D16).
+    """
+
+    start: str = Field(
+        description=(
+            'First day to cover, as an ISO date. Read in the '
+            'server\'s time zone.'
+        ),
+        examples=['2026-09-01']
+    )
+    end: str = Field(
+        description=(
+            'Day after the last day to cover, as an ISO date. '
+            'Exclusive, so a one-day window is two consecutive dates. '
+            'There is no limit on how long a window may be.'
+        ),
+        examples=['2026-10-01']
+    )
+
+
+class CollectRequest(ApiModel):
+    """ Which calendar to collect, and over which days. """
+
+    calendar: str = Field(
+        description=(
+            'Which configured calendar to read. One the deployment '
+            'has configured; the names are not part of this contract, '
+            'because they are a property of a deployment rather than '
+            'of the API. A name that is not configured is refused, '
+            'and the refusal lists the ones that are.'
+        ),
+        examples=['events']
+    )
+    window: WindowRequest = Field(
+        description='The days to cover.'
+    )

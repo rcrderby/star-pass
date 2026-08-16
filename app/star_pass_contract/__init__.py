@@ -27,6 +27,7 @@ from ._schemas import (
     EventRoleView,
     EventView,
     JobView,
+    CollectRequest,
     LogEntryView,
     MatchView,
     OpportunityView,
@@ -37,6 +38,7 @@ from ._schemas import (
     RunCountsView,
     RunDetailView,
     RunView,
+    WindowRequest,
     WindowView
 )
 from ._views import (
@@ -50,6 +52,7 @@ from ._views import (
 __all__ = [
     'ApiModel',
     'BlockerView',
+    'CollectRequest',
     'EventRoleView',
     'EventView',
     'JobView',
@@ -63,6 +66,7 @@ __all__ = [
     'RunCountsView',
     'RunDetailView',
     'RunView',
+    'WindowRequest',
     'WindowView',
     'no_such_job',
     'no_such_run',

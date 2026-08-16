@@ -210,6 +210,7 @@ class Client(Operations):
             self,
             method: str,
             path: str,
+            body: Optional[Dict[str, Any]] = None,
             **parameters: Any
     ) -> Any:
         """ Send one request and return what the service answered.
@@ -220,6 +221,13 @@ class Client(Operations):
 
                 path (str):
                     The templated path from the specification.
+
+                body (Dict[str, Any], optional):
+                    What to send.  Defaults to None, for an operation
+                    that is sent nothing.  Named separately from the
+                    path values, which fill the template: a body that
+                    arrived among them would be interpolated into the
+                    address.
 
                 **parameters (Any):
                     Values for the template's placeholders.
@@ -236,6 +244,7 @@ class Client(Operations):
         response = self._session.request(
             method=method,
             url=self._url(path=path, **parameters),
+            json=body,
             timeout=REQUEST_TIMEOUT_SECONDS
         )
 

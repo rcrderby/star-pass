@@ -60,7 +60,7 @@ HEADER = '''#!/usr/bin/env python3
 """
 
 # Imports - Python Standard Library
-from typing import Any, Callable, Iterator
+from typing import Any, Callable, Dict, Iterator
 
 # Imports - Local
 from ._stream import StreamEvent
@@ -120,6 +120,23 @@ def _path_parameters(
     ]
 
 
+def _takes_body(
+        operation: Dict[str, Any]
+) -> bool:
+    """ Return whether an operation is sent something.
+
+        Args:
+            operation (Dict[str, Any]):
+                The operation from the specification.
+
+        Returns:
+            sends (bool):
+                Whether it carries a request body.
+    """
+
+    return bool(operation.get('requestBody'))
+
+
 def _is_stream(
         operation: Dict[str, Any]
 ) -> bool:
@@ -165,16 +182,30 @@ def _method(
     name = operation['operationId']
     parameters = _path_parameters(operation=operation)
     streaming = _is_stream(operation=operation)
+    sends = _takes_body(operation=operation)
 
-    signature = ''.join(
+    # The body comes first, so that adding a path parameter to an
+    # operation cannot change what an existing positional argument
+    # means.
+    signature = (
+        ',\n            body: Dict[str, Any]' if sends else ''
+    ) + ''.join(
         f',\n            {parameter}: str'
         for parameter in parameters
     )
-    arguments = ''.join(
+    arguments = (
+        ',\n            body=body' if sends else ''
+    ) + ''.join(
         f',\n            {parameter}={parameter}'
         for parameter in parameters
     )
-    documented = ''.join(
+    documented = (
+        '\n                body (Dict[str, Any]):'
+        '\n                    What the operation is sent, shaped as '
+        'the\n                    contract publishes it.\n'
+        if sends
+        else ''
+    ) + ''.join(
         f'\n                {parameter} (str):'
         f'\n                    Value for the path.\n'
         for parameter in parameters

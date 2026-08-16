@@ -31,14 +31,21 @@ from typing import Any, Callable, Dict, Iterator, List, Optional
 
 # Imports - Local
 from __version__ import __version__
-from star_pass._database import connect
+from star_pass._collect import collect
+from star_pass._job_runner import JobRunner
+from star_pass._database import connect, transaction
+from star_pass._defaults import GCAL_CALENDARS
+from star_pass._gcal_time import resolve_window
 from star_pass._reading import (
     read_run_detail,
     read_run_for_send,
     read_run_history
 )
+from star_pass._records import JOB_KIND_COLLECT
+from star_pass._reporting import Reporter
 from star_pass._repository import JobRepository, RunRepository
 from star_pass_contract import (
+    CollectRequest,
     no_such_job,
     no_such_run,
     to_detail_view,
@@ -57,6 +64,7 @@ from ._stream import StreamEvent
 # stops matching here rather than quietly answering the wrong thing.
 HANDLERS = {
     ('GET', '/v1/version'): '_version',
+    ('POST', '/v1/runs'): '_collect',
     ('GET', '/v1/runs'): '_runs',
     ('GET', '/v1/runs/{run_id}'): '_run',
     ('GET', '/v1/runs/{run_id}/revisions'): '_revisions',
@@ -90,6 +98,17 @@ UNAVAILABLE = {
 # one branch.
 NOT_FOUND = 404
 NOT_FOUND_TITLE = 'Not Found'
+
+# What a request the service would refuse is reported as, so that a
+# caller handling one mode has handled both.
+UNPROCESSABLE = 422
+UNPROCESSABLE_TITLE = 'Unprocessable Entity'
+
+# Who a local write is recorded as (D13).  Distinct from the service's
+# principal on purpose: the column exists so that two writers can be
+# told apart, and a local run and a run the service collected are two
+# different people acting.
+LOCAL_PRINCIPAL_ID = 'local-cli'
 
 
 class LocalOperationUnavailable(Exception):
@@ -156,6 +175,7 @@ class LocalClient(Operations):
             self,
             method: str,
             path: str,
+            body: Optional[Dict[str, Any]] = None,
             **parameters: Any
     ) -> Any:
         """ Answer one operation from the database.
@@ -166,6 +186,10 @@ class LocalClient(Operations):
 
                 path (str):
                     The templated path it is published at.
+
+                body (Dict[str, Any], optional):
+                    What the operation is sent.  Defaults to None, for
+                    one that is sent nothing.
 
                 **parameters (Any):
                     Values the path names.
@@ -191,6 +215,9 @@ class LocalClient(Operations):
             raise LocalOperationUnavailable(
                 f'{method} {path} has no local answer.'
             )
+
+        if body is not None:
+            parameters['body'] = body
 
         return getattr(self, HANDLERS[operation])(**parameters)
 
@@ -428,3 +455,171 @@ class LocalClient(Operations):
                 by_alias=True,
                 mode='json'
             )
+
+    def _collect(
+            self,
+            body: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """ Create a run and collect into it, here and now.
+
+            The remote half answers as soon as the run exists and
+            leaves a job running.  This one cannot: the process that
+            would run the job is the one about to return, so the work
+            happens in the call and the job is answered as it ended.
+
+            That is a difference in when, not in what.  The run, the
+            job and every event the collection reported are written
+            exactly as the service writes them, so reading the job
+            afterwards -- or following it -- says the same things.
+
+            Args:
+                body (Dict[str, Any]):
+                    Which calendar to collect, and over which days.
+
+            Raises:
+                ApiProblem:
+                    If the calendar is not configured, or the window
+                    does not name days a search can cover.
+
+                StarPassError:
+                    If the collection cannot be carried out.
+
+            Returns:
+                answer (Dict[str, Any]):
+                    The job, as it ended.
+        """
+
+        asked = CollectRequest.model_validate(body)
+        self._checked(asked=asked)
+
+        with self._opened() as connection:
+            with transaction(connection=connection):
+                run = RunRepository(connection=connection).create(
+                    calendar=asked.calendar,
+                    window_start=asked.window.start,
+                    window_end=asked.window.end
+                )
+                jobs = JobRepository(connection=connection)
+                job = jobs.create(
+                    run_id=run.id,
+                    kind=JOB_KIND_COLLECT,
+                    principal_id=LOCAL_PRINCIPAL_ID
+                )
+
+            JobRunner(
+                connect=self._connect_to,
+                workers=1
+            ).submit(
+                job_id=job.id,
+                work=lambda reporter: self._collected(
+                    run_id=run.id,
+                    reporter=reporter
+                )
+            ).result()
+
+            return to_job_view(
+                job=jobs.get(job_id=job.id)
+            ).model_dump(by_alias=True, mode='json')
+
+    def _collected(
+            self,
+            run_id: str,
+            reporter: Reporter
+    ) -> None:
+        """ Collect a run on a connection of the job's own.
+
+            Args:
+                run_id (str):
+                    Run to collect into.
+
+                reporter (Reporter):
+                    Where the job records what it reported.
+
+            Raises:
+                StarPassError:
+                    If the collection cannot be carried out.
+
+            Returns:
+                None.
+        """
+
+        with self._opened() as connection:
+            collect(
+                connection=connection,
+                run_id=run_id,
+                reporter=reporter
+            )
+
+        return None
+
+    def _checked(
+            self,
+            asked: CollectRequest
+    ) -> None:
+        """ Fail on a request the service would refuse.
+
+            The same two refusals the service makes, reported the same
+            way, so a person who mistypes a calendar name is told the
+            same thing in either mode (D2).
+
+            Args:
+                asked (CollectRequest):
+                    What the caller asked for.
+
+            Raises:
+                ApiProblem:
+                    If the calendar is not configured, or the window
+                    does not name days a search can cover.
+
+            Returns:
+                None.
+        """
+
+        if asked.calendar not in GCAL_CALENDARS:
+            raise self._refused(
+                detail=(
+                    f'"{asked.calendar}" is not a calendar this '
+                    'service reads. Use one of: '
+                    f'{", ".join(sorted(GCAL_CALENDARS))}.'
+                )
+            )
+
+        try:
+            resolve_window(
+                start=asked.window.start,
+                end=asked.window.end,
+                start_name='The window start',
+                end_name='the window end'
+            )
+
+        except ValueError as error:
+            raise self._refused(detail=str(error)) from error
+
+        return None
+
+    def _refused(
+            self,
+            detail: str
+    ) -> ApiProblem:
+        """ Return the failure for a request that will not be carried out.
+
+            Args:
+                detail (str):
+                    What to tell the caller.
+
+            Returns:
+                error (ApiProblem):
+                    An unprocessable-entity failure carrying that
+                    reason.
+        """
+
+        del self
+
+        return ApiProblem(
+            status=UNPROCESSABLE,
+            document={
+                'title': UNPROCESSABLE_TITLE,
+                'status': UNPROCESSABLE,
+                'detail': detail
+            }
+        )

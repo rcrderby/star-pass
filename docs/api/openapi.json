@@ -22,6 +22,29 @@
         "title": "BlockerView",
         "type": "object"
       },
+      "CollectRequest": {
+        "description": "Which calendar to collect, and over which days. ",
+        "properties": {
+          "calendar": {
+            "description": "Which configured calendar to read. One the deployment has configured; the names are not part of this contract, because they are a property of a deployment rather than of the API. A name that is not configured is refused, and the refusal lists the ones that are.",
+            "examples": [
+              "events"
+            ],
+            "title": "Calendar",
+            "type": "string"
+          },
+          "window": {
+            "$ref": "#/components/schemas/WindowRequest",
+            "description": "The days to cover."
+          }
+        },
+        "required": [
+          "calendar",
+          "window"
+        ],
+        "title": "CollectRequest",
+        "type": "object"
+      },
       "EventRoleView": {
         "description": "One opportunity an event creates a shift for. ",
         "properties": {
@@ -781,6 +804,33 @@
         "title": "Version",
         "type": "object"
       },
+      "WindowRequest": {
+        "description": "The days a collection is asked to cover.\n\nNo zone, unlike the window a run answers with.  The server's\nzone is the authoritative one, and a client that sent its own\nwould be deciding which days a run covers from wherever the\nperson happened to be sitting (D16).",
+        "properties": {
+          "end": {
+            "description": "Day after the last day to cover, as an ISO date. Exclusive, so a one-day window is two consecutive dates. There is no limit on how long a window may be.",
+            "examples": [
+              "2026-10-01"
+            ],
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "description": "First day to cover, as an ISO date. Read in the server's time zone.",
+            "examples": [
+              "2026-09-01"
+            ],
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "WindowRequest",
+        "type": "object"
+      },
       "WindowView": {
         "description": "The days a run covers, and the zone they are read in. ",
         "properties": {
@@ -979,6 +1029,49 @@
           }
         ],
         "summary": "List the runs, newest first",
+        "tags": [
+          "runs"
+        ]
+      },
+      "post": {
+        "description": "Reads the calendar over the days given and stores what it finds as a new run, ready to review. The identifier is minted here and is never the path of a file.\n\nAnswers as soon as the run exists, with the job doing the work: reading a calendar and naming every opportunity it finds takes longer than a request should be held open. Read the job, or follow its events, to see how far it has got. The run is in the list from the moment this answers, so a person who closed the page can find it again.\n\nThe window is a first day and the day after the last, read in the server's time zone, and there is no limit on its length. An event that cannot become a correct shift does not stop the collection: it is stored, named as unmatched, and stops the **send** instead, so a reviewer sees everything the calendar held rather than a run with holes in it.",
+        "operationId": "collect_run",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:write"
+            ]
+          }
+        ],
+        "summary": "Collect a calendar window into a new run",
         "tags": [
           "runs"
         ]
