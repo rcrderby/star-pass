@@ -402,15 +402,14 @@ class TestWhatIsShownBesideARun:
 
     def test_the_change_log_is_returned(
         self,
-        change_log: ChangeLogRepository,
+        add_log_entry: Callable[..., None],
         read_run: Callable[[str], Dict[str, Any]],
         run_id: str,
         revision: int
     ) -> None:
-        change_log.add(
+        add_log_entry(
             run_id=run_id,
             revision=revision,
-            principal_id=_defaults.API_PRINCIPAL_ID,
             entry='Set slots to 6 on Adult Scrimmages'
         )
 

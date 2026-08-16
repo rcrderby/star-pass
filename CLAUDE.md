@@ -114,8 +114,19 @@ through the Amplify API. It is run once per month.
   true — importing anything from `star_pass_api` runs its `__init__`
   and pulls in FastAPI, which would give the command line client a
   server as a dependency to read a run locally.
+- `app/star_pass/_reading.py` — which repository reads answer a
+  question about a run, and reading them on one connection. Below both
+  callers, because the service and the local client ask the same
+  questions and a mode that read one fewer thing than the other would
+  answer differently with nothing saying so.
 - `app/star_pass_client/` — the client the command line client uses
-  to reach a remote service. `_operations.py` is **generated** from
+  to reach a remote service, and the local half that answers the same
+  operations from the database in this process (D2). Both inherit the
+  same generated operations, so they cannot offer different methods;
+  only how an answer is reached differs. An operation with no local
+  answer is listed in `_local.UNAVAILABLE` with the reason, and a test
+  holds that list to exactly what the contract publishes and the
+  handlers do not cover. `_operations.py` is **generated** from
   the committed contract, one method per operation, so an endpoint the
   client cannot reach is a failing test rather than something nobody
   notices (D15). `_client.py` is written by hand and holds everything

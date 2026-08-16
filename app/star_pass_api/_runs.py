@@ -15,28 +15,20 @@
 """
 
 # Imports - Python Standard Library
-import sqlite3
-from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List
 
 # Imports - Third-Party
 from fastapi import APIRouter, HTTPException, Path, status
 
 # Imports - Local
-from star_pass._records import (
-    Event,
-    LogEntry,
-    Opportunity,
-    Revision,
-    Run
+from star_pass._reading import (
+    read_run_detail,
+    read_run_for_send,
+    read_run_history
 )
-from star_pass._repository import (
-    ChangeLogRepository,
-    EventRepository,
-    RevisionRepository,
-    RunRepository
-)
+from star_pass._repository import RunRepository
 from star_pass_contract import (
+    no_such_run,
     PreviewView,
     RevisionView,
     RunDetailView,
@@ -51,155 +43,6 @@ from ._security import Principal, requires, SCOPE_RUNS_READ
 from ._storage import read
 
 router = APIRouter(tags=[_defaults.API_TAG_RUNS])
-
-
-@dataclass(frozen=True)
-class _Detail:
-    """ Everything one read of a run gathered.
-
-        Held together rather than fetched a piece at a time, because a
-        screen showing the events, the opportunities labelling them and
-        the log of what was done to them shows all three at once.  Read
-        separately they could disagree, each having seen the run at a
-        different moment.
-
-        Attributes:
-            run (Run):
-                The run itself.
-
-            events (List[Event]):
-                The current revision's events.
-
-            opportunities (List[Opportunity]):
-                Every opportunity the run resolved.
-
-            log (List[LogEntry]):
-                The run's change log.
-    """
-
-    run: Run
-    events: List[Event]
-    opportunities: List[Opportunity]
-    log: List[LogEntry]
-
-
-def _gather(
-        connection: sqlite3.Connection,
-        run_id: str
-) -> Optional[_Detail]:
-    """ Read a run and everything shown beside it, in one go.
-
-        All four reads share the connection, so they describe the run
-        at one moment rather than at four.
-
-        Args:
-            connection (sqlite3.Connection):
-                Connection to read on.
-
-            run_id (str):
-                Run to read.
-
-        Returns:
-            detail (_Detail | None):
-                Everything about the run, or None when there is no
-                such run.
-    """
-
-    runs = RunRepository(connection=connection)
-    run = runs.get(run_id=run_id)
-
-    if run is None:
-        return None
-
-    return _Detail(
-        run=run,
-        # A run before its first revision reports revision 0, which
-        # holds nothing and reads back as nothing.  No guard for it:
-        # the answer is already the right one.
-        events=EventRepository(connection=connection).list_all(
-            run_id=run_id,
-            revision=run.current_revision
-        ),
-        opportunities=runs.get_opportunities(run_id=run_id),
-        log=ChangeLogRepository(connection=connection).list_all(
-            run_id=run_id
-        )
-    )
-
-
-def _history(
-        connection: sqlite3.Connection,
-        run_id: str
-) -> Optional[Tuple[Run, List[Revision]]]:
-    """ Read a run and its revisions together.
-
-        The run is read as well as the revisions, and not only to know
-        the run exists: it is what says which revision is the current
-        one.  Both reads share the connection, so the answer cannot be
-        a list of revisions from one moment marked current from
-        another.
-
-        Args:
-            connection (sqlite3.Connection):
-                Connection to read on.
-
-            run_id (str):
-                Run to read the history of.
-
-        Returns:
-            history (Tuple[Run, List[Revision]] | None):
-                The run and its revisions oldest first, or None when
-                there is no such run.
-    """
-
-    run = RunRepository(connection=connection).get(run_id=run_id)
-
-    if run is None:
-        return None
-
-    return (
-        run,
-        RevisionRepository(connection=connection).list_all(run_id=run_id)
-    )
-
-
-def _to_send(
-        connection: sqlite3.Connection,
-        run_id: str
-) -> Optional[Tuple[List[Event], List[Opportunity]]]:
-    """ Read what a send would work from.
-
-        The events of the current revision and the opportunities
-        labelling them, on one connection: a preview assembled from
-        two moments could label a shift with a title that no longer
-        belongs to it.
-
-        Args:
-            connection (sqlite3.Connection):
-                Connection to read on.
-
-            run_id (str):
-                Run to read.
-
-        Returns:
-            gathered (Tuple[List[Event], List[Opportunity]] | None):
-                The events and the opportunities, or None when there
-                is no such run.
-    """
-
-    runs = RunRepository(connection=connection)
-    run = runs.get(run_id=run_id)
-
-    if run is None:
-        return None
-
-    return (
-        EventRepository(connection=connection).list_all(
-            run_id=run_id,
-            revision=run.current_revision
-        ),
-        runs.get_opportunities(run_id=run_id)
-    )
 
 
 def _missing(
@@ -223,7 +66,7 @@ def _missing(
 
     return HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail=f'There is no run with the ID "{run_id}".'
+        detail=no_such_run(run_id=run_id)
     )
 
 
@@ -308,7 +151,7 @@ async def get_run(
     del principal
 
     detail = await read(
-        lambda connection: _gather(
+        lambda connection: read_run_detail(
             connection=connection,
             run_id=run_id
         )
@@ -317,12 +160,7 @@ async def get_run(
     if detail is None:
         raise _missing(run_id=run_id)
 
-    return to_detail_view(
-        run=detail.run,
-        events=detail.events,
-        opportunities=detail.opportunities,
-        log=detail.log
-    )
+    return to_detail_view(detail=detail)
 
 
 @router.get(
@@ -371,7 +209,7 @@ async def list_revisions(
     del principal
 
     history = await read(
-        lambda connection: _history(
+        lambda connection: read_run_history(
             connection=connection,
             run_id=run_id
         )
@@ -437,7 +275,7 @@ async def get_preview(
     del principal
 
     gathered = await read(
-        lambda connection: _to_send(
+        lambda connection: read_run_for_send(
             connection=connection,
             run_id=run_id
         )

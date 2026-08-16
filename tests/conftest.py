@@ -69,6 +69,7 @@ from star_pass._repository import (  # noqa: E402
     RunRepository
 )
 from star_pass_api import create_app  # noqa: E402
+from star_pass_api._defaults import API_PRINCIPAL_ID  # noqa: E402
 
 
 @pytest.fixture
@@ -211,6 +212,28 @@ def fixture_add_second_event(
             run_id=collected,
             revision=revision,
             event=make_event(id='event-2', **overrides)
+        )
+
+    return add
+
+
+@pytest.fixture(name='add_log_entry')
+def fixture_add_log_entry(
+    change_log: ChangeLogRepository
+) -> Callable[..., None]:
+    """ Return a way to append one entry to a run's change log. """
+
+    def add(
+        run_id: str,
+        revision: int,
+        entry: str
+    ) -> None:
+        """ Append the entry, recorded against the one principal. """
+        change_log.add(
+            run_id=run_id,
+            revision=revision,
+            principal_id=API_PRINCIPAL_ID,
+            entry=entry
         )
 
     return add

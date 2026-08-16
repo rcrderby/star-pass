@@ -20,7 +20,7 @@ from fastapi.responses import StreamingResponse
 # Imports - Local
 from star_pass._records import Job, JOB_STATUSES_FINISHED
 from star_pass._repository import JobRepository
-from star_pass_contract import JobView
+from star_pass_contract import JobView, no_such_job, to_job_view
 from . import _defaults
 from ._security import Principal, requires, SCOPE_RUNS_READ
 from ._storage import read
@@ -119,19 +119,10 @@ async def get_job(
     if job is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'There is no job with the ID "{job_id}".'
+            detail=no_such_job(job_id=job_id)
         )
 
-    return JobView(
-        id=job.id,
-        run_id=job.run_id,
-        kind=job.kind,
-        status=job.status,
-        created_at=job.created_at,
-        started_at=job.started_at,
-        finished_at=job.finished_at,
-        detail=job.detail
-    )
+    return to_job_view(job=job)
 
 
 def _frame(
@@ -338,7 +329,7 @@ async def stream_job_events(
     if job is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'There is no job with the ID "{job_id}".'
+            detail=no_such_job(job_id=job_id)
         )
 
     return StreamingResponse(
