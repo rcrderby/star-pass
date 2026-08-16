@@ -149,12 +149,20 @@ class Revision:
 
             label (str):
                 How the revision is named to a reader.
+
+            change_count (int):
+                How many changes were made while this revision was the
+                current one.  Derived from the change log, and the
+                figure that tells a reader which revision in a list is
+                worth looking at: a revision nothing was done in is
+                one somebody sealed and left.
     """
 
     run_id: str
     number: int
     created_at: str
     label: str
+    change_count: int
 
 
 @dataclass(frozen=True)

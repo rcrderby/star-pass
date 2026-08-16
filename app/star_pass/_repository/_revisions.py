@@ -19,6 +19,26 @@ from ._common import (
     utc_now
 )
 
+# Constants
+# A revision and the count of what was done while it was current.
+# Derived in the statement that reads a revision rather than by
+# whoever displays one, so a run's whole history costs one query
+# however many revisions it holds.
+REVISION_SELECT = """
+    SELECT
+        revisions.run_id      AS run_id,
+        revisions.number      AS number,
+        revisions.created_at  AS created_at,
+        revisions.label       AS label,
+        (
+            SELECT COUNT(*)
+            FROM change_log
+            WHERE change_log.run_id = revisions.run_id
+              AND change_log.revision = revisions.number
+        ) AS change_count
+    FROM revisions
+"""
+
 # Module logger
 logger = get_logger(__name__)
 
@@ -41,7 +61,8 @@ def _to_revision(
         run_id=row['run_id'],
         number=row['number'],
         created_at=row['created_at'],
-        label=row['label']
+        label=row['label'],
+        change_count=row['change_count']
     )
 
 
@@ -167,8 +188,8 @@ class RevisionRepository(Repository):
         row = query_one(
             connection=self._connection,
             statement=(
-                'SELECT * FROM revisions '
-                'WHERE run_id = ? AND number = ?'
+                f'{REVISION_SELECT} '
+                'WHERE revisions.run_id = ? AND revisions.number = ?'
             ),
             parameters=(run_id, number)
         )
@@ -197,8 +218,8 @@ class RevisionRepository(Repository):
         rows = query(
             connection=self._connection,
             statement=(
-                'SELECT * FROM revisions '
-                'WHERE run_id = ? ORDER BY number'
+                f'{REVISION_SELECT} '
+                'WHERE revisions.run_id = ? ORDER BY revisions.number'
             ),
             parameters=(run_id,)
         )
@@ -304,11 +325,14 @@ class RevisionRepository(Repository):
         message = f'Added revision {number} to run {run_id}'
         logger.debug(message)
 
+        # A revision this new is one nothing has been done in yet:
+        # the changes it will count are the ones made from now on.
         return Revision(
             run_id=run_id,
             number=number,
             created_at=created_at,
-            label=label
+            label=label,
+            change_count=0
         )
 
     def _current_number(

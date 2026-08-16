@@ -381,6 +381,45 @@
         "title": "OpportunityView",
         "type": "object"
       },
+      "RevisionView": {
+        "description": "One numbered version of a run's events. ",
+        "properties": {
+          "changes": {
+            "description": "How many changes were made while this revision was the current one. Zero means it was sealed and left, which is what tells a reader which revision in a list is worth looking at.",
+            "title": "Changes",
+            "type": "integer"
+          },
+          "createdAt": {
+            "description": "When it was created, as an ISO-8601 UTC time.",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "current": {
+            "description": "Whether this is the revision being edited now. Exactly one revision of a run is current, and it is the last: everything below it is history and is never written to again.",
+            "title": "Current",
+            "type": "boolean"
+          },
+          "label": {
+            "description": "How the revision is named to a reader.",
+            "title": "Label",
+            "type": "string"
+          },
+          "number": {
+            "description": "Position in the run's history, from one.",
+            "title": "Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "number",
+          "createdAt",
+          "label",
+          "changes",
+          "current"
+        ],
+        "title": "RevisionView",
+        "type": "object"
+      },
       "RunCountsView": {
         "description": "What the run's current revision holds. ",
         "properties": {
@@ -857,6 +896,58 @@
           }
         ],
         "summary": "Read one run in full",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/revisions": {
+      "get": {
+        "description": "Every numbered version of the run's events, in the order they were made. Everything below the current revision is history and is never written to again: editing adds a revision holding a copy, and reverting does the same rather than deleting anything, so the record of what was done survives being undone.\n\nEach carries how many changes were made while it was current, which is what says whether a revision is worth looking at.",
+        "operationId": "list_revisions_v1_runs__run_id__revisions_get",
+        "parameters": [
+          {
+            "description": "Identifier the run was created with.",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the run was created with.",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RevisionView"
+                  },
+                  "title": "Response List Revisions V1 Runs  Run Id  Revisions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:read"
+            ]
+          }
+        ],
+        "summary": "List a run's revisions, oldest first",
         "tags": [
           "runs"
         ]

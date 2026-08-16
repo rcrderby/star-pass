@@ -23,6 +23,7 @@ from star_pass._records import Event, Match, Opportunity
 from star_pass._repository import (
     ChangeLogRepository,
     EventRepository,
+    RevisionRepository,
     RunRepository
 )
 from star_pass_api import _defaults
@@ -36,6 +37,11 @@ RUNS_PATH = f'{_defaults.API_VERSION_PREFIX}/runs'
 def run_path(run_id: str) -> str:
     """ Return the address of one run. """
     return f'{RUNS_PATH}/{run_id}'
+
+
+def revisions_path(run_id: str) -> str:
+    """ Return the address of one run's revisions. """
+    return f'{run_path(run_id=run_id)}/revisions'
 
 
 @pytest.fixture(name='read_run')
@@ -214,8 +220,8 @@ class TestTheEventsOfARun:
         read_run: Callable[[str], Dict[str, Any]],
         run_id: str
     ) -> None:
-        # Asking for revision 0 would be asking for one that never
-        # existed, so nothing asks.
+        # A run before its first revision reports revision 0, which
+        # holds nothing and reads back as nothing.
         document = read_run(run_id)
 
         assert document['currentRevision'] == 0
@@ -455,3 +461,158 @@ class TestWhatTheSpecificationSays:
         assert 'opportunities' in detail
         assert 'log' in detail
         assert 'events' not in schemas['RunView']['properties']
+
+
+class TestListingRevisions:
+    def test_a_revision_appears_in_the_list(
+        self,
+        running_client: TestClient,
+        run_id: str,
+        revision: int
+    ) -> None:
+        response = running_client.get(revisions_path(run_id=run_id))
+
+        assert response.status_code == 200
+        assert [item['number'] for item in response.json()] == [revision]
+
+    def test_revisions_are_listed_oldest_first(
+        self,
+        running_client: TestClient,
+        edited: str
+    ) -> None:
+        listed = running_client.get(revisions_path(run_id=edited)).json()
+
+        assert [item['number'] for item in listed] == [1, 2]
+
+    def test_the_last_revision_is_the_current_one(
+        self,
+        running_client: TestClient,
+        edited: str
+    ) -> None:
+        # Everything below it is history and is never written to
+        # again, which is what the flag tells a reader.
+        listed = running_client.get(revisions_path(run_id=edited)).json()
+
+        assert [item['current'] for item in listed] == [False, True]
+
+    def test_a_revisions_label_is_returned(
+        self,
+        running_client: TestClient,
+        edited: str
+    ) -> None:
+        listed = running_client.get(revisions_path(run_id=edited)).json()
+
+        assert [item['label'] for item in listed] == [
+            'As collected',
+            'Edited'
+        ]
+
+    def test_a_run_with_no_revision_reads_as_an_empty_list(
+        self,
+        running_client: TestClient,
+        run_id: str
+    ) -> None:
+        # A run that exists and has no revision is a different fact
+        # from a run that does not exist, and reads differently.
+        response = running_client.get(revisions_path(run_id=run_id))
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_an_unknown_run_is_not_found(
+        self,
+        running_client: TestClient
+    ) -> None:
+        response = running_client.get(revisions_path(run_id='no-such-run'))
+
+        assert response.status_code == 404
+        assert response.headers['content-type'] == PROBLEM_MEDIA_TYPE
+        assert 'no-such-run' in response.json()['detail']
+
+    def test_listing_revisions_needs_a_credential(
+        self,
+        anonymous_client: TestClient,
+        run_id: str
+    ) -> None:
+        assert anonymous_client.get(
+            revisions_path(run_id=run_id)
+        ).status_code == 401
+
+
+class TestWhatWasDoneInARevision:
+    def test_a_revision_nothing_was_done_in_counts_nothing(
+        self,
+        running_client: TestClient,
+        run_id: str,
+        revision: int
+    ) -> None:
+        listed = running_client.get(revisions_path(run_id=run_id)).json()
+
+        assert [
+            (item['number'], item['changes']) for item in listed
+        ] == [(revision, 0)]
+
+    def test_the_changes_made_while_a_revision_was_current_are_counted(
+        self,
+        change_log: ChangeLogRepository,
+        running_client: TestClient,
+        run_id: str,
+        revision: int
+    ) -> None:
+        for entry in ('Set slots to 6', 'Removed Adult Scrimmages'):
+            change_log.add(
+                run_id=run_id,
+                revision=revision,
+                principal_id=_defaults.API_PRINCIPAL_ID,
+                entry=entry
+            )
+
+        listed = running_client.get(revisions_path(run_id=run_id)).json()
+
+        assert [item['changes'] for item in listed] == [2]
+
+    def test_a_change_counts_against_the_revision_it_was_made_in(
+        self,
+        change_log: ChangeLogRepository,
+        running_client: TestClient,
+        edited: str
+    ) -> None:
+        # The count says what was done while each revision was the
+        # current one, so an edit made now belongs to the second and
+        # leaves the first as it was.
+        change_log.add(
+            run_id=edited,
+            revision=2,
+            principal_id=_defaults.API_PRINCIPAL_ID,
+            entry='Nudged Adult Scrimmages by 30 minutes'
+        )
+
+        listed = running_client.get(revisions_path(run_id=edited)).json()
+
+        assert [item['changes'] for item in listed] == [0, 1]
+
+    def test_another_runs_changes_are_not_counted(
+        self,
+        change_log: ChangeLogRepository,
+        running_client: TestClient,
+        runs: RunRepository,
+        revisions: RevisionRepository,
+        run_id: str,
+        revision: int
+    ) -> None:
+        other = runs.create(
+            calendar='events',
+            window_start='2026-09-01',
+            window_end='2026-10-01'
+        )
+        revisions.create(run_id=other.id, label='As collected')
+        change_log.add(
+            run_id=other.id,
+            revision=revision,
+            principal_id=_defaults.API_PRINCIPAL_ID,
+            entry='Removed something from the other run'
+        )
+
+        listed = running_client.get(revisions_path(run_id=run_id)).json()
+
+        assert [item['changes'] for item in listed] == [0]
