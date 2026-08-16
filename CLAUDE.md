@@ -49,6 +49,15 @@ through the Amplify API. It is run once per month.
   it are derived, and so are shift length and duplicates. The counts
   and the active job are derived in the same statement that reads a
   run, so a list of runs costs one query rather than one per run.
+- `app/star_pass/_derived.py` — the four things the `Event` record
+  deliberately leaves out, worked out from what it does hold: how long
+  the shift is, whether an opportunity's maximum shortened it, whether
+  another event in the revision would create the same shift, and
+  whether the event blocks the run for want of a match. Pure functions
+  over records, in the core rather than the service, so the CLI shows
+  the same figures the web interface does. A run's own figures are
+  derived in the repository instead, because they are counts over rows
+  the caller has not read.
 - `app/star_pass/_job_runner.py` — `JobRunner`, which runs a job's
   work on a thread and records how it ended, and `JobReporter`, a
   `Reporter` that writes the core's progress calls to the job's event
