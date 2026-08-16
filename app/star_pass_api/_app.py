@@ -11,17 +11,84 @@
     The routes carry no domain logic.  They call the core and turn what
     it returns into a response, which is what keeps the command line
     client and this service able to do the same things (D1).
+
+    What happens when the service starts is here too, because it is
+    part of what the application is: a job the last process was holding
+    is ended, and the one that runs new work is created and shut down
+    with the service.
 """
+
+# Imports - Python Standard Library
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
 
 # Imports - Third-Party
 from fastapi import FastAPI
 
 # Imports - Local
+from star_pass._job_runner import JobRunner
+from star_pass._logging import get_logger
+from star_pass._repository import JobRepository
 from . import _defaults
 from ._health import router as health_router
+from ._jobs import router as jobs_router
 from ._problems import add_problem_handlers, PROBLEM_MEDIA_TYPE
 from ._security import check_configuration
+from ._storage import in_database, open_connection
 from ._version import router as version_router
+
+# Module logger
+logger = get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(
+        api: FastAPI
+) -> AsyncIterator[None]:
+    """ End what the last process was holding, and run what comes next.
+
+        A job left queued or running belongs to a process that no
+        longer exists.  Ending them here is what keeps a restart from
+        leaving a caller watching something nothing is doing, and it
+        happens before the service answers anything, so nobody reads a
+        status that is about to change (D10).
+
+        Nothing is resumed.  A job that was interrupted is picked up
+        again only when somebody asks, because a send that resumed
+        itself would write to a live volunteer system from state
+        rebuilt after a crash.
+
+        Args:
+            api (FastAPI):
+                The application starting up.
+
+        Yields:
+            None:
+                While the service is running.
+    """
+
+    interrupted = in_database(
+        lambda connection: JobRepository(
+            connection=connection
+        ).interrupt_unfinished()
+    )
+
+    if interrupted:
+        message = (
+            f'Ended {interrupted} job(s) the previous process was '
+            'holding. Resume them from the interface.'
+        )
+        logger.warning(message)
+
+    api.state.runner = JobRunner(connect=open_connection)
+
+    try:
+        yield
+
+    finally:
+        # Waits, so a job in hand records how it ended rather than
+        # being left for the next start to sweep.
+        api.state.runner.shutdown()
 
 
 def create_app() -> FastAPI:
@@ -46,6 +113,7 @@ def create_app() -> FastAPI:
     check_configuration()
 
     api = FastAPI(
+        lifespan=lifespan,
         title=_defaults.API_TITLE,
         version=_defaults.API_VERSION,
         summary=_defaults.API_SUMMARY,
@@ -65,7 +133,7 @@ def create_app() -> FastAPI:
 
     add_problem_handlers(api=api)
 
-    for router in (health_router, version_router):
+    for router in (health_router, version_router, jobs_router):
         api.include_router(
             router,
             prefix=_defaults.API_VERSION_PREFIX

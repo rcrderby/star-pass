@@ -8,6 +8,7 @@
 # Imports - Python Standard Library
 import os
 import sqlite3
+from contextlib import contextmanager
 from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Iterator
@@ -51,6 +52,7 @@ from fastapi import FastAPI  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 # Imports - Local
+from star_pass import _database  # noqa: E402
 from star_pass._database import connect  # noqa: E402
 from star_pass._helpers import Helpers  # noqa: E402
 from star_pass._records import (  # noqa: E402
@@ -256,3 +258,53 @@ def fixture_authenticated_client(
         raise_server_exceptions=False,
         headers={'Authorization': f'Bearer {api_credential}'}
     )
+
+
+@pytest.fixture(name='service_database')
+def fixture_service_database(
+    monkeypatch: pytest.MonkeyPatch,
+    database_path: Path
+) -> Path:
+    """ Point the service at the test's own database.
+
+        The service opens the configured database by name rather than
+        being handed a connection, so a test redirects the name.
+    """
+    monkeypatch.setattr(_database, 'DATABASE_FILE', database_path)
+
+    return database_path
+
+
+@pytest.fixture(name='start_service')
+def fixture_start_service(
+    service_database: Path,
+    api_credential: str
+) -> Callable[[], Any]:
+    """ Return a way to start a service on the test's database.
+
+        A started service is one whose startup and shutdown work has
+        run; the plain client fixture skips it, which is what most
+        tests want.
+    """
+    del service_database
+
+    @contextmanager
+    def start() -> Iterator[TestClient]:
+        """ Start a service and yield a client that authenticates. """
+        with TestClient(
+            app=create_app(),
+            raise_server_exceptions=False,
+            headers={'Authorization': f'Bearer {api_credential}'}
+        ) as client:
+            yield client
+
+    return start
+
+
+@pytest.fixture(name='running_client')
+def fixture_running_client(
+    start_service: Callable[[], Any]
+) -> Iterator[TestClient]:
+    """ Return a client for a service that has actually started. """
+    with start_service() as client:
+        yield client

@@ -19,6 +19,81 @@
         "title": "Health",
         "type": "object"
       },
+      "JobView": {
+        "description": "A long operation, as a caller sees it. ",
+        "properties": {
+          "createdAt": {
+            "description": "When it was asked for, as an ISO-8601 UTC time.",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it failed, when it did and when the reason is one a caller can act on. A failure the service did not expect says so without its reason, which is in the service log against the job.",
+            "title": "Detail"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it stopped, or null while it has not.",
+            "title": "Finishedat"
+          },
+          "id": {
+            "description": "Identifier the job is addressed by.",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What it is doing: collect, recollect, send.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "runId": {
+            "description": "Run the job is working on.",
+            "title": "Runid",
+            "type": "string"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it began, or null while it is queued.",
+            "title": "Startedat"
+          },
+          "status": {
+            "description": "Where it is: queued, running, succeeded, failed, interrupted. \"interrupted\" means the service stopped while it was in hand, so how far it got is unknown; resuming one is a deliberate action, never automatic.",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "runId",
+          "kind",
+          "status",
+          "createdAt"
+        ],
+        "title": "JobView",
+        "type": "object"
+      },
       "Version": {
         "description": "The running version of the application. ",
         "properties": {
@@ -79,6 +154,54 @@
         "summary": "Report that the service is serving",
         "tags": [
           "service"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}": {
+      "get": {
+        "description": "Answers for a job whether it is queued, running or over. A caller watching one polls this, or reads the event stream for the same job to be told as it happens.",
+        "operationId": "get_job_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "description": "Identifier the job was created with.",
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the job was created with.",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:read"
+            ]
+          }
+        ],
+        "summary": "Report where a job has got to",
+        "tags": [
+          "jobs"
         ]
       }
     },
