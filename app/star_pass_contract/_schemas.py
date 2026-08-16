@@ -434,8 +434,13 @@ class RevisionView(ApiModel):
     )
 
 
+# Described by its scope rather than by how many figures it holds.  A
+# docstring here is published, and a count of the fields below it is a
+# second statement of something the fields already say -- one that
+# needs re-reading every time preview learns to report another figure,
+# and that says nothing a reader could not see.
 class PreviewTotalsView(ApiModel):
-    """ What a send would do, in four numbers. """
+    """ What a send would do, totalled over the whole revision. """
 
     will_create: int = Field(
         description=(
@@ -520,7 +525,10 @@ class PreviewView(ApiModel):
     """
 
     totals: PreviewTotalsView = Field(
-        description='What a send would do, in four numbers.'
+        description=(
+            'What a send would do, totalled over the whole revision '
+            'rather than per opportunity.'
+        )
     )
     rows: List[PreviewRowView] = Field(
         description=(
