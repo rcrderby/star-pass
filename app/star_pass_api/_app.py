@@ -24,6 +24,7 @@ from typing import AsyncIterator
 
 # Imports - Third-Party
 from fastapi import FastAPI
+from fastapi.routing import APIRoute
 
 # Imports - Local
 from star_pass._job_runner import JobRunner
@@ -92,6 +93,29 @@ async def lifespan(
         api.state.runner.shutdown()
 
 
+def operation_id(
+        route: APIRoute
+) -> str:
+    """ Return the name an operation is published under.
+
+        The name of the function serving the route, rather than the
+        default built from its method and path.  The identifier is
+        what a generated client names its methods after, so 'get_run'
+        reads as a method and
+        'get_run_v1_runs__run_id__get' does not.
+
+        Args:
+            route (APIRoute):
+                The route being published.
+
+        Returns:
+            identifier (str):
+                What to call the operation in the specification.
+    """
+
+    return route.name
+
+
 def create_app() -> FastAPI:
     """ Build the service.
 
@@ -122,6 +146,7 @@ def create_app() -> FastAPI:
         docs_url=_defaults.API_DOCS_PATH,
         redoc_url=_defaults.API_REDOC_PATH,
         openapi_url=_defaults.API_OPENAPI_PATH,
+        generate_unique_id_function=operation_id,
         # Every failure is a problem document, so the generated
         # specification says so once here rather than on each route.
         responses={

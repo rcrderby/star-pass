@@ -50,7 +50,7 @@ PLACEHOLDER_CREDENTIAL = 'generated-specification-placeholder-value'
 
 # The command that rewrites the committed copy, quoted in the failure
 # when it no longer matches.
-REGENERATE_COMMAND = 'python scripts/generate_openapi.py'
+REGENERATE_COMMAND = 'python scripts/generate_contract.py'
 
 
 @contextmanager

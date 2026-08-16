@@ -102,7 +102,17 @@ through the Amplify API. It is run once per month.
   and this package holds no domain logic. Run it with
   `uvicorn --factory star_pass_api:create_app`.
 - `docs/api/openapi.json` — the generated OpenAPI 3.1 contract,
-  written by `scripts/generate_openapi.py`.
+  written by `scripts/generate_contract.py`, which also writes the
+  client generated from it.
+- `app/star_pass_client/` — the client the command line client uses
+  to reach a remote service. `_operations.py` is **generated** from
+  the committed contract, one method per operation, so an endpoint the
+  client cannot reach is a failing test rather than something nobody
+  notices (D15). `_client.py` is written by hand and holds everything
+  the generated methods call: the session, the credential, and the
+  mapping of a problem document onto an exception. Generated code is
+  excluded from the duplicate-code check, which one method per
+  endpoint would otherwise trip.
 - `app/schema/amplify.shifts.schema.json` — JSON Schema for shift
   payloads.
 - `tests/` — pytest suite.
@@ -267,10 +277,20 @@ The notes below are the ones that are not obvious from the commands.
   was outside their scopes.
 - `docs/api/openapi.json` is generated, never edited. After changing a
   route, a model, a scope or the version, run
-  `python scripts/generate_openapi.py` and commit the result;
+  `python scripts/generate_contract.py` and commit the result;
   `tests/test_api_spec.py` fails while it and the service disagree.
   A version bump changes this file, which is intended: the contract
-  records which release it describes.
+  records which release it describes. The same command writes
+  `app/star_pass_client/_operations.py`, which is generated from the
+  contract: one command, because writing the contract without the
+  client generated from it would leave a client describing the service
+  as it used to be.
+- An operation's identifier in the contract is the name of the
+  function serving the route, not FastAPI's default built from the
+  method and path. The generated client names its methods after it, so
+  `get_run` reads as a method and `get_run_v1_runs__run_id__get` does
+  not. Two routes may not share a function name; a test fails if they
+  do.
 - Prefer failing loudly over dropping data. A row that cannot become a
   correct shift stops the run and is named, rather than being skipped:
   a missing shift is invisible, and the operator only discovers it when
