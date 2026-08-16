@@ -155,6 +155,41 @@ def fixture_revision(
     ).number
 
 
+@pytest.fixture(name='collected')
+def fixture_collected(
+    events: EventRepository,
+    run_id: str,
+    revision: int,
+    make_event: Callable[..., Event]
+) -> str:
+    """ Return a run whose first revision holds one event. """
+    events.add(
+        run_id=run_id,
+        revision=revision,
+        event=make_event()
+    )
+
+    return run_id
+
+
+@pytest.fixture(name='edited')
+def fixture_edited(
+    events: EventRepository,
+    revisions: RevisionRepository,
+    collected: str,
+    make_event: Callable[..., Event]
+) -> str:
+    """ Return that run with a second revision moving the event. """
+    revisions.create(run_id=collected, label='Edited')
+    events.replace(
+        run_id=collected,
+        revision=2,
+        event=make_event(shift_start='19:45')
+    )
+
+    return collected
+
+
 @pytest.fixture(name='job_principal')
 def fixture_job_principal() -> str:
     """ Return the principal ID a test's jobs are asked for by. """

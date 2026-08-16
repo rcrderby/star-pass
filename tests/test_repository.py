@@ -30,41 +30,6 @@ from star_pass._repository import (
 from star_pass._repository._common import copy_statement, insert_statement
 
 
-@pytest.fixture(name='collected')
-def fixture_collected(
-    events: EventRepository,
-    run_id: str,
-    revision: int,
-    make_event: Callable[..., Event]
-) -> str:
-    """ Return a run whose first revision holds one event. """
-    events.add(
-        run_id=run_id,
-        revision=revision,
-        event=make_event()
-    )
-
-    return run_id
-
-
-@pytest.fixture(name='edited')
-def fixture_edited(
-    events: EventRepository,
-    revisions: RevisionRepository,
-    collected: str,
-    make_event: Callable[..., Event]
-) -> str:
-    """ Return that run with a second revision moving the event. """
-    revisions.create(run_id=collected, label='Edited')
-    events.replace(
-        run_id=collected,
-        revision=2,
-        event=make_event(shift_start='19:45')
-    )
-
-    return collected
-
-
 class TestRuns:
     def test_a_new_run_is_stored_with_a_minted_id(
         self,
