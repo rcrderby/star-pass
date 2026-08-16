@@ -119,9 +119,14 @@ through the Amplify API. It is run once per month.
   callers, because the service and the local client ask the same
   questions and a mode that read one fewer thing than the other would
   answer differently with nothing saying so.
-- `app/star_pass_cli/` — the run-based commands (`star-pass runs
-  list`), which read the local database by default and a service when
-  `--api-url` or `STAR_PASS_API_URL` names one (D2). Separate from
+- `app/star_pass_cli/` — the reading commands (`runs list`, `runs
+  show`, `runs revisions`, `runs preview` and `jobs show`), which read
+  the local database by default and a service when
+  `--api-url` or `STAR_PASS_API_URL` names one (D2). Each is a row in
+  `_commands.COMMANDS` naming the contract operation to ask and the
+  renderer to show its answer with, and the same rows build the
+  parser, so a command the command line offers and the dispatcher does
+  not answer is not expressible. Separate from
   `__main__.py`, which holds the three CSV-based run modes: those
   cannot be reached over HTTP, because the contract deliberately
   publishes nothing addressed by a file path, so they stay local. A

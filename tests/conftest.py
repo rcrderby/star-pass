@@ -60,6 +60,8 @@ from star_pass._records import (  # noqa: E402
     Event,
     EventRole,
     JOB_KIND_COLLECT,
+    Match,
+    MATCH_KIND_FUZZY,
     Opportunity
 )
 from star_pass._repository import (  # noqa: E402
@@ -219,6 +221,59 @@ def fixture_edited(
     return collected
 
 
+@pytest.fixture(name='populated')
+# Seven fixtures because the run has something of everything in it, and
+# a shorter list would be a run that agrees by accident.
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
+def fixture_populated(
+    add_log_entry: Callable[..., None],
+    edited: str,
+    events: EventRepository,
+    job_id: str,
+    make_event: Callable[..., Event],
+    make_opportunity: Callable[..., Opportunity],
+    runs: RunRepository
+) -> str:
+    """ Return a run with something of everything in it.
+
+        A run holding one plain event can be read correctly by code
+        that is wrong about everything a run can also hold, so this one
+        has two revisions, a repeat, a blocked event, a fuzzy match, an
+        opportunity and a change log entry.
+    """
+    del job_id
+
+    runs.set_opportunities(
+        run_id=edited,
+        opportunities=[make_opportunity(max_length=120)]
+    )
+    events.add(
+        run_id=edited,
+        revision=2,
+        event=make_event(
+            id='event-2',
+            match=Match(kind=MATCH_KIND_FUZZY, keyword=None, score=71)
+        )
+    )
+    events.add(
+        run_id=edited,
+        revision=2,
+        event=make_event(id='event-3', category=None, roles=())
+    )
+    events.add(
+        run_id=edited,
+        revision=2,
+        event=make_event(id='event-4', added_by_hand=True)
+    )
+    add_log_entry(
+        run_id=edited,
+        revision=2,
+        entry='Nudged Adult Scrimmages by 30 minutes'
+    )
+
+    return edited
+
+
 @pytest.fixture(name='add_second_event')
 def fixture_add_second_event(
     events: EventRepository,
@@ -355,6 +410,44 @@ def fixture_make_run_document() -> Callable[..., dict]:
                 'unmatched': overrides.get('unmatched', 0)
             }
         }
+
+    return build
+
+
+@pytest.fixture(name='make_event_document')
+def fixture_make_event_document() -> Callable[..., dict]:
+    """ Return a factory building an event as an answer carries one.
+
+        Written out rather than read from a database, because what
+        reads one is deciding how to show a field and wants to set
+        that field.  A test holds these keys to the shape the contract
+        publishes, so a rename cannot leave this passing on its own.
+    """
+
+    def build(**overrides: Any) -> dict:
+        """ Return the document, replacing any overridden field. """
+        document: dict = {
+            'id': 'event-1',
+            'title': 'Adult Scrimmages',
+            'date': '2026-09-03',
+            'calendarStart': '19:00',
+            'calendarEnd': '21:00',
+            'shiftStart': '19:15',
+            'shiftEnd': '21:30',
+            'lengthMinutes': 135,
+            'cappedAt': None,
+            'category': 'scrimmage',
+            'match': None,
+            'addedByHand': False,
+            'roles': [
+                {'needId': '905196', 'slots': 4, 'edited': False}
+            ],
+            'duplicateOf': None,
+            'blocking': False
+        }
+        document.update(overrides)
+
+        return document
 
     return build
 

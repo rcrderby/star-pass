@@ -37,6 +37,8 @@ SLACK_SUMMARY_NEED_IDS = _defaults.SLACK_SUMMARY_NEED_IDS
 # mandatory (unbracketed) and optional (bracketed) for each run mode.
 USAGE = (
     'star-pass runs list [--api-url URL]\n'
+    '       star-pass runs {show,revisions,preview} RUN [--api-url URL]\n'
+    '       star-pass jobs show JOB [--api-url URL]\n'
     '       star-pass -g -n {events,practices}\n'
     '       star-pass -c -i INPUT_FILE [-C {true,false}] '
     '[-o {basic,simple,detailed}]\n'

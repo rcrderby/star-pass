@@ -34,8 +34,6 @@ from requests import Response, Session
 from requests.adapters import BaseAdapter
 
 # Imports - Local
-from star_pass._records import Match
-from star_pass._repository import RunRepository
 from star_pass_client import (
     ApiProblem,
     Client,
@@ -174,50 +172,6 @@ def problem_from(
     return error.value
 
 
-@pytest.fixture(name='populated')
-def fixture_populated(
-    add_log_entry: Callable[..., None],
-    runs: RunRepository,
-    edited: str,
-    make_opportunity: Callable[..., Any],
-    make_event: Callable[..., Any],
-    events: Any,
-    job_id: str
-) -> str:
-    """ Return a run with something of everything in it.
-
-        A run with one plain event would let the two modes agree by
-        accident.  This one has two revisions, a repeat, a blocked
-        event, a fuzzy match, an opportunity and a log entry.
-    """
-    del job_id
-
-    runs.set_opportunities(
-        run_id=edited,
-        opportunities=[make_opportunity(max_length=120)]
-    )
-    events.add(
-        run_id=edited,
-        revision=2,
-        event=make_event(
-            id='event-2',
-            match=Match(kind='fuzzy', keyword=None, score=71)
-        )
-    )
-    events.add(
-        run_id=edited,
-        revision=2,
-        event=make_event(id='event-3', category=None, roles=())
-    )
-    add_log_entry(
-        run_id=edited,
-        revision=2,
-        entry='Nudged Adult Scrimmages by 30 minutes'
-    )
-
-    return edited
-
-
 class TestTheTwoModesAgree:
     def test_the_runs_read_the_same(
         self,
@@ -238,7 +192,7 @@ class TestTheTwoModesAgree:
 
         assert local == remote
         # Guard against both answering an empty document identically.
-        assert len(local['events']) == 3
+        assert len(local['events']) == 4
         assert local['opportunities']
 
     def test_the_revisions_read_the_same(
@@ -260,6 +214,7 @@ class TestTheTwoModesAgree:
 
         assert local == remote
         assert local['totals']['willCreate']
+        assert local['totals']['repeatedRows']
         assert local['blockers']
 
     def test_a_job_reads_the_same(

@@ -12,11 +12,30 @@
     CLAUDE.md asks for -- times and window bounds are converted for
     display -- and it keeps the authoritative value unconverted
     everywhere else.
+
+    Two shapes, and the choice between them is the size of the answer.
+    A list is a table, because a reader is comparing rows.  One thing
+    is a column of labelled values, because a reader is looking a
+    single fact up and a row that wide would wrap.  A document holding
+    both -- a run, which arrives with its events, its opportunities and
+    its change log -- is the labelled values followed by a table each.
+
+    Every renderer a command uses takes one argument, named 'answer',
+    so that '_commands' can hold which renderer belongs to which
+    operation as data rather than as five near-identical functions.
 """
 
 # Imports - Python Standard Library
 from datetime import date, timedelta
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Sequence, Tuple
+
+# Imports - Local
+from star_pass._preview import (
+    BLOCKER_ENDS_BEFORE_START,
+    BLOCKER_NO_OPPORTUNITY,
+    BLOCKER_NO_SLOTS
+)
+from star_pass._records import MATCH_KIND_FUZZY
 
 # Constants
 # Two spaces between columns: enough to separate them, little enough
@@ -35,8 +54,85 @@ RUN_HEADERS = (
     'REVISED'
 )
 
+# What an event's row shows, in order.  The notes column carries what
+# a reader would otherwise have to work out; an ordinary keyword match
+# is not in it, because a column that says something about every row
+# says nothing about any of them.
+EVENT_HEADERS = (
+    'ID',
+    'DATE',
+    'SHIFT',
+    'MINUTES',
+    'TITLE',
+    'CATEGORY',
+    'ROLES',
+    'NOTES'
+)
+
+# What an opportunity's row shows, in order.
+OPPORTUNITY_HEADERS = (
+    'NEED',
+    'TITLE',
+    'MAXIMUM',
+    'OFFSETS',
+    'SLOTS'
+)
+
+# What a change log entry shows, in order.
+LOG_HEADERS = (
+    'WHEN',
+    'REVISION',
+    'WHO',
+    'ENTRY'
+)
+
+# What a revision's row shows, in order.
+REVISION_HEADERS = (
+    'NUMBER',
+    'CREATED',
+    'LABEL',
+    'CHANGES',
+    'CURRENT'
+)
+
+# What a previewed opportunity's row shows, in order.
+PREVIEW_HEADERS = (
+    'NEED',
+    'TITLE',
+    'SHIFTS',
+    'SLOTS',
+    'FIRST',
+    'LAST'
+)
+
+# What a blocked event's row shows, in order.
+BLOCKER_HEADERS = (
+    'EVENT',
+    'REASON'
+)
+
 # Shown in a column that has nothing to show, so a row keeps its shape.
 NOTHING = '-'
+
+# Said of the revision being edited now, in the column that marks it.
+CURRENT = 'current'
+
+# Said once, above the rows, when anything is blocked.  A preview whose
+# totals a reader skims should not let them think the blocked events
+# below cost them only those shifts.
+NOTHING_SENDABLE = 'Nothing can be sent while an event is blocked.'
+
+# How each reason an event cannot be sent is put to a reader.  The
+# contract publishes the reasons as identifiers, which is right for
+# something a program branches on and wrong for something a person
+# reads, so they are worded here -- the module that decides how things
+# are shown.  A reason with no wording shows as itself, and a test
+# holds this to what the core publishes so that never happens quietly.
+BLOCKER_PHRASES = {
+    BLOCKER_NO_OPPORTUNITY: 'No opportunity to create a shift under.',
+    BLOCKER_ENDS_BEFORE_START: 'The shift ends before it starts.',
+    BLOCKER_NO_SLOTS: 'No volunteers are wanted.'
+}
 
 
 def last_day(
@@ -75,32 +171,21 @@ def window_text(
     return f'{window["start"]} to {last_day(window=window)}'
 
 
-def run_row(
-        run: Dict[str, Any]
-) -> List[str]:
-    """ Return one run as a row.
+def shown(
+        value: Any
+) -> str:
+    """ Return a value as it is displayed, or a dash when there is none.
 
         Args:
-            run (Dict[str, Any]):
-                A run from an answer.
+            value (Any):
+                What an answer carried, which may be null.
 
         Returns:
-            row (List[str]):
-                One value per column in 'RUN_HEADERS'.
+            text (str):
+                The value, or 'NOTHING' when there was none.
     """
 
-    counts = run['counts']
-
-    return [
-        run['id'],
-        run['calendar'],
-        window_text(window=run['window']),
-        run['status'],
-        str(counts['events']),
-        str(counts['shifts']),
-        str(counts['unmatched']) if counts['unmatched'] else NOTHING,
-        run['revisedAt']
-    ]
+    return NOTHING if value is None else str(value)
 
 
 def table(
@@ -138,24 +223,543 @@ def table(
     )
 
 
+def labelled(
+        pairs: Sequence[Tuple[str, str]]
+) -> str:
+    """ Return named values, one to a line, aligned on their names.
+
+        What a table is for a list, this is for one thing: a run and a
+        job each carry more fields than a terminal row can hold, and a
+        reader of one is looking a single value up rather than
+        comparing it with the value beside it.
+
+        Args:
+            pairs (Sequence[Tuple[str, str]]):
+                A name and its value, in the order to show them.
+
+        Returns:
+            text (str):
+                The values, without a trailing newline.
+    """
+
+    width = max(len(name) for name, _ in pairs)
+
+    return '\n'.join(
+        f'{name.ljust(width)}{COLUMN_GAP}{value}'
+        for name, value in pairs
+    )
+
+
+def section(
+        heading: str,
+        headers: Sequence[str],
+        rows: Sequence[Sequence[str]],
+        empty: str
+) -> str:
+    """ Return one headed table, or a sentence when it has no rows.
+
+        A heading over a table of nothing but column names reads as an
+        answer that failed rather than as one that is empty, so the
+        sentence says which it is.
+
+        Args:
+            heading (str):
+                What the section is called.
+
+            headers (Sequence[str]):
+                One name per column.
+
+            rows (Sequence[Sequence[str]]):
+                The rows, which may be none.
+
+            empty (str):
+                What to say instead when there are no rows.
+
+        Returns:
+            text (str):
+                The heading and what belongs under it.
+    """
+
+    return '\n'.join(
+        (
+            heading,
+            table(headers=headers, rows=rows) if rows else empty
+        )
+    )
+
+
+def run_row(
+        run: Dict[str, Any]
+) -> List[str]:
+    """ Return one run as a row.
+
+        Args:
+            run (Dict[str, Any]):
+                A run from an answer.
+
+        Returns:
+            row (List[str]):
+                One value per column in 'RUN_HEADERS'.
+    """
+
+    counts = run['counts']
+
+    return [
+        run['id'],
+        run['calendar'],
+        window_text(window=run['window']),
+        run['status'],
+        str(counts['events']),
+        str(counts['shifts']),
+        str(counts['unmatched']) if counts['unmatched'] else NOTHING,
+        run['revisedAt']
+    ]
+
+
 def runs_table(
-        runs: Sequence[Dict[str, Any]]
+        answer: Sequence[Dict[str, Any]]
 ) -> str:
     """ Return every run as a table.
 
         Args:
-            runs (Sequence[Dict[str, Any]]):
-                The runs an answer carried.
+            answer (Sequence[Dict[str, Any]]):
+                The runs a client answered with.
 
         Returns:
             text (str):
                 The table, or a sentence when there are no runs.
     """
 
-    if not runs:
+    if not answer:
         return 'No runs yet.'
 
     return table(
         headers=RUN_HEADERS,
-        rows=[run_row(run=run) for run in runs]
+        rows=[run_row(run=run) for run in answer]
+    )
+
+
+def roles_text(
+        event: Dict[str, Any]
+) -> str:
+    """ Return the opportunities an event creates shifts for.
+
+        Args:
+            event (Dict[str, Any]):
+                An event from an answer.
+
+        Returns:
+            text (str):
+                Each need ID with the volunteers it wants, or a dash
+                for an event with no opportunity at all.
+    """
+
+    return ', '.join(
+        f'{role["needId"]} ({role["slots"]})'
+        for role in event['roles']
+    ) or NOTHING
+
+
+def event_notes(
+        event: Dict[str, Any]
+) -> str:
+    """ Return what a reader has to be told about an event.
+
+        Everything here is a reason to look at the row twice, which is
+        why an ordinary keyword match is absent: it is how most events
+        reach their category, and noting it on every row would bury the
+        rows that need attention.
+
+        Args:
+            event (Dict[str, Any]):
+                An event from an answer.
+
+        Returns:
+            text (str):
+                The notes, or a dash when there are none.
+    """
+
+    match = event['match']
+    notes = []
+
+    if event['blocking']:
+        notes.append('blocks the send')
+
+    if event['duplicateOf'] is not None:
+        notes.append(f'repeats {event["duplicateOf"]}')
+
+    if event['cappedAt'] is not None:
+        notes.append(f'capped at {event["cappedAt"]} minutes')
+
+    if match is not None and match['kind'] == MATCH_KIND_FUZZY:
+        notes.append(f'fuzzy match, scored {match["score"]}')
+
+    if event['addedByHand']:
+        notes.append('added by hand')
+
+    return ', '.join(notes) or NOTHING
+
+
+def event_row(
+        event: Dict[str, Any]
+) -> List[str]:
+    """ Return one event as a row.
+
+        Args:
+            event (Dict[str, Any]):
+                An event from an answer.
+
+        Returns:
+            row (List[str]):
+                One value per column in 'EVENT_HEADERS'.
+    """
+
+    return [
+        event['id'],
+        event['date'],
+        f'{event["shiftStart"]}-{event["shiftEnd"]}',
+        str(event['lengthMinutes']),
+        event['title'],
+        shown(event['category']),
+        roles_text(event=event),
+        event_notes(event=event)
+    ]
+
+
+def opportunity_row(
+        opportunity: Dict[str, Any]
+) -> List[str]:
+    """ Return one opportunity as a row.
+
+        The offsets are signed rather than plain, because a reader
+        wants to know which way the shift moved from the event and a
+        bare number leaves them to guess.
+
+        Args:
+            opportunity (Dict[str, Any]):
+                An opportunity from an answer.
+
+        Returns:
+            row (List[str]):
+                One value per column in 'OPPORTUNITY_HEADERS'.
+    """
+
+    return [
+        opportunity['needId'],
+        opportunity['title'],
+        shown(opportunity['maxLength']),
+        (
+            f'{opportunity["offsetStart"]:+d}'
+            f'/{opportunity["offsetEnd"]:+d}'
+        ),
+        str(opportunity['defaultSlots'])
+    ]
+
+
+def log_row(
+        entry: Dict[str, Any]
+) -> List[str]:
+    """ Return one change log entry as a row.
+
+        Args:
+            entry (Dict[str, Any]):
+                A log entry from an answer.
+
+        Returns:
+            row (List[str]):
+                One value per column in 'LOG_HEADERS'.
+    """
+
+    return [
+        entry['loggedAt'],
+        str(entry['revision']),
+        entry['principalId'],
+        entry['entry']
+    ]
+
+
+def run_summary(
+        run: Dict[str, Any]
+) -> str:
+    """ Return what a run is, above what it holds.
+
+        The zone is shown beside the window rather than folded into it.
+        The server's zone is the authoritative one (D16), and a reader
+        somewhere else is entitled to know which zone the dates they
+        are looking at were read in.
+
+        Args:
+            run (Dict[str, Any]):
+                A run from an answer.
+
+        Returns:
+            text (str):
+                The run's own values, one to a line.
+    """
+
+    counts = run['counts']
+
+    return labelled(
+        pairs=(
+            ('Run', run['id']),
+            ('Calendar', run['calendar']),
+            ('Window', window_text(window=run['window'])),
+            ('Timezone', run['window']['timezone']),
+            ('Status', run['status']),
+            ('Collected', run['collectedAt']),
+            ('Sent', shown(run['sentAt'])),
+            ('Revised', run['revisedAt']),
+            ('Revision', str(run['currentRevision'])),
+            ('Events', str(counts['events'])),
+            ('Shifts', str(counts['shifts'])),
+            ('Unmatched', str(counts['unmatched'])),
+            ('Active job', shown(run['activeJobId']))
+        )
+    )
+
+
+def run_detail(
+        answer: Dict[str, Any]
+) -> str:
+    """ Return one run, everything in it and everything done to it.
+
+        The three lists arrive in one answer because a reader looking
+        at one is looking at all three, and reading them separately
+        would let them disagree.  They are shown together for the same
+        reason.
+
+        Args:
+            answer (Dict[str, Any]):
+                The run a client answered with.
+
+        Returns:
+            text (str):
+                The run in full.
+    """
+
+    return '\n\n'.join(
+        (
+            run_summary(run=answer),
+            section(
+                heading='EVENTS',
+                headers=EVENT_HEADERS,
+                rows=[
+                    event_row(event=event)
+                    for event in answer['events']
+                ],
+                empty='This revision holds no events.'
+            ),
+            section(
+                heading='OPPORTUNITIES',
+                headers=OPPORTUNITY_HEADERS,
+                rows=[
+                    opportunity_row(opportunity=opportunity)
+                    for opportunity in answer['opportunities']
+                ],
+                empty='The run resolved no opportunities.'
+            ),
+            section(
+                heading='CHANGE LOG',
+                headers=LOG_HEADERS,
+                rows=[
+                    log_row(entry=entry)
+                    for entry in answer['log']
+                ],
+                empty='Nothing has been changed.'
+            )
+        )
+    )
+
+
+def revision_row(
+        revision: Dict[str, Any]
+) -> List[str]:
+    """ Return one revision as a row.
+
+        The change count is shown as it is, including zero: a revision
+        nothing was changed in was sealed and left, which is what tells
+        a reader which one in a list is worth opening.
+
+        Args:
+            revision (Dict[str, Any]):
+                A revision from an answer.
+
+        Returns:
+            row (List[str]):
+                One value per column in 'REVISION_HEADERS'.
+    """
+
+    return [
+        str(revision['number']),
+        revision['createdAt'],
+        revision['label'],
+        str(revision['changes']),
+        CURRENT if revision['current'] else NOTHING
+    ]
+
+
+def revisions_table(
+        answer: Sequence[Dict[str, Any]]
+) -> str:
+    """ Return a run's revisions as a table.
+
+        Args:
+            answer (Sequence[Dict[str, Any]]):
+                The revisions a client answered with.
+
+        Returns:
+            text (str):
+                The table, or a sentence when there are none.
+    """
+
+    if not answer:
+        return 'This run has no revisions yet.'
+
+    return table(
+        headers=REVISION_HEADERS,
+        rows=[revision_row(revision=revision) for revision in answer]
+    )
+
+
+def preview_row(
+        row: Dict[str, Any]
+) -> List[str]:
+    """ Return what one opportunity would receive, as a row.
+
+        Args:
+            row (Dict[str, Any]):
+                A preview row from an answer.
+
+        Returns:
+            row (List[str]):
+                One value per column in 'PREVIEW_HEADERS'.
+    """
+
+    return [
+        row['needId'],
+        shown(row['title']),
+        str(row['willCreate']),
+        str(row['slots']),
+        row['firstDate'],
+        row['lastDate']
+    ]
+
+
+def blocker_row(
+        blocker: Dict[str, Any]
+) -> List[str]:
+    """ Return one reason an event cannot be sent, as a row.
+
+        The reason is worded rather than shown as the identifier the
+        contract publishes, which is written for a program to branch
+        on.
+
+        Args:
+            blocker (Dict[str, Any]):
+                A blocker from an answer.
+
+        Returns:
+            row (List[str]):
+                One value per column in 'BLOCKER_HEADERS'.
+    """
+
+    reason = blocker['reason']
+
+    return [
+        blocker['eventId'],
+        BLOCKER_PHRASES.get(reason, reason)
+    ]
+
+
+def preview_totals(
+        totals: Dict[str, Any]
+) -> str:
+    """ Return what a send would do, in numbers.
+
+        Args:
+            totals (Dict[str, Any]):
+                The totals from a preview.
+
+        Returns:
+            text (str):
+                The totals, one to a line.
+    """
+
+    return labelled(
+        pairs=(
+            ('Would create', str(totals['willCreate'])),
+            ('Repeated rows', str(totals['repeatedRows'])),
+            ('Blocking events', str(totals['blockingEvents']))
+        )
+    )
+
+
+def preview_text(
+        answer: Dict[str, Any]
+) -> str:
+    """ Return what sending a run's current revision would create.
+
+        Args:
+            answer (Dict[str, Any]):
+                The preview a client answered with.
+
+        Returns:
+            text (str):
+                The totals, what each opportunity would receive, and
+                every reason an event cannot be sent.
+    """
+
+    parts = [preview_totals(totals=answer['totals'])]
+
+    if answer['totals']['blockingEvents']:
+        parts.append(NOTHING_SENDABLE)
+
+    parts.append(
+        section(
+            heading='OPPORTUNITIES',
+            headers=PREVIEW_HEADERS,
+            rows=[preview_row(row=row) for row in answer['rows']],
+            empty='Nothing would be created.'
+        )
+    )
+    parts.append(
+        section(
+            heading='BLOCKED',
+            headers=BLOCKER_HEADERS,
+            rows=[
+                blocker_row(blocker=blocker)
+                for blocker in answer['blockers']
+            ],
+            empty='Nothing is blocked.'
+        )
+    )
+
+    return '\n\n'.join(parts)
+
+
+def job_text(
+        answer: Dict[str, Any]
+) -> str:
+    """ Return where a job has got to.
+
+        Args:
+            answer (Dict[str, Any]):
+                The job a client answered with.
+
+        Returns:
+            text (str):
+                The job's values, one to a line.
+    """
+
+    return labelled(
+        pairs=(
+            ('Job', answer['id']),
+            ('Run', answer['runId']),
+            ('Kind', answer['kind']),
+            ('Status', answer['status']),
+            ('Created', answer['createdAt']),
+            ('Started', shown(answer['startedAt'])),
+            ('Finished', shown(answer['finishedAt'])),
+            ('Detail', shown(answer['detail']))
+        )
     )
