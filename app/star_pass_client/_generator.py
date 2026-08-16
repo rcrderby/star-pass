@@ -62,6 +62,9 @@ HEADER = '''#!/usr/bin/env python3
 # Imports - Python Standard Library
 from typing import Any, Callable, Iterator
 
+# Imports - Local
+from ._stream import StreamEvent
+
 
 class Operations:
     """ One method per operation the contract publishes.
@@ -75,7 +78,7 @@ class Operations:
     # written ones is on the page and a checker reading this file
     # alone can see it.
     _call: Callable[..., Any]
-    _stream: Callable[..., Iterator[str]]
+    _stream: Callable[..., Iterator[StreamEvent]]
 '''
 
 
@@ -177,8 +180,8 @@ def _method(
         for parameter in parameters
     )
     answer = (
-        """            line (str):
-                    One line of the stream, as it arrives."""
+        """            event (StreamEvent):
+                    One event, in the order they arrive."""
         if streaming
         else """            answer (Any):
                     What the service answered."""
@@ -187,7 +190,7 @@ def _method(
     return f'''
     def {name}(
             self{signature}
-    ) -> {'Iterator[str]' if streaming else 'Any'}:
+    ) -> {'Iterator[StreamEvent]' if streaming else 'Any'}:
         """ {_summary(operation=operation)}.
 
             Args:{documented or '\n                None.\n'}

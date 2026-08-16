@@ -22,6 +22,7 @@ from requests import Response, Session
 
 # Imports - Local
 from ._operations import Operations
+from ._stream import events, StreamEvent
 
 # Constants
 # What the service returns when something went wrong (RFC 9457).
@@ -247,8 +248,14 @@ class Client(Operations):
             method: str,
             path: str,
             **parameters: Any
-    ) -> Iterator[str]:
+    ) -> Iterator[StreamEvent]:
         """ Hold a request open and yield what arrives on it.
+
+            The lines are parsed here rather than handed on, because
+            the other half of this client answers the same operation
+            from the database and has no wire syntax to hand on (D2).
+            Parsing on the side that receives it is what lets a caller
+            work with one record either way.
 
             Args:
                 method (str):
@@ -264,9 +271,12 @@ class Client(Operations):
                 ApiProblem:
                     If the service reported a failure.
 
+                StreamProtocolError:
+                    If a frame is not what the contract says it is.
+
             Yields:
-                line (str):
-                    One line of the stream, as it arrives.
+                event (StreamEvent):
+                    One event, in the order they arrive.
         """
 
         with self._session.request(
@@ -279,4 +289,6 @@ class Client(Operations):
 
             response.encoding = STREAM_ENCODING
 
-            yield from response.iter_lines(decode_unicode=True)
+            yield from events(
+                lines=response.iter_lines(decode_unicode=True)
+            )

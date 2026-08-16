@@ -15,6 +15,9 @@
 # Imports - Python Standard Library
 from typing import Any, Callable, Iterator
 
+# Imports - Local
+from ._stream import StreamEvent
+
 
 class Operations:
     """ One method per operation the contract publishes.
@@ -28,7 +31,7 @@ class Operations:
     # written ones is on the page and a checker reading this file
     # alone can see it.
     _call: Callable[..., Any]
-    _stream: Callable[..., Iterator[str]]
+    _stream: Callable[..., Iterator[StreamEvent]]
 
     def get_health(
             self
@@ -199,7 +202,7 @@ class Operations:
     def stream_job_events(
             self,
             job_id: str
-    ) -> Iterator[str]:
+    ) -> Iterator[StreamEvent]:
         """ Follow what a job reports, as it reports it.
 
             Args:
@@ -211,8 +214,8 @@ class Operations:
                     If the service reported a failure.
 
             Yields:
-                line (str):
-                    One line of the stream, as it arrives.
+                event (StreamEvent):
+                    One event, in the order they arrive.
         """
 
         return self._stream(

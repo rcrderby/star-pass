@@ -21,7 +21,7 @@ import pytest
 from requests import Response, Session
 
 # Imports - Local
-from star_pass_client import ApiProblem, Client
+from star_pass_client import ApiProblem, Client, StreamEvent
 from star_pass_client import _generator
 from star_pass_client._client import PROBLEM_MEDIA_TYPE
 from star_pass_client._operations import Operations
@@ -69,7 +69,14 @@ class RecordingSession(Session):
         })
 
         if self._lines is not None:
-            content = '\n'.join(self._lines).encode('utf-8')
+            # Every line is terminated, including the last.  Joined
+            # without that, a trailing blank line is only a trailing
+            # newline on the wire and the reader never sees the line
+            # that says the frame is complete -- so the harness would
+            # be sending something the service does not.
+            content = ''.join(
+                f'{line}\n' for line in self._lines
+            ).encode('utf-8')
         else:
             content = json.dumps(self._body).encode('utf-8')
 
@@ -314,7 +321,24 @@ class TestFollowingAStream:
 
         received = list(client.stream_job_events(job_id='j-1'))
 
-        assert 'event: progress' in received
+        assert received == [
+            StreamEvent(kind='progress', payload={'done': 1})
+        ]
+
+    def test_a_streaming_operation_yields_records_not_lines(
+        self,
+        make_client: Callable[..., Any]
+    ) -> None:
+        # The other half answers this operation from the database and
+        # has no wire syntax to hand on (D2), so neither half does.
+        client, _ = make_client(
+            media_type='text/event-stream',
+            lines=['event: progress', 'data: {"done": 1}', '']
+        )
+
+        received = list(client.stream_job_events(job_id='j-1'))
+
+        assert not any(isinstance(event, str) for event in received)
 
     def test_a_streaming_operation_asks_for_a_stream(
         self,
@@ -322,7 +346,7 @@ class TestFollowingAStream:
     ) -> None:
         client, session = make_client(
             media_type='text/event-stream',
-            lines=['data: {}']
+            lines=['data: {}', '']
         )
 
         list(client.stream_job_events(job_id='j-1'))
@@ -337,7 +361,7 @@ class TestFollowingAStream:
         # waits on Amplify.
         client, session = make_client(
             media_type='text/event-stream',
-            lines=['data: {}']
+            lines=['data: {}', '']
         )
 
         list(client.stream_job_events(job_id='j-1'))
