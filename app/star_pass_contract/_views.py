@@ -32,9 +32,10 @@ from star_pass._derived import (
     shift_length
 )
 from star_pass._preview import preview
+from star_pass._reading import RunDetail
 from star_pass._records import (
     Event,
-    LogEntry,
+    Job,
     Opportunity,
     Revision,
     Run
@@ -43,6 +44,7 @@ from ._schemas import (
     BlockerView,
     EventRoleView,
     EventView,
+    JobView,
     LogEntryView,
     MatchView,
     OpportunityView,
@@ -79,6 +81,32 @@ def _by_need_id(
         opportunity.need_id: opportunity
         for opportunity in opportunities
     }
+
+
+def to_job_view(
+        job: Job
+) -> JobView:
+    """ Return a job as a caller sees it.
+
+        Args:
+            job (Job):
+                The stored job.
+
+        Returns:
+            view (JobView):
+                The job, shaped for the contract.
+    """
+
+    return JobView(
+        id=job.id,
+        run_id=job.run_id,
+        kind=job.kind,
+        status=job.status,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        finished_at=job.finished_at,
+        detail=job.detail
+    )
 
 
 def to_run_view(
@@ -181,43 +209,35 @@ def _to_event_view(
 
 
 def to_detail_view(
-        run: Run,
-        events: Sequence[Event],
-        opportunities: Sequence[Opportunity],
-        log: Sequence[LogEntry]
+        detail: RunDetail
 ) -> RunDetailView:
     """ Return a run and everything shown beside it.
 
+        Takes what one read gathered rather than its parts, so that
+        the two callers cannot pass them in different orders or leave
+        one out.
+
         Args:
-            run (Run):
-                The stored run.
-
-            events (Sequence[Event]):
-                The current revision's events.
-
-            opportunities (Sequence[Opportunity]):
-                Every opportunity the run resolved.
-
-            log (Sequence[LogEntry]):
-                The run's change log.
+            detail (RunDetail):
+                Everything one read of the run gathered.
 
         Returns:
             view (RunDetailView):
                 The run in full, shaped for the contract.
     """
 
-    keyed = _by_need_id(opportunities=opportunities)
-    repeats = repeated(events=events)
+    keyed = _by_need_id(opportunities=detail.opportunities)
+    repeats = repeated(events=detail.events)
 
     return RunDetailView(
-        **to_run_view(run=run).model_dump(),
+        **to_run_view(run=detail.run).model_dump(),
         events=[
             _to_event_view(
                 event=event,
                 opportunities=keyed,
                 repeats=repeats
             )
-            for event in events
+            for event in detail.events
         ],
         opportunities=[
             OpportunityView(
@@ -229,7 +249,7 @@ def to_detail_view(
                 offset_end=opportunity.offset_end,
                 default_slots=opportunity.default_slots
             )
-            for opportunity in opportunities
+            for opportunity in detail.opportunities
         ],
         log=[
             LogEntryView(
@@ -239,7 +259,7 @@ def to_detail_view(
                 principal_id=entry.principal_id,
                 entry=entry.entry
             )
-            for entry in log
+            for entry in detail.log
         ]
     )
 

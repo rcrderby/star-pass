@@ -9,8 +9,11 @@
 
 # Imports - Local
 from ._client import ApiProblem, Client
+from ._local import LocalClient, LocalOperationUnavailable
 
 __all__ = [
     'ApiProblem',
-    'Client'
+    'Client',
+    'LocalClient',
+    'LocalOperationUnavailable'
 ]

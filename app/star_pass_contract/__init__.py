@@ -20,6 +20,7 @@
 """
 
 # Imports - Local
+from ._messages import no_such_job, no_such_run
 from ._schemas import (
     ApiModel,
     BlockerView,
@@ -40,6 +41,7 @@ from ._schemas import (
 )
 from ._views import (
     to_detail_view,
+    to_job_view,
     to_preview_view,
     to_revision_views,
     to_run_view
@@ -62,7 +64,10 @@ __all__ = [
     'RunDetailView',
     'RunView',
     'WindowView',
+    'no_such_job',
+    'no_such_run',
     'to_detail_view',
+    'to_job_view',
     'to_preview_view',
     'to_revision_views',
     'to_run_view'
