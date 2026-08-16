@@ -20,6 +20,7 @@ from star_pass._helpers import Helpers, require_env_vars
 from star_pass._logging import get_logger
 from star_pass._reporting import Reporter, ShiftBatch
 from star_pass import _defaults
+from star_pass_cli import add_commands, run_command, selected, write
 
 # Constants
 VERBOSITY_LEVELS = _defaults.VERBOSITY_LEVELS
@@ -35,7 +36,8 @@ SLACK_SUMMARY_NEED_IDS = _defaults.SLACK_SUMMARY_NEED_IDS
 # Hand-written usage so the help clearly shows which options are
 # mandatory (unbracketed) and optional (bracketed) for each run mode.
 USAGE = (
-    'star-pass -g -n {events,practices}\n'
+    'star-pass runs list [--api-url URL]\n'
+    '       star-pass -g -n {events,practices}\n'
     '       star-pass -c -i INPUT_FILE [-C {true,false}] '
     '[-o {basic,simple,detailed}]\n'
     '       star-pass -s [-N NEED_ID ...] [-C {true,false}] '
@@ -86,33 +88,6 @@ class TerminalReporter(Reporter):
 
         return None
 
-    @staticmethod
-    def _write(
-            message: str,
-            end: str = '\n'
-    ) -> None:
-        """ Write one piece of rendered output.
-
-            Args:
-                message (str):
-                    Text to write.
-
-                end (str, optional):
-                    Appended after the message.  Defaults to a newline;
-                    an empty string leaves a status line open for the
-                    result that closes it.
-
-            Returns:
-                None.
-        """
-
-        # Resolve the stream at call time rather than binding it once,
-        # so redirected output (pytest's capsys, a shell redirection) is
-        # captured.
-        print(message, end=end, file=sys.stdout)
-
-        return None
-
     def step_started(
             self,
             label: str
@@ -129,7 +104,7 @@ class TerminalReporter(Reporter):
 
         prefix = '' if self._started else '\n'
         self._started = True
-        self._write(f'{prefix}{label}...', end='')
+        write(f'{prefix}{label}...', end='')
 
         return None
 
@@ -143,7 +118,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        self._write('done.')
+        write('done.')
 
         return None
 
@@ -157,7 +132,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        self._write('')
+        write('')
 
         return None
 
@@ -171,7 +146,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        self._write('\n\n** Error validating shift data **\n')
+        write('\n\n** Error validating shift data **\n')
 
         return None
 
@@ -186,7 +161,7 @@ class TerminalReporter(Reporter):
         """
 
         self._started = True
-        self._write('\nReading data from the Google Calendar service...')
+        write('\nReading data from the Google Calendar service...')
 
         return None
 
@@ -204,7 +179,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        self._write(f'\nWrote CSV data to "{path}"\n')
+        write(f'\nWrote CSV data to "{path}"\n')
 
         return None
 
@@ -218,7 +193,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        self._write('\nSending shift data to Amplify...')
+        write('\nSending shift data to Amplify...')
 
         return None
 
@@ -232,7 +207,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        self._write(_defaults.HTTP_CHECK_MODE_MESSAGE)
+        write(_defaults.HTTP_CHECK_MODE_MESSAGE)
 
         return None
 
@@ -250,8 +225,8 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        self._write(_defaults.SLACK_CHECK_MODE_MESSAGE)
-        self._write(dumps(payload, indent=2))
+        write(_defaults.SLACK_CHECK_MODE_MESSAGE)
+        write(dumps(payload, indent=2))
 
         return None
 
@@ -265,7 +240,7 @@ class TerminalReporter(Reporter):
                 None.
         """
 
-        self._write(
+        write(
             'No shifts in the summary window; skipped posting to Slack.'
         )
 
@@ -329,7 +304,7 @@ class TerminalReporter(Reporter):
                 f'Payload:\n{dumps(payload, indent=2)}'
             )
 
-        self._write(message)
+        write(message)
 
         return None
 
@@ -353,7 +328,7 @@ class TerminalReporter(Reporter):
         if detail is not None:
             message += f'\n\n{detail}'
 
-        self._write(f'{message}\n')
+        write(f'{message}\n')
 
         return None
 
@@ -477,8 +452,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # Run mode: exactly one flag is required
+    # Not required at the argparse level: a command word selects what
+    # to do instead, and requiring a mode flag here would reject every
+    # command.  'main' reports the case where neither was given.
     mode_group = parser.add_argument_group('run mode (choose one)')
-    mode = mode_group.add_mutually_exclusive_group(required=True)
+    mode = mode_group.add_mutually_exclusive_group(required=False)
     mode.add_argument(
         '-g', '--get-gcal-events',
         action='store_true',
@@ -574,7 +552,125 @@ def build_parser() -> argparse.ArgumentParser:
         help='Dry run without sending requests (default: true).'
     )
 
+    # The run-based commands, which work against the local database or
+    # a service (D2).  Added last so they appear below the run modes.
+    add_commands(parser=parser)
+
     return parser
+
+
+def _command_answered(
+        parser: argparse.ArgumentParser,
+        args: argparse.Namespace
+) -> bool:
+    """ Run a command word, if one selected this run.
+
+        Holds the whole question of how a run was selected: a command
+        answers it, a run mode answers it, and nothing answering it is
+        the error.  Kept together because reading one without the
+        others would not say what a run without either of them does.
+
+        Args:
+            parser (argparse.ArgumentParser):
+                The parser, for reporting a selection that is neither.
+
+            args (argparse.Namespace):
+                The parsed command line.
+
+        Raises:
+            SystemExit:
+                With a non-zero status when the command failed, or
+                when neither a command nor a run mode was given.
+
+        Returns:
+            answered (bool):
+                Whether a command answered, so the run modes are not
+                involved.
+    """
+
+    if selected(args=args) is None:
+        if not any(
+            (
+                args.get_gcal_events,
+                args.create_amplify_shifts,
+                args.post_slack_summary
+            )
+        ):
+            parser.error(
+                'one of -g/--get-gcal-events, '
+                '-c/--create-amplify-shifts or -s/--post-slack-summary '
+                'is required, or a command such as "runs list"'
+            )
+
+        return False
+
+    status = run_command(args=args)
+
+    if status:
+        sys.exit(status)
+
+    return True
+
+
+def _get_gcal_events(
+        parser: argparse.ArgumentParser,
+        args: argparse.Namespace
+) -> None:
+    """ Collect calendar events into a CSV file.
+
+        Args:
+            parser (argparse.ArgumentParser):
+                The parser, for reporting an option this mode does not
+                take.
+
+            args (argparse.Namespace):
+                The parsed command line.
+
+        Raises:
+            SystemExit:
+                With a non-zero status when the options are not this
+                mode's.
+
+        Returns:
+            None.
+    """
+
+    # Validate that only get-mode options were supplied
+    if args.gcal_name is None:
+        parser.error(
+            '-g/--get-gcal-events requires -n/--gcal-name'
+        )
+    if any(
+        value is not None
+        for value in (
+            args.input_file,
+            args.output_verbosity,
+            args.need_id,
+            args.days,
+            args.slack_title,
+            args.slack_channel,
+            args.check_mode
+        )
+    ):
+        parser.error(
+            'only -n/--gcal-name is valid with '
+            '-g/--get-gcal-events'
+        )
+
+    # Fail before the first request when the credential is missing
+    require_env_vars('GCAL_TOKEN')
+
+    # Announce the run mode
+    logger.info(
+        'Run mode is "Get Google Calendar Events"'
+    )
+    # Create GCALData object
+    GCALData(
+        gcal_name=args.gcal_name,
+        reporter=TerminalReporter()
+    )
+
+    return None
 
 
 # Main application function definition
@@ -637,42 +733,12 @@ def _run(
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    if _command_answered(parser=parser, args=args):
+        return None
+
     # Run the application in 'get_gcal_events' mode
     if args.get_gcal_events:
-        # Validate that only get-mode options were supplied
-        if args.gcal_name is None:
-            parser.error(
-                '-g/--get-gcal-events requires -n/--gcal-name'
-            )
-        if any(
-            value is not None
-            for value in (
-                args.input_file,
-                args.output_verbosity,
-                args.need_id,
-                args.days,
-                args.slack_title,
-                args.slack_channel,
-                args.check_mode
-            )
-        ):
-            parser.error(
-                'only -n/--gcal-name is valid with '
-                '-g/--get-gcal-events'
-            )
-
-        # Fail before the first request when the credential is missing
-        require_env_vars('GCAL_TOKEN')
-
-        # Announce the run mode
-        logger.info(
-            'Run mode is "Get Google Calendar Events"'
-        )
-        # Create GCALData object
-        GCALData(
-            gcal_name=args.gcal_name,
-            reporter=TerminalReporter()
-        )
+        _get_gcal_events(parser=parser, args=args)
 
     # Run the application in 'create_amplify_shifts' mode
     elif args.create_amplify_shifts:

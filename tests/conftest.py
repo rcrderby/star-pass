@@ -6,6 +6,7 @@
 """
 
 # Imports - Python Standard Library
+import importlib.util
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -70,6 +71,33 @@ from star_pass._repository import (  # noqa: E402
 )
 from star_pass_api import create_app  # noqa: E402
 from star_pass_api._defaults import API_PRINCIPAL_ID  # noqa: E402
+
+
+# Path to the entry point, which is executed as a script rather than
+# imported, so nothing puts it on the import path.
+ENTRY_POINT = Path(__file__).resolve().parent.parent / 'app' / '__main__.py'
+
+
+def load_entry_point() -> Any:
+    """ Return 'app/__main__.py' as an importable module.
+
+        Loaded under a name other than '__main__', so the guard at the
+        foot of the file does not run the application on import.
+    """
+    spec = importlib.util.spec_from_file_location(
+        'star_pass_main',
+        ENTRY_POINT
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return module
+
+
+@pytest.fixture(name='entry_point')
+def fixture_entry_point() -> Any:
+    """ Return the entry point, with nothing replaced. """
+    return load_entry_point()
 
 
 @pytest.fixture
@@ -301,6 +329,32 @@ def fixture_make_opportunity() -> Callable[..., Opportunity]:
         fields.update(overrides)
 
         return Opportunity(**fields)
+
+    return build
+
+
+@pytest.fixture(name='make_run_document')
+def fixture_make_run_document() -> Callable[..., dict]:
+    """ Return a factory building a run as an answer carries one. """
+
+    def build(**overrides: Any) -> dict:
+        """ Return the document, replacing any overridden count. """
+        return {
+            'id': 'r-1',
+            'calendar': 'practices',
+            'window': {
+                'start': '2026-09-01',
+                'end': '2026-10-01',
+                'timezone': 'America/Los_Angeles'
+            },
+            'status': 'unsent',
+            'revisedAt': '2026-09-02T01:00:00+00:00',
+            'counts': {
+                'events': overrides.get('events', 1),
+                'shifts': overrides.get('shifts', 1),
+                'unmatched': overrides.get('unmatched', 0)
+            }
+        }
 
     return build
 
