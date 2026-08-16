@@ -44,9 +44,11 @@ through the Amplify API. It is run once per month.
   statement that touches the
   database is in this package and no SQL appears outside it, so the
   core stays testable without a database and a move to another one is
-  contained. Only facts are stored: a run's current revision and the
-  time it was last revised are derived, and so are shift length,
-  duplicates and the counts on a run.
+  contained. Only facts are stored: a run's current revision, the
+  time it was last revised, its counts and the job still working on
+  it are derived, and so are shift length and duplicates. The counts
+  and the active job are derived in the same statement that reads a
+  run, so a list of runs costs one query rather than one per run.
 - `app/star_pass/_job_runner.py` — `JobRunner`, which runs a job's
   work on a thread and records how it ended, and `JobReporter`, a
   `Reporter` that writes the core's progress calls to the job's event

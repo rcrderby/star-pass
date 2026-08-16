@@ -87,6 +87,29 @@ class Run:
                 timestamp.  Derived from the newest change log entry,
                 falling back to 'collected_at' for a run nothing has
                 changed yet.
+
+            event_count (int):
+                How many events the current revision holds.  Derived.
+
+            shift_count (int):
+                How many shifts sending the current revision would
+                create.  Derived: an event creates one shift per role,
+                so this counts roles and not events.
+
+            unmatched_count (int):
+                How many events in the current revision would create
+                no shift at all.  Derived, and the figure that says a
+                run needs attention: an event whose title matched
+                nothing has no category and so no role, and an event
+                whose category resolved to no need ID has none either.
+                Either way the event cannot become a shift, and a run
+                holding one cannot be sent.
+
+            active_job_id (str, optional):
+                Identifier of the job still working on the run, or
+                None when nothing is.  Derived, and what makes a run
+                somebody walked away from reattachable: the run is
+                enough to find what is running on it.
     """
 
     id: str
@@ -98,6 +121,10 @@ class Run:
     sent_at: Optional[str]
     current_revision: int
     revised_at: str
+    event_count: int
+    shift_count: int
+    unmatched_count: int
+    active_job_id: Optional[str]
 
 
 @dataclass(frozen=True)
