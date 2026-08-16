@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-""" Reading runs, one run in full, and what was done to it.
+""" Reading runs, one in full, its history and what it would send.
 
     The first callers of the repository layer's run and revision side:
     the list a person opens the tool on, the run itself with
-    everything the review screen reads at once, and the numbered
-    versions its events have been through.
+    everything the review screen reads at once, the numbered versions
+    its events have been through, and what sending it would create.
 
     No domain logic lives here.  What a run holds is counted by the
     repository, and what an event does not say is worked out by the
@@ -28,6 +28,7 @@ from star_pass._derived import (
     repeated,
     shift_length
 )
+from star_pass._preview import preview
 from star_pass._records import (
     Event,
     LogEntry,
@@ -43,11 +44,15 @@ from star_pass._repository import (
 )
 from . import _defaults
 from ._schemas import (
+    BlockerView,
     EventRoleView,
     EventView,
     LogEntryView,
     MatchView,
     OpportunityView,
+    PreviewRowView,
+    PreviewTotalsView,
+    PreviewView,
     RevisionView,
     RunCountsView,
     RunDetailView,
@@ -167,6 +172,45 @@ def _history(
     return (
         run,
         RevisionRepository(connection=connection).list_all(run_id=run_id)
+    )
+
+
+def _to_send(
+        connection: sqlite3.Connection,
+        run_id: str
+) -> Optional[Tuple[List[Event], List[Opportunity]]]:
+    """ Read what a send would work from.
+
+        The events of the current revision and the opportunities
+        labelling them, on one connection: a preview assembled from
+        two moments could label a shift with a title that no longer
+        belongs to it.
+
+        Args:
+            connection (sqlite3.Connection):
+                Connection to read on.
+
+            run_id (str):
+                Run to read.
+
+        Returns:
+            gathered (Tuple[List[Event], List[Opportunity]] | None):
+                The events and the opportunities, or None when there
+                is no such run.
+    """
+
+    runs = RunRepository(connection=connection)
+    run = runs.get(run_id=run_id)
+
+    if run is None:
+        return None
+
+    return (
+        EventRepository(connection=connection).list_all(
+            run_id=run_id,
+            revision=run.current_revision
+        ),
+        runs.get_opportunities(run_id=run_id)
     )
 
 
@@ -509,3 +553,100 @@ async def list_revisions(
         )
         for revision in revisions
     ]
+
+
+@router.get(
+    '/runs/{run_id}/preview',
+    summary='Report what sending this run would create',
+    description=(
+        'What a send would do, grouped by Amplify opportunity and '
+        'never by category: several categories share one listing, so '
+        'grouping by category would show it twice under two names and '
+        'split a total the reader is about to check against Amplify.\n\n'
+        'Shifts are counted by identity -- need ID, date, start and '
+        'end -- so two events asking for the same row count once, and '
+        'a reader is told how many rows repeat rather than left to '
+        'wonder why the total is below what they can see.\n\n'
+        'An event that cannot become a shift stops the whole send and '
+        'is named with every reason it cannot, so fixing one does not '
+        'reveal another.\n\n'
+        '**This does not yet say which shifts Amplify already has.** '
+        'That needs a read of the live opportunity, which arrives with '
+        'the send path that re-checks the same thing inside its '
+        'transaction, so that both ask the question the same way. '
+        'Until then the totals describe what the stored revision would '
+        'create, and some of it may already exist.'
+    ),
+    response_model=PreviewView
+)
+async def get_preview(
+        run_id: str = Path(
+            description='Identifier the run was created with.'
+        ),
+        principal: Principal = requires(SCOPE_RUNS_READ)
+) -> PreviewView:
+    """ Return what sending the run's current revision would create.
+
+        Args:
+            run_id (str):
+                Identifier of the run to preview.
+
+            principal (Principal):
+                The authenticated caller, which the dependency supplies
+                after checking the scope.
+
+        Raises:
+            HTTPException:
+                404 when there is no such run.
+
+        Returns:
+            preview (PreviewView):
+                What a send would do.
+    """
+
+    del principal
+
+    gathered = await read(
+        lambda connection: _to_send(
+            connection=connection,
+            run_id=run_id
+        )
+    )
+
+    if gathered is None:
+        raise _missing(run_id=run_id)
+
+    events, opportunities = gathered
+    result = preview(
+        events=events,
+        opportunities={
+            opportunity.need_id: opportunity
+            for opportunity in opportunities
+        }
+    )
+
+    return PreviewView(
+        totals=PreviewTotalsView(
+            will_create=result.will_create,
+            repeated_rows=result.repeated_rows,
+            blocking_events=result.blocking_events
+        ),
+        rows=[
+            PreviewRowView(
+                need_id=row.need_id,
+                title=row.title,
+                will_create=row.will_create,
+                slots=row.slots,
+                first_date=row.first_date,
+                last_date=row.last_date
+            )
+            for row in result.rows
+        ],
+        blockers=[
+            BlockerView(
+                event_id=blocker.event_id,
+                reason=blocker.reason
+            )
+            for blocker in result.blockers
+        ]
+    )

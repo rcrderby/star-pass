@@ -26,11 +26,46 @@ from typing import Dict, Iterable, Mapping, Optional, Tuple
 
 # Imports - Local
 from ._defaults import SIMPLE_TIME_FORMAT
-from ._records import Event, Opportunity
+from ._records import Event, EventRole, Opportunity
 
 # How many minutes are in an hour, for turning a time of day into one
 # number that can be subtracted from another.
 MINUTES_PER_HOUR = 60
+
+# The row Amplify receives, and so the unit of duplicate safety and of
+# idempotency (D16): need ID, date, start and end.  Never a count -- a
+# count cannot say *which* shifts a send would repeat.
+ShiftIdentity = Tuple[str, str, str, str]
+
+
+def shift_identity(
+        event: Event,
+        role: EventRole
+) -> ShiftIdentity:
+    """ Return the row one role of an event would send Amplify.
+
+        Written once and used wherever sameness is decided, so that
+        the answer to "is this the same shift" cannot come out
+        differently in two places (D16).
+
+        Args:
+            event (Event):
+                The event the shift comes from.
+
+            role (EventRole):
+                The opportunity the shift is created under.
+
+        Returns:
+            identity (ShiftIdentity):
+                Need ID, date, start and end.
+    """
+
+    return (
+        role.need_id,
+        event.date,
+        event.shift_start,
+        event.shift_end
+    )
 
 
 def _minutes_of_day(
@@ -182,17 +217,12 @@ def repeated(
                 repeats.  An event repeating nothing is absent.
     """
 
-    seen: Dict[Tuple[str, str, str, str], str] = {}
+    seen: Dict[ShiftIdentity, str] = {}
     repeats: Dict[str, str] = {}
 
     for event in events:
         for role in event.roles:
-            identity = (
-                role.need_id,
-                event.date,
-                event.shift_start,
-                event.shift_end
-            )
+            identity = shift_identity(event=event, role=role)
 
             if identity in seen:
                 # An event repeating on two of its roles is still one

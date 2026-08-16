@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 # Imports - Local
+from star_pass._preview import BLOCKER_REASONS
 from star_pass._records import (
     JOB_KINDS,
     JOB_STATUSES,
@@ -429,5 +430,108 @@ class RevisionView(ApiModel):
             'one revision of a run is current, and it is the last: '
             'everything below it is history and is never written to '
             'again.'
+        )
+    )
+
+
+class PreviewTotalsView(ApiModel):
+    """ What a send would do, in four numbers. """
+
+    will_create: int = Field(
+        description=(
+            'Shifts that would be created. Counted by identity -- '
+            'need ID, date, start and end -- so two events asking for '
+            'the same row count once.'
+        )
+    )
+    repeated_rows: int = Field(
+        description=(
+            'How many shifts the revision asks for more than once. '
+            'They create one shift, not several; the figure is here '
+            'so a reader is told rather than left to wonder why the '
+            'total is below the number of rows they can see.'
+        )
+    )
+    blocking_events: int = Field(
+        description=(
+            'Events that cannot be sent. Above zero means nothing '
+            'can be sent at all: the run stops and names them rather '
+            'than dropping them, because a missing shift is invisible '
+            'until volunteers cannot sign up.'
+        )
+    )
+
+
+class PreviewRowView(ApiModel):
+    """ What one Amplify opportunity would receive. """
+
+    need_id: str = Field(
+        description='Amplify need ID the shifts would be created under.'
+    )
+    title: str | None = Field(
+        default=None,
+        description=(
+            'The opportunity\'s title, or null when the run stored no '
+            'opportunity for this need ID, which means collection did '
+            'not resolve one.'
+        )
+    )
+    will_create: int = Field(
+        description='Shifts this opportunity would receive.'
+    )
+    slots: int = Field(
+        description='Volunteers wanted across those shifts.'
+    )
+    first_date: str = Field(
+        description='Earliest day a shift would be created on.'
+    )
+    last_date: str = Field(
+        description=(
+            'Latest day a shift would be created on. Of the shifts '
+            'that would be created, not of every event under this '
+            'opportunity: these are the days about to arrive in '
+            'Amplify.'
+        )
+    )
+
+
+class BlockerView(ApiModel):
+    """ One reason one event cannot become a shift. """
+
+    event_id: str = Field(
+        description='Event that cannot be sent.'
+    )
+    reason: str = Field(
+        description=(
+            f'Why: {", ".join(BLOCKER_REASONS)}. An event with two '
+            'things wrong with it appears once for each, so fixing '
+            'one does not reveal another.'
+        )
+    )
+
+
+class PreviewView(ApiModel):
+    """ What sending the current revision would create.
+
+        Grouped by opportunity and never by category: several
+        categories share one Amplify listing, so grouping by category
+        would show that listing twice under two names and split a
+        total the reader is about to check against Amplify.
+    """
+
+    totals: PreviewTotalsView = Field(
+        description='What a send would do, in four numbers.'
+    )
+    rows: List[PreviewRowView] = Field(
+        description=(
+            'One per opportunity that would receive a shift, by need '
+            'ID. An opportunity the run resolved but would send '
+            'nothing to has no row.'
+        )
+    )
+    blockers: List[BlockerView] = Field(
+        description=(
+            'Every reason an event cannot be sent, in the order the '
+            'events are shown.'
         )
     )

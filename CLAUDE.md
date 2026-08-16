@@ -58,6 +58,14 @@ through the Amplify API. It is run once per month.
   the same figures the web interface does. A run's own figures are
   derived in the repository instead, because they are counts over rows
   the caller has not read.
+- `app/star_pass/_preview.py` — what sending a revision would create,
+  worked out before it does: totals, a row per Amplify opportunity,
+  and every reason an event cannot be sent. Grouped by opportunity and
+  never by category, and counted by shift identity
+  (`_derived.shift_identity`) rather than by how many events there
+  are. In the core because the CLI previews the same run. It does not
+  yet say which shifts Amplify already has; that needs the live read
+  written with the send path.
 - `app/star_pass/_job_runner.py` — `JobRunner`, which runs a job's
   work on a thread and records how it ended, and `JobReporter`, a
   `Reporter` that writes the core's progress calls to the job's event
