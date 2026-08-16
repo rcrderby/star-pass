@@ -20,7 +20,7 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 from . import _defaults
 from ._exceptions import ValidationError
 from ._helpers import Helpers, load_env_file
-from ._reporting import Reporter
+from ._reporting import Reporter, ShiftBatch
 from ._logging import get_logger
 from ._validation import validate_shift_columns, validate_shift_need_ids
 
@@ -814,12 +814,16 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                 # Report the batch; the renderer decides how much of
                 # it to show
                 self.reporter.shifts_sent(
-                    index=index,
-                    need_id=need_id,
-                    title=self._lookup_opportunity_title(need_id=need_id),
-                    url=url,
-                    shifts=json.get('shifts'),
-                    payload=json
+                    batch=ShiftBatch(
+                        index=index,
+                        need_id=need_id,
+                        title=self._lookup_opportunity_title(
+                            need_id=need_id
+                        ),
+                        url=url,
+                        shifts=json.get('shifts'),
+                        payload=json
+                    )
                 )
 
         # Display a message if self._json_shift_data['valid'] is not True

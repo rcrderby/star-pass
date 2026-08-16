@@ -18,7 +18,7 @@ from star_pass.slack_notify import SlackNotifier
 from star_pass._exceptions import StarPassError
 from star_pass._helpers import Helpers, require_env_vars
 from star_pass._logging import get_logger
-from star_pass._reporting import Reporter
+from star_pass._reporting import Reporter, ShiftBatch
 from star_pass import _defaults
 
 # Constants
@@ -271,41 +271,28 @@ class TerminalReporter(Reporter):
 
         return None
 
-    def shifts_sent(  # pylint: disable=unused-argument
+    def shifts_sent(
             self,
-            *,
-            index: int,
-            need_id: str | int,
-            title: str,
-            url: str,
-            shifts: List[Dict[str, Any]],
-            payload: Dict[str, Any]
+            batch: ShiftBatch
     ) -> None:
         """ Render one opportunity's batch at the chosen verbosity.
 
+            The need ID is not shown at any verbosity: the title names
+            the opportunity in a way an operator recognizes.
+
             Args:
-                index (int):
-                    Position of this opportunity in the run, from one.
-
-                need_id (str | int):
-                    Amplify need ID.  Not shown; the title names the
-                    opportunity in a way an operator recognizes.
-
-                title (str):
-                    Amplify opportunity title.
-
-                url (str):
-                    Amplify API URL for the opportunity's shifts.
-
-                shifts (List[Dict[str, Any]]):
-                    The individual shifts.
-
-                payload (Dict[str, Any]):
-                    The request body.
+                batch (ShiftBatch):
+                    The opportunity, and the shifts created under it.
 
             Returns:
                 None.
         """
+
+        index = batch.index
+        title = batch.title
+        url = batch.url
+        shifts = batch.shifts
+        payload = batch.payload
 
         shift_count = len(shifts)
         shift_noun = 'shift' if shift_count == 1 else 'shifts'

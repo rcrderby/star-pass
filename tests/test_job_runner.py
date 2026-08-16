@@ -15,7 +15,7 @@ import pytest
 from star_pass._exceptions import UpstreamError, ValidationError
 from star_pass._job_runner import JobReporter, JobRunner, UNEXPECTED_DETAIL
 from star_pass._records import JOB_STATUS_FAILED, JOB_STATUS_SUCCEEDED
-from star_pass._reporting import Reporter
+from star_pass._reporting import Reporter, ShiftBatch
 from star_pass._repository import JobRepository
 
 # Constants
@@ -291,12 +291,14 @@ class TestTheReporterBridge:
         # It is built from the shifts, so storing both keeps two copies
         # of one fact.
         JobReporter(jobs=jobs, job_id=job_id).shifts_sent(
-            index=1,
-            need_id=905196,
-            title='Adult Scrimmages: Skating Officials',
-            url='https://example.test/needs/905196/shifts',
-            shifts=[{'start': '2026-09-03 19:15:00', 'duration': 135}],
-            payload={'shifts': [{'start': '2026-09-03 19:15:00'}]}
+            batch=ShiftBatch(
+                index=1,
+                need_id=905196,
+                title='Adult Scrimmages: Skating Officials',
+                url='https://example.test/needs/905196/shifts',
+                shifts=[{'start': '2026-09-03 19:15:00', 'duration': 135}],
+                payload={'shifts': [{'start': '2026-09-03 19:15:00'}]}
+            )
         )
         payload = jobs.events(job_id=job_id)[0].payload
 

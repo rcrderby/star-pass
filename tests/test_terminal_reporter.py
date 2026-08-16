@@ -19,6 +19,9 @@ from pathlib import Path
 # Imports - Third-Party
 import pytest
 
+# Imports - Local
+from star_pass._reporting import ShiftBatch
+
 _MAIN_PATH = Path(__file__).resolve().parent.parent / 'app' / '__main__.py'
 
 # One opportunity's worth of sent shifts, in the shape the core reports.
@@ -27,6 +30,21 @@ SHIFTS = [
     {'start': '2099-04-10 19:30', 'duration': 90}
 ]
 PAYLOAD = {'shifts': SHIFTS}
+
+
+def batch(**overrides) -> ShiftBatch:
+    """ Return a sent batch, with any field replaced. """
+    fields = {
+        'index': 1,
+        'need_id': 879609,
+        'title': 'Adult Games: Non-Skating Officials',
+        'url': 'https://example.test/needs/879609/shifts',
+        'shifts': SHIFTS,
+        'payload': PAYLOAD
+    }
+    fields.update(overrides)
+
+    return ShiftBatch(**fields)
 
 
 @pytest.fixture
@@ -129,14 +147,7 @@ class TestSendReport:
         self, reporter_class, capsys
     ):
         reporter = reporter_class(verbosity='basic')
-        reporter.shifts_sent(
-            index=1,
-            need_id=879609,
-            title='Adult Games: Non-Skating Officials',
-            url='https://example.test/needs/879609/shifts',
-            shifts=SHIFTS,
-            payload=PAYLOAD
-        )
+        reporter.shifts_sent(batch=batch())
 
         assert capsys.readouterr().out == (
             '1. Adult Games: Non-Skating Officials - 2 new shifts\n'
@@ -147,12 +158,14 @@ class TestSendReport:
     ):
         reporter = reporter_class(verbosity='basic')
         reporter.shifts_sent(
-            index=2,
-            need_id=879610,
-            title='Adult Games: Skating Officials',
-            url='https://example.test/needs/879610/shifts',
-            shifts=SHIFTS[:1],
-            payload={'shifts': SHIFTS[:1]}
+            batch=batch(
+                index=2,
+                need_id=879610,
+                title='Adult Games: Skating Officials',
+                url='https://example.test/needs/879610/shifts',
+                shifts=SHIFTS[:1],
+                payload={'shifts': SHIFTS[:1]}
+            )
         )
 
         assert capsys.readouterr().out == (
@@ -163,14 +176,7 @@ class TestSendReport:
         self, reporter_class, capsys
     ):
         reporter = reporter_class(verbosity='simple')
-        reporter.shifts_sent(
-            index=1,
-            need_id=879609,
-            title='Adult Games: Non-Skating Officials',
-            url='https://example.test/needs/879609/shifts',
-            shifts=SHIFTS,
-            payload=PAYLOAD
-        )
+        reporter.shifts_sent(batch=batch())
 
         out = capsys.readouterr().out
         assert out.startswith(
@@ -183,14 +189,7 @@ class TestSendReport:
 
     def test_detailed_includes_the_payload(self, reporter_class, capsys):
         reporter = reporter_class(verbosity='detailed')
-        reporter.shifts_sent(
-            index=1,
-            need_id=879609,
-            title='Adult Games: Non-Skating Officials',
-            url='https://example.test/needs/879609/shifts',
-            shifts=SHIFTS,
-            payload=PAYLOAD
-        )
+        reporter.shifts_sent(batch=batch())
 
         out = capsys.readouterr().out
         assert out.startswith(
@@ -207,14 +206,7 @@ class TestSendReport:
         # A bad value shows less rather than failing a run that is
         # otherwise fine.
         reporter = reporter_class(verbosity='chatty')
-        reporter.shifts_sent(
-            index=1,
-            need_id=879609,
-            title='Adult Games: Non-Skating Officials',
-            url='https://example.test/needs/879609/shifts',
-            shifts=SHIFTS,
-            payload=PAYLOAD
-        )
+        reporter.shifts_sent(batch=batch())
 
         assert capsys.readouterr().out == (
             '1. Adult Games: Non-Skating Officials - 2 new shifts\n'
