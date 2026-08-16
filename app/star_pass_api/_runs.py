@@ -7,7 +7,8 @@
     its events have been through, and what sending it would create.
 
     No domain logic lives here, and no shaping either.  A route
-    decides what to read and what a failure looks like; '_views' turns
+    decides what to read and what a failure looks like; the
+    contract package turns
     what was read into what a caller is shown, because the command
     line client shows the same answers from the same database and the
     two must not drift (D1, D2).
@@ -35,21 +36,19 @@ from star_pass._repository import (
     RevisionRepository,
     RunRepository
 )
-from . import _defaults
-from ._schemas import (
+from star_pass_contract import (
     PreviewView,
     RevisionView,
     RunDetailView,
-    RunView
-)
-from ._security import Principal, requires, SCOPE_RUNS_READ
-from ._storage import read
-from ._views import (
+    RunView,
     to_detail_view,
     to_preview_view,
     to_revision_views,
     to_run_view
 )
+from . import _defaults
+from ._security import Principal, requires, SCOPE_RUNS_READ
+from ._storage import read
 
 router = APIRouter(tags=[_defaults.API_TAG_RUNS])
 

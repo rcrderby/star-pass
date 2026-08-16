@@ -20,8 +20,8 @@ from fastapi.responses import StreamingResponse
 # Imports - Local
 from star_pass._records import Job, JOB_STATUSES_FINISHED
 from star_pass._repository import JobRepository
+from star_pass_contract import JobView
 from . import _defaults
-from ._schemas import JobView
 from ._security import Principal, requires, SCOPE_RUNS_READ
 from ._storage import read
 

@@ -11,7 +11,8 @@
     Separate from the routes for the same reason it is separate from
     the records.  A route decides what to read and what a failure
     looks like; these functions decide what the answer contains, and
-    nothing here knows it is being asked over a network.
+    nothing here knows it is being asked over a network -- which is
+    what lets a client that is not asking over one use them.
 
     What each figure means is not decided here either.  The counts on
     a run come from the repository, and what an event does not store
