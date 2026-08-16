@@ -12,10 +12,7 @@
 # pylint: disable=too-many-arguments,too-many-positional-arguments
 
 # Imports - Python Standard Library
-from typing import Any, Callable
-
-# Imports - Third-Party
-import pytest
+from typing import Callable
 
 # Imports - Local
 from star_pass._records import (
@@ -29,31 +26,6 @@ from star_pass._repository import (
     JobRepository,
     RunRepository
 )
-
-
-@pytest.fixture(name='add_second_event')
-def fixture_add_second_event(
-    events: EventRepository,
-    collected: str,
-    revision: int,
-    make_event: Callable[..., Event]
-) -> Callable[..., None]:
-    """ Return a way to add one more event to the collected run.
-
-        A count is only interesting once there is more than one thing
-        to count, so most of these tests want a second event differing
-        from the first in the one respect under test.
-    """
-
-    def add(**overrides: Any) -> None:
-        """ Add an event, replacing any field named in 'overrides'. """
-        events.add(
-            run_id=collected,
-            revision=revision,
-            event=make_event(id='event-2', **overrides)
-        )
-
-    return add
 
 
 class TestRunFigures:

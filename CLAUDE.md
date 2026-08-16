@@ -229,6 +229,13 @@ The notes below are the ones that are not obvious from the commands.
 - Field names are camelCase on the wire and snake_case in Python.
   Every published shape inherits from `ApiModel` in `_schemas.py`,
   which does the translation once.
+- A run's window crosses the wire as a `start` and an **exclusive**
+  `end`, the pair the repository stores, plus the zone they are read
+  in. The server's zone is authoritative: a client displays those
+  dates and never works a window out in the zone of whoever is looking
+  at it (D16). `openapi-v1-sketch.yaml` shows an inclusive `lastDay`
+  instead; adding one is an additive change to make when a client
+  needs it, not a reason to convert on the way out.
 - The job event stream reads the job's status *before* its events.
   The other order loses an event written between the two reads: the
   events read would not hold it, and the status read after it would

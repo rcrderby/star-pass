@@ -190,6 +190,32 @@ def fixture_edited(
     return collected
 
 
+@pytest.fixture(name='add_second_event')
+def fixture_add_second_event(
+    events: EventRepository,
+    collected: str,
+    revision: int,
+    make_event: Callable[..., Event]
+) -> Callable[..., None]:
+    """ Return a way to add one more event to the collected run.
+
+        A figure over a revision is only interesting once there is
+        more than one thing in it, so most tests of one want a second
+        event differing from the first in the single respect under
+        test.
+    """
+
+    def add(**overrides: Any) -> None:
+        """ Add an event, replacing any field named in 'overrides'. """
+        events.add(
+            run_id=collected,
+            revision=revision,
+            event=make_event(id='event-2', **overrides)
+        )
+
+    return add
+
+
 @pytest.fixture(name='job_principal')
 def fixture_job_principal() -> str:
     """ Return the principal ID a test's jobs are asked for by. """
