@@ -2,9 +2,10 @@
 """ Helper methods for star_pass.py """
 
 # Imports - Python Standard Library
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from os import getenv
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import re
 
 # Imports - Third-Party
@@ -20,6 +21,7 @@ from . import _defaults
 from ._exceptions import ConfigurationError, UpstreamError
 from ._logging import get_logger
 from . import _models
+from ._records import Match, MATCH_KIND_FUZZY, MATCH_KIND_KEYWORD
 
 # Constants
 AMPLIFY_DATE_TIME_FORMAT = _defaults.AMPLIFY_DATE_TIME_FORMAT
@@ -35,6 +37,35 @@ SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
 
 # Module logger
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class CategoryMatch:
+    """ Which category a title matched, and how it got there.
+
+        The answer to one lookup, kept whole.  A caller that only
+        wants the shift configuration reads 'need_details'; a caller
+        storing the event needs the other two as well, because a run
+        records the match it actually made rather than the one the
+        data model would make today.
+
+        Attributes:
+            need_details (Dict[str, Any]):
+                The category's configuration -- its need IDs, their
+                slots and their offsets -- without the alias list a
+                reader has no use for.
+
+            category (str, optional):
+                Which category matched, or None when nothing did and
+                the calendar's review fallback was assigned instead.
+
+            match (Match, optional):
+                How it matched, or None when nothing did.
+    """
+
+    need_details: Dict[str, Any]
+    category: Optional[str] = None
+    match: Optional[Match] = None
 
 
 # Class definitions
@@ -297,13 +328,49 @@ class Helpers:
                     matches with enough confidence.
         """
 
+        return self.match_shift_info(
+            gcal_name=gcal_name,
+            need_name=need_name
+        ).need_details
+
+    def match_shift_info(
+            self,
+            gcal_name: str,
+            need_name: str
+    ) -> CategoryMatch:
+        """ Match a title to a category, and say which one and how.
+
+            The whole answer to the lookup 'search_shift_info' takes
+            one field of.  A run stores which category a title matched
+            and how it matched, because the data model can change
+            between the day a run is collected and the day it is
+            reviewed: recomputed later, the match would describe the
+            model as it is now instead of what the run actually did.
+
+            Args:
+                gcal_name (str):
+                    Google Calendar name to search.  For example:
+                    'events' or 'practices'.
+
+                need_name (str):
+                    Google Calendar event name to search for.
+
+            Returns:
+                matched (CategoryMatch):
+                    The category, how the title reached it, and its
+                    shift configuration.
+        """
+
         calendar = _models.get_shifts_info()['calendar'][gcal_name]
         categories = calendar['categories']
 
-        # Map each alias to its category configuration
+        # Map each alias to the name of the category it belongs to.
+        # The name rather than the configuration, because a caller
+        # storing the event records which category matched and the
+        # configuration does not carry its own name.
         alias_categories = {
-            alias: category
-            for category in categories.values()
+            alias: name
+            for name, category in categories.items()
             for alias in category['aliases']
         }
 
@@ -314,7 +381,14 @@ class Helpers:
             list(alias_categories)
         )
         if best_alias is not None:
-            return self._category_need_details(alias_categories[best_alias])
+            return self._matched(
+                categories=categories,
+                name=alias_categories[best_alias],
+                match=Match(
+                    kind=MATCH_KIND_KEYWORD,
+                    keyword=best_alias
+                )
+            )
 
         # Fuzzy fallback: accept the best token-set match only if it
         # clears the confidence threshold.
@@ -324,15 +398,63 @@ class Helpers:
             scorer=fuzz.token_set_ratio
         )
         if match is not None and match[1] >= FUZZY_MATCH_THRESHOLD:
-            return self._category_need_details(alias_categories[match[0]])
+            return self._matched(
+                categories=categories,
+                name=alias_categories[match[0]],
+                # Stored as the scorer gave it.  It answers in whole
+                # numbers out of a hundred, which is what a score is
+                # shown as, and 'test_helpers' holds it to that: a
+                # library that started answering in fractions would
+                # otherwise put one in a field typed for a whole
+                # number, and nothing would say so.
+                match=Match(
+                    kind=MATCH_KIND_FUZZY,
+                    score=match[1]
+                )
+            )
 
-        # Unmatched: log for review and fall back to the default category
+        # Unmatched: log for review and fall back to the default
+        # category, which names no category and no match, because
+        # neither is what happened.
         message = (
             f'No confident shift-info match for "{need_name}" in the '
             f'"{gcal_name}" calendar; assigning the review fallback'
         )
         logger.warning(message)
-        return self._category_need_details(calendar['default'])
+
+        return CategoryMatch(
+            need_details=self._category_need_details(calendar['default'])
+        )
+
+    @classmethod
+    def _matched(
+            cls,
+            categories: Dict,
+            name: str,
+            match: Match
+    ) -> CategoryMatch:
+        """ Return the answer for a title that reached a category.
+
+            Args:
+                categories (Dict):
+                    Every category the calendar defines, by name.
+
+                name (str):
+                    The category that matched.
+
+                match (Match):
+                    How the title reached it.
+
+            Returns:
+                matched (CategoryMatch):
+                    The category, the match and the configuration.
+        """
+
+        return CategoryMatch(
+            need_details=cls._category_need_details(categories[name]),
+            category=name,
+            match=match
+        )
 
     @classmethod
     def _best_literal_alias(

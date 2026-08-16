@@ -16,11 +16,13 @@ from unittest.mock import Mock
 
 # Imports - Third-Party
 import pytest
+from thefuzz import fuzz
 from urllib3.exceptions import MaxRetryError, ReadTimeoutError
 
 # Imports - Local
 from star_pass import _defaults, _models, _helpers
 from star_pass._exceptions import ConfigurationError, UpstreamError
+from star_pass._records import MATCH_KIND_FUZZY, MATCH_KIND_KEYWORD
 
 
 class TestConvertToBool:
@@ -162,6 +164,134 @@ class TestSearchShiftInfo:
         assert result['description'] == 'Unknown Game'
         assert result['need_ids'][0]['id'] == ''
         assert 'review' in caplog.text.lower()
+
+
+class TestMatchShiftInfo:
+    # What 'search_shift_info' returns one field of.  A run stores the
+    # match it made, so the category and the way the title reached it
+    # have to survive the lookup.
+
+    def test_a_keyword_match_names_the_category(self, helpers):
+        matched = helpers.match_shift_info(
+            gcal_name='events',
+            need_name='Wheels of Justice vs Rose City'
+        )
+
+        assert matched.category is not None
+        assert matched.need_details['description'] == 'Adult Games'
+
+    def test_a_keyword_match_records_the_alias_that_won(self, helpers):
+        matched = helpers.match_shift_info(
+            gcal_name='events',
+            need_name='Wheels of Justice vs Rose City'
+        )
+
+        assert matched.match.kind == MATCH_KIND_KEYWORD
+        assert matched.match.keyword in ('wheels', 'woj', 'justice')
+        assert matched.match.score is None
+
+    def test_a_fuzzy_match_records_a_score_and_no_alias(
+        self, monkeypatch, helpers
+    ):
+        # The deterministic pass returns before the threshold is
+        # consulted, so a title that matches an alias literally would
+        # never reach the fallback this checks.
+        monkeypatch.setattr(
+            'star_pass._helpers.FUZZY_MATCH_THRESHOLD', 1
+        )
+
+        matched = helpers.match_shift_info(
+            gcal_name='practices',
+            need_name='Quilting Circle Meetup'
+        )
+
+        assert matched.match.kind == MATCH_KIND_FUZZY
+        assert matched.match.keyword is None
+
+    def test_a_fuzzy_score_is_the_one_that_cleared_the_threshold(
+        self, monkeypatch, helpers
+    ):
+        # A fuzzy match is recorded only when it clears the threshold,
+        # so the score stored cannot be below it.  A value that did
+        # not come from that comparison could be anything.
+        threshold = 30
+        monkeypatch.setattr(
+            'star_pass._helpers.FUZZY_MATCH_THRESHOLD', threshold
+        )
+
+        matched = helpers.match_shift_info(
+            gcal_name='practices',
+            need_name='Quilting Circle Meetup'
+        )
+
+        assert threshold <= matched.match.score <= 100
+
+    def test_the_scorer_answers_in_whole_numbers(self):
+        # A match is stored with the score as it came, in a field
+        # typed for a whole number.  A library that began answering
+        # in fractions would put one there and nothing else would
+        # notice, so the assumption is held here rather than worked
+        # around at the call site.
+        assert isinstance(
+            fuzz.token_set_ratio('Quilting Circle Meetup', 'juniors'),
+            int
+        )
+
+    def test_an_unmatched_title_names_no_category_and_no_match(
+        self, helpers
+    ):
+        # Neither is what happened, and a run that recorded one would
+        # be claiming the model matched something it did not.
+        matched = helpers.match_shift_info(
+            gcal_name='events',
+            need_name='Jet City vs Cherry City'
+        )
+
+        assert matched.category is None
+        assert matched.match is None
+
+    def test_an_unmatched_title_still_carries_the_review_fallback(
+        self, helpers
+    ):
+        matched = helpers.match_shift_info(
+            gcal_name='events',
+            need_name='Jet City vs Cherry City'
+        )
+
+        assert matched.need_details['description'] == 'Unknown Game'
+        assert matched.need_details['need_ids'][0]['id'] == ''
+
+    @pytest.mark.parametrize(
+        'gcal_name, need_name',
+        [
+            ('events', 'Wheels of Justice vs Rose City'),
+            ('events', 'Jet City vs Cherry City'),
+            ('practices', 'Adult Officiating Practice')
+        ]
+    )
+    def test_the_two_lookups_agree_about_the_configuration(
+        self, helpers, gcal_name, need_name
+    ):
+        # One is the other's answer with two fields dropped.  Answered
+        # separately, the run and the CSV could match a title to
+        # different opportunities.
+        assert helpers.search_shift_info(
+            gcal_name=gcal_name,
+            need_name=need_name
+        ) == helpers.match_shift_info(
+            gcal_name=gcal_name,
+            need_name=need_name
+        ).need_details
+
+    def test_the_configuration_carries_no_alias_list(self, helpers):
+        # The aliases are how the model is searched, not something a
+        # run has any use for.
+        matched = helpers.match_shift_info(
+            gcal_name='events',
+            need_name='Wheels of Justice vs Rose City'
+        )
+
+        assert 'aliases' not in matched.need_details
 
 
 class TestRedactSecrets:
