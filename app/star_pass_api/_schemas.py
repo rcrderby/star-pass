@@ -401,3 +401,33 @@ class RunDetailView(RunView):
             'the same in a browser and a terminal.'
         )
     )
+
+
+class RevisionView(ApiModel):
+    """ One numbered version of a run's events. """
+
+    number: int = Field(
+        description='Position in the run\'s history, from one.'
+    )
+    created_at: str = Field(
+        description='When it was created, as an ISO-8601 UTC time.'
+    )
+    label: str = Field(
+        description='How the revision is named to a reader.'
+    )
+    changes: int = Field(
+        description=(
+            'How many changes were made while this revision was the '
+            'current one. Zero means it was sealed and left, which is '
+            'what tells a reader which revision in a list is worth '
+            'looking at.'
+        )
+    )
+    current: bool = Field(
+        description=(
+            'Whether this is the revision being edited now. Exactly '
+            'one revision of a run is current, and it is the last: '
+            'everything below it is history and is never written to '
+            'again.'
+        )
+    )

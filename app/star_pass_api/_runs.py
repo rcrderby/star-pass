@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-""" Reading runs, and reading one in full.
+""" Reading runs, one run in full, and what was done to it.
 
-    The first callers of the repository layer's run and revision side.
-    Two endpoints: the list a person opens the tool on, and the run
-    itself with everything the review screen reads at once.
+    The first callers of the repository layer's run and revision side:
+    the list a person opens the tool on, the run itself with
+    everything the review screen reads at once, and the numbered
+    versions its events have been through.
 
     No domain logic lives here.  What a run holds is counted by the
     repository, and what an event does not say is worked out by the
@@ -14,7 +15,7 @@
 # Imports - Python Standard Library
 import sqlite3
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 # Imports - Third-Party
 from fastapi import APIRouter, HTTPException, Path, status
@@ -27,10 +28,17 @@ from star_pass._derived import (
     repeated,
     shift_length
 )
-from star_pass._records import Event, LogEntry, Opportunity, Run
+from star_pass._records import (
+    Event,
+    LogEntry,
+    Opportunity,
+    Revision,
+    Run
+)
 from star_pass._repository import (
     ChangeLogRepository,
     EventRepository,
+    RevisionRepository,
     RunRepository
 )
 from . import _defaults
@@ -40,6 +48,7 @@ from ._schemas import (
     LogEntryView,
     MatchView,
     OpportunityView,
+    RevisionView,
     RunCountsView,
     RunDetailView,
     RunView,
@@ -122,6 +131,42 @@ def _gather(
         log=ChangeLogRepository(connection=connection).list_all(
             run_id=run_id
         )
+    )
+
+
+def _history(
+        connection: sqlite3.Connection,
+        run_id: str
+) -> Optional[Tuple[Run, List[Revision]]]:
+    """ Read a run and its revisions together.
+
+        The run is read as well as the revisions, and not only to know
+        the run exists: it is what says which revision is the current
+        one.  Both reads share the connection, so the answer cannot be
+        a list of revisions from one moment marked current from
+        another.
+
+        Args:
+            connection (sqlite3.Connection):
+                Connection to read on.
+
+            run_id (str):
+                Run to read the history of.
+
+        Returns:
+            history (Tuple[Run, List[Revision]] | None):
+                The run and its revisions oldest first, or None when
+                there is no such run.
+    """
+
+    run = RunRepository(connection=connection).get(run_id=run_id)
+
+    if run is None:
+        return None
+
+    return (
+        run,
+        RevisionRepository(connection=connection).list_all(run_id=run_id)
     )
 
 
@@ -395,3 +440,72 @@ async def get_run(
         raise _missing(run_id=run_id)
 
     return _to_detail_view(detail=detail)
+
+
+@router.get(
+    '/runs/{run_id}/revisions',
+    summary='List a run\'s revisions, oldest first',
+    description=(
+        'Every numbered version of the run\'s events, in the order '
+        'they were made. Everything below the current revision is '
+        'history and is never written to again: editing adds a '
+        'revision holding a copy, and reverting does the same rather '
+        'than deleting anything, so the record of what was done '
+        'survives being undone.\n\n'
+        'Each carries how many changes were made while it was '
+        'current, which is what says whether a revision is worth '
+        'looking at.'
+    ),
+    response_model=List[RevisionView]
+)
+async def list_revisions(
+        run_id: str = Path(
+            description='Identifier the run was created with.'
+        ),
+        principal: Principal = requires(SCOPE_RUNS_READ)
+) -> List[RevisionView]:
+    """ Return a run's revisions.
+
+        Args:
+            run_id (str):
+                Identifier of the run to read the history of.
+
+            principal (Principal):
+                The authenticated caller, which the dependency supplies
+                after checking the scope.
+
+        Raises:
+            HTTPException:
+                404 when there is no such run.  A run that exists and
+                has no revision yet answers with an empty list, which
+                is a different fact and reads differently.
+
+        Returns:
+            revisions (List[RevisionView]):
+                Every revision of the run, oldest first.
+    """
+
+    del principal
+
+    history = await read(
+        lambda connection: _history(
+            connection=connection,
+            run_id=run_id
+        )
+    )
+
+    if history is None:
+        raise _missing(run_id=run_id)
+
+    run, revisions = history
+
+    return [
+        RevisionView(
+            number=revision.number,
+            created_at=revision.created_at,
+            label=revision.label,
+            changes=revision.change_count,
+            current=revision.number == run.current_revision
+        )
+        for revision in revisions
+    ]
