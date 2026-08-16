@@ -205,6 +205,50 @@
         ]
       }
     },
+    "/v1/jobs/{job_id}/events": {
+      "get": {
+        "description": "A server-sent event stream. Each frame is named for what the job reported and carries what that report held. The stream ends with a \"job_finished\" frame when the job is over.\n\nIt is reattachable: a client that reconnects sends the identifier of the last frame it saw in \"Last-Event-ID\", and is given what it missed rather than what it already has. A browser sends that header itself.",
+        "operationId": "stream_job_events_v1_jobs__job_id__events_get",
+        "parameters": [
+          {
+            "description": "Identifier the job was created with.",
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the job was created with.",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "The job's events, as they happen."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:read"
+            ]
+          }
+        ],
+        "summary": "Follow what a job reports, as it reports it",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
     "/v1/version": {
       "get": {
         "description": "Return the running version.\n\nArgs:\n    principal (Principal):\n        The authenticated caller, which the dependency supplies\n        after checking the scope.\n\nReturns:\n    version (Version):\n        The version of the application that is serving.",

@@ -301,6 +301,20 @@ def fixture_start_service(
     return start
 
 
+@pytest.fixture(name='anonymous_client')
+def fixture_anonymous_client(
+    service_database: Path
+) -> Iterator[TestClient]:
+    """ Return a started service's client that presents no credential. """
+    del service_database
+
+    with TestClient(
+        app=create_app(),
+        raise_server_exceptions=False
+    ) as client:
+        yield client
+
+
 @pytest.fixture(name='running_client')
 def fixture_running_client(
     start_service: Callable[[], Any]

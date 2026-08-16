@@ -64,6 +64,29 @@ API_DOCS_PATH = '/docs'
 API_REDOC_PATH = '/redoc'
 API_OPENAPI_PATH = f'{API_VERSION_PREFIX}/openapi.json'
 
+# How often the event stream looks for what a job has reported since
+# it last looked.  A poll rather than a subscription: the service runs
+# one operation at a time for one person watching it, and a
+# notification channel between a worker thread and a request would be
+# a moving part with nothing to gain against half a second.
+JOB_EVENT_POLL_SECONDS = float(
+    getenv(
+        'STAR_PASS_JOB_EVENT_POLL_SECONDS',
+        '0.5'
+    )
+)
+
+# How long the stream stays silent before sending a comment to keep
+# the connection open.  A job can be quiet for minutes -- reading a
+# calendar, waiting on Amplify -- and an idle connection is what a
+# proxy in front of the service closes.
+JOB_EVENT_HEARTBEAT_SECONDS = float(
+    getenv(
+        'STAR_PASS_JOB_EVENT_HEARTBEAT_SECONDS',
+        '15'
+    )
+)
+
 # Tags, so the generated documentation groups endpoints by what they
 # are for rather than listing them in definition order.
 API_TAG_SERVICE = 'service'
