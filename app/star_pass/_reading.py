@@ -26,7 +26,7 @@
 # Imports - Python Standard Library
 import sqlite3
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 # Imports - Local
 from ._records import Event, LogEntry, Opportunity, Revision, Run
@@ -184,3 +184,33 @@ def read_run_for_send(
         ),
         runs.get_opportunities(run_id=run_id)
     )
+
+
+def changes_in_current(
+        run: Run,
+        revisions: Sequence[Revision]
+) -> int:
+    """ Return how much has been done to a run's current revision.
+
+        A run with no revision yet has had nothing done to one, which
+        is what a caller confirming against a count needs to hear
+        rather than an absence.
+
+        Args:
+            run (Run):
+                The run, which names its current revision.
+
+            revisions (Sequence[Revision]):
+                Its revisions, as 'read_run_history' returns them.
+
+        Returns:
+            changed (int):
+                How many changes were made while the current revision
+                has been the current one.
+    """
+
+    for revision in revisions:
+        if revision.number == run.current_revision:
+            return revision.change_count
+
+    return 0

@@ -587,3 +587,25 @@ class CollectRequest(ApiModel):
     window: WindowRequest = Field(
         description='The days to cover.'
     )
+
+
+class RecollectRequest(ApiModel):
+    """ What the operator was shown before asking to collect again. """
+
+    expected_change_count: int = Field(
+        ge=0,
+        description=(
+            'How many changes the operator was told a recollection '
+            'would discard. Collecting again replaces the run\'s '
+            'events with what the calendar has now, so any editing '
+            'done since it was collected is left behind in the '
+            'revision it was done in.\n\n'
+            'The service refuses when this does not match what the '
+            'run actually holds. That is the stale-tab case: a number '
+            'read from a page somebody left open describes a run that '
+            'has moved on, and a confirmation dialog cannot tell the '
+            'difference. Read the run again and ask again with what '
+            'it says now.'
+        ),
+        examples=[0]
+    )

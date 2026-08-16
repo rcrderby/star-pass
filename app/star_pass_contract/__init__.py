@@ -20,7 +20,14 @@
 """
 
 # Imports - Local
-from ._messages import no_such_job, no_such_run
+from ._messages import (
+    already_sent,
+    already_working,
+    has_moved,
+    no_such_job,
+    no_such_run,
+    why_not_recollect
+)
 from ._schemas import (
     ApiModel,
     BlockerView,
@@ -34,6 +41,7 @@ from ._schemas import (
     PreviewRowView,
     PreviewTotalsView,
     PreviewView,
+    RecollectRequest,
     RevisionView,
     RunCountsView,
     RunDetailView,
@@ -62,17 +70,22 @@ __all__ = [
     'PreviewRowView',
     'PreviewTotalsView',
     'PreviewView',
+    'RecollectRequest',
     'RevisionView',
     'RunCountsView',
     'RunDetailView',
     'RunView',
     'WindowRequest',
     'WindowView',
+    'already_sent',
+    'already_working',
+    'has_moved',
     'no_such_job',
     'no_such_run',
     'to_detail_view',
     'to_job_view',
     'to_preview_view',
     'to_revision_views',
-    'to_run_view'
+    'to_run_view',
+    'why_not_recollect'
 ]
