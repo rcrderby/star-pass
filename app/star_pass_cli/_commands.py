@@ -7,6 +7,13 @@
     document either way (D2) -- that is what makes one renderer
     correct for both.
 
+    Because all of them do the same three things, none of them is
+    written out.  A command is a row in 'COMMANDS' naming the operation
+    to ask and the renderer to show it with, and one function does the
+    three things for all of them.  The rows also build the parser, so a
+    command cannot be one the command line offers and the dispatcher
+    does not answer, or the reverse.
+
     A failure the client reports is written and turned into a non-zero
     status here rather than raised at the operator.  The reason is
     already written for a person: a problem document carries a
@@ -21,23 +28,119 @@
 
 # Imports - Python Standard Library
 import argparse
-from typing import Callable, Dict, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, Optional, Tuple
 
 # Imports - Local
 from star_pass._exceptions import StarPassError
 from star_pass_client import ApiProblem, LocalOperationUnavailable
 from ._mode import API_URL_VARIABLE, client_for
 from ._output import write
-from ._render import runs_table
+from ._render import (
+    job_text,
+    preview_text,
+    revisions_table,
+    run_detail,
+    runs_table
+)
 
 # Constants
 # What a command exits with when it could not answer.
 FAILURE = 1
 SUCCESS = 0
 
-# The commands, by the words that select them.
-COMMAND_RUNS = 'runs'
-SUBCOMMAND_LIST = 'list'
+# The word each group of commands is selected by, and what it reads.
+GROUPS = {
+    'runs': 'Read collected runs.',
+    'jobs': 'Read the jobs that long operations are watched through.'
+}
+
+
+@dataclass(frozen=True)
+class Command:
+    """ One command, and everything that makes it work.
+
+        Attributes:
+            group (str):
+                The word selecting the group it belongs to, which is a
+                key of 'GROUPS'.
+
+            word (str):
+                The word selecting it within that group.
+
+            summary (str):
+                What it does, shown in the help.
+
+            operation (str):
+                The contract operation to ask, named as the generated
+                client names it.  Both clients inherit that surface, so
+                the name is the same in either mode.
+
+            render (Callable[..., str]):
+                What turns the answer into something to read.
+
+            argument (str, optional):
+                The path value the operation takes, named as the
+                operation names it.  Defaults to None, for an operation
+                that addresses nothing.
+    """
+
+    group: str
+    word: str
+    summary: str
+    operation: str
+    render: Callable[..., str]
+    argument: Optional[str] = None
+
+
+# Every command, in the order the help lists them.
+COMMANDS = (
+    Command(
+        group='runs',
+        word='list',
+        summary='List the runs, newest first.',
+        operation='list_runs',
+        render=runs_table
+    ),
+    Command(
+        group='runs',
+        word='show',
+        summary='Show one run, what it holds and what changed it.',
+        operation='get_run',
+        render=run_detail,
+        argument='run_id'
+    ),
+    Command(
+        group='runs',
+        word='revisions',
+        summary='List a run\'s revisions, oldest first.',
+        operation='list_revisions',
+        render=revisions_table,
+        argument='run_id'
+    ),
+    Command(
+        group='runs',
+        word='preview',
+        summary='Show what sending a run would create.',
+        operation='get_preview',
+        render=preview_text,
+        argument='run_id'
+    ),
+    Command(
+        group='jobs',
+        word='show',
+        summary='Show where a job has got to.',
+        operation='get_job',
+        render=job_text,
+        argument='job_id'
+    )
+)
+
+# Which command the words on the command line select.
+BY_WORDS: Dict[Tuple[str, Optional[str]], Command] = {
+    (command.group, command.word): command
+    for command in COMMANDS
+}
 
 
 def remote_options() -> argparse.ArgumentParser:
@@ -69,10 +172,45 @@ def remote_options() -> argparse.ArgumentParser:
     return shared
 
 
+def _add_argument(
+        parser: argparse.ArgumentParser,
+        argument: str
+) -> None:
+    """ Add the value a command addresses something by.
+
+        What it is called on the command line comes from what the
+        operation calls it, so the two cannot drift apart.
+
+        Args:
+            parser (argparse.ArgumentParser):
+                The command's own parser.
+
+            argument (str):
+                The operation's name for the value.
+
+        Returns:
+            None.
+    """
+
+    named = argument.split('_')[0]
+
+    parser.add_argument(
+        argument,
+        metavar=named.upper(),
+        help=f'Identifier of the {named} to read.'
+    )
+
+    return None
+
+
 def add_commands(
         parser: argparse.ArgumentParser
 ) -> None:
     """ Add the reading commands to a parser.
+
+        Built from 'COMMANDS' rather than written out, so that what the
+        command line offers and what the dispatcher answers are the
+        same list read twice.
 
         Args:
             parser (argparse.ArgumentParser):
@@ -88,36 +226,49 @@ def add_commands(
         metavar='COMMAND',
         title='commands'
     )
+    groups: Dict[str, Any] = {}
 
-    runs = commands.add_parser(
-        COMMAND_RUNS,
-        help='Read collected runs.'
-    )
-    subcommands = runs.add_subparsers(
-        dest='subcommand',
-        metavar='SUBCOMMAND'
-    )
-    subcommands.add_parser(
-        SUBCOMMAND_LIST,
-        parents=[shared],
-        help='List the runs, newest first.'
-    )
+    for command in COMMANDS:
+        if command.group not in groups:
+            groups[command.group] = commands.add_parser(
+                command.group,
+                help=GROUPS[command.group]
+            ).add_subparsers(
+                dest='subcommand',
+                metavar='SUBCOMMAND'
+            )
+
+        added = groups[command.group].add_parser(
+            command.word,
+            parents=[shared],
+            help=command.summary
+        )
+
+        if command.argument is not None:
+            _add_argument(parser=added, argument=command.argument)
 
     return None
 
 
-def _list_runs(
+def _answer(
+        command: Command,
         args: argparse.Namespace
 ) -> None:
-    """ Write every run as a table.
+    """ Ask one command's operation and write what it answered.
 
         Args:
+            command (Command):
+                The command the words selected.
+
             args (argparse.Namespace):
                 The parsed command line.
 
         Raises:
             ApiProblem:
                 If the service reported a failure.
+
+            LocalOperationUnavailable:
+                If local mode has no answer for the operation.
 
             StarPassError:
                 If the mode cannot be reached as configured.
@@ -127,16 +278,19 @@ def _list_runs(
     """
 
     client = client_for(api_url=args.api_url)
+    parameters = (
+        {}
+        if command.argument is None
+        else {command.argument: getattr(args, command.argument)}
+    )
 
-    write(runs_table(runs=client.list_runs()))
+    write(
+        command.render(
+            answer=getattr(client, command.operation)(**parameters)
+        )
+    )
 
     return None
-
-
-# Which function answers which command.
-HANDLERS: Dict[Tuple[str, Optional[str]], Callable[..., None]] = {
-    (COMMAND_RUNS, SUBCOMMAND_LIST): _list_runs
-}
 
 
 def selected(
@@ -178,7 +332,7 @@ def run_command(
 
     command = selected(args=args)
 
-    if command is None or command not in HANDLERS:
+    if command is None or command not in BY_WORDS:
         # A command word with no subcommand, which argparse accepts
         # because the subcommand is what carries the options.
         named = ' '.join(part for part in command or () if part)
@@ -190,7 +344,7 @@ def run_command(
         return FAILURE
 
     try:
-        HANDLERS[command](args)
+        _answer(command=BY_WORDS[command], args=args)
 
     except (ApiProblem, LocalOperationUnavailable) as error:
         # Nothing has reported these: they are raised by a client, and

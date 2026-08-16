@@ -229,6 +229,31 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     was created, not when a *shift* starts, so narrowing the day window
     does not shorten that read.
 
+### Reading collected runs
+
+A second group of commands reads what has been collected. They are
+selected by a word rather than by a mode flag:
+
+```bash
+./app/__main__.py runs list
+./app/__main__.py runs show <run_id>
+./app/__main__.py runs revisions <run_id>
+./app/__main__.py runs preview <run_id>
+./app/__main__.py jobs show <job_id>
+```
+
+Each reads the local database in the same process, so none of them
+needs a service to be running. Add `--api-url`, or set
+`STAR_PASS_API_URL`, to read a star-pass service instead; that also
+needs `STAR_PASS_API_TOKEN`, and the command says so rather than
+failing with a 401. What is displayed is identical either way, because
+both modes answer with the same document.
+
+`runs show` gives one run, the events its current revision holds, the
+Amplify opportunities they are created under, and every change made to
+it. `runs preview` gives what sending it would create, per opportunity,
+and every reason an event cannot be sent.
+
 ## Unmatched event titles
 
 `Helpers.search_shift_info` maps a Google Calendar event title to a
