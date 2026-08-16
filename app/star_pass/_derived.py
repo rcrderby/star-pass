@@ -22,20 +22,15 @@
 
 # Imports - Python Standard Library
 from datetime import datetime
-from typing import Dict, Iterable, Mapping, Optional, Tuple
+from typing import Dict, Iterable, Mapping, Optional
 
 # Imports - Local
 from ._defaults import SIMPLE_TIME_FORMAT
-from ._records import Event, EventRole, Opportunity
+from ._records import Event, EventRole, Opportunity, ShiftIdentity
 
 # How many minutes are in an hour, for turning a time of day into one
 # number that can be subtracted from another.
 MINUTES_PER_HOUR = 60
-
-# The row Amplify receives, and so the unit of duplicate safety and of
-# idempotency (D16): need ID, date, start and end.  Never a count -- a
-# count cannot say *which* shifts a send would repeat.
-ShiftIdentity = Tuple[str, str, str, str]
 
 
 def shift_identity(

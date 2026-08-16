@@ -23,10 +23,21 @@ EXPECTED_TABLES = {
     'change_log',
     'event_roles',
     'events',
+    'idempotency_keys',
     'opportunities',
     'revisions',
-    'runs'
+    'runs',
+    'sent_shifts'
 }
+
+# Every version this application has written, and the tables the one
+# after it added.  Carrying a database forward is checked at each of
+# them rather than only at the newest, because a release that skipped
+# two versions has to gain both sets.
+EARLIER_VERSIONS = (
+    (1, ('job_events', 'jobs')),
+    (2, ('idempotency_keys', 'sent_shifts'))
+)
 
 
 INSERT_RUN = (
@@ -236,38 +247,56 @@ def test_a_nested_transaction_leaves_the_commit_to_the_outer_one(
 
 class TestCarryingAnOlderDatabaseForward:
     @staticmethod
-    def make_earlier_version(database_path: Path) -> None:
-        # Stands in for a database written before the job tables
-        # existed: the tables are dropped and the version wound back.
+    def make_earlier_version(
+        database_path: Path,
+        version: int,
+        tables: tuple
+    ) -> None:
+        # Stands in for a database written before those tables
+        # existed: they are dropped and the version wound back.
         connection = _database.connect(path=database_path)
-        for table in ('job_events', 'jobs'):
+        for table in tables:
             _database.execute(
                 connection=connection,
                 statement=f'DROP TABLE {table}'
             )
         _database.execute(
             connection=connection,
-            statement='PRAGMA user_version = 1'
+            statement=f'PRAGMA user_version = {version}'
         )
         connection.close()
 
+    @pytest.mark.parametrize('version, tables', EARLIER_VERSIONS)
     def test_an_earlier_database_gains_what_it_lacked(
         self,
-        database_path: Path
+        database_path: Path,
+        version: int,
+        tables: tuple
     ) -> None:
-        self.make_earlier_version(database_path=database_path)
+        self.make_earlier_version(
+            database_path=database_path,
+            version=version,
+            tables=tables
+        )
 
         connection = _database.connect(path=database_path)
         names = table_names(connection=connection)
         connection.close()
 
-        assert {'jobs', 'job_events'} <= names
+        assert set(tables) <= names
 
+    @pytest.mark.parametrize('version, tables', EARLIER_VERSIONS)
     def test_an_earlier_database_is_recorded_at_the_new_version(
         self,
-        database_path: Path
+        database_path: Path,
+        version: int,
+        tables: tuple
     ) -> None:
-        self.make_earlier_version(database_path=database_path)
+        self.make_earlier_version(
+            database_path=database_path,
+            version=version,
+            tables=tables
+        )
 
         connection = _database.connect(path=database_path)
         row = _database.query_one(
@@ -278,9 +307,12 @@ class TestCarryingAnOlderDatabaseForward:
 
         assert row[0] == _database.SCHEMA_VERSION
 
+    @pytest.mark.parametrize('version, tables', EARLIER_VERSIONS)
     def test_carrying_forward_keeps_what_was_there(
         self,
-        database_path: Path
+        database_path: Path,
+        version: int,
+        tables: tuple
     ) -> None:
         # The upgrade adds; it must not rebuild a table that already
         # holds rows.
@@ -290,7 +322,11 @@ class TestCarryingAnOlderDatabaseForward:
             run_id='survives'
         )
         first.close()
-        self.make_earlier_version(database_path=database_path)
+        self.make_earlier_version(
+            database_path=database_path,
+            version=version,
+            tables=tables
+        )
 
         connection = _database.connect(path=database_path)
         row = _database.query_one(

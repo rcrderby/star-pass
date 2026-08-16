@@ -9,10 +9,15 @@
     them does.
 
     One repository per thing that has a lifetime of its own, and a
-    module each, because the layer is still growing: jobs, the record of
-    what was sent and the idempotency keys join it when the endpoints
-    that use them are written, and a single module holding all of them
-    would not stay readable.
+    module each, because a single module holding all of them would not
+    stay readable.
+
+    The record of what was sent and the reservations made against
+    idempotency keys are two of them rather than one.  They answer
+    different questions: which rows a run has already put into Amplify,
+    and what a request that has already been made answered.  A key is
+    one request covering many shifts, so neither can be stored as a
+    column of the other.
 
     A run owns the opportunities it resolved, so those live with it; a
     revision owns the events in it, and an event owns its roles, so each
@@ -28,14 +33,18 @@
 # Imports - Local
 from ._change_log import ChangeLogRepository
 from ._events import EventRepository
+from ._idempotency import IdempotencyRepository
 from ._jobs import JobRepository
 from ._revisions import RevisionRepository
 from ._runs import RunRepository
+from ._sent import SentShiftRepository
 
 __all__ = [
     'ChangeLogRepository',
     'EventRepository',
+    'IdempotencyRepository',
     'JobRepository',
     'RevisionRepository',
-    'RunRepository'
+    'RunRepository',
+    'SentShiftRepository'
 ]

@@ -62,14 +62,17 @@ from star_pass._records import (  # noqa: E402
     JOB_KIND_COLLECT,
     Match,
     MATCH_KIND_FUZZY,
-    Opportunity
+    Opportunity,
+    ShiftIdentity
 )
 from star_pass._repository import (  # noqa: E402
     ChangeLogRepository,
     EventRepository,
+    IdempotencyRepository,
     JobRepository,
     RevisionRepository,
-    RunRepository
+    RunRepository,
+    SentShiftRepository
 )
 from star_pass_api import create_app  # noqa: E402
 from star_pass_api._defaults import API_PRINCIPAL_ID  # noqa: E402
@@ -164,11 +167,41 @@ def fixture_jobs(connection: sqlite3.Connection) -> JobRepository:
     return JobRepository(connection=connection)
 
 
+@pytest.fixture(name='sent')
+def fixture_sent(connection: sqlite3.Connection) -> SentShiftRepository:
+    """ Return a sent shift repository on the test's database. """
+    return SentShiftRepository(connection=connection)
+
+
+@pytest.fixture(name='idempotency')
+def fixture_idempotency(
+    connection: sqlite3.Connection
+) -> IdempotencyRepository:
+    """ Return an idempotency repository on the test's database. """
+    return IdempotencyRepository(connection=connection)
+
+
+@pytest.fixture(name='shift_identity')
+def fixture_shift_identity() -> ShiftIdentity:
+    """ Return one shift's identity: need, date, start and end. """
+    return ('123456', '2026-09-05', '18:00', '20:00')
+
+
 @pytest.fixture(name='run_id')
 def fixture_run_id(runs: RunRepository) -> str:
     """ Return the ID of a run stored with a one-month window. """
     return runs.create(
         calendar='practices',
+        window_start='2026-09-01',
+        window_end='2026-10-01'
+    ).id
+
+
+@pytest.fixture(name='other_run_id')
+def fixture_other_run_id(runs: RunRepository) -> str:
+    """ Return the ID of a second run, for a test that needs two. """
+    return runs.create(
+        calendar='events',
         window_start='2026-09-01',
         window_end='2026-10-01'
     ).id

@@ -46,7 +46,7 @@ DATABASE_BUSY_TIMEOUT = _defaults.DATABASE_BUSY_TIMEOUT
 # forward.  A later one means the file was written by a newer version
 # of the application, which is a deployment problem rather than
 # something to guess at.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Pragmas applied to every connection.  'foreign_keys' is off by
 # default and is per-connection rather than stored in the file, so
@@ -202,6 +202,54 @@ SCHEMA_STATEMENTS = (
     """
     CREATE INDEX IF NOT EXISTS ix_job_events_job
         ON job_events (job_id, id)
+    """,
+    # What a send put into Amplify.  The key is the four columns a
+    # shift is identified by plus the run, because that is the unit
+    # idempotency and duplicate safety work in (D16): a retry asks
+    # which rows it already created, and a count could not say which.
+    #
+    # The reference to 'runs' deliberately does not cascade, unlike
+    # every other one above.  This record is never purged (D12), so a
+    # deletion that would take it away has to fail rather than succeed
+    # quietly; a cascade would make "never purged" a sentence in a
+    # document instead of something the database holds to.
+    """
+    CREATE TABLE IF NOT EXISTS sent_shifts (
+        run_id           TEXT NOT NULL REFERENCES runs (id),
+        need_id          TEXT NOT NULL,
+        date             TEXT NOT NULL,
+        shift_start      TEXT NOT NULL,
+        shift_end        TEXT NOT NULL,
+        sent_at          TEXT NOT NULL,
+        principal_id     TEXT NOT NULL,
+        idempotency_key  TEXT NOT NULL,
+        PRIMARY KEY (run_id, need_id, date, shift_start, shift_end)
+    )
+    """,
+    # Writes that have been asked for, and what each answered.  Keyed
+    # on the operation as well as the key, so one value used on two
+    # operations cannot have one of them replay the other's answer.
+    #
+    # The response columns are empty between the reservation and the
+    # answer, which is what lets a second request tell a write still
+    # running from one that finished.
+    """
+    CREATE TABLE IF NOT EXISTS idempotency_keys (
+        operation     TEXT NOT NULL,
+        key           TEXT NOT NULL,
+        run_id        TEXT NOT NULL
+                           REFERENCES runs (id) ON DELETE CASCADE,
+        fingerprint   TEXT NOT NULL,
+        principal_id  TEXT NOT NULL,
+        created_at    TEXT NOT NULL,
+        status_code   INTEGER,
+        response      TEXT,
+        PRIMARY KEY (operation, key)
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_idempotency_keys_run
+        ON idempotency_keys (run_id, created_at)
     """
 )
 

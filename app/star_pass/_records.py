@@ -25,6 +25,17 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple
 
+# The row Amplify receives, and so the unit of duplicate safety and of
+# idempotency (D16): need ID, date, start and end.  Never a count -- a
+# count cannot say *which* shifts a send would repeat.
+#
+# Here rather than with the function that builds one, because the
+# record of what was sent stores exactly these four columns and
+# '_derived' works them out from an event.  Written in either place it
+# would be a second answer to "is this the same shift", which is the
+# one question D16 says must have only one.
+ShiftIdentity = Tuple[str, str, str, str]
+
 # Statuses a run moves through, in the order it moves through them.
 # 'collecting' is set when the run is created, before any event exists;
 # 'partly_sent' is reachable because a send that fails part way through
@@ -496,3 +507,117 @@ class JobEvent:
     recorded_at: str
     kind: str
     payload: Dict[str, Any]
+
+
+@dataclass(frozen=True)
+class SentShift:
+    """ One row a send put into Amplify, and who put it there.
+
+        The record duplicate safety rests on, so it is never purged
+        (D12) and its first four fields are exactly a 'ShiftIdentity':
+        a send that is retried asks what it already created, and an
+        answer assembled from anything else would be a second opinion.
+
+        It is not the whole answer to "does Amplify already have this".
+        Amplify is the authority, and a shift created by an earlier run
+        or by hand appears in no run's sent record; that is why the
+        send path reads the live opportunity as well.  This says what
+        *this* run did, which is what a retry needs and what a live
+        read cannot tell it.
+
+        Attributes:
+            run_id (str):
+                Run whose send created the shift.
+
+            need_id (str):
+                Amplify need ID the shift was created under.
+
+            date (str):
+                Day of the shift, as an ISO date.
+
+            shift_start (str):
+                Start time of the shift, in the league's own time zone.
+
+            shift_end (str):
+                End time of the shift, in the league's own time zone.
+
+            sent_at (str):
+                When it was created, as an ISO-8601 UTC timestamp
+                (D13).
+
+            principal_id (str):
+                Who sent it (D13).
+
+            idempotency_key (str):
+                The key the send was made under (D13).  Kept per shift
+                rather than only per request, so that the rows one
+                attempt created can be told from the rows another did.
+    """
+
+    run_id: str
+    need_id: str
+    date: str
+    shift_start: str
+    shift_end: str
+    sent_at: str
+    principal_id: str
+    idempotency_key: str
+
+
+@dataclass(frozen=True)
+class IdempotencyRecord:
+    """ A write that was asked for once, and what it answered.
+
+        Reserved before the write and completed after it, so the record
+        exists while the work is still running.  That gap is the point:
+        a second request arriving with the same key finds a reservation
+        with no response yet and knows the first one is still in hand,
+        which is a different answer from "here is what it returned"
+        and a different one again from "nothing has asked for this".
+
+        Attributes:
+            operation (str):
+                Which write the key was used for, one of 'JOB_KINDS'.
+                Every idempotent write starts a job of that kind, so
+                the two vocabularies are the same one.  Part of the
+                key, so the same value used on two operations is two
+                reservations rather than one operation replaying the
+                other's answer.
+
+            key (str):
+                What the caller supplied, unread and uninterpreted.
+
+            run_id (str):
+                Run the write acts on.
+
+            fingerprint (str):
+                What the request asked for, as the caller summarized
+                it.  Compared on a replay: the key is a promise that
+                the request is the same one, and a replay that asks
+                for something else has broken the promise rather than
+                earned the first answer.
+
+            principal_id (str):
+                Who asked (D13).
+
+            created_at (str):
+                When they asked, as an ISO-8601 UTC timestamp (D13).
+
+            status_code (int, optional):
+                The status the write answered with, or None while it
+                is still running.
+
+            response (Dict[str, Any], optional):
+                The body it answered with, or None while it is still
+                running.  Stored so that a replay is answered from
+                here instead of writing again.
+    """
+
+    operation: str
+    key: str
+    run_id: str
+    fingerprint: str
+    principal_id: str
+    created_at: str
+    status_code: Optional[int] = None
+    response: Optional[Dict[str, Any]] = None
