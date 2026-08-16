@@ -828,7 +828,7 @@
     "/v1/health": {
       "get": {
         "description": "Answers without authentication, for a container runtime or a proxy deciding whether to route to this process. It reports that the process is serving and does not check the database or any upstream service.",
-        "operationId": "get_health_v1_health_get",
+        "operationId": "get_health",
         "responses": {
           "200": {
             "content": {
@@ -856,7 +856,7 @@
     "/v1/jobs/{job_id}": {
       "get": {
         "description": "Answers for a job whether it is queued, running or over. A caller watching one polls this, or reads the event stream for the same job to be told as it happens.",
-        "operationId": "get_job_v1_jobs__job_id__get",
+        "operationId": "get_job",
         "parameters": [
           {
             "description": "Identifier the job was created with.",
@@ -904,7 +904,7 @@
     "/v1/jobs/{job_id}/events": {
       "get": {
         "description": "A server-sent event stream. Each frame is named for what the job reported and carries what that report held. The stream ends with a \"job_finished\" frame when the job is over.\n\nIt is reattachable: a client that reconnects sends the identifier of the last frame it saw in \"Last-Event-ID\", and is given what it missed rather than what it already has. A browser sends that header itself.",
-        "operationId": "stream_job_events_v1_jobs__job_id__events_get",
+        "operationId": "stream_job_events",
         "parameters": [
           {
             "description": "Identifier the job was created with.",
@@ -948,7 +948,7 @@
     "/v1/runs": {
       "get": {
         "description": "Every run the service holds, most recently collected first, including one still being collected. Each carries what its current revision holds and the job still working on it, so the list is enough to decide what to open without reading each run in turn.",
-        "operationId": "list_runs_v1_runs_get",
+        "operationId": "list_runs",
         "responses": {
           "200": {
             "content": {
@@ -957,7 +957,7 @@
                   "items": {
                     "$ref": "#/components/schemas/RunView"
                   },
-                  "title": "Response List Runs V1 Runs Get",
+                  "title": "Response List Runs",
                   "type": "array"
                 }
               }
@@ -987,7 +987,7 @@
     "/v1/runs/{run_id}": {
       "get": {
         "description": "The run, the events of its current revision, the Amplify opportunities labelling them, and the log of everything done to it. Read together because a screen showing one shows all of them, and separate reads could disagree.\n\nEach event carries what its stored row does not say: how long the shift is, the maximum that shortened it, whether an earlier event would create the same shift, and whether it blocks the send.",
-        "operationId": "get_run_v1_runs__run_id__get",
+        "operationId": "get_run",
         "parameters": [
           {
             "description": "Identifier the run was created with.",
@@ -1035,7 +1035,7 @@
     "/v1/runs/{run_id}/preview": {
       "get": {
         "description": "What a send would do, grouped by Amplify opportunity and never by category: several categories share one listing, so grouping by category would show it twice under two names and split a total the reader is about to check against Amplify.\n\nShifts are counted by identity -- need ID, date, start and end -- so two events asking for the same row count once, and a reader is told how many rows repeat rather than left to wonder why the total is below what they can see.\n\nAn event that cannot become a shift stops the whole send and is named with every reason it cannot, so fixing one does not reveal another.\n\n**This does not yet say which shifts Amplify already has.** That needs a read of the live opportunity, which arrives with the send path that re-checks the same thing inside its transaction, so that both ask the question the same way. Until then the totals describe what the stored revision would create, and some of it may already exist.",
-        "operationId": "get_preview_v1_runs__run_id__preview_get",
+        "operationId": "get_preview",
         "parameters": [
           {
             "description": "Identifier the run was created with.",
@@ -1083,7 +1083,7 @@
     "/v1/runs/{run_id}/revisions": {
       "get": {
         "description": "Every numbered version of the run's events, in the order they were made. Everything below the current revision is history and is never written to again: editing adds a revision holding a copy, and reverting does the same rather than deleting anything, so the record of what was done survives being undone.\n\nEach carries how many changes were made while it was current, which is what says whether a revision is worth looking at.",
-        "operationId": "list_revisions_v1_runs__run_id__revisions_get",
+        "operationId": "list_revisions",
         "parameters": [
           {
             "description": "Identifier the run was created with.",
@@ -1105,7 +1105,7 @@
                   "items": {
                     "$ref": "#/components/schemas/RevisionView"
                   },
-                  "title": "Response List Revisions V1 Runs  Run Id  Revisions Get",
+                  "title": "Response List Revisions",
                   "type": "array"
                 }
               }
@@ -1135,7 +1135,7 @@
     "/v1/version": {
       "get": {
         "description": "Return the running version.\n\nArgs:\n    principal (Principal):\n        The authenticated caller, which the dependency supplies\n        after checking the scope.\n\nReturns:\n    version (Version):\n        The version of the application that is serving.",
-        "operationId": "get_version_v1_version_get",
+        "operationId": "get_version",
         "responses": {
           "200": {
             "content": {

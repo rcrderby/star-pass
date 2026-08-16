@@ -1,18 +1,19 @@
 {
     "threshold": 0,
     "reporters": [
-      "consoleFull"
+        "consoleFull"
     ],
     "ignore": [
-      "**/.bandit.yml",
-      "**/.github/workflows/**",
-      "**/__snapshots__/**",
-      "**/data/json/**",
-      "**/docs/api/**",
-      "**/docs/design/**",
-      "**/node_modules/**",
-      "**/models/shift_info.yml",
-      "**/tests/fixtures/**"
+        "**/.bandit.yml",
+        "**/.github/workflows/**",
+        "**/__snapshots__/**",
+        "**/app/star_pass_client/_operations.py",
+        "**/data/json/**",
+        "**/docs/api/**",
+        "**/docs/design/**",
+        "**/models/shift_info.yml",
+        "**/node_modules/**",
+        "**/tests/fixtures/**"
     ],
     "absolute": true
 }
