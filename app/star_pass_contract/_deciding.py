@@ -482,18 +482,19 @@ def sealed(
                 Run to seal the current revision of.
 
             key (str):
-                What this action is claimed under (D13, D16).
+                What the seal is claimed under, so a retry opens no
+                second revision (D13, D16).
 
             principal_id (str):
-                Who did it (D13).
+                Who sealed it (D13).
 
             refusals (WriteRefusals):
-                How this half says no.
+                What this half raises when it will not carry the write
+                out.
 
         Raises:
-            Whatever 'refusals' raises: the run is not there, it has
-            collected nothing yet, or the key carries a different
-            request.
+            Whatever 'refusals' raises: no such run, nothing collected
+            to seal, or a key already carrying another request.
 
         Returns:
             answer (Dict[str, Any]):

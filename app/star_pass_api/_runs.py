@@ -311,17 +311,18 @@ async def seal_revision(
                 Identifier of the run to seal.
 
             idempotency_key (str):
-                What this action is claimed under (D13, D16).
+                What the seal is claimed under, so a retry opens no
+                second revision (D13, D16).
 
             principal (Principal):
-                The authenticated caller, which the dependency supplies
-                after checking the scope.
+                Who is sealing it, which the dependency supplies after
+                checking the scope.
 
         Raises:
             HTTPException:
-                404 when there is no such run, 409 when it has
-                collected nothing to seal, 422 when the key carries a
-                different request.
+                404 for a run that is not there, 409 for one with
+                nothing collected to seal, and 422 for a key already
+                carrying another request.
 
         Returns:
             opened (RevisionView):

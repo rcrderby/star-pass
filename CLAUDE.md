@@ -120,7 +120,7 @@ through the Amplify API. It is run once per month.
   in (`seal`). An edit changes a revision in place, so sealing is what
   fixes a point in that work as something to come back to: it opens a
   revision holding a copy and leaves the sealed one's rows where they
-  are. **No change log entry**, because the change count on a revision
+  are. **No `change_log` entry**, because the change count on a revision
   is what was done *while it was current*, and one written as a
   revision opens would have every sealed revision starting at a change
   nobody made; who sealed it is recorded against the idempotency key
