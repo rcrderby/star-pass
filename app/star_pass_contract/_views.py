@@ -18,13 +18,24 @@
     a run come from the repository, and what an event does not store
     comes from the core's '_derived' and '_preview'; this module reads
     those answers and names them for the contract.
+
+    What the deployment was configured with is shown the same way, for
+    the same reason.  Nothing stored it, but both callers publish it
+    and a second reading of one environment could differ from the
+    first.
 """
 
 # Imports - Python Standard Library
 from typing import AbstractSet, Dict, Iterable, List, Sequence
 
 # Imports - Local
-from star_pass._defaults import LOCAL_TIMEZONE
+from star_pass._defaults import (
+    FUZZY_MATCH_THRESHOLD,
+    GCAL_CALENDARS,
+    GCAL_PREFIX_FILTERS,
+    GCAL_TIMEZONE,
+    LOCAL_TIMEZONE
+)
 from star_pass._editing import Operation
 from star_pass._derived import (
     blocks_the_run,
@@ -48,6 +59,8 @@ from star_pass._records import (
 )
 from ._schemas import (
     BlockerView,
+    CalendarView,
+    ConfigView,
     EditRequest,
     EditView,
     EventRoleView,
@@ -572,3 +585,40 @@ def to_operations(
         )
         for operation in asked.operations
     ]
+
+
+def to_config_view() -> ConfigView:
+    """ Return what the deployment was configured with.
+
+        Read from the settings rather than from a record, and here
+        rather than in either half for the same reason as everything
+        else in this module: a service and a command line client that
+        each assembled this would be two readings of one environment,
+        and the difference would show up as a value the two modes
+        disagree about.
+
+        The calendars are in key order rather than in the order they
+        were configured, so what is published is a property of the
+        configuration rather than of how it was written down.
+
+        Args:
+            None.
+
+        Returns:
+            view (ConfigView):
+                The settings a caller is shown, shaped for the
+                contract.
+    """
+
+    return ConfigView(
+        timezone=GCAL_TIMEZONE,
+        match_threshold=FUZZY_MATCH_THRESHOLD,
+        excluded_title_terms=list(GCAL_PREFIX_FILTERS),
+        calendars=[
+            CalendarView(
+                key=key,
+                search_terms=list(GCAL_CALENDARS[key]['query_strings'])
+            )
+            for key in sorted(GCAL_CALENDARS)
+        ]
+    )

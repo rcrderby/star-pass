@@ -44,6 +44,7 @@ from star_pass._repository import JobRepository, RunRepository
 from star_pass_contract import (
     no_such_job,
     no_such_run,
+    to_config_view,
     to_detail_view,
     to_job_view,
     to_preview_view,
@@ -63,6 +64,7 @@ from ._stream import StreamEvent
 # stops matching here rather than quietly answering the wrong thing.
 HANDLERS = {
     ('GET', '/v1/version'): '_version',
+    ('GET', '/v1/config'): '_config',
     ('POST', '/v1/runs'): '_collect',
     ('POST', '/v1/runs/{run_id}/recollect'): '_recollect',
     ('POST', '/v1/runs/{run_id}/send'): '_send',
@@ -306,6 +308,30 @@ class LocalClient(OperationCaller, LocalWrites, Operations):
         del self
 
         return {'version': __version__}
+
+    def _config(self) -> Dict[str, Any]:
+        """ Return what the deployment was configured with.
+
+            Answered locally rather than declared unavailable: "which
+            calendars can I collect, and why was this title left out"
+            is a troubleshooting question, and troubleshooting is what
+            the command line is for (D2).  It opens no database
+            either, because a setting is not stored.
+
+            Args:
+                None.
+
+            Returns:
+                answer (Dict[str, Any]):
+                    The settings this process resolved.
+        """
+
+        del self
+
+        return to_config_view().model_dump(
+            by_alias=True,
+            mode='json'
+        )
 
     def _runs(self) -> List[Dict[str, Any]]:
         """ Return every run, newest first.

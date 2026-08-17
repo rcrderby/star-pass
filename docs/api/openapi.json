@@ -22,6 +22,39 @@
         "title": "BlockerView",
         "type": "object"
       },
+      "CalendarView": {
+        "description": "One calendar a run may be collected from. ",
+        "properties": {
+          "key": {
+            "description": "What a collection names this calendar by, which is what the \"calendar\" field of a collection request takes.",
+            "examples": [
+              "practices"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "searchTerms": {
+            "description": "The query strings this calendar's window is searched with, one request each. An empty string searches for nothing in particular and so returns the whole window, which is what makes a search miss impossible on a calendar configured with one: an event left out of a run for the \"search\" reason is an event none of these returned.",
+            "examples": [
+              [
+                "officials",
+                "scrimmage"
+              ]
+            ],
+            "items": {
+              "type": "string"
+            },
+            "title": "Searchterms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "searchTerms"
+        ],
+        "title": "CalendarView",
+        "type": "object"
+      },
       "CollectRequest": {
         "description": "Which calendar to collect, and over which days. ",
         "properties": {
@@ -43,6 +76,57 @@
           "window"
         ],
         "title": "CollectRequest",
+        "type": "object"
+      },
+      "ConfigView": {
+        "description": "What the service resolved from its environment. ",
+        "properties": {
+          "calendars": {
+            "description": "The calendars a run may be collected from, by key. This is where a client learns which keys a collection request accepts, because the keys belong to a deployment rather than to this contract. The calendar identifiers themselves are not published: nothing a caller does names one.",
+            "items": {
+              "$ref": "#/components/schemas/CalendarView"
+            },
+            "title": "Calendars",
+            "type": "array"
+          },
+          "excludedTitleTerms": {
+            "description": "Terms this deployment never collects. An event whose title contains one of them anywhere is left out of a run with the \"excluded\" reason instead of becoming a shift, and no editing brings it back.",
+            "examples": [
+              [
+                "canceled",
+                "cancelled"
+              ]
+            ],
+            "items": {
+              "type": "string"
+            },
+            "title": "Excludedtitleterms",
+            "type": "array"
+          },
+          "matchThreshold": {
+            "description": "Confidence out of 100 a fuzzy title match has to reach when no alias appears in an event title. Below it the title is left unmatched, which blocks the send rather than guessing at an opportunity.",
+            "examples": [
+              80
+            ],
+            "title": "Matchthreshold",
+            "type": "integer"
+          },
+          "timezone": {
+            "description": "IANA zone a calendar window's dates are read in when they carry no UTC offset. The server's zone is the authoritative one: a client displays it rather than working a window out in the zone of whoever is looking at it.",
+            "examples": [
+              "America/Los_Angeles"
+            ],
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timezone",
+          "matchThreshold",
+          "excludedTitleTerms",
+          "calendars"
+        ],
+        "title": "ConfigView",
         "type": "object"
       },
       "EditRequest": {
@@ -1234,6 +1318,41 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/config": {
+      "get": {
+        "description": "The settings a collection is carried out under, as this process resolved them at startup. Read only: rotating a credential or changing a setting is a deployment operation, and no endpoint writes one (D8).\n\nThis is where a client learns which calendars a collection may name. Those keys belong to a deployment rather than to this contract, so a client that hard-coded them would be describing one installation.",
+        "operationId": "get_config",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "config:read"
+            ]
+          }
+        ],
+        "summary": "Report what the service was configured with",
+        "tags": [
+          "service"
+        ]
+      }
+    },
     "/v1/health": {
       "get": {
         "description": "Answers without authentication, for a container runtime or a proxy deciding whether to route to this process. It reports that the process is serving and does not check the database or any upstream service.",

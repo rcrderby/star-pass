@@ -921,3 +921,73 @@ class EditView(ApiModel):
             'reload and reads the same in a browser and a terminal.'
         )
     )
+
+
+# What the deployment was configured with, rather than anything a run
+# holds.  Below, because a reader working through this file is reading
+# about runs until they reach these two.
+class CalendarView(ApiModel):
+    """ One calendar a run may be collected from. """
+
+    key: str = Field(
+        description=(
+            'What a collection names this calendar by, which is what '
+            'the "calendar" field of a collection request takes.'
+        ),
+        examples=['practices']
+    )
+    search_terms: List[str] = Field(
+        description=(
+            'The query strings this calendar\'s window is searched '
+            'with, one request each. An empty string searches for '
+            'nothing in particular and so returns the whole window, '
+            'which is what makes a search miss impossible on a '
+            'calendar configured with one: an event left out of a run '
+            'for the "search" reason is an event none of these '
+            'returned.'
+        ),
+        examples=[['officials', 'scrimmage']]
+    )
+
+
+class ConfigView(ApiModel):
+    """ What the service resolved from its environment. """
+
+    timezone: str = Field(
+        description=(
+            'IANA zone a calendar window\'s dates are read in when '
+            'they carry no UTC offset. The server\'s zone is the '
+            'authoritative one: a client displays it rather than '
+            'working a window out in the zone of whoever is looking '
+            'at it.'
+        ),
+        examples=['America/Los_Angeles']
+    )
+    match_threshold: int = Field(
+        description=(
+            'Confidence out of 100 a fuzzy title match has to reach '
+            'when no alias appears in an event title. Below it the '
+            'title is left unmatched, which blocks the send rather '
+            'than guessing at an opportunity.'
+        ),
+        examples=[80]
+    )
+    excluded_title_terms: List[str] = Field(
+        description=(
+            'Terms this deployment never collects. An event whose '
+            'title contains one of them anywhere is left out of a run '
+            'with the "excluded" reason instead of becoming a shift, '
+            'and no editing brings it back.'
+        ),
+        examples=[['canceled', 'cancelled']]
+    )
+    calendars: List[CalendarView] = Field(
+        description=(
+            'The calendars a run may be collected from, by key. This '
+            'is where a client learns which keys a collection request '
+            'accepts, because the keys belong to a deployment rather '
+            'than to this contract. The calendar identifiers '
+            'themselves are not published: nothing a caller does '
+            'names one.'
+        )
+    )

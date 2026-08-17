@@ -121,6 +121,17 @@ class TestTheTwoModesAgree:
 
         assert local == remote
 
+    def test_the_configuration_reads_the_same(
+        self,
+        both: Callable[..., Tuple[Any, Any]]
+    ) -> None:
+        local, remote = both('get_config')
+
+        assert local == remote
+        # Guard against both answering an empty document identically.
+        assert local['timezone']
+        assert local['calendars']
+
     def test_an_empty_database_reads_the_same(
         self,
         both: Callable[..., Tuple[Any, Any]],
