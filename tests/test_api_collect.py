@@ -19,7 +19,6 @@ from fastapi.testclient import TestClient
 
 # Imports - Local
 from star_pass._exceptions import ValidationError as CoreValidationError
-from star_pass._job_runner import JobRunner
 from star_pass._repository import JobRepository, RunRepository
 from star_pass_api import _defaults
 
@@ -30,40 +29,6 @@ RUNS_PATH = f'{_defaults.API_VERSION_PREFIX}/runs'
 def run_path(run_id: str) -> str:
     """ Return the address of one run. """
     return f'{RUNS_PATH}/{run_id}'
-
-
-class WaitingRunner(JobRunner):
-    """ The real runner, with a way to wait for what it was given.
-
-        A job runs on a thread, so a test that read the database
-        straight after asking for one would be racing it.  This is not
-        a stand-in for the runner: it is the runner, keeping the
-        futures it already returns so a test can wait on the last one.
-    """
-
-    def __init__(self, connect: Any) -> None:
-        """ Run one job at a time and remember them. """
-        super().__init__(connect=connect, workers=1)
-        self.futures: List[Any] = []
-
-    def submit(self, job_id: str, work: Any) -> Any:
-        """ Submit the job and keep what it returned. """
-        future = super().submit(job_id=job_id, work=work)
-        self.futures.append(future)
-
-        return future
-
-
-@pytest.fixture(name='started_client')
-def fixture_started_client(
-    running_client: TestClient
-) -> TestClient:
-    """ Return a started service whose jobs a test can wait for. """
-    running_client.app.state.runner = WaitingRunner(
-        connect=running_client.app.state.runner.__dict__['_connect']
-    )
-
-    return running_client
 
 
 @pytest.fixture(name='collecting')

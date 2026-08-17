@@ -34,6 +34,13 @@
     This module is pure, so a caller cannot be told what a send would
     do without having asked Amplify first -- there is no default that
     quietly means "nothing exists yet".
+
+    **The send works from the same two answers.**  'asked_for' decides
+    which rows a revision means and 'split_by_existing' decides which
+    of them Amplify already has; a preview reports what they say and a
+    send creates it.  Written twice, the two could differ about a row
+    -- one created that a person was told would not arrive, or one
+    counted that never does -- and nothing would say so.
 """
 
 # Imports - Python Standard Library
@@ -45,6 +52,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Sequence,
     Set,
     Tuple
 )
@@ -110,6 +118,77 @@ class SkippedShift:
     date: str
     shift_start: str
     shift_end: str
+
+
+@dataclass(frozen=True)
+class PlannedShift:
+    """ One shift a revision asks for, and what it asks Amplify for.
+
+        The first four fields are exactly a 'ShiftIdentity' (D16), so
+        'identity' is what decides whether Amplify already has this
+        row.  The fifth is the only thing a send adds to it.
+
+        Attributes:
+            need_id, date, shift_start, shift_end (str):
+                The row, as '_derived.shift_identity' builds one.
+
+            slots (int):
+                Volunteers wanted.
+    """
+
+    need_id: str
+    date: str
+    shift_start: str
+    shift_end: str
+    slots: int
+
+    @property
+    def identity(self) -> ShiftIdentity:
+        """ Return the row this shift is, for comparing with another.
+
+            Args:
+                None.
+
+            Returns:
+                identity (ShiftIdentity):
+                    Need ID, date, start and end.
+        """
+
+        return (
+            self.need_id,
+            self.date,
+            self.shift_start,
+            self.shift_end
+        )
+
+
+@dataclass(frozen=True)
+class Asked:
+    """ What a revision asks for, before Amplify has been consulted.
+
+        Attributes:
+            by_opportunity (Dict[str, Tuple[PlannedShift, ...]]):
+                The distinct shifts asked for, by need ID, in the order
+                the events were read.  An opportunity nothing sendable
+                names is absent rather than empty.
+
+            blockers (Tuple[Blocker, ...]):
+                Every reason an event cannot be sent, in the order the
+                events were given.
+
+            blocking_events (int):
+                How many events cannot be sent.  Not the length of
+                'blockers': one event with two things wrong with it is
+                two reasons and one event.
+
+            repeated_rows (int):
+                How many shifts the revision asks for more than once.
+    """
+
+    by_opportunity: Dict[str, Tuple[PlannedShift, ...]]
+    blockers: Tuple[Blocker, ...]
+    blocking_events: int
+    repeated_rows: int
 
 
 @dataclass(frozen=True)
@@ -247,12 +326,12 @@ def blockers(
 
 
 def _dates(
-        identities: Iterable[ShiftIdentity]
+        shifts: Iterable[PlannedShift]
 ) -> Tuple[Optional[str], Optional[str]]:
     """ Return the first and last day a set of shifts falls on.
 
         Args:
-            identities (Iterable[ShiftIdentity]):
+            shifts (Iterable[PlannedShift]):
                 The shifts to bound.
 
         Returns:
@@ -261,8 +340,7 @@ def _dates(
                 shifts to bound.
     """
 
-    # Position 1 of an identity is the date it falls on.
-    dates = sorted(identity[1] for identity in identities)
+    dates = sorted(shift.date for shift in shifts)
 
     return (dates[0], dates[-1]) if dates else (None, None)
 
@@ -270,9 +348,8 @@ def _dates(
 def _row(
         need_id: str,
         opportunity: Optional[Opportunity],
-        creating: List[ShiftIdentity],
-        skipping: int,
-        slots: int
+        creating: Sequence[PlannedShift],
+        already: Sequence[PlannedShift]
 ) -> PreviewRow:
     """ Return what one opportunity would receive.
 
@@ -284,45 +361,47 @@ def _row(
                 The stored opportunity, or None when the run has none
                 for this need ID.
 
-            creating (List[ShiftIdentity]):
+            creating (Sequence[PlannedShift]):
                 The distinct shifts that would be created under it.
 
-            skipping (int):
-                How many more it is asked for that Amplify already has.
-
-            slots (int):
-                Volunteers wanted across the ones being created.
+            already (Sequence[PlannedShift]):
+                The ones it is asked for that Amplify already has.
 
         Returns:
             row (PreviewRow):
                 What the opportunity would receive.
     """
 
-    first_date, last_date = _dates(identities=creating)
+    first_date, last_date = _dates(shifts=creating)
 
     return PreviewRow(
         need_id=need_id,
         title=opportunity.title if opportunity is not None else None,
         will_create=len(creating),
-        already_in_amplify=skipping,
-        slots=slots,
+        already_in_amplify=len(already),
+        slots=sum(shift.slots for shift in creating),
         first_date=first_date,
         last_date=last_date
     )
 
 
 def _skipped(
-        identities: Iterable[ShiftIdentity]
+        shifts: Iterable[PlannedShift]
 ) -> Tuple[SkippedShift, ...]:
     """ Return the shifts Amplify already has, in a settled order.
 
-        Sorted rather than left in whatever order a set iterated in: a
-        reader comparing two previews of one run is comparing lists,
-        and a list that reordered itself between readings would look
-        like a change.
+        Sorted rather than left in the order the opportunities were
+        read: a reader comparing two previews of one run is comparing
+        lists, and a list that reordered itself between readings would
+        look like a change.
+
+        The volunteers a skipped shift would have asked for are not
+        carried over.  It exists already, wanting whatever it was
+        created wanting, and a number here would read as a number
+        Amplify holds.
 
         Args:
-            identities (Iterable[ShiftIdentity]):
+            shifts (Iterable[PlannedShift]):
                 The shifts that would be skipped.
 
         Returns:
@@ -332,95 +411,46 @@ def _skipped(
 
     return tuple(
         SkippedShift(
-            need_id=need_id,
-            date=date,
-            shift_start=shift_start,
-            shift_end=shift_end
+            need_id=shift.need_id,
+            date=shift.date,
+            shift_start=shift.shift_start,
+            shift_end=shift.shift_end
         )
-        for need_id, date, shift_start, shift_end in sorted(identities)
+        for shift in sorted(shifts, key=lambda shift: shift.identity)
     )
 
 
-@dataclass
-class _Gathered:
-    """ What one pass over a revision's events found.
+def asked_for(
+        events: Iterable[Event]
+) -> Asked:
+    """ Return what a revision asks for, before Amplify is consulted.
 
-        Mutable and private, unlike everything else here: it is the
-        working state of a single pass, filled in as the events are
-        read, and it exists so that the reading and the reporting are
-        two things rather than one long one.
-
-        Attributes:
-            seen (Set[ShiftIdentity]):
-                Every distinct shift the revision asks for, whether
-                Amplify has it or not.
-
-            creating (Dict[str, List[ShiftIdentity]]):
-                The shifts that would be created, by need ID.  An
-                opportunity every one of whose shifts already exists
-                is here with an empty list, because it still has a row
-                to show.
-
-            skipping (Dict[str, int]):
-                How many of each opportunity's shifts already exist.
-
-            wanted (Dict[str, int]):
-                Volunteers asked for across the shifts being created,
-                by need ID.
-
-            blockers (List[Blocker]):
-                Every reason an event cannot be sent.
-
-            blocked (int):
-                How many events cannot be sent.  Not the length of
-                'blockers': one event with two things wrong with it is
-                two reasons and one event.
-
-            repeats (int):
-                How many shifts the revision asks for more than once.
-    """
-
-    seen: Set[ShiftIdentity]
-    creating: Dict[str, List[ShiftIdentity]]
-    skipping: Dict[str, int]
-    wanted: Dict[str, int]
-    blockers: List[Blocker]
-    blocked: int
-    repeats: int
-
-
-def _gather(
-        events: Iterable[Event],
-        existing: AbstractSet[ShiftIdentity]
-) -> _Gathered:
-    """ Read a revision's events once, and report what they ask for.
+        The one place that decides which rows a revision means: which
+        events cannot become shifts at all, which of the rest repeat
+        each other, and which distinct shift each surviving role
+        describes.  The preview reports it and the send creates it, and
+        a second reading of the same events would let those two differ
+        about a row nobody would notice was missing.
 
         Args:
             events (Iterable[Event]):
                 Every event in the revision, in the order they are
                 shown.
 
-            existing (AbstractSet[ShiftIdentity]):
-                The shifts Amplify already holds.
-
         Raises:
             ValueError:
                 If an event's shift times are not times.
 
         Returns:
-            gathered (_Gathered):
-                What the pass found.
+            asked (Asked):
+                What the revision asks for.
     """
 
-    found = _Gathered(
-        seen=set(),
-        creating={},
-        skipping={},
-        wanted={},
-        blockers=[],
-        blocked=0,
-        repeats=0
-    )
+    by_opportunity: Dict[str, List[PlannedShift]] = {}
+    found: List[Blocker] = []
+    seen: Set[ShiftIdentity] = set()
+    blocked = 0
+    repeats = 0
 
     for event in events:
         reasons = blockers(event=event)
@@ -428,8 +458,8 @@ def _gather(
         if reasons:
             # A blocked event creates nothing, so it is counted as a
             # reason to stop rather than as a shift that would arrive.
-            found.blocked += 1
-            found.blockers.extend(
+            blocked += 1
+            found.extend(
                 Blocker(event_id=event.id, reason=reason)
                 for reason in reasons
             )
@@ -437,26 +467,71 @@ def _gather(
 
         for role in event.roles:
             identity = shift_identity(event=event, role=role)
-            need_id = role.need_id
 
-            if identity in found.seen:
-                found.repeats += 1
+            if identity in seen:
+                repeats += 1
                 continue
 
-            found.seen.add(identity)
+            seen.add(identity)
+            by_opportunity.setdefault(role.need_id, []).append(
+                PlannedShift(
+                    need_id=role.need_id,
+                    date=event.date,
+                    shift_start=event.shift_start,
+                    shift_end=event.shift_end,
+                    slots=role.slots
+                )
+            )
 
-            if identity in existing:
-                # Asked for, and already there.  The opportunity keeps
-                # a place in the grouping without the shift becoming
-                # something that would arrive.
-                found.skipping[need_id] = found.skipping.get(need_id, 0) + 1
-                found.creating.setdefault(need_id, [])
-                continue
+    return Asked(
+        by_opportunity={
+            need_id: tuple(shifts)
+            for need_id, shifts in by_opportunity.items()
+        },
+        blockers=tuple(found),
+        blocking_events=blocked,
+        repeated_rows=repeats
+    )
 
-            found.creating.setdefault(need_id, []).append(identity)
-            found.wanted[need_id] = found.wanted.get(need_id, 0) + role.slots
 
-    return found
+def split_by_existing(
+        shifts: Iterable[PlannedShift],
+        existing: AbstractSet[ShiftIdentity]
+) -> Tuple[Tuple[PlannedShift, ...], Tuple[PlannedShift, ...]]:
+    """ Return which shifts would arrive and which are already there.
+
+        The one place that decides it, for the same reason 'asked_for'
+        is the one place that decides what is asked for.  The preview
+        reports the second group as skipped and the send declines to
+        create it, and a send that split them differently would create
+        a row a person was told would not arrive.
+
+        Args:
+            shifts (Iterable[PlannedShift]):
+                The shifts to split, as 'asked_for' groups them.
+
+            existing (AbstractSet[ShiftIdentity]):
+                The shifts Amplify already holds, as
+                '_opportunities.shifts_in_amplify' reads them.  Empty
+                is a real answer -- the opportunities hold nothing yet
+                -- and is never a stand-in for not having asked.
+
+        Returns:
+            split (Tuple[Tuple[PlannedShift, ...], ...]):
+                The shifts that would be created, and the ones Amplify
+                already has, in that order.
+    """
+
+    creating = []
+    already = []
+
+    for shift in shifts:
+        if shift.identity in existing:
+            already.append(shift)
+        else:
+            creating.append(shift)
+
+    return tuple(creating), tuple(already)
 
 
 def preview(
@@ -477,9 +552,7 @@ def preview(
 
             existing (AbstractSet[ShiftIdentity]):
                 The shifts Amplify already holds, as
-                '_opportunities.shifts_in_amplify' reads them.  Empty
-                is a real answer -- the opportunities hold nothing yet
-                -- and is never a stand-in for not having asked.
+                '_opportunities.shifts_in_amplify' reads them.
 
         Raises:
             ValueError:
@@ -490,24 +563,33 @@ def preview(
                 What a send would do.
     """
 
-    found = _gather(events=events, existing=existing)
-    already = found.seen & existing
+    asked = asked_for(events=events)
+    split = {
+        need_id: split_by_existing(shifts=shifts, existing=existing)
+        for need_id, shifts in sorted(asked.by_opportunity.items())
+    }
+    skipping = [
+        shift
+        for _creating, already in split.values()
+        for shift in already
+    ]
 
     return Preview(
-        will_create=len(found.seen) - len(already),
-        already_in_amplify=len(already),
-        repeated_rows=found.repeats,
-        blocking_events=found.blocked,
+        will_create=sum(
+            len(creating) for creating, _already in split.values()
+        ),
+        already_in_amplify=len(skipping),
+        repeated_rows=asked.repeated_rows,
+        blocking_events=asked.blocking_events,
         rows=tuple(
             _row(
                 need_id=need_id,
                 opportunity=opportunities.get(need_id),
-                creating=identities,
-                skipping=found.skipping.get(need_id, 0),
-                slots=found.wanted.get(need_id, 0)
+                creating=creating,
+                already=already
             )
-            for need_id, identities in sorted(found.creating.items())
+            for need_id, (creating, already) in split.items()
         ),
-        skipped=_skipped(identities=already),
-        blockers=tuple(found.blockers)
+        skipped=_skipped(shifts=skipping),
+        blockers=asked.blockers
     )

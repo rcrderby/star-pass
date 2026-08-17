@@ -126,6 +126,102 @@ CORE_EXCEPTION_PROBLEMS = {
 logger = get_logger(__name__)
 
 
+def refusal(
+        status_code: int,
+        detail: str
+) -> HTTPException:
+    """ Return a failure a route raises rather than answers with.
+
+        Here rather than beside each route because more than one group
+        of them refuses the same three ways, and a route that built its
+        own would be a second place for the shape of a refusal to
+        live.  What is refused, and why, is still the route's to say:
+        this only carries it.
+
+        Args:
+            status_code (int):
+                What the refusal is, as a status.
+
+            detail (str):
+                Why, written for the caller.  A 4xx carries its reason,
+                because the caller is the one who can act on it.
+
+        Returns:
+            error (HTTPException):
+                The failure, for the handlers to shape into a problem
+                document.
+    """
+
+    return HTTPException(
+        status_code=status_code,
+        detail=detail
+    )
+
+
+def not_found(
+        detail: str
+) -> HTTPException:
+    """ Return the failure for something that is not there.
+
+        Raised by a route rather than left to the repository, which
+        reports a value it cannot use and a missing row the same way;
+        only the route knows it asked for one by identifier.
+
+        Args:
+            detail (str):
+                What to tell the caller.
+
+        Returns:
+            error (HTTPException):
+                A 404 carrying that reason.
+    """
+
+    return refusal(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=detail
+    )
+
+
+def conflict(
+        detail: str
+) -> HTTPException:
+    """ Return the failure for something not in a state to be asked.
+
+        Args:
+            detail (str):
+                What to tell the caller.
+
+        Returns:
+            error (HTTPException):
+                A 409 carrying that reason.
+    """
+
+    return refusal(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=detail
+    )
+
+
+def unprocessable(
+        detail: str
+) -> HTTPException:
+    """ Return the failure for a request that will not be carried out.
+
+        Args:
+            detail (str):
+                What to tell the caller.
+
+        Returns:
+            error (HTTPException):
+                A 422 carrying that reason.
+    """
+
+    return refusal(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail=detail
+    )
+
+
 def problem_document(
         *,
         status_code: int,

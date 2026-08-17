@@ -21,6 +21,7 @@ from urllib.parse import quote
 from requests import Response, Session
 
 # Imports - Local
+from ._calling import Operation, OperationCaller
 from ._operations import Operations
 from ._stream import events, StreamEvent
 
@@ -102,7 +103,7 @@ class ApiProblem(Exception):
         )
 
 
-class Client(Operations):
+class Client(OperationCaller, Operations):
     """ A client for the star-pass API.
 
         The operations are inherited from the generated half, so this
@@ -206,31 +207,18 @@ class Client(Operations):
             document=document if isinstance(document, dict) else {}
         )
 
-    def _call(
+    def _answer(
             self,
-            method: str,
-            path: str,
-            body: Optional[Dict[str, Any]] = None,
-            **parameters: Any
+            operation: Operation
     ) -> Any:
         """ Send one request and return what the service answered.
 
+            The headers are sent with this request and no other, so a
+            key never outlives the request that carried it.
+
             Args:
-                method (str):
-                    The HTTP method.
-
-                path (str):
-                    The templated path from the specification.
-
-                body (Dict[str, Any], optional):
-                    What to send.  Defaults to None, for an operation
-                    that is sent nothing.  Named separately from the
-                    path values, which fill the template: a body that
-                    arrived among them would be interpolated into the
-                    address.
-
-                **parameters (Any):
-                    Values for the template's placeholders.
+                operation (Operation):
+                    The call a generated method made.
 
             Raises:
                 ApiProblem:
@@ -242,9 +230,13 @@ class Client(Operations):
         """
 
         response = self._session.request(
-            method=method,
-            url=self._url(path=path, **parameters),
-            json=body,
+            method=operation.method,
+            url=self._url(
+                path=operation.path,
+                **operation.parameters
+            ),
+            json=operation.body,
+            headers=operation.headers,
             timeout=REQUEST_TIMEOUT_SECONDS
         )
 

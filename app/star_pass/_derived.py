@@ -86,6 +86,44 @@ def _minutes_of_day(
     return parsed.hour * MINUTES_PER_HOUR + parsed.minute
 
 
+def minutes_between(
+        start: str,
+        end: str
+) -> int:
+    """ Return how many minutes separate two times of day.
+
+        Below both callers.  A stored event's shift length is worked
+        out this way, and so is the duration Amplify is sent for a
+        shift the send is about to create -- and those two have to be
+        the same number, because the second is what arrives and the
+        first is what a person was shown.
+
+        Negative when the end is earlier than the start.  Reported
+        rather than refused: the caller knows whether that is a row to
+        block or a figure to display.
+
+        Args:
+            start (str):
+                A 24-hour time, as the records store one.
+
+            end (str):
+                The later time.
+
+        Raises:
+            ValueError:
+                If either value is not a time.
+
+        Returns:
+            minutes (int):
+                Minutes from the first to the second.
+    """
+
+    return (
+        _minutes_of_day(time_of_day=end)
+        - _minutes_of_day(time_of_day=start)
+    )
+
+
 def shift_length(
         event: Event
 ) -> int:
@@ -115,9 +153,9 @@ def shift_length(
                 blocking when it is not above zero.
     """
 
-    return (
-        _minutes_of_day(time_of_day=event.shift_end)
-        - _minutes_of_day(time_of_day=event.shift_start)
+    return minutes_between(
+        start=event.shift_start,
+        end=event.shift_end
     )
 
 

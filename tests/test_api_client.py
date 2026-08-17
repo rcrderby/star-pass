@@ -60,11 +60,19 @@ class RecordingSession(Session):
     # a test can assert on what was asked for.
     # pylint: disable=arguments-differ
     def request(self, method, url, **kwargs):  # type: ignore[override]
-        """ Record the request and return the prepared answer. """
+        """ Record the request and return the prepared answer.
+
+            The headers a request carries are the session's plus its
+            own, which is what the real session does; recorded the
+            other way round, a request naming none of its own would
+            look like one carrying no credential.
+        """
+        sent = dict(self.headers)
+        sent.update(kwargs.pop('headers', None) or {})
         self.calls.append({
             'method': method,
             'url': url,
-            'headers': dict(self.headers),
+            'headers': sent,
             **kwargs
         })
 

@@ -58,6 +58,7 @@ from requests import Response  # noqa: E402
 from star_pass import _database  # noqa: E402
 from star_pass._database import connect  # noqa: E402
 from star_pass._helpers import Helpers  # noqa: E402
+from star_pass._job_runner import JobRunner  # noqa: E402
 from star_pass._records import (  # noqa: E402
     Event,
     EventRole,
@@ -65,6 +66,7 @@ from star_pass._records import (  # noqa: E402
     Match,
     MATCH_KIND_FUZZY,
     Opportunity,
+    RUN_STATUS_UNSENT,
     ShiftIdentity
 )
 from star_pass._repository import (  # noqa: E402
@@ -79,6 +81,10 @@ from star_pass._repository import (  # noqa: E402
 from star_pass_api import create_app  # noqa: E402
 from star_pass_api._defaults import API_PRINCIPAL_ID  # noqa: E402
 
+
+# What the address of a shift create ends with, so the scripted
+# answers can tell one from a read of the opportunity itself.
+SHIFT_CREATE_SUFFIX = '/shifts'
 
 # Path to the entry point, which is executed as a script rather than
 # imported, so nothing puts it on the import path.
@@ -139,7 +145,7 @@ def fixture_make_amplify_shift() -> Callable[..., dict]:
 @pytest.fixture(name='answer_requests')
 def fixture_answer_requests(
     monkeypatch: pytest.MonkeyPatch
-) -> Callable[[Callable[[str], dict]], None]:
+) -> Callable[[Callable[[str], dict]], list]:
     """ Return a way to answer every request the core sends.
 
         Everything reaching the calendar or Amplify goes through
@@ -148,10 +154,15 @@ def fixture_answer_requests(
         one caller: how a scripted answer is built is the same
         wherever one is scripted, and a second copy would be a second
         thing to keep in step with what the code reads.
+
+        The list it returns is what was asked for, in order, so a test
+        about what a send does to Amplify reads the requests rather
+        than inferring them from what was stored afterwards.
     """
 
-    def script(body_for: Callable[[str], dict]) -> None:
+    def script(body_for: Callable[[str], dict]) -> list:
         """ Answer each request with the body chosen for its address. """
+        sent: list = []
 
         def send(
             _self: Any,
@@ -159,6 +170,7 @@ def fixture_answer_requests(
             **_ignored: Any
         ) -> Response:
             """ Answer one request. """
+            sent.append(api_request_data)
             response = Response()
             response.status_code = 200
             response.headers['Content-Type'] = 'application/json'
@@ -173,6 +185,8 @@ def fixture_answer_requests(
             'star_pass._helpers.Helpers.send_api_request',
             send
         )
+
+        return sent
 
     return script
 
@@ -191,17 +205,25 @@ def fixture_amplify_holds(
         An opportunity the mapping does not name answers without a
         'shifts' key at all, which is Amplify's own way of saying it
         holds none.
+
+        Returns the list of requests made, so a test about a send can
+        read what it asked Amplify for.
     """
 
     def script(
         shifts: dict | None = None,
         titled: bool = True
-    ) -> None:
+    ) -> list:
         """ Answer each opportunity with the shifts named against it. """
         held = shifts if shifts is not None else {}
 
         def need_body(url: str) -> dict:
             """ Return what Amplify says about one opportunity. """
+            if url.endswith(SHIFT_CREATE_SUFFIX):
+                # A create, which the send does not read an answer
+                # from; only the reads before it are scripted here.
+                return {}
+
             need_id = url.rsplit('/', 1)[-1]
             data: dict = {}
 
@@ -213,7 +235,7 @@ def fixture_amplify_holds(
 
             return {'data': data}
 
-        answer_requests(need_body)
+        return answer_requests(need_body)
 
     return script
 
@@ -329,16 +351,24 @@ def fixture_revision(
 @pytest.fixture(name='collected')
 def fixture_collected(
     events: EventRepository,
+    runs: RunRepository,
     run_id: str,
     revision: int,
     make_event: Callable[..., Event]
 ) -> str:
-    """ Return a run whose first revision holds one event. """
+    """ Return a run whose first revision holds one event.
+
+        Left 'unsent' rather than 'collecting', which is where a real
+        collection leaves a run it has finished filling in.  A fixture
+        that stopped short of that would be a run nothing may be done
+        with, and a test using it would be testing the wrong refusal.
+    """
     events.add(
         run_id=run_id,
         revision=revision,
         event=make_event()
     )
+    runs.set_status(run_id=run_id, status=RUN_STATUS_UNSENT)
 
     return run_id
 
@@ -670,6 +700,57 @@ def fixture_start_service(
             yield client
 
     return start
+
+
+class WaitingRunner(JobRunner):
+    """ The real runner, with a way to wait for what it was given.
+
+        A job runs on a thread, so a test that read the database
+        straight after asking for one would be racing it.  This is not
+        a stand-in for the runner: it is the runner, keeping the
+        futures it already returns so a test can wait on the last one.
+    """
+
+    def __init__(self, connect_to: Any) -> None:
+        """ Run one job at a time and remember them. """
+        super().__init__(connect=connect_to, workers=1)
+        self.futures: list = []
+
+    def submit(self, job_id: str, work: Any) -> Any:
+        """ Submit the job and keep what it returned. """
+        future = super().submit(job_id=job_id, work=work)
+        self.futures.append(future)
+
+        return future
+
+
+@pytest.fixture(name='started_client')
+def fixture_started_client(
+    running_client: TestClient
+) -> TestClient:
+    """ Return a started service whose jobs a test can wait for. """
+    running_client.app.state.runner = WaitingRunner(
+        # pylint: disable-next=protected-access
+        connect_to=running_client.app.state.runner._connect
+    )
+
+    return running_client
+
+
+@pytest.fixture(name='finish_jobs')
+def fixture_finish_jobs(
+    started_client: TestClient
+) -> Callable[[], None]:
+    """ Return a way to wait for every job the service has started. """
+
+    def wait() -> None:
+        """ Wait for each future the runner kept. """
+        for future in started_client.app.state.runner.futures:
+            future.result()
+
+        return None
+
+    return wait
 
 
 @pytest.fixture(name='anonymous_client')

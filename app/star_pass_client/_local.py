@@ -46,15 +46,25 @@ from star_pass._reading import (
 from star_pass._records import (
     JOB_KIND_COLLECT,
     JOB_KIND_RECOLLECT,
+    JOB_KIND_SEND,
     RUN_STATUS_COLLECTING
 )
 from star_pass._reporting import Reporter
-from star_pass._repository import JobRepository, RunRepository
+from star_pass._repository import (
+    IdempotencyRepository,
+    JobRepository,
+    RunRepository
+)
+from star_pass._send import claim, send
 from star_pass_contract import (
     CollectRequest,
+    IDEMPOTENCY_KEY_HEADER,
     no_such_job,
     no_such_run,
     RecollectRequest,
+    replayed,
+    sendable,
+    SendRequest,
     to_detail_view,
     to_job_view,
     to_preview_view,
@@ -62,6 +72,7 @@ from star_pass_contract import (
     to_run_view,
     why_not_recollect
 )
+from ._calling import Operation, OperationCaller
 from ._client import ApiProblem
 from ._operations import Operations
 from ._stream import StreamEvent
@@ -74,6 +85,7 @@ HANDLERS = {
     ('GET', '/v1/version'): '_version',
     ('POST', '/v1/runs'): '_collect',
     ('POST', '/v1/runs/{run_id}/recollect'): '_recollect',
+    ('POST', '/v1/runs/{run_id}/send'): '_send',
     ('GET', '/v1/runs'): '_runs',
     ('GET', '/v1/runs/{run_id}'): '_run',
     ('GET', '/v1/runs/{run_id}/revisions'): '_revisions',
@@ -112,6 +124,13 @@ NOT_FOUND_TITLE = 'Not Found'
 CONFLICT = 409
 CONFLICT_TITLE = 'Conflict'
 
+# What a write that started a job is reported as.  The remote half
+# answers 202 with a job still running; this one answers 202 with a job
+# that has ended, because the process that would run it is the one
+# about to return.  The same status either way: a caller reading the
+# job afterwards is told the same things (D2).
+ACCEPTED = 202
+
 # What a request the service would refuse is reported as, so that a
 # caller handling one mode has handled both.
 UNPROCESSABLE = 422
@@ -133,7 +152,7 @@ class LocalOperationUnavailable(Exception):
     """
 
 
-class LocalClient(Operations):
+class LocalClient(OperationCaller, Operations):
     """ The contract's operations, answered from the local database.
 
         Holds no connection.  One is opened for each answer and closed
@@ -184,28 +203,20 @@ class LocalClient(Operations):
         finally:
             connection.close()
 
-    def _call(
+    def _answer(
             self,
-            method: str,
-            path: str,
-            body: Optional[Dict[str, Any]] = None,
-            **parameters: Any
+            operation: Operation
     ) -> Any:
         """ Answer one operation from the database.
 
+            Nothing here speaks HTTP, so the headers are handed to the
+            handler as values rather than sent: an idempotency key
+            means the same thing to a local write as to a remote one,
+            which is the point of D2.
+
             Args:
-                method (str):
-                    The HTTP method the contract publishes it under.
-
-                path (str):
-                    The templated path it is published at.
-
-                body (Dict[str, Any], optional):
-                    What the operation is sent.  Defaults to None, for
-                    one that is sent nothing.
-
-                **parameters (Any):
-                    Values the path names.
+                operation (Operation):
+                    The call a generated method made.
 
             Raises:
                 LocalOperationUnavailable:
@@ -219,20 +230,26 @@ class LocalClient(Operations):
                     The same shape a decoded response carries.
         """
 
-        operation = (method, path)
+        published = (operation.method, operation.path)
 
-        if operation in UNAVAILABLE:
-            raise LocalOperationUnavailable(UNAVAILABLE[operation])
+        if published in UNAVAILABLE:
+            raise LocalOperationUnavailable(UNAVAILABLE[published])
 
-        if operation not in HANDLERS:
+        if published not in HANDLERS:
             raise LocalOperationUnavailable(
-                f'{method} {path} has no local answer.'
+                f'{operation.method} {operation.path} has no local '
+                'answer.'
             )
 
-        if body is not None:
-            parameters['body'] = body
+        asked = dict(operation.parameters)
 
-        return getattr(self, HANDLERS[operation])(**parameters)
+        if operation.body is not None:
+            asked['body'] = operation.body
+
+        if operation.headers is not None:
+            asked['headers'] = operation.headers
+
+        return getattr(self, HANDLERS[published])(**asked)
 
     def _stream(
             self,
@@ -750,3 +767,177 @@ class LocalClient(Operations):
                 'detail': detail
             }
         )
+
+    def _send(
+            self,
+            run_id: str,
+            body: Dict[str, Any],
+            headers: Dict[str, str]
+    ) -> Dict[str, Any]:
+        """ Send a run's outstanding shifts to Amplify, here and now.
+
+            The same four refusals the service makes, the same claim on
+            the idempotency key, and the same work -- run in the call
+            for the reason a local collection is (D2).  A local send is
+            recorded as 'local-cli' rather than as the service's
+            principal, because two writers into one live volunteer
+            system are two different people acting (D13).
+
+            Args:
+                run_id (str):
+                    Run to send.
+
+                body (Dict[str, Any]):
+                    How many shifts the operator was told would be
+                    created.
+
+                headers (Dict[str, str]):
+                    Carries the key this attempt is claimed under.
+
+            Raises:
+                ApiProblem:
+                    If there is no such run, it is not one that may be
+                    sent, or the key carries a different request.
+
+                StarPassError:
+                    If the send cannot be carried out.
+
+            Returns:
+                answer (Dict[str, Any]):
+                    The job, as it ended.
+        """
+
+        asked = SendRequest.model_validate(body)
+        key = headers[IDEMPOTENCY_KEY_HEADER]
+
+        with self._opened() as connection:
+            self._refused_send(
+                connection=connection,
+                run_id=run_id,
+                expected=asked.expected_shift_count
+            )
+            existing, job = claim(
+                connection=connection,
+                run_id=run_id,
+                key=key,
+                fingerprint=asked.fingerprint(),
+                principal_id=LOCAL_PRINCIPAL_ID
+            )
+
+            if existing is not None:
+                return replayed(
+                    record=existing,
+                    run_id=run_id,
+                    fingerprint=asked.fingerprint(),
+                    refuse=self._refused,
+                    conflict=self._conflicted
+                )
+
+            JobRunner(
+                connect=self._connect_to,
+                workers=1
+            ).submit(
+                job_id=job.id,
+                work=lambda reporter: self._sent(
+                    run_id=run_id,
+                    reporter=reporter,
+                    key=key
+                )
+            ).result()
+
+            answer = to_job_view(
+                job=JobRepository(connection=connection).get(job_id=job.id)
+            ).model_dump(by_alias=True, mode='json')
+
+            IdempotencyRepository(connection=connection).complete(
+                operation=JOB_KIND_SEND,
+                key=key,
+                status_code=ACCEPTED,
+                response=answer
+            )
+
+            return answer
+
+    def _refused_send(
+            self,
+            connection: sqlite3.Connection,
+            run_id: str,
+            expected: int
+    ) -> None:
+        """ Fail on a send the service would refuse.
+
+            The decision is the shared one, so the two modes cannot
+            refuse different things about one run (D2).  Only what a
+            refusal is reported as belongs to this half.
+
+            Args:
+                connection (sqlite3.Connection):
+                    The database to read.
+
+                run_id (str):
+                    Run to send.
+
+                expected (int):
+                    How many shifts the caller was shown.
+
+            Raises:
+                ApiProblem:
+                    If there is no such run, or it is not one that may
+                    be sent.
+
+            Returns:
+                None.
+        """
+
+        found = sendable(
+            connection=connection,
+            run_id=run_id,
+            expected=expected
+        )
+
+        if found is None:
+            raise self._missing(detail=no_such_run(run_id=run_id))
+
+        _run, refusal = found
+
+        if refusal is not None:
+            raise self._conflicted(detail=refusal)
+
+        return None
+
+    def _sent(
+            self,
+            run_id: str,
+            reporter: Reporter,
+            key: str
+    ) -> None:
+        """ Send a run on a connection of the job's own.
+
+            Args:
+                run_id (str):
+                    Run to send.
+
+                reporter (Reporter):
+                    Where the job records what it reported.
+
+                key (str):
+                    The key the send is made under (D13).
+
+            Raises:
+                StarPassError:
+                    If the send cannot be carried out.
+
+            Returns:
+                None.
+        """
+
+        with self._opened() as connection:
+            send(
+                connection=connection,
+                run_id=run_id,
+                reporter=reporter,
+                principal_id=LOCAL_PRINCIPAL_ID,
+                idempotency_key=key
+            )
+
+        return None

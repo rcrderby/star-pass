@@ -31,6 +31,13 @@ from star_pass._records import (
 )
 
 
+# The header a send is claimed under (D16).  Named here rather than in
+# the service, because the command line client answering the same
+# operation locally reads the key out of it and nothing about the
+# spelling belongs to one half.
+IDEMPOTENCY_KEY_HEADER = 'Idempotency-Key'
+
+
 class ApiModel(BaseModel):
     """ The base every shape the service publishes is built on. """
 
@@ -677,3 +684,43 @@ class RecollectRequest(ApiModel):
         ),
         examples=[0]
     )
+
+
+class SendRequest(ApiModel):
+    """ What the operator was shown before asking to send. """
+
+    expected_shift_count: int = Field(
+        ge=0,
+        description=(
+            'How many shifts the operator was told a send would '
+            'create. This is the preview\'s `totals.willCreate`, which '
+            'is net of what Amplify already holds -- the number of '
+            'rows that will arrive, and so the number the confirmation '
+            'restates.\n\n'
+            'The service refuses when this does not match what a send '
+            'would create now. Two things move it: the run being '
+            'edited, and Amplify itself gaining or losing a shift. '
+            'Both mean the number somebody confirmed against described '
+            'a moment that has passed. Read the preview again and ask '
+            'again with what it says now.'
+        ),
+        examples=[12]
+    )
+
+    def fingerprint(self) -> str:
+        """ Return what this request asks for, as a key remembers it.
+
+            Compared when a request arrives on a key already in use.
+            Built here rather than by each half, so that one of them
+            cannot decide two requests are the same while the other
+            decides they differ.
+
+            Args:
+                None.
+
+            Returns:
+                fingerprint (str):
+                    What the request asked for.
+        """
+
+        return f'expected_shift_count={self.expected_shift_count}'

@@ -93,7 +93,23 @@ through the Amplify API. It is run once per month.
   counted in what would be created, so the number the confirmation
   restates (D11) is the number of rows that arrive. The live answer is
   a required parameter with no default: a preview cannot be produced
-  without having asked.
+  without having asked. `asked_for` and `split_by_existing` are the two
+  answers the send works from as well — written twice, a preview and a
+  send could differ about a row and nothing would say so.
+- `app/star_pass/_send.py` — putting a revision's shifts into Amplify,
+  the one thing star-pass does that cannot be undone. **One request per
+  opportunity, not per shift**: Amplify's create endpoint takes an
+  array, and a single-shift request that times out is exactly as
+  unknown as a batch that times out, only smaller. Per-shift
+  idempotency is unaffected, because it was never about the unit of the
+  request — the record is per shift and so is the decision to skip.
+  Each opportunity is read from Amplify in the step that writes to it,
+  not all of them once at the start, because minutes pass between the
+  first batch and the last. A batch is recorded only once its request
+  succeeded, so a batch whose answer never arrived leaves the run
+  `partly_sent` and the next send reads the opportunity and sends the
+  difference; those rows are then in Amplify and not in the run's sent
+  record, which says what the run saw itself create.
 - `app/star_pass/_job_runner.py` — `JobRunner`, which runs a job's
   work on a thread and records how it ended, and `JobReporter`, a
   `Reporter` that writes the core's progress calls to the job's event
@@ -135,7 +151,14 @@ through the Amplify API. It is run once per month.
   written by `scripts/generate_contract.py`, which also writes the
   client generated from it.
 - `app/star_pass_contract/` — the shapes the contract publishes
-  (`_schemas.py`) and how stored records become them (`_views.py`). Its
+  (`_schemas.py`), how stored records become them (`_views.py`), what a
+  caller is told when a request is refused (`_messages.py`), and the
+  refusals themselves (`_deciding.py`, which reads what a decision
+  needs and makes it — a half that read one fewer thing would refuse a
+  different thing while saying the same words). Nothing there decides
+  what a refusal *is* to a caller: a status code belongs to the
+  transport, so each half raises its own kind of failure carrying the
+  reason. Its
   own package between the core and the two things that speak the
   contract: the service answers over HTTP and the command line client
   answers from the same database in the same process (D2), and both

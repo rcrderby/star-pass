@@ -120,6 +120,53 @@ def _path_parameters(
     ]
 
 
+def header_argument(
+        name: str
+) -> str:
+    """ Return the argument name a header parameter is taken as.
+
+        A header is named for the wire, with capitals and hyphens; an
+        argument is named for Python.  Converted here rather than by
+        each caller, so that renaming a header in the contract renames
+        the argument with it.
+
+        Args:
+            name (str):
+                The header, as the contract publishes it.
+
+        Returns:
+            argument (str):
+                The same name, as an identifier.
+    """
+
+    return name.lower().replace('-', '_')
+
+
+def _header_parameters(
+        operation: Dict[str, Any]
+) -> List[str]:
+    """ Return the headers an operation requires, in order.
+
+        Only the required ones.  An optional header is something a
+        caller may choose to send, and a generated method that took one
+        would make the choice look mandatory.
+
+        Args:
+            operation (Dict[str, Any]):
+                The operation from the specification.
+
+        Returns:
+            names (List[str]):
+                The header names, as the contract publishes them.
+    """
+
+    return [
+        parameter['name']
+        for parameter in operation.get('parameters', [])
+        if parameter.get('in') == 'header' and parameter.get('required')
+    ]
+
+
 def _takes_body(
         operation: Dict[str, Any]
 ) -> bool:
@@ -181,20 +228,30 @@ def _method(
 
     name = operation['operationId']
     parameters = _path_parameters(operation=operation)
+    headers = _header_parameters(operation=operation)
     streaming = _is_stream(operation=operation)
     sends = _takes_body(operation=operation)
 
-    # The body comes first, so that adding a path parameter to an
-    # operation cannot change what an existing positional argument
-    # means.
+    # The body comes first and the headers last, so that adding a path
+    # parameter to an operation cannot change what an existing
+    # positional argument means.
     signature = (
         ',\n            body: Dict[str, Any]' if sends else ''
     ) + ''.join(
         f',\n            {parameter}: str'
         for parameter in parameters
+    ) + ''.join(
+        f',\n            {header_argument(name=header)}: str'
+        for header in headers
+    )
+    sent = ', '.join(
+        f"'{header}': {header_argument(name=header)}"
+        for header in headers
     )
     arguments = (
         ',\n            body=body' if sends else ''
+    ) + (
+        f',\n            headers={{{sent}}}' if headers else ''
     ) + ''.join(
         f',\n            {parameter}={parameter}'
         for parameter in parameters
@@ -209,6 +266,10 @@ def _method(
         f'\n                {parameter} (str):'
         f'\n                    Value for the path.\n'
         for parameter in parameters
+    ) + ''.join(
+        f'\n                {header_argument(name=header)} (str):'
+        f'\n                    Value for the {header} header.\n'
+        for header in headers
     )
     answer = (
         """            event (StreamEvent):
