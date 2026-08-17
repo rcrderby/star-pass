@@ -278,6 +278,23 @@ now, so any editing done since it was collected is left behind:
 longer matches is refused, which is what stops a run that has moved on
 being replaced from a stale reading of it.
 
+### Sending a run
+
+```bash
+./app/__main__.py runs send <run_id>
+```
+
+This is the one thing star-pass does that cannot be undone, so it asks
+first (D11). It reads what a send would create, restates the count, the
+window and the opportunities, and waits for a yes; anything else, an
+empty line included, sends nothing. Where there is no terminal to
+answer from -- a script, a scheduled job, a pipe -- it refuses, and no
+flag turns that into a yes.
+
+The count it confirms is the one it just read, and it is the one the
+send is made with, so the service refuses if the run or Amplify moved
+between the question and the answer.
+
 ### Watching and resuming a job
 
 ```bash

@@ -36,10 +36,12 @@
 import argparse
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional, Tuple
+from uuid import uuid4
 
 # Imports - Local
 from star_pass._exceptions import StarPassError
 from star_pass_client import ApiProblem, LocalOperationUnavailable
+from ._confirm import confirmed, ConfirmationUnavailable
 from ._mode import API_URL_VARIABLE, client_for
 from ._output import write
 from ._render import (
@@ -49,13 +51,25 @@ from ._render import (
     preview_text,
     revisions_table,
     run_detail,
-    runs_table
+    runs_table,
+    send_restatement
 )
 
 # Constants
-# What a command exits with when it could not answer.
+# What a command exits with when it could not answer.  Declining to
+# send is neither: the command was told to stop and it stopped.
 FAILURE = 1
 SUCCESS = 0
+
+# What a send asks before it writes into Amplify (D11).
+SEND_QUESTION = 'Create these shifts in Amplify? This cannot be undone.'
+
+# What a send says when there is nothing to ask about, and when the
+# answer was no.
+NOTHING_TO_SEND = (
+    'Amplify already has every shift this run asks for. Nothing sent.'
+)
+NOT_SENT = 'Nothing was sent.'
 
 # The word each group of commands is selected by, and what it covers.
 GROUPS = {
@@ -150,6 +164,11 @@ class Command:  # pylint: disable=too-many-instance-attributes
                 Whether the operation is answered over time, so the
                 renderer is given each thing as it arrives rather than
                 one answer at the end.
+
+            answer (Callable[..., None], optional):
+                What carries the command out, for one the three things
+                below do not describe.  Defaults to None, which is
+                nearly all of them.
     """
 
     group: str
@@ -161,6 +180,7 @@ class Command:  # pylint: disable=too-many-instance-attributes
     options: Tuple[Option, ...] = ()
     body: Optional[Callable[..., Dict[str, Any]]] = None
     streams: bool = False
+    answer: Optional[Callable[..., None]] = None
 
 
 def _collection(
@@ -297,6 +317,15 @@ COMMANDS = (
             ),
         ),
         body=_recollection
+    ),
+    Command(
+        group='runs',
+        word='send',
+        summary='Create this run\'s shifts in Amplify.',
+        operation='send_run',
+        render=job_text,
+        argument='run_id',
+        answer=lambda command, args: _send(command=command, args=args)
     ),
     Command(
         group='jobs',
@@ -479,6 +508,78 @@ def add_commands(
     return None
 
 
+def _send(
+        command: Command,
+        args: argparse.Namespace
+) -> None:
+    """ Read what a send would do, ask, and do it (D11).
+
+        Three operations rather than one, and that is the point.  What
+        somebody is asked to confirm is read here and now -- so it
+        describes the run and the Amplify of this moment rather than
+        of whenever they last looked -- and the count they confirmed is
+        the count the send is made with.  The service checks it again
+        against its own reading, which is what catches a run that moved
+        between the question and the answer.
+
+        The key is minted per attempt rather than asked for.  It stops
+        one request being carried out twice; what stops a *row* being
+        created twice is the live read the send makes, and that holds
+        however many attempts there are.
+
+        Args:
+            command (Command):
+                The command the words selected.
+
+            args (argparse.Namespace):
+                The parsed command line.
+
+        Raises:
+            ApiProblem:
+                If there is no such run, or it is not one that may be
+                sent.
+
+            ConfirmationUnavailable:
+                If there is no terminal to answer from.
+
+            StarPassError:
+                If the mode cannot be reached as configured.
+
+        Returns:
+            None.
+    """
+
+    client = client_for(api_url=args.api_url)
+    run_id = getattr(args, command.argument)
+    run = client.get_run(run_id=run_id)
+    preview = client.get_preview(run_id=run_id)
+    creating = preview['totals']['willCreate']
+
+    write(send_restatement(run=run, preview=preview))
+
+    if not creating:
+        write(NOTHING_TO_SEND)
+
+        return None
+
+    if not confirmed(question=SEND_QUESTION):
+        write(NOT_SENT)
+
+        return None
+
+    write(
+        command.render(
+            answer=client.send_run(
+                run_id=run_id,
+                body={'expectedShiftCount': creating},
+                idempotency_key=uuid4().hex
+            )
+        )
+    )
+
+    return None
+
+
 def _answer(
         command: Command,
         args: argparse.Namespace
@@ -505,6 +606,9 @@ def _answer(
         Returns:
             None.
     """
+
+    if command.answer is not None:
+        return command.answer(command=command, args=args)
 
     client = client_for(api_url=args.api_url)
     answer = getattr(client, command.operation)(
@@ -611,9 +715,14 @@ def run_command(
     try:
         _answer(command=BY_WORDS[command], args=args)
 
-    except (ApiProblem, LocalOperationUnavailable) as error:
-        # Nothing has reported these: they are raised by a client, and
-        # a client does not decide what an operator is shown.
+    except (
+        ApiProblem,
+        ConfirmationUnavailable,
+        LocalOperationUnavailable
+    ) as error:
+        # Nothing has reported these: they are raised by a client or
+        # by the gate in front of a send, and neither decides what an
+        # operator is shown.
         write(str(error))
 
         return FAILURE
