@@ -308,6 +308,15 @@ dates and never computes presets in its own zone.
 `Date.now()` ids, a count-based duplicate check that can skip the wrong shifts,
 and presets computed in the visitor's timezone.
 
+**Corrected (2026-08-17):** this decision named `LOCAL_TIMEZONE`, and the code
+reads `GCAL_TIMEZONE` — the zone a calendar bound without a UTC offset is read
+in, which `.env.example` documents setting when the calendar keeps a different
+clock from the league. `GCAL_TIMEZONE` defaults to `LOCAL_TIMEZONE`, so the two
+agreed until a deployment separated them, and a run then reported a zone its
+own dates had not been read in. The window is parsed in **`GCAL_TIMEZONE`**,
+that is what a run and `GET /v1/config` both publish, and the server's zone
+being the authoritative one is unchanged.
+
 **Revisit if:** never — these are correctness, not preference.
 
 ---
