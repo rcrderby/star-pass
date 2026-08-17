@@ -33,8 +33,7 @@ from star_pass._defaults import (
     FUZZY_MATCH_THRESHOLD,
     GCAL_CALENDARS,
     GCAL_PREFIX_FILTERS,
-    GCAL_TIMEZONE,
-    LOCAL_TIMEZONE
+    GCAL_TIMEZONE
 )
 from star_pass._editing import Operation
 from star_pass._derived import (
@@ -138,6 +137,15 @@ def to_run_view(
 ) -> RunView:
     """ Return a run as a caller sees it.
 
+        The window carries the zone the calendar is read in, which is
+        the one a bound without a UTC offset means.  A run says which
+        zone its dates were read in, so the value has to be the
+        setting that read them rather than the one the league keeps
+        its clock by; the two are the same until a deployment sets the
+        calendar's, which is what that setting is for.  It is the same
+        value the configuration reports, because there is one answer
+        to the question.
+
         Args:
             run (Run):
                 The stored run.
@@ -153,7 +161,7 @@ def to_run_view(
         window=WindowView(
             start=run.window_start,
             end=run.window_end,
-            timezone=LOCAL_TIMEZONE
+            timezone=GCAL_TIMEZONE
         ),
         status=run.status,
         collected_at=run.collected_at,

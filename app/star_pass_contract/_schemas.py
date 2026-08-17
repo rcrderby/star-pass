@@ -107,10 +107,11 @@ class WindowView(ApiModel):
     )
     timezone: str = Field(
         description=(
-            'Zone the two dates are read in. The server\'s zone is '
-            'the authoritative one: a client displays these dates and '
-            'never works a window out in the zone of whoever is '
-            'looking at it.'
+            'Zone the two dates are read in, which is the zone the '
+            'calendar is read in and the one the configuration '
+            'reports. The server\'s zone is the authoritative one: a '
+            'client displays these dates and never works a window out '
+            'in the zone of whoever is looking at it.'
         )
     )
 

@@ -38,6 +38,10 @@ from star_pass_api._security import SCOPE_RUNS_READ
 # Constants
 RUNS_PATH = f'{_defaults.API_VERSION_PREFIX}/runs'
 
+# Where the zone a run reports is read, so a test can separate the
+# calendar's setting from the league's.
+SETTINGS_READ_IN = 'star_pass_contract._views'
+
 
 def run_path(run_id: str) -> str:
     """ Return the address of one run. """
@@ -251,19 +255,46 @@ class TestReadingOneRun:
         assert 'currentRevision' in document
         assert 'collected_at' not in document
 
-    def test_the_window_carries_the_zone_it_is_read_in(
+    def test_the_window_carries_the_days_it_covers(
         self,
         read_run: Callable[[str], Dict[str, Any]],
         run_id: str
     ) -> None:
-        # The server's zone is the authoritative one, so a client is
-        # told which it is rather than working the window out in the
-        # zone of whoever is looking at it.
-        assert read_run(run_id)['window'] == {
-            'start': '2026-09-01',
-            'end': '2026-10-01',
-            'timezone': LOCAL_TIMEZONE
-        }
+        # Exclusive on the wire: a run covering September carries the
+        # first of October, and whoever displays it says September.
+        window = read_run(run_id)['window']
+
+        assert window['start'] == '2026-09-01'
+        assert window['end'] == '2026-10-01'
+
+    def test_the_window_carries_the_zone_the_calendar_was_read_in(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        read_run: Callable[[str], Dict[str, Any]],
+        run_id: str
+    ) -> None:
+        # The zone a bound without a UTC offset is read in, which is
+        # the calendar's rather than the league's.  A deployment whose
+        # calendar keeps a different clock sets that one, and a run
+        # naming the other would be reporting a zone its own dates
+        # were not read in.
+        monkeypatch.setattr(f'{SETTINGS_READ_IN}.GCAL_TIMEZONE', 'Asia/Tokyo')
+
+        assert read_run(run_id)['window']['timezone'] == 'Asia/Tokyo'
+
+    def test_the_zone_is_not_the_one_the_league_keeps_its_clock_by(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        read_run: Callable[[str], Dict[str, Any]],
+        run_id: str
+    ) -> None:
+        # The two settings are the same until a deployment separates
+        # them, so a test that never separates them would pass against
+        # either.
+        monkeypatch.setattr(f'{SETTINGS_READ_IN}.GCAL_TIMEZONE', 'Asia/Tokyo')
+
+        assert LOCAL_TIMEZONE != 'Asia/Tokyo'
+        assert read_run(run_id)['window']['timezone'] != LOCAL_TIMEZONE
 
 
 class TestTheEventsOfARun:
