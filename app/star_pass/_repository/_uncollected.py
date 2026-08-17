@@ -16,10 +16,16 @@
 
 # Imports - Python Standard Library
 import sqlite3
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 
 # Imports - Local
-from .._database import execute, execute_many, query, transaction
+from .._database import (
+    execute,
+    execute_many,
+    query,
+    query_one,
+    transaction
+)
 from .._records import UncollectedEvent, UNCOLLECTED_REASONS
 from ._common import (
     insert_statement,
@@ -133,6 +139,48 @@ class UncollectedRepository(Repository):
             )
 
         return None
+
+    def get(
+            self,
+            run_id: str,
+            event_id: str
+    ) -> Optional[UncollectedEvent]:
+        """ Return one thing a run's window held and the run left out.
+
+            Read by the run as well as the identifier, because the
+            identifier is the calendar's and two runs whose windows
+            overlap hold rows for the same event.
+
+            Args:
+                run_id (str):
+                    Identifier of the run.
+
+                event_id (str):
+                    The calendar's identifier for the event.
+
+            Raises:
+                UpstreamError:
+                    If it cannot be read.
+
+            Returns:
+                uncollected (UncollectedEvent | None):
+                    What the run left out under that identifier, or
+                    None when it left out no such thing.
+        """
+
+        row = query_one(
+            connection=self._connection,
+            statement=(
+                'SELECT * FROM uncollected_events '
+                'WHERE run_id = ? AND id = ?'
+            ),
+            parameters=(run_id, event_id)
+        )
+
+        if row is None:
+            return None
+
+        return _to_uncollected(row=row)
 
     def list_all(
             self,

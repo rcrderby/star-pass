@@ -46,10 +46,10 @@ from .gcal_data import (
     item_times,
     WindowRead
 )
+from ._building import event_from, opportunity_read
 from ._helpers import CategoryMatch, Helpers
 from ._logging import get_logger
-from ._opportunities import public_url, read_need, title_of
-from ._shift_timing import RoleTiming, role_timings, shift_times
+from ._shift_timing import RoleTiming, role_timings
 from ._records import (
     Event,
     Opportunity,
@@ -158,6 +158,11 @@ def _event_from(
 ) -> Event:
     """ Return one calendar item as a revision holds it.
 
+        The reading of the item is here and the making of the event is
+        below, because a person pulling an event in by hand makes one
+        from a stored row rather than from a calendar item, and the
+        two have to produce the same event.
+
         Args:
             item (Dict[str, Any]):
                 A calendar item that passed the filter, so it has a
@@ -178,78 +183,18 @@ def _event_from(
                 The event, with a role per need ID it serves.
     """
 
-    title = item['summary']
-    start = _local_moment(
-        value=item['start']['dateTime'],
-        timezone=timezone
-    )
-    end = _local_moment(
-        value=item['end']['dateTime'],
-        timezone=timezone
-    )
-    timings = role_timings(matched=matched, title=title)
-
-    # An event serving no opportunity has no shift to time.  It is
-    # stored with the calendar's own times, and blocks the run for
-    # having no role at all.
-    shift_start, shift_end = (
-        shift_times(
-            start=start,
-            end=end,
-            timings=timings,
-            title=title
-        )
-        if timings
-        else (
-            start.strftime(SIMPLE_TIME_FORMAT),
-            end.strftime(SIMPLE_TIME_FORMAT)
-        )
-    )
-
-    return Event(
-        id=item['id'],
-        title=title,
-        date=start.strftime(ISO_DATE_FORMAT),
-        calendar_start=start.strftime(SIMPLE_TIME_FORMAT),
-        calendar_end=end.strftime(SIMPLE_TIME_FORMAT),
-        shift_start=shift_start,
-        shift_end=shift_end,
-        category=matched.category,
-        match=matched.match,
-        roles=tuple(timing.role for timing in timings)
-    )
-
-
-def _opportunity_from(
-        need_id: str,
-        timing: RoleTiming,
-        title: str
-) -> Opportunity:
-    """ Return the opportunity a need ID names.
-
-        Args:
-            need_id (str):
-                Amplify need ID.
-
-            timing (RoleTiming):
-                What the data model says about it.
-
-            title (str):
-                What Amplify calls it.
-
-        Returns:
-            opportunity (Opportunity):
-                The opportunity as the run stores it.
-    """
-
-    return Opportunity(
-        need_id=need_id,
-        title=title,
-        url=public_url(need_id=need_id),
-        max_length=timing.max_length,
-        offset_start=timing.offset_start,
-        offset_end=timing.offset_end,
-        default_slots=timing.role.slots
+    return event_from(
+        identifier=item['id'],
+        title=item['summary'],
+        start=_local_moment(
+            value=item['start']['dateTime'],
+            timezone=timezone
+        ),
+        end=_local_moment(
+            value=item['end']['dateTime'],
+            timezone=timezone
+        ),
+        matched=matched
     )
 
 
@@ -575,12 +520,10 @@ def _collected(
     reporter.step_started(label='Reading the Amplify opportunities')
 
     opportunities = [
-        _opportunity_from(
+        opportunity_read(
+            helpers=helpers,
             need_id=need_id,
-            timing=timing,
-            title=title_of(
-                need=read_need(helpers=helpers, need_id=need_id)
-            )
+            timing=timing
         )
         for need_id, timing in sorted(timings.items())
     ]
