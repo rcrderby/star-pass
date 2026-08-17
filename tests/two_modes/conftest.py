@@ -43,6 +43,15 @@ class InProcessAdapter(BaseAdapter):
         the remote half was really used.  Without that, a harness that
         asked the same client twice would compare an answer with
         itself and pass while testing nothing.
+
+        **Waits for what the request started.**  A write the service
+        answers leaves a job running on a thread, and it answers before
+        that job is done -- which is the whole point of a job.  The
+        local half has no such gap: the process that would run the work
+        is the one about to return.  So a comparison made without this
+        would be comparing what one mode has finished doing with what
+        the other has only begun, and would pass or fail depending on
+        which thread got there first.
     """
 
     def __init__(
@@ -68,6 +77,9 @@ class InProcessAdapter(BaseAdapter):
             content=request.body
         )
 
+        for started in self._served_by.app.state.runner.futures:
+            started.result()
+
         response = Response()
         response.status_code = answered.status_code
         response.headers.update(answered.headers)
@@ -85,10 +97,15 @@ class InProcessAdapter(BaseAdapter):
 
 @pytest.fixture(name='adapter')
 def fixture_adapter(
-    running_client: TestClient
+    started_client: TestClient
 ) -> InProcessAdapter:
-    """ Return the adapter the remote client answers through. """
-    return InProcessAdapter(served_by=running_client)
+    """ Return the adapter the remote client answers through.
+
+        A service whose jobs can be waited for, because the adapter
+        waits for them: what these tests compare is what each mode has
+        finished doing.
+    """
+    return InProcessAdapter(served_by=started_client)
 
 
 @pytest.fixture(name='remote_client')
