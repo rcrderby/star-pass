@@ -117,22 +117,6 @@ class Reporter:
 
         return None
 
-    def schema_validation_failed(self) -> None:
-        """ Shift data did not match the JSON Schema.
-
-            Distinct from 'step_failed' because the run continues: the
-            data is reported as invalid rather than raising, so that an
-            operator sees why nothing was created.
-
-            Args:
-                None.
-
-            Returns:
-                None.
-        """
-
-        return None
-
     def calendar_read_started(self) -> None:
         """ The run began reading the Google Calendar service.
 
@@ -149,40 +133,8 @@ class Reporter:
 
         return None
 
-    def csv_written(
-            self,
-            path: str
-    ) -> None:
-        """ Collected shifts were written to a CSV file.
-
-            The path is the run's product: it is what the operator
-            passes to the create-shifts run, and what a service would
-            record as the run's output.
-
-            Args:
-                path (str):
-                    Full path to the file that was written.
-
-            Returns:
-                None.
-        """
-
-        return None
-
     def sending_started(self) -> None:
         """ The run began sending shift data to Amplify.
-
-            Args:
-                None.
-
-            Returns:
-                None.
-        """
-
-        return None
-
-    def check_mode(self) -> None:
-        """ The run is a dry run and will send no shift data.
 
             Args:
                 None.
@@ -243,24 +195,6 @@ class Reporter:
             Args:
                 batch (ShiftBatch):
                     The opportunity, and the shifts created under it.
-
-            Returns:
-                None.
-        """
-
-        return None
-
-    def shift_data_invalid(
-            self,
-            detail: str | None = None
-    ) -> None:
-        """ No shifts were created, because the data did not validate.
-
-            Args:
-                detail (str, optional):
-                    The validation error, when there is one.  Defaults
-                    to None, because unvalidated data reports the same
-                    way: returning in silence would read as success.
 
             Returns:
                 None.

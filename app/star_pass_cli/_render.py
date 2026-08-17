@@ -149,11 +149,7 @@ EVENT_PHRASES = {
     'step_failed': 'Failed.',
     'calendar_read_started': 'Reading the calendar.',
     'sending_started': 'Sending to Amplify.',
-    'check_mode': 'A dry run; nothing will be created.',
     'shifts_sent': 'Sent shifts to:',
-    'shift_data_invalid': 'The shift data did not validate.',
-    'schema_validation_failed': 'The shift data did not match the schema.',
-    'csv_written': 'Wrote:',
     'job_finished': 'The job is over:'
 }
 

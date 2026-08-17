@@ -42,8 +42,6 @@ os.environ.setdefault(
     'STAR_PASS_API_TOKEN',
     'test-star-pass-api-value-not-a-real-one'
 )
-os.environ.setdefault('GCAL_WINDOW_START', '2099-01-01T00:00:00-00:00')
-os.environ.setdefault('GCAL_WINDOW_END', '2099-01-31T00:00:00-00:00')
 
 # Imports below intentionally follow the env setup above.
 # pylint: disable=wrong-import-position

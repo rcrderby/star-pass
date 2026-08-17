@@ -418,7 +418,6 @@ def _calendar_items(
 
     calendar = GCALData(
         gcal_name=run.calendar,
-        auto_prep_data=False,
         reporter=reporter
     )
     window_start, window_end = resolve_window(

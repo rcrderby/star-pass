@@ -28,9 +28,9 @@ COPY /app /app
 # time from a path relative to the package ('<app>/../models').
 COPY /models /models
 
-# Create the CSV input and JSON output directories that the Google
-# Calendar and Amplify shift run modes read from and write to.
-RUN mkdir -p /data/csv /data/json
+# Create the directory the SQLite database lives in, so a deployment
+# can mount a volume over it.
+RUN mkdir -p /data
 
 # Start the bash prompt
 CMD ["/bin/bash"]
