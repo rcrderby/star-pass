@@ -87,6 +87,30 @@ through the Amplify API. It is run once per month.
   including two cases about what a stored event can express: a
   category whose need IDs disagree about their offsets, and a shift
   that would run past midnight.
+- `app/star_pass/_shift_timing.py` — what a category asks of an event
+  and the shift times it produces (`role_timings`, `shift_times`).
+  Below both callers: collection works them out from a calendar item
+  and an edit works them out again, and two copies would eventually
+  disagree — a run that previews one shift and sends another. The two
+  things a stored event cannot express are refused here, so a
+  collection and an edit refuse them alike: a category whose need IDs
+  disagree about their offsets, and a shift running past midnight.
+- `app/star_pass/_editing.py` — one user action's worth of operations
+  applied to a run's current revision (`apply`), and the write that
+  stores them (`edit`). Operations apply in order, each seeing what
+  the one before produced, and **a call is applied whole or not at
+  all**: a bulk nudge that would push one event of thirty out of its
+  day leaves all thirty alone, because a partly applied action is one
+  the reviewer cannot see the shape of. `apply` writes nothing; the
+  caller decides when the answer becomes durable.
+- `app/star_pass/_event_edits.py` — what changes about *one* event,
+  below the operations that ask for it. **An edit moves the shift
+  times; the calendar times never move**: they are what the calendar
+  said, so a run can always say what it started from. That is what
+  lets an undo recompute the original from the calendar times and the
+  category's offsets rather than storing a copy of it. A maximum does
+  not pull a hand-set end time back in — a maximum shortens what the
+  offsets produced, and a person setting a time has overridden that.
 - `app/star_pass/_opportunities.py` — reading an Amplify opportunity:
   its title, the shifts it already holds, and the public address it is
   published at. Below every caller, because collection stores the
@@ -357,6 +381,18 @@ The notes below are the ones that are not obvious from the commands.
   stored, sent or compared.
 - Endpoints live under `/v1`. Changes within a version are additive;
   a breaking change is served at a new prefix alongside the old one.
+  A route's own path is written **without** the prefix, because the
+  routers are included under it; writing it twice produces a working
+  service and a contract describing `/v1/v1/...`.
+- An idempotency key names an **operation**, one of
+  `IDEMPOTENT_OPERATIONS`, which is wider than `JOB_KINDS`: an edit is
+  idempotent and answered in the request that asked for it, so not
+  every keyed write starts a job. Where a write claims its key is part
+  of the decision, not an implementation detail — the run is read
+  before the key is claimed, the key claimed before the write, and the
+  answer recorded after it. Reading the run last spends a reservation
+  on a run that is not there and reports a foreign key violation as a
+  malformed request.
 - Field names are camelCase on the wire and snake_case in Python.
   Every published shape inherits from `ApiModel` in
   `star_pass_contract`, which does the translation once.
