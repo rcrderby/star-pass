@@ -691,9 +691,10 @@ class TestSelectingACommand:
         self,
         build_parser: Callable[[], Any]
     ) -> None:
-        # The three run modes predate the API and stay local, so a
-        # command must not be read out of a run mode's arguments.
-        args = build_parser().parse_args(['-g', '-n', 'events'])
+        # The Slack summary is the one run mode left, and it is the one
+        # the API deliberately does not publish, so a command must not
+        # be read out of its arguments.
+        args = build_parser().parse_args(['-s', '-N', '5'])
 
         assert selected(args=args) is None
 

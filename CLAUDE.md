@@ -16,7 +16,15 @@ through the Amplify API. It is run once per month.
 - `app/` is the Python import root. Modules import as
   `from star_pass.<module> import ...` (the `app/` directory is placed
   on `sys.path`, not the repository root).
-- `app/__main__.py` — CLI entry point and run-mode dispatch.
+- `app/__main__.py` — CLI entry point and dispatch. Two ways in: a
+  command word selects something the API publishes (`star_pass_cli`),
+  and `-s/--post-slack-summary` selects the Slack sign-up summary,
+  which the API deliberately does not publish. **The `-s` path opens no
+  database**, and a test holds that: it is the only thing in the
+  repository on a schedule, the runner is ephemeral with no volume, and
+  a dispatcher that opened one for every invocation would be writing
+  into a container about to be destroyed. The two CSV run modes are
+  retired; `runs collect` and `runs send` do what they did.
 - `app/star_pass/gcal_data.py` — collect and transform Google Calendar
   events (`GCALData`).
 - `app/star_pass/amplify_shifts.py` — build and upload Amplify shifts
@@ -134,9 +142,10 @@ through the Amplify API. It is run once per month.
   longest alias whose words all appear in the title, falling back to a
   fuzzy match (`FUZZY_MATCH_THRESHOLD`); an unmatched title logs a
   warning and uses the `default` category, whose need IDs are empty. An
-  empty need ID cannot become a shift, so the `-c` run stops and names
-  the affected rows rather than dropping them. See the "Unmatched event
-  titles" section of `README.md` for the operator workflow.
+  empty need ID cannot become a shift, so the event is collected and
+  named as unmatched, and stops the **send** rather than being dropped.
+  See the "Unmatched event titles" section of `README.md` for the
+  operator workflow.
 - `app/star_pass_api/` — the remote surface over the core: the
   application factory (`create_app`), the service's own `_defaults.py`,
   `_problems.py`, `_security.py`,
@@ -208,18 +217,19 @@ through the Amplify API. It is run once per month.
 ## Running the workflow
 
 ```bash
-# The run mode is a flag: -g/--get-gcal-events,
-# -c/--create-amplify-shifts, or -s/--post-slack-summary. Use --help
-# for the full option list.
+# 1. Collect a calendar window into a run. --last-day is the last day
+#    covered, not the day after it.
+./app/__main__.py runs collect \
+    --calendar events --start 2026-09-01 --last-day 2026-09-30
 
-# 1. Collect Google Calendar events into a timestamped CSV.
-./app/__main__.py -g -n practices
-./app/__main__.py -g -n events
+# 2. Read what sending it would create, then send it. The send asks
+#    first (D11) and refuses where there is no terminal to answer from.
+./app/__main__.py runs preview <run_id>
+./app/__main__.py runs send <run_id>
 
-# 2. Create Amplify shifts from a CSV (-C true is a dry run).
-./app/__main__.py -c -i gcal_shifts_<timestamp>.csv -C true
-
-# 3. Post a Slack sign-up summary (-C true is a dry run).
+# 3. Post a Slack sign-up summary (-C true is a dry run). The one run
+#    mode flag left: the API deliberately publishes no summary, so
+#    nothing replaces it.
 #    -d/--days sets the window, counting today as day one; the default
 #    is 1 (today only). Nothing in the window means nothing is posted.
 #    -N repeats, comma-separates, or takes - to read IDs from stdin;
