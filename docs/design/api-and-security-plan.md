@@ -19,7 +19,7 @@ through the API — never wired directly into the web UI.
 
 | Layer | Responsibility |
 | --- | --- |
-| `star_pass` core (Python package) | All domain logic: calendar collection, title matching, CSV build, Amplify writes, sent record. No HTTP, no argv, no printing. |
+| `star_pass` core (Python package) | All domain logic: calendar collection, title matching, shift timing, editing, Amplify writes, sent record. No HTTP, no argv, no printing. |
 | API service (FastAPI) | The only *remote* surface over the core. Owns credentials, SQLite state, job lifecycle, authn/authz. Its own container; the CLI ships in this image. |
 | Clients | The CLI and the web BFF. Neither contains domain logic. The BFF is a separate container with no credential mount (D17). |
 
@@ -154,7 +154,7 @@ Four more findings from that sketch, all additive:
   keeps test + last-four.*
 - **Any generic escape hatch** — no endpoint taking CLI arguments, no Amplify
   passthrough proxy. One of these undoes the whole model.
-- **Anything addressed by file path** — no CSV or log download taking a path.
+- **Anything addressed by file path** — no download taking one.
   Ids only; path traversal shouldn't be expressible.
 - **Config writes** — read-only, as decided.
 - **Anything touching code or `shift_info.yml`** — kept out of the spec so it
@@ -209,7 +209,7 @@ clients fail the same way:
   `Authorization` headers, API keys, email addresses) before it is written.
 - Structured JSON logs to stdout. No log files, no log rotation in the app.
 - Secrets appear in exactly one place: the process environment of the API
-  service. Not in SQLite, not in CSVs, not in job records, not in the BFF's
+  service. Not in SQLite, not in job records, not in the BFF's
   session store.
 - `POST /credentials/test` is rate-limited so the endpoint can't be used as a
   credential oracle.
@@ -243,7 +243,7 @@ clients fail the same way:
 6. Write endpoints: collect, recollect, send with idempotency keys.
 7. BFF: session cookie, CSRF, proxy. Web UI stops holding anything.
 8. Caddy in front, HSTS, forwarded-header trust scoped to the proxy.
-9. Retention policy job for CSVs, logs and superseded revisions.
+9. Retention policy job for job logs and superseded revisions.
 
 Steps 1–3 are the ones that create or prevent technical debt. The rest is
 mechanical once they're right.
@@ -260,7 +260,7 @@ Every decision, with its rationale and a revisit trigger, is recorded in
 - State access goes through a **repository layer**; SQLite behind it (D7).
 - Interrupted jobs are **marked interrupted with a one-click resume** (D10).
 - Send is gated by a **two-step confirmation** restating count and window (D11).
-- Retention: sent record forever, **CSVs and logs 90 days**, superseded revisions
+- Retention: sent record forever, **job logs 90 days**, superseded revisions
   deleted immediately; both windows are config values (D12).
 - Writes record **principal id, timestamp and idempotency key** (D13).
 - Access via **Tailscale-style device-level networking**; Caddy internal CA while
