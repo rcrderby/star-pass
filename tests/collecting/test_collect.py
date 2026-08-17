@@ -1,22 +1,29 @@
 #!/usr/bin/env python3
-""" Collecting a calendar window into a stored run.
+""" What a collected run holds.
 
-    The calendar and Amplify are reached through
-    'Helpers.send_api_request', which is replaced here: no test makes a
-    live request.  What is not replaced is everything between that
-    boundary and the database, which is what these tests are about.
+    The events the calendar window became, the times they are stored
+    with, the opportunities they name, and everything that stops a run
+    rather than being quietly dropped.  What the window held and the
+    run left out is asked in 'test_uncollected.py', off the same
+    arrangement.
 """
 
 # pylint: disable=missing-function-docstring,missing-class-docstring
 
 # Imports - Python Standard Library
 import sqlite3
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 # Imports - Third-Party
 import pytest
 
 # Imports - Local
+from collecting._arranging import (
+    an_item,
+    NEED_ID,
+    OTHER_NEED_ID,
+    REPEATING_CALENDAR
+)
 from conftest import a_category, a_need
 from star_pass._collect import collect
 from star_pass._exceptions import ValidationError
@@ -32,127 +39,6 @@ from star_pass._repository import (
     RevisionRepository,
     RunRepository
 )
-
-# Constants
-# A calendar with one query string, so the calendar is read once and a
-# repeat in the results is one the test arranged.
-CALENDAR = 'events'
-
-# A calendar with two query strings, so it is read twice and an event
-# matching both arrives twice.
-REPEATING_CALENDAR = 'practices'
-NEED_ID = '879609'
-OTHER_NEED_ID = '879610'
-
-
-def an_item(
-    identifier: str = 'gcal-1',
-    summary: str = 'Wheels of Justice vs Rose City',
-    start: str = '2026-09-03T19:00:00-07:00',
-    end: str = '2026-09-03T21:00:00-07:00'
-) -> Dict[str, Any]:
-    return {
-        'id': identifier,
-        'summary': summary,
-        'start': {'dateTime': start},
-        'end': {'dateTime': end}
-    }
-
-
-@pytest.fixture(name='answers')
-def fixture_answers(
-    answer_requests: Callable[[Callable[[str], Dict[str, Any]]], None]
-) -> Callable[..., None]:
-    """ Return a way to script the calendar and Amplify answers. """
-
-    def script(
-        items: List[Dict[str, Any]],
-        titled: bool = True
-    ) -> None:
-        """ Answer every calendar read with 'items', and name needs.
-
-            'titled' is what Amplify answers about an opportunity: a
-            title, or an answer carrying none.
-        """
-
-        def need_body(url: str) -> Dict[str, Any]:
-            """ Return what Amplify says about one opportunity. """
-            if not titled:
-                return {'data': {}}
-
-            return {
-                'data': {'need_title': f'Need {url.rsplit("/", 1)[-1]}'}
-            }
-
-        def body_for(url: str) -> Dict[str, Any]:
-            """ Return the body for one address. """
-            if '/needs/' in url:
-                return need_body(url=url)
-
-            return {'items': items}
-
-        answer_requests(body_for)
-
-    return script
-
-
-@pytest.fixture(name='window')
-def fixture_window(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ Read an offset-less window in a fixed zone. """
-    monkeypatch.setenv('GCAL_TIMEZONE', 'America/Los_Angeles')
-
-    return None
-
-
-@pytest.fixture(name='collecting')
-def fixture_collecting(runs: RunRepository) -> str:
-    """ Return a run asked for and not yet collected into. """
-    return runs.create(
-        calendar=CALENDAR,
-        window_start='2026-09-01',
-        window_end='2026-10-01'
-    ).id
-
-
-# Every test arranges the same five things and then collects, so the
-# arrangement is one fixture rather than five on each of them.  The
-# count below is those five; a test that named them itself would carry
-# the same disable and repeat the arrangement as well.
-# pylint: disable-next=too-many-arguments,too-many-positional-arguments
-@pytest.fixture(name='collect_run')
-def fixture_collect_run(
-    connection: sqlite3.Connection,
-    collecting: str,
-    answers: Callable[..., None],
-    shift_model: Callable[..., None],
-    window: None
-) -> Callable[..., Any]:
-    """ Return a way to script the reads and collect a run. """
-    del window
-
-    def run(
-        items: List[Dict[str, Any]],
-        categories: Dict[str, Any] = None,
-        run_id: str = None,
-        titled: bool = True
-    ):
-        """ Collect, with the calendar and Amplify answering to plan. """
-        shift_model(
-            categories=(
-                categories
-                if categories is not None
-                else {'adult_game': a_category(need_ids=[a_need()])}
-            )
-        )
-        answers(items=items, titled=titled)
-
-        return collect(
-            connection=connection,
-            run_id=run_id if run_id is not None else collecting,
-            reporter=Reporter()
-        )
-
-    return run
 
 
 class TestWhatACollectedRunHolds:

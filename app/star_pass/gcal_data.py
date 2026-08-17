@@ -3,12 +3,18 @@
 
 # Imports - Python Standard Library
 from copy import copy
+from dataclasses import dataclass
 from os import getenv
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 # Imports - Local
 from . import _defaults
 from ._exceptions import ConfigurationError
+from ._records import (
+    UNCOLLECTED_ALL_DAY,
+    UNCOLLECTED_EXCLUDED,
+    UNCOLLECTED_UNTITLED
+)
 from ._reporting import Reporter
 from ._helpers import Helpers, load_env_file
 from ._logging import get_logger
@@ -30,11 +36,39 @@ BASE_GCAL_PARAMS = _defaults.BASE_GCAL_PARAMS
 BASE_GCAL_URL = _defaults.BASE_GCAL_URL
 HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 
+# The query string that searches nothing and so returns the whole
+# window.  A calendar configured with it is already read whole, which
+# is why reading the window costs a second request on some calendars
+# and none on others.
+WHOLE_WINDOW_QUERY = ''
+
 # Module logger
 logger = get_logger(__name__)
 
 
-def _item_times(
+@dataclass(frozen=True)
+class WindowRead:
+    """ One reading of a calendar window, searched and whole.
+
+        Both halves rather than either alone, because what a run does
+        not collect is the difference between them: an event the
+        configured query strings never returned is one nobody looked
+        for, and only the whole window says which those are.
+
+        Attributes:
+            searched (List[Dict[str, Any]]):
+                What the configured query strings returned, which is
+                what the run is built from.
+
+            everything (List[Dict[str, Any]]):
+                Every event in the window, whatever it is called.
+    """
+
+    searched: List[Dict[str, Any]]
+    everything: List[Dict[str, Any]]
+
+
+def item_times(
         gcal_item: Dict[str, Any]
 ) -> Tuple[str, str] | None:
     """ Return a calendar item's start and end times.
@@ -61,6 +95,66 @@ def _item_times(
     return start, end
 
 
+def _is_excluded_title(
+        need_name: str
+) -> bool:
+    """ Determine whether an event title excludes it from shifts.
+
+        Args:
+            need_name (str):
+                Google Calendar event title.
+
+        Returns:
+            bool:
+                True when the title contains any excluded term.
+    """
+
+    title = need_name.lower()
+
+    return any(
+        excluded_term in title
+        for excluded_term in _defaults.GCAL_PREFIX_FILTERS
+    )
+
+
+def exclusion_reason(
+        gcal_item: Dict[str, Any]
+) -> Optional[str]:
+    """ Return why an item must not become a shift, or None.
+
+        One answer to that question, read twice: the filter drops the
+        items it names, and the collection records them against the run
+        so that a reviewer can be told what the window held and why it
+        is not there.  Two copies would eventually disagree, and a
+        reviewer would be given a reason for an item the run had
+        collected anyway.
+
+        Args:
+            gcal_item (Dict[str, Any]):
+                Raw Google Calendar item.
+
+        Returns:
+            reason (str | None):
+                One of the reasons in '_records.UNCOLLECTED_REASONS',
+                or None when the item can become a shift.
+    """
+
+    # An untitled event cannot be matched to a need
+    if not gcal_item.get('summary'):
+        return UNCOLLECTED_UNTITLED
+
+    # Cancelled and non-officiated events never become shifts
+    if _is_excluded_title(need_name=gcal_item['summary']) is True:
+        return UNCOLLECTED_EXCLUDED
+
+    # An all-day event has a 'date' instead of a 'dateTime', so it has
+    # no start or end time to build a shift from
+    if item_times(gcal_item=gcal_item) is None:
+        return UNCOLLECTED_ALL_DAY
+
+    return None
+
+
 class GCALData:
     """ Collect and manage Google Calendar data. """
     def __init__(
@@ -75,7 +169,9 @@ class GCALData:
             caller chooses the window and asks for the calendar it
             wants: 'get_gcal_shift_data' collects the items in a window
             and 'filter_gcal_items' removes the ones that must not
-            become shifts.
+            become shifts.  'read_window' does the first of those and
+            reads the whole window beside it, which is what says which
+            events nobody looked for.
 
             Args:
                 gcal_name (str):
@@ -109,47 +205,22 @@ class GCALData:
 
         return None
 
-    def get_gcal_shift_data(  # pylint: disable=too-many-locals
-            self,
-            timeMin: str,  # pylint: disable=invalid-name
-            timeMax: str,  # pylint: disable=invalid-name
-            timeout: int = HTTP_TIMEOUT
-    ) -> Dict[Any, Any]:
-        """ Get shift data from the Google Calendar.
+    def _calendar_settings(self) -> Tuple[str, Sequence[str]]:
+        """ Return the calendar's identifier and its query strings.
 
             Args:
-                timeMin (str):
-                    ISO-formatted string start date/time for shifts in
-                    calendar query
+                None.
 
-                    Example:
-                        '2024-09-01T00:00:00-00:00'
-
-                timeMax (str):
-                    ISO-formatted string end date/time for shifts in
-                    calendar query.
-
-                    Example:
-                        '2024-10-10T00:00:00-00:00'
-
-                timeout (int, optional):
-                    HTTP timeout.  Default is HTTP_TIMEOUT.
+            Raises:
+                ConfigurationError:
+                    If the deployment configured either as nothing.
 
             Returns:
-                gcal_shift_data (Dict[Any, Any]):
-                    Data returned by the Google Calendar service.
+                settings (Tuple[str, Sequence[str]]):
+                    The calendar identifier and the strings it is
+                    searched with.
         """
 
-        self.reporter.calendar_read_started()
-
-        # Create a list of shifts for Google Calendar data
-        gcal_shift_data = []
-
-        # Set HTTP request variables
-        method = 'GET'
-        headers = BASE_GCAL_HEADERS
-
-        # Set Google Calendar variables
         gcal_id = GCAL_CALENDARS[self.gcal_name].get('gcal_id')
         query_strings = GCAL_CALENDARS[self.gcal_name].get('query_strings')
 
@@ -159,6 +230,56 @@ class GCALData:
             message = f'Invalid Google Calendar data for "{self.gcal_name}"'
             logger.error(message)
             raise ConfigurationError(message)
+
+        return gcal_id, query_strings
+
+    def _read(  # pylint: disable=too-many-locals
+            self,
+            query_strings: Sequence[str],
+            timeMin: str,  # pylint: disable=invalid-name
+            timeMax: str,  # pylint: disable=invalid-name
+            timeout: int = HTTP_TIMEOUT
+    ) -> List[Dict[str, Any]]:
+        """ Return every item a set of query strings finds in a window.
+
+            Below both readings of a window: the configured strings
+            build the run, and the empty string reads the window whole.
+            One implementation, so the two cannot page or de-duplicate
+            differently and disagree about what the window holds.
+
+            Args:
+                query_strings (Sequence[str]):
+                    What to search for, one search each.
+
+                timeMin (str):
+                    ISO-formatted string start date/time.
+
+                timeMax (str):
+                    ISO-formatted string end date/time.
+
+                timeout (int, optional):
+                    HTTP timeout.  Default is HTTP_TIMEOUT.
+
+            Raises:
+                ConfigurationError:
+                    If the calendar is not configured.
+
+                UpstreamError:
+                    If the calendar cannot be read.
+
+            Returns:
+                items (List[Dict[str, Any]]):
+                    Every item returned, in the order the searches ran.
+        """
+
+        # Create a list of shifts for Google Calendar data
+        gcal_shift_data = []
+
+        # Set HTTP request variables
+        method = 'GET'
+        headers = BASE_GCAL_HEADERS
+
+        gcal_id, _ = self._calendar_settings()
 
         # Construct URL
         url = (
@@ -214,26 +335,113 @@ class GCALData:
 
         return gcal_shift_data
 
-    @staticmethod
-    def _is_excluded_title(
-            need_name: str
-    ) -> bool:
-        """ Determine whether an event title excludes it from shifts.
+    def get_gcal_shift_data(
+            self,
+            timeMin: str,  # pylint: disable=invalid-name
+            timeMax: str,  # pylint: disable=invalid-name
+            timeout: int = HTTP_TIMEOUT
+    ) -> List[Dict[str, Any]]:
+        """ Get shift data from the Google Calendar.
 
             Args:
-                need_name (str):
-                    Google Calendar event title.
+                timeMin (str):
+                    ISO-formatted string start date/time for shifts in
+                    calendar query
+
+                    Example:
+                        '2024-09-01T00:00:00-00:00'
+
+                timeMax (str):
+                    ISO-formatted string end date/time for shifts in
+                    calendar query.
+
+                    Example:
+                        '2024-10-10T00:00:00-00:00'
+
+                timeout (int, optional):
+                    HTTP timeout.  Default is HTTP_TIMEOUT.
+
+            Raises:
+                ConfigurationError:
+                    If the calendar is not configured.
+
+                UpstreamError:
+                    If the calendar cannot be read.
 
             Returns:
-                bool:
-                    True when the title contains any excluded term.
+                gcal_shift_data (List[Dict[str, Any]]):
+                    Data returned by the Google Calendar service.
         """
 
-        title = need_name.lower()
+        self.reporter.calendar_read_started()
 
-        return any(
-            excluded_term in title
-            for excluded_term in _defaults.GCAL_PREFIX_FILTERS
+        _, query_strings = self._calendar_settings()
+
+        return self._read(
+            query_strings=query_strings,
+            timeMin=timeMin,
+            timeMax=timeMax,
+            timeout=timeout
+        )
+
+    def read_window(
+            self,
+            timeMin: str,  # pylint: disable=invalid-name
+            timeMax: str,  # pylint: disable=invalid-name
+            timeout: int = HTTP_TIMEOUT
+    ) -> WindowRead:
+        """ Read a window as it is searched and as it stands.
+
+            Two readings because a run has to be able to say what it
+            did not collect, and the events nobody looked for are the
+            ones the configured query strings never returned.  A
+            calendar searched with the empty string is already read
+            whole, so its second reading is the first one rather than
+            a repeat of the same request.
+
+            Args:
+                timeMin (str):
+                    First moment the window covers.
+
+                timeMax (str):
+                    First moment after it.
+
+                timeout (int, optional):
+                    What each of the reads waits.  Default is
+                    HTTP_TIMEOUT.
+
+            Raises:
+                ConfigurationError:
+                    If the deployment has not configured the calendar.
+
+                UpstreamError:
+                    If either read fails.
+
+            Returns:
+                read (WindowRead):
+                    What the searches found, and everything the window
+                    holds.
+        """
+
+        _, query_strings = self._calendar_settings()
+        searched = self.get_gcal_shift_data(
+            timeMin=timeMin,
+            timeMax=timeMax,
+            timeout=timeout
+        )
+
+        return WindowRead(
+            searched=searched,
+            everything=(
+                searched
+                if WHOLE_WINDOW_QUERY in query_strings
+                else self._read(
+                    query_strings=(WHOLE_WINDOW_QUERY,),
+                    timeMin=timeMin,
+                    timeMax=timeMax,
+                    timeout=timeout
+                )
+            )
         )
 
     def filter_gcal_items(
@@ -254,6 +462,10 @@ class GCALData:
                shift can be built from, and is named here rather than
                failing partway through a collection.
 
+            Which items those are is 'exclusion_reason's answer rather
+            than this method's, because the collection records the same
+            answer against the run.
+
             Args:
                 gcal_shift_data (List[Dict[str, Any]]):
                     Raw Google Calendar items.
@@ -270,32 +482,30 @@ class GCALData:
 
         filtered_gcal_items = []
         for gcal_item in gcal_shift_data:
+            reason = exclusion_reason(gcal_item=gcal_item)
 
-            # An untitled event cannot be matched to a need
-            need_name = gcal_item.get('summary')
-            if not need_name:
+            if reason is None:
+                filtered_gcal_items.append(gcal_item)
+                continue
+
+            # A title the deployment never collects is expected and
+            # says nothing worth a line in the log; the other two are
+            # events somebody put on the calendar meaning them to
+            # become shifts.
+            if reason == UNCOLLECTED_UNTITLED:
                 message = (
                     'Skipping a Google Calendar event with no title '
                     f'(starting {self._item_start(gcal_item)})'
                 )
                 logger.warning(message)
-                continue
 
-            # Cancelled and non-officiated events never become shifts
-            if self._is_excluded_title(need_name=need_name) is True:
-                continue
-
-            # An all-day event has a 'date' instead of a 'dateTime', so
-            # it has no start or end time to build a shift from
-            if _item_times(gcal_item=gcal_item) is None:
+            elif reason == UNCOLLECTED_ALL_DAY:
                 message = (
-                    f'Skipping "{need_name}" because it has no start and '
-                    'end time (an all-day event cannot become a shift)'
+                    f'Skipping "{gcal_item["summary"]}" because it has '
+                    'no start and end time (an all-day event cannot '
+                    'become a shift)'
                 )
                 logger.warning(message)
-                continue
-
-            filtered_gcal_items.append(gcal_item)
 
         # Display status message
         self.reporter.step_finished()

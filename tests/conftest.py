@@ -76,7 +76,8 @@ from star_pass._repository import (  # noqa: E402
     JobRepository,
     RevisionRepository,
     RunRepository,
-    SentShiftRepository
+    SentShiftRepository,
+    UncollectedRepository
 )
 from star_pass_api import create_app  # noqa: E402
 from star_pass_api._defaults import API_PRINCIPAL_ID  # noqa: E402
@@ -147,7 +148,7 @@ def fixture_make_amplify_shift() -> Callable[..., dict]:
 @pytest.fixture(name='answer_requests')
 def fixture_answer_requests(
     monkeypatch: pytest.MonkeyPatch
-) -> Callable[[Callable[[str], dict]], list]:
+) -> Callable[[Callable[[dict], dict]], list]:
     """ Return a way to answer every request the core sends.
 
         Everything reaching the calendar or Amplify goes through
@@ -157,13 +158,17 @@ def fixture_answer_requests(
         wherever one is scripted, and a second copy would be a second
         thing to keep in step with what the code reads.
 
+        The script is handed the whole request rather than its address,
+        because two reads of one calendar window differ only in the
+        query string they carry.
+
         The list it returns is what was asked for, in order, so a test
         about what a send does to Amplify reads the requests rather
         than inferring them from what was stored afterwards.
     """
 
-    def script(body_for: Callable[[str], dict]) -> list:
-        """ Answer each request with the body chosen for its address. """
+    def script(body_for: Callable[[dict], dict]) -> list:
+        """ Answer each request with the body chosen for it. """
         sent: list = []
 
         def send(
@@ -178,7 +183,7 @@ def fixture_answer_requests(
             response.headers['Content-Type'] = 'application/json'
             # pylint: disable-next=protected-access
             response._content = json.dumps(
-                body_for(api_request_data['url'])
+                body_for(api_request_data)
             ).encode('utf-8')
 
             return response
@@ -195,7 +200,7 @@ def fixture_answer_requests(
 
 @pytest.fixture(name='amplify_holds')
 def fixture_amplify_holds(
-    answer_requests: Callable[[Callable[[str], dict]], None]
+    answer_requests: Callable[[Callable[[dict], dict]], None]
 ) -> Callable[..., None]:
     """ Return a way to say what Amplify's opportunities already hold.
 
@@ -219,8 +224,10 @@ def fixture_amplify_holds(
         """ Answer each opportunity with the shifts named against it. """
         held = shifts if shifts is not None else {}
 
-        def need_body(url: str) -> dict:
+        def need_body(request: dict) -> dict:
             """ Return what Amplify says about one opportunity. """
+            url = request['url']
+
             if url.endswith(SHIFT_CREATE_SUFFIX):
                 # A create, which the send does not read an answer
                 # from; only the reads before it are scripted here.
@@ -302,6 +309,14 @@ def fixture_jobs(connection: sqlite3.Connection) -> JobRepository:
 def fixture_sent(connection: sqlite3.Connection) -> SentShiftRepository:
     """ Return a sent shift repository on the test's database. """
     return SentShiftRepository(connection=connection)
+
+
+@pytest.fixture(name='uncollected')
+def fixture_uncollected(
+    connection: sqlite3.Connection
+) -> UncollectedRepository:
+    """ Return an uncollected event repository on the database. """
+    return UncollectedRepository(connection=connection)
 
 
 @pytest.fixture(name='idempotency')

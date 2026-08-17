@@ -40,10 +40,15 @@ UNFINISHED_PLACEHOLDERS = ', '.join('?' * len(JOB_STATUSES_UNFINISHED))
 #
 # The current revision is joined rather than sub-selected per column,
 # so that "the current revision" is defined once and the three counts
-# below cannot drift from each other or from 'current_revision'.  A run
-# that has not reached its first revision joins to nothing: the
-# revision number reads through COALESCE, and the counts match no row
-# and come back as zero, which is what a run with no events holds.
+# taken over it cannot drift from each other or from
+# 'current_revision'.  A run that has not reached its first revision
+# joins to nothing: the revision number reads through COALESCE, and
+# the counts match no row and come back as zero, which is what a run
+# with no events holds.
+#
+# The fourth count is not one of those.  What the window held and the
+# run left out is a fact about the collection, so editing a revision
+# does not change it and it is counted over the run alone.
 #
 # Nothing stops a run holding two unfinished jobs, so the active one is
 # the most recently created.  Ordered by 'rowid' rather than by
@@ -96,6 +101,11 @@ RUN_SELECT = f"""
               )
         ) AS unmatched_count,
         (
+            SELECT COUNT(*)
+            FROM uncollected_events
+            WHERE uncollected_events.run_id = runs.id
+        ) AS uncollected_count,
+        (
             SELECT jobs.id
             FROM jobs
             WHERE jobs.run_id = runs.id
@@ -144,6 +154,7 @@ def _to_run(
         event_count=row['event_count'],
         shift_count=row['shift_count'],
         unmatched_count=row['unmatched_count'],
+        uncollected_count=row['uncollected_count'],
         active_job_id=row['active_job_id']
     )
 
@@ -281,6 +292,7 @@ class RunRepository(Repository):
             event_count=0,
             shift_count=0,
             unmatched_count=0,
+            uncollected_count=0,
             active_job_id=None
         )
 

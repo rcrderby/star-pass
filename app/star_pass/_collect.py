@@ -8,6 +8,12 @@
     happened to produce: an event serving both skating and non-skating
     officials is one thing to retime, not two things to keep in step.
 
+    A collection also records what it did **not** collect.  The window
+    is read twice -- once as the deployment searches it and once
+    whole -- and everything the run will not hold is stored with the
+    reason, so that a reviewer asking where an event went is answered
+    from the run rather than from a second calendar request.
+
     In the core, not the service.  Nothing here is about HTTP, and the
     command line client collects a run without one (D2).
 
@@ -26,7 +32,7 @@
 # Imports - Python Standard Library
 import sqlite3
 from datetime import datetime
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 from zoneinfo import ZoneInfo
 
 # Imports - Local
@@ -34,7 +40,12 @@ from . import _defaults
 from ._database import transaction
 from ._exceptions import ValidationError
 from ._gcal_time import gcal_timezone, resolve_window
-from .gcal_data import GCALData
+from .gcal_data import (
+    exclusion_reason,
+    GCALData,
+    item_times,
+    WindowRead
+)
 from ._helpers import CategoryMatch, Helpers
 from ._logging import get_logger
 from ._opportunities import public_url, read_need, title_of
@@ -43,13 +54,16 @@ from ._records import (
     Event,
     Opportunity,
     Run,
-    RUN_STATUS_UNSENT
+    RUN_STATUS_UNSENT,
+    UncollectedEvent,
+    UNCOLLECTED_SEARCH
 )
 from ._reporting import Reporter
 from ._repository import (
     EventRepository,
     RevisionRepository,
-    RunRepository
+    RunRepository,
+    UncollectedRepository
 )
 
 # Constants
@@ -66,11 +80,44 @@ LATER_REVISION_LABEL = 'As recollected'
 logger = get_logger(__name__)
 
 
+def _read_moment(
+        value: Any,
+        timezone: ZoneInfo
+) -> Optional[datetime]:
+    """ Return a calendar time in the league's zone, or None.
+
+        Args:
+            value (Any):
+                What the calendar gave, which is an ISO 8601 datetime
+                when the calendar is behaving.
+
+            timezone (ZoneInfo):
+                The zone to read it in.
+
+        Returns:
+            moment (datetime | None):
+                The same instant in the league's zone, or None when
+                the value is not a date and time.
+    """
+
+    try:
+        return datetime.fromisoformat(value).astimezone(timezone)
+
+    except (TypeError, ValueError):
+        return None
+
+
 def _local_moment(
         value: str,
         timezone: ZoneInfo
 ) -> datetime:
-    """ Return a calendar time in the zone the league reads it in.
+    """ Return a calendar time, or stop the run for want of one.
+
+        The reading an event needs.  A time that cannot be read is a
+        shift that cannot be built, and a run that stored it would be
+        one nobody could send; an event the run is only describing
+        reads the same value through '_read_moment' and settles for
+        not knowing.
 
         Args:
             value (str):
@@ -88,16 +135,20 @@ def _local_moment(
                 The same instant, in the league's zone.
     """
 
-    try:
-        return datetime.fromisoformat(value).astimezone(timezone)
+    moment = _read_moment(
+        value=value,
+        timezone=timezone
+    )
 
-    except (TypeError, ValueError) as error:
+    if moment is None:
         message = (
             f'The calendar gave "{value}", which is not a date and '
             'time a shift can be built from.'
         )
         logger.error(message)
-        raise ValidationError(message) from error
+        raise ValidationError(message)
+
+    return moment
 
 
 def _event_from(
@@ -202,11 +253,128 @@ def _opportunity_from(
     )
 
 
-def _calendar_items(
+def _uncollected_from(
+        item: Dict[str, Any],
+        reason: str,
+        timezone: ZoneInfo
+) -> UncollectedEvent:
+    """ Return one calendar item as the record of a thing left out.
+
+        Every field but the identifier and the reason may be absent,
+        because the reasons name exactly the items that are missing
+        something.  A value the calendar gave that cannot be read is
+        recorded as absent rather than stopping the run: this item is
+        not becoming a shift either way, and a run refused for the
+        shape of an event it was never going to collect would be a run
+        nobody could correct.
+
+        Args:
+            item (Dict[str, Any]):
+                A calendar item that will not become an event.
+
+            reason (str):
+                One of '_records.UNCOLLECTED_REASONS'.
+
+            timezone (ZoneInfo):
+                The zone its times are read in.
+
+        Returns:
+            uncollected (UncollectedEvent):
+                The item, as the run records what it left out.
+    """
+
+    times = item_times(gcal_item=item)
+    start = (
+        _read_moment(value=times[0], timezone=timezone)
+        if times is not None
+        else None
+    )
+    end = (
+        _read_moment(value=times[1], timezone=timezone)
+        if times is not None
+        else None
+    )
+
+    return UncollectedEvent(
+        id=item['id'],
+        reason=reason,
+        title=item.get('summary'),
+        # An all-day event carries the day it covers instead of a time,
+        # which is the one thing worth saying about it.
+        date=(
+            start.strftime(ISO_DATE_FORMAT)
+            if start is not None
+            else (item.get('start') or {}).get('date')
+        ),
+        calendar_start=(
+            start.strftime(SIMPLE_TIME_FORMAT)
+            if start is not None
+            else None
+        ),
+        calendar_end=(
+            end.strftime(SIMPLE_TIME_FORMAT)
+            if end is not None
+            else None
+        )
+    )
+
+
+def _uncollected(
+        read: WindowRead,
+        timezone: ZoneInfo
+) -> List[UncollectedEvent]:
+    """ Return what the window held that the run will not collect.
+
+        Three of the reasons come from the item itself and hold
+        whether or not a search found it.  The fourth is the one no
+        item can carry: an event the configured query strings never
+        returned is one nobody looked for, and only the whole window
+        says which those are.
+
+        Args:
+            read (WindowRead):
+                The window as searched and as it stands.
+
+            timezone (ZoneInfo):
+                The zone the calendar's times are read in.
+
+        Returns:
+            uncollected (List[UncollectedEvent]):
+                One record per thing left out, without repeats.
+    """
+
+    searched = {item['id'] for item in read.searched}
+    left_out: Dict[str, UncollectedEvent] = {}
+
+    # The whole window is the only half to walk.  It holds everything
+    # the searches returned as well, so what the searches found is
+    # read off it by identifier rather than by looking at it twice.
+    for item in read.everything:
+        identifier = item['id']
+
+        if identifier in left_out:
+            continue
+
+        reason = exclusion_reason(gcal_item=item)
+
+        if reason is None and identifier in searched:
+            continue
+
+        left_out[identifier] = _uncollected_from(
+            item=item,
+            reason=reason if reason is not None else UNCOLLECTED_SEARCH,
+            timezone=timezone
+        )
+
+    return list(left_out.values())
+
+
+def _window_contents(
         run: Run,
+        timezone: ZoneInfo,
         reporter: Reporter
-) -> List[Dict[str, Any]]:
-    """ Return the calendar items a run's window holds.
+) -> Tuple[List[Dict[str, Any]], List[UncollectedEvent]]:
+    """ Return what a run's window holds, collected and not.
 
         The calendar is searched once per configured query string and
         the results are concatenated, so an event matching two of them
@@ -215,10 +383,19 @@ def _calendar_items(
         show a reviewer two rows for one thing and send Amplify two
         identical shifts.
 
+        What is left out is worked out here, from the same reading, and
+        never from a second read at the moment somebody asks: the
+        figure is shown on every reading of the run, and a live read
+        would cost a calendar request per look and give the run a
+        second opinion about its own window.
+
         Args:
             run (Run):
                 The run being collected, which names the calendar and
                 the days.
+
+            timezone (ZoneInfo):
+                The zone the calendar's times are read in.
 
             reporter (Reporter):
                 Where progress is described.
@@ -234,8 +411,9 @@ def _calendar_items(
                 If the run's window cannot be resolved.
 
         Returns:
-            items (List[Dict[str, Any]]):
-                The items that can become shifts, without repeats.
+            contents (Tuple[List[Dict[str, Any]], List[UncollectedEvent]]):
+                The items that can become shifts, without repeats, and
+                a record of everything else the window held.
     """
 
     calendar = GCALData(
@@ -248,17 +426,20 @@ def _calendar_items(
         start_name='the window start',
         end_name='the window end'
     )
-    collected = calendar.get_gcal_shift_data(
+    read = calendar.read_window(
         timeMin=window_start,
         timeMax=window_end
     )
-    filtered = calendar.filter_gcal_items(gcal_shift_data=collected)
+    filtered = calendar.filter_gcal_items(gcal_shift_data=read.searched)
     seen: Dict[str, Dict[str, Any]] = {}
 
     for item in filtered:
         seen.setdefault(item['id'], item)
 
-    return list(seen.values())
+    return (
+        list(seen.values()),
+        _uncollected(read=read, timezone=timezone)
+    )
 
 
 def _require_one_timing(
@@ -429,7 +610,9 @@ def collect(
         Everything the collection produces is written in one
         transaction.  A run left holding events but no opportunities
         would label none of them, and a reader could not tell that
-        from a run whose opportunities Amplify had forgotten.
+        from a run whose opportunities Amplify had forgotten.  What the
+        window held and the run left out is written there too, for the
+        same reason: the two describe one reading of one window.
 
         Args:
             connection (sqlite3.Connection):
@@ -467,10 +650,16 @@ def collect(
         logger.error(message)
         raise ValidationError(message)
 
-    events, opportunities = _collected(
-        items=_calendar_items(run=run, reporter=reporter),
+    timezone = gcal_timezone()
+    items, uncollected = _window_contents(
         run=run,
-        timezone=gcal_timezone(),
+        timezone=timezone,
+        reporter=reporter
+    )
+    events, opportunities = _collected(
+        items=items,
+        run=run,
+        timezone=timezone,
         helpers=Helpers(),
         reporter=reporter
     )
@@ -498,6 +687,10 @@ def collect(
         runs.set_opportunities(
             run_id=run_id,
             opportunities=opportunities
+        )
+        UncollectedRepository(connection=connection).replace(
+            run_id=run_id,
+            uncollected=uncollected
         )
         runs.set_status(
             run_id=run_id,

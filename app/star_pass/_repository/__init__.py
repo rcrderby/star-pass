@@ -38,6 +38,7 @@ from ._jobs import JobRepository
 from ._revisions import RevisionRepository
 from ._runs import RunRepository
 from ._sent import SentShiftRepository
+from ._uncollected import UncollectedRepository
 
 __all__ = [
     'ChangeLogRepository',
@@ -46,5 +47,6 @@ __all__ = [
     'JobRepository',
     'RevisionRepository',
     'RunRepository',
-    'SentShiftRepository'
+    'SentShiftRepository',
+    'UncollectedRepository'
 ]

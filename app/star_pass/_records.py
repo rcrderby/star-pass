@@ -116,6 +116,12 @@ class Run:
                 Either way the event cannot become a shift, and a run
                 holding one cannot be sent.
 
+            uncollected_count (int):
+                How many things the run's window held that did not
+                become events.  Derived by counting the rows the
+                collection stored, so the figure beside the run and
+                the list behind it are one answer.
+
             active_job_id (str, optional):
                 Identifier of the job still working on the run, or
                 None when nothing is.  Derived, and what makes a run
@@ -135,6 +141,7 @@ class Run:
     event_count: int
     shift_count: int
     unmatched_count: int
+    uncollected_count: int
     active_job_id: Optional[str]
 
 
@@ -336,6 +343,75 @@ class Event:
     match: Optional[Match] = None
     added_by_hand: bool = False
     roles: Tuple[EventRole, ...] = field(default_factory=tuple)
+
+
+# Why something in a run's window did not become one of its events.
+# Three of them are what the calendar filter drops: a title the
+# deployment never collects, an all-day event with no times to build a
+# shift from, and an event with no title to match.  The fourth is the
+# one the filter never sees -- an event the configured query strings
+# did not return -- and it is the only one a person may pull in, since
+# the other three describe events that cannot become a correct shift
+# rather than events nobody looked for.
+UNCOLLECTED_SEARCH = 'search'
+UNCOLLECTED_EXCLUDED = 'excluded'
+UNCOLLECTED_ALL_DAY = 'allday'
+UNCOLLECTED_UNTITLED = 'untitled'
+UNCOLLECTED_REASONS = (
+    UNCOLLECTED_SEARCH,
+    UNCOLLECTED_EXCLUDED,
+    UNCOLLECTED_ALL_DAY,
+    UNCOLLECTED_UNTITLED
+)
+
+
+@dataclass(frozen=True)
+class UncollectedEvent:
+    """ Something in a run's window that did not become an event.
+
+        Stored while the run is collected rather than worked out when
+        somebody asks: the count is shown on every load of the review
+        screen, and reading the calendar again to produce it would
+        make looking at a run cost a Google request and give the run
+        a second source of truth about its own window.
+
+        Every field but the identifier and the reason may be absent,
+        because the reasons describe exactly the events that are
+        missing something: an untitled event has no title and an
+        all-day event has no times.
+
+        Attributes:
+            id (str):
+                Calendar identifier of the event.  The same identifier
+                an event of the run carries, so a row that was later
+                pulled in can be recognised.
+
+            reason (str):
+                One of 'UNCOLLECTED_REASONS'.
+
+            title (str, optional):
+                Event title, or None when it has none.
+
+            date (str, optional):
+                Day of the event as an ISO date, in the league's own
+                time zone, or None when the calendar gave a value that
+                could not be read as one.
+
+            calendar_start (str, optional):
+                Start time on the calendar, or None for an all-day
+                event, which has none.
+
+            calendar_end (str, optional):
+                End time on the calendar, or None for an all-day
+                event.
+    """
+
+    id: str
+    reason: str
+    title: Optional[str] = None
+    date: Optional[str] = None
+    calendar_start: Optional[str] = None
+    calendar_end: Optional[str] = None
 
 
 @dataclass(frozen=True)

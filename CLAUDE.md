@@ -28,7 +28,12 @@ through the Amplify API. It is run once per month.
 - `app/star_pass/gcal_data.py` — read a Google Calendar window
   (`GCALData`): the paged request and the filter that removes items
   which must not become shifts. Construction sends nothing; the caller
-  supplies the window, because a run carries its own.
+  supplies the window, because a run carries its own. `read_window`
+  reads it twice — as the deployment searches it and, when the two
+  differ, whole — because the events nobody looked for are the ones
+  the configured query strings never returned. Why an item must not
+  become a shift is `exclusion_reason`'s single answer, read by the
+  filter and by the record of what a run left out.
 - `app/star_pass/_gcal_time.py` — reading a search window's bounds
   (`resolve_window`) and the zone an offset-less value is read in
   (`gcal_timezone`). A bound without a UTC offset is local time in
@@ -52,9 +57,10 @@ through the Amplify API. It is run once per month.
   own `user_version` pragma.
 - `app/star_pass/_records.py` — the frozen dataclasses the repository
   layer stores and returns (`Run`, `Revision`, `Opportunity`, `Event`,
-  `EventRole`, `LogEntry`).
+  `EventRole`, `UncollectedEvent`, `LogEntry`).
 - `app/star_pass/_repository/` — runs, their revisions, the events in
-  each revision, the `change_log` of edits made to them, the jobs
+  each revision, what each run's window held and the run left out, the
+  `change_log` of edits made to them, the jobs
   that long operations are watched through, the shifts a send put into
   Amplify, and the reservations made against idempotency keys. The last
   two are separate because they answer different questions — which rows
@@ -86,7 +92,13 @@ through the Amplify API. It is run once per month.
   event that cannot become a correct shift stops the run and is named,
   including two cases about what a stored event can express: a
   category whose need IDs disagree about their offsets, and a shift
-  that would run past midnight.
+  that would run past midnight. It also records what it did **not**
+  collect, with the reason for each — a title the deployment never
+  collects, an all-day or untitled event, or an event no configured
+  query string returned. Stored while the window is read and never
+  worked out later: the figure is shown on every reading of the run,
+  and a live calendar read would cost a request per look and give the
+  run a second opinion about its own window.
 - `app/star_pass/_shift_timing.py` — what a category asks of an event
   and the shift times it produces (`role_timings`, `shift_times`).
   Below both callers: collection works them out from a calendar item
