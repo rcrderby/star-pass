@@ -46,6 +46,7 @@ from ._schemas import (
     RunCountsView,
     RunDetailView,
     RunView,
+    SkippedShiftView,
     WindowRequest,
     WindowView
 )
@@ -75,6 +76,7 @@ __all__ = [
     'RunCountsView',
     'RunDetailView',
     'RunView',
+    'SkippedShiftView',
     'WindowRequest',
     'WindowView',
     'already_sent',

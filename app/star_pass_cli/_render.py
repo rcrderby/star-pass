@@ -95,14 +95,27 @@ REVISION_HEADERS = (
     'CURRENT'
 )
 
-# What a previewed opportunity's row shows, in order.
+# What a previewed opportunity's row shows, in order.  'SHIFTS' is
+# what would arrive and 'EXISTS' is what is already there, kept apart
+# because a reader adding them together would be counting a send twice.
 PREVIEW_HEADERS = (
     'NEED',
     'TITLE',
     'SHIFTS',
+    'EXISTS',
     'SLOTS',
     'FIRST',
     'LAST'
+)
+
+# What a shift Amplify already has shows, in order.  Per shift rather
+# than as a count, so a reader checking whether the right rows are
+# being left out has the days and times to check (D16).
+SKIPPED_HEADERS = (
+    'NEED',
+    'DATE',
+    'START',
+    'END'
 )
 
 # What a blocked event's row shows, in order.
@@ -639,9 +652,32 @@ def preview_row(
         row['needId'],
         shown(row['title']),
         str(row['willCreate']),
+        str(row['alreadyInAmplify']),
         str(row['slots']),
-        row['firstDate'],
-        row['lastDate']
+        shown(row['firstDate']),
+        shown(row['lastDate'])
+    ]
+
+
+def skipped_row(
+        shift: Dict[str, Any]
+) -> List[str]:
+    """ Return one shift Amplify already has, as a row.
+
+        Args:
+            shift (Dict[str, Any]):
+                A skipped shift from an answer.
+
+        Returns:
+            row (List[str]):
+                One value per column in 'SKIPPED_HEADERS'.
+    """
+
+    return [
+        shift['needId'],
+        shift['date'],
+        shift['shiftStart'],
+        shift['shiftEnd']
     ]
 
 
@@ -688,6 +724,7 @@ def preview_totals(
     return labelled(
         pairs=(
             ('Would create', str(totals['willCreate'])),
+            ('Already in Amplify', str(totals['alreadyInAmplify'])),
             ('Repeated rows', str(totals['repeatedRows'])),
             ('Blocking events', str(totals['blockingEvents']))
         )
@@ -705,8 +742,9 @@ def preview_text(
 
         Returns:
             text (str):
-                The totals, what each opportunity would receive, and
-                every reason an event cannot be sent.
+                The totals, what each opportunity would receive, the
+                shifts Amplify already has, and every reason an event
+                cannot be sent.
     """
 
     parts = [preview_totals(totals=answer['totals'])]
@@ -720,6 +758,17 @@ def preview_text(
             headers=PREVIEW_HEADERS,
             rows=[preview_row(row=row) for row in answer['rows']],
             empty='Nothing would be created.'
+        )
+    )
+    parts.append(
+        section(
+            heading='ALREADY IN AMPLIFY',
+            headers=SKIPPED_HEADERS,
+            rows=[
+                skipped_row(shift=shift)
+                for shift in answer['skipped']
+            ],
+            empty='Amplify has none of these shifts yet.'
         )
     )
     parts.append(

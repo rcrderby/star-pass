@@ -10,13 +10,11 @@
 # pylint: disable=missing-function-docstring,missing-class-docstring
 
 # Imports - Python Standard Library
-import json
 import sqlite3
 from typing import Any, Callable, Dict, List
 
 # Imports - Third-Party
 import pytest
-from requests import Response
 
 # Imports - Local
 from star_pass import _models
@@ -103,7 +101,9 @@ def a_model(categories: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @pytest.fixture(name='answers')
-def fixture_answers(monkeypatch: pytest.MonkeyPatch) -> Callable[..., None]:
+def fixture_answers(
+    answer_requests: Callable[[Callable[[str], Dict[str, Any]]], None]
+) -> Callable[..., None]:
     """ Return a way to script the calendar and Amplify answers. """
 
     def script(
@@ -125,25 +125,14 @@ def fixture_answers(monkeypatch: pytest.MonkeyPatch) -> Callable[..., None]:
                 'data': {'need_title': f'Need {url.rsplit("/", 1)[-1]}'}
             }
 
-        def send(_self: Any, api_request_data: Dict[str, Any], **_: Any):
-            url = api_request_data['url']
-            body = (
-                need_body(url=url)
-                if '/needs/' in url
-                else {'items': items}
-            )
-            response = Response()
-            response.status_code = 200
-            response.headers['Content-Type'] = 'application/json'
-            # pylint: disable-next=protected-access
-            response._content = json.dumps(body).encode('utf-8')
+        def body_for(url: str) -> Dict[str, Any]:
+            """ Return the body for one address. """
+            if '/needs/' in url:
+                return need_body(url=url)
 
-            return response
+            return {'items': items}
 
-        monkeypatch.setattr(
-            'star_pass._helpers.Helpers.send_api_request',
-            send
-        )
+        answer_requests(body_for)
 
     return script
 

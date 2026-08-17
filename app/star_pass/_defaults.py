@@ -46,6 +46,8 @@ AMPLIFY_DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
 # Amplify returns shift/response datetimes with seconds.
 AMPLIFY_SHIFT_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 FILE_NAME_DATE_TIME_FORMAT = '%Y-%m-%dT%H_%M_%S_%f'
+# How a date is written wherever one is stored or compared.
+ISO_DATE_FORMAT = '%Y-%m-%d'
 SIMPLE_DATE_FORMAT = '%A, %B %d %Y'
 SIMPLE_TIME_FORMAT = '%H:%M'
 

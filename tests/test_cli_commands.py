@@ -12,7 +12,7 @@
 
 # Imports - Python Standard Library
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Tuple
 
 # Imports - Third-Party
 import pytest
@@ -24,6 +24,11 @@ from star_pass_cli import _mode, _render
 from star_pass_cli._commands import COMMANDS, GROUPS, run_command, selected
 from star_pass_client import Client, LocalClient
 from star_pass_contract import EventView
+
+# Constants
+# The opportunity every fixture's events send to, and so the row a
+# preview's tables are found by.
+NEED_ID = '905196'
 
 
 @pytest.fixture(name='build_parser')
@@ -56,6 +61,47 @@ def fixture_cli(
         return run_command(args=build_parser().parse_args(argv))
 
     return run
+
+
+@pytest.fixture(name='previewed')
+def fixture_previewed(
+    capsys: pytest.CaptureFixture,
+    cli: Callable[..., int]
+) -> Callable[[str], Tuple[str, list]]:
+    """ Return a way to preview a run and read the rows about an
+        opportunity.
+
+        The rows are the displayed lines split into their columns, in
+        the order the preview shows them: the opportunity's own row
+        first, then any shift Amplify already has.
+    """
+
+    def read(run_id: str) -> Tuple[str, list]:
+        """ Preview the run and return the output and those rows. """
+        cli('runs', 'preview', run_id)
+        shown = capsys.readouterr().out
+
+        return shown, [
+            line.split()
+            for line in shown.splitlines()
+            if line.startswith(NEED_ID)
+        ]
+
+    return read
+
+
+@pytest.fixture(name='holding_nothing')
+def fixture_holding_nothing(
+    amplify_holds: Callable[..., None]
+) -> None:
+    """ Answer every opportunity read with an opportunity holding none.
+
+        A preview reads them live, so a test about how a preview is
+        displayed still has to say what Amplify holds.
+    """
+    amplify_holds()
+
+    return None
 
 
 class TestChoosingAMode:
@@ -255,8 +301,11 @@ class TestPreviewingARun:
         self,
         capsys: pytest.CaptureFixture,
         cli: Callable[..., int],
+        holding_nothing: None,
         populated: str
     ) -> None:
+        del holding_nothing
+
         status = cli('runs', 'preview', populated)
         shown = capsys.readouterr().out
 
@@ -268,10 +317,13 @@ class TestPreviewingARun:
         self,
         capsys: pytest.CaptureFixture,
         cli: Callable[..., int],
+        holding_nothing: None,
         populated: str
     ) -> None:
         # The identifier the contract publishes is written for a
         # program to branch on; a person is told what it means.
+        del holding_nothing
+
         cli('runs', 'preview', populated)
         shown = capsys.readouterr().out
 
@@ -282,13 +334,70 @@ class TestPreviewingARun:
         self,
         capsys: pytest.CaptureFixture,
         cli: Callable[..., int],
+        holding_nothing: None,
         populated: str
     ) -> None:
         # A reader skimming the totals should not think the blocked
         # events below cost them only those shifts.
+        del holding_nothing
+
         cli('runs', 'preview', populated)
 
         assert _render.NOTHING_SENDABLE in capsys.readouterr().out
+
+    def test_a_shift_amplify_already_has_is_shown_as_skipped(
+        self,
+        previewed: Callable[[str], Tuple[str, list]],
+        amplify_holds: Callable[..., None],
+        make_amplify_shift: Callable[..., dict],
+        populated: str
+    ) -> None:
+        # Named per shift rather than only counted, so a reader can
+        # check that the right rows are being left out (D16).
+        amplify_holds({NEED_ID: [make_amplify_shift()]})
+
+        shown, (opportunity, skipped) = previewed(populated)
+
+        assert 'Already in Amplify' in shown
+        # The last five columns are what would be created, what is
+        # already there, the volunteers wanted, and the days.
+        assert opportunity[-5:] == [
+            '1',
+            '1',
+            '4',
+            '2026-09-03',
+            '2026-09-03'
+        ]
+        assert skipped == [NEED_ID, '2026-09-03', '19:15', '21:30']
+
+    def test_a_row_names_the_first_and_last_day_in_that_order(
+        self,
+        previewed: Callable[[str], Tuple[str, list]],
+        holding_nothing: None,
+        collected: str,
+        add_second_event: Callable[..., None]
+    ) -> None:
+        del holding_nothing
+
+        add_second_event(date='2026-09-10')
+        _shown, (row,) = previewed(collected)
+
+        assert row[-2:] == ['2026-09-03', '2026-09-10']
+
+    def test_a_row_creating_nothing_shows_no_days(
+        self,
+        previewed: Callable[[str], Tuple[str, list]],
+        amplify_holds: Callable[..., None],
+        make_amplify_shift: Callable[..., dict],
+        collected: str
+    ) -> None:
+        # The dates are the days about to arrive in Amplify, and none
+        # are; a blank column would read as a rendering fault.
+        amplify_holds({NEED_ID: [make_amplify_shift()]})
+
+        _shown, (row, _skipped) = previewed(collected)
+
+        assert row[-2:] == [_render.NOTHING, _render.NOTHING]
 
 
 class TestShowingAJob:

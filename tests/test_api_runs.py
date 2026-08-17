@@ -86,9 +86,16 @@ def fixture_first_event(
 
 @pytest.fixture(name='read_preview')
 def fixture_read_preview(
-    running_client: TestClient
+    running_client: TestClient,
+    amplify_holds: Callable[..., None]
 ) -> Callable[[str], Dict[str, Any]]:
-    """ Return a way to read one run's preview. """
+    """ Return a way to read one run's preview.
+
+        Amplify answers that its opportunities hold nothing unless the
+        test says otherwise.  A preview reads every one of them live,
+        so a test that arranged nothing would be making a request.
+    """
+    amplify_holds()
 
     def read(run_id: str) -> Dict[str, Any]:
         """ Read the preview, failing the test if it was not found. """
@@ -652,6 +659,7 @@ class TestPreviewingASend:
     ) -> None:
         assert read_preview(collected)['totals'] == {
             'willCreate': 1,
+            'alreadyInAmplify': 0,
             'repeatedRows': 0,
             'blockingEvents': 0
         }
@@ -699,6 +707,7 @@ class TestPreviewingASend:
 
         assert read_preview(collected)['totals'] == {
             'willCreate': 1,
+            'alreadyInAmplify': 0,
             'repeatedRows': 1,
             'blockingEvents': 0
         }
@@ -768,6 +777,47 @@ class TestPreviewingASend:
         )
 
         assert read_preview(edited)['totals']['willCreate'] == 2
+
+    def test_a_shift_amplify_already_has_is_skipped(
+        self,
+        read_preview: Callable[[str], Dict[str, Any]],
+        amplify_holds: Callable[..., None],
+        make_amplify_shift: Callable[..., dict],
+        collected: str
+    ) -> None:
+        # Read from the opportunity itself, not from any record of what
+        # this run sent: a shift somebody created by hand is in neither.
+        amplify_holds({'905196': [make_amplify_shift()]})
+
+        document = read_preview(collected)
+
+        assert document['totals']['willCreate'] == 0
+        assert document['totals']['alreadyInAmplify'] == 1
+        assert document['skipped'] == [
+            {
+                'needId': '905196',
+                'date': '2026-09-03',
+                'shiftStart': '19:15',
+                'shiftEnd': '21:30'
+            }
+        ]
+
+    def test_an_opportunity_holding_the_shift_says_so_in_its_row(
+        self,
+        read_preview: Callable[[str], Dict[str, Any]],
+        amplify_holds: Callable[..., None],
+        make_amplify_shift: Callable[..., dict],
+        collected: str,
+        add_second_event: Callable[..., None]
+    ) -> None:
+        add_second_event(date='2026-09-10')
+        amplify_holds({'905196': [make_amplify_shift()]})
+
+        row = read_preview(collected)['rows'][0]
+
+        assert row['willCreate'] == 1
+        assert row['alreadyInAmplify'] == 1
+        assert row['firstDate'] == '2026-09-10'
 
     def test_an_unknown_run_is_not_found(
         self,

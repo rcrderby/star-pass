@@ -73,18 +73,27 @@ through the Amplify API. It is run once per month.
   including two cases about what a stored event can express: a
   category whose need IDs disagree about their offsets, and a shift
   that would run past midnight.
-- `app/star_pass/_opportunities.py` — reading an Amplify opportunity's
-  title, and building the public address it is published at. Below
-  both callers, because collection stores the title on the run and the
-  shift preview reads the same one.
+- `app/star_pass/_opportunities.py` — reading an Amplify opportunity:
+  its title, the shifts it already holds, and the public address it is
+  published at. Below every caller, because collection stores the
+  title on the run, the shift preview reads the same one, and the
+  preview and the send both ask what Amplify already has. One request
+  answers title and shifts together. A shift whose times cannot be
+  read is logged and left out, which is the only case where a row that
+  exists is counted as absent; a shift crossing midnight is left out
+  silently, because collection refuses to store one and so no run
+  could have created it.
 - `app/star_pass/_preview.py` — what sending a revision would create,
   worked out before it does: totals, a row per Amplify opportunity,
-  and every reason an event cannot be sent. Grouped by opportunity and
-  never by category, and counted by shift identity
-  (`_derived.shift_identity`) rather than by how many events there
-  are. In the core because the CLI previews the same run. It does not
-  yet say which shifts Amplify already has; that needs the live read
-  written with the send path.
+  the shifts Amplify already has, and every reason an event cannot be
+  sent. Grouped by opportunity and never by category, and counted by
+  shift identity (`_derived.shift_identity`) rather than by how many
+  events there are. In the core because the CLI previews the same run.
+  A shift Amplify already holds is reported as skipped rather than
+  counted in what would be created, so the number the confirmation
+  restates (D11) is the number of rows that arrive. The live answer is
+  a required parameter with no default: a preview cannot be produced
+  without having asked.
 - `app/star_pass/_job_runner.py` — `JobRunner`, which runs a job's
   work on a thread and records how it ended, and `JobReporter`, a
   `Reporter` that writes the core's progress calls to the job's event

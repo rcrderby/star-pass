@@ -25,6 +25,7 @@ from ._records import Match, MATCH_KIND_FUZZY, MATCH_KIND_KEYWORD
 
 # Constants
 AMPLIFY_DATE_TIME_FORMAT = _defaults.AMPLIFY_DATE_TIME_FORMAT
+AMPLIFY_SHIFT_DATETIME_FORMAT = _defaults.AMPLIFY_SHIFT_DATETIME_FORMAT
 ENV_FILE_PATH = _defaults.ENV_FILE_PATH
 FILE_ENCODING = _defaults.FILE_ENCODING
 FUZZY_MATCH_THRESHOLD = _defaults.FUZZY_MATCH_THRESHOLD
@@ -64,6 +65,45 @@ def amplify_headers() -> Dict[str, str]:
     )
 
     return headers
+
+
+def parse_amplify_datetime(
+        value: Any
+) -> Optional[datetime]:
+    """ Return an Amplify datetime as a datetime, or None.
+
+        Here rather than beside either caller.  The sign-up summary
+        reads a shift's start to decide whether it falls in its window,
+        and the shift preview reads the same field to decide whether
+        Amplify already has a row (D16).  Two readings of one format
+        could disagree about a value with no seconds in it, and the
+        disagreement would show up as a shift sent twice.
+
+        Amplify writes datetimes as naive local values, so what comes
+        back carries no zone and is directly comparable with another
+        one from the same source.
+
+        Args:
+            value (Any):
+                A datetime string, as Amplify writes one, or None.
+
+        Returns:
+            parsed (datetime | None):
+                The datetime, or None when the value is missing or is
+                not one.
+    """
+
+    for date_time_format in (
+        AMPLIFY_SHIFT_DATETIME_FORMAT,
+        AMPLIFY_DATE_TIME_FORMAT
+    ):
+        try:
+            return datetime.strptime(value, date_time_format)
+
+        except (TypeError, ValueError):
+            continue
+
+    return None
 
 
 @dataclass(frozen=True)

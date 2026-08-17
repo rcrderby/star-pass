@@ -20,7 +20,7 @@ from ._exceptions import ValidationError
 from ._helpers import amplify_headers, Helpers, load_env_file
 from ._reporting import Reporter, ShiftBatch
 from ._logging import get_logger
-from ._opportunities import read_title
+from ._opportunities import read_need, title_of
 from ._validation import validate_shift_columns, validate_shift_need_ids
 
 # Load environment variables
@@ -715,10 +715,12 @@ class CreateShifts:  # pylint: disable=too-many-instance-attributes
                     Opportunity title.
         """
 
-        return read_title(
-            helpers=self.helpers,
-            need_id=need_id,
-            timeout=timeout
+        return title_of(
+            need=read_need(
+                helpers=self.helpers,
+                need_id=need_id,
+                timeout=timeout
+            )
         )
 
     def create_new_shifts(

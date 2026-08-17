@@ -313,13 +313,22 @@ class TestTheTwoModesAgree:
     def test_the_preview_reads_the_same(
         self,
         both: Callable[..., Tuple[Any, Any]],
+        amplify_holds: Callable[..., None],
+        make_amplify_shift: Callable[..., dict],
         populated: str
     ) -> None:
+        # Amplify holds one of the shifts, so the two modes are
+        # compared on the live read as well: a mode that skipped asking
+        # would promise a row the other one knows will not arrive.
+        amplify_holds({'905196': [make_amplify_shift()]})
+
         local, remote = both('get_preview', run_id=populated)
 
         assert local == remote
         assert local['totals']['willCreate']
+        assert local['totals']['alreadyInAmplify']
         assert local['totals']['repeatedRows']
+        assert local['skipped']
         assert local['blockers']
 
     def test_a_job_reads_the_same(
