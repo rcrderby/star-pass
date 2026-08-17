@@ -903,3 +903,54 @@ def event_line(
     )
 
     return f'{said} {about}'.rstrip()
+
+
+def send_restatement(
+        run: Dict[str, Any],
+        preview: Dict[str, Any]
+) -> str:
+    """ Return what a send is about to do, for somebody to read.
+
+        The three things D11 asks a confirmation to restate: how many
+        shifts, over which days, and to which opportunities.  Built
+        from the same row renderer 'runs preview' uses, so what
+        somebody confirms is what they were shown.
+
+        Args:
+            run (Dict[str, Any]):
+                The run, which names the calendar and the window.
+
+            preview (Dict[str, Any]):
+                What sending it would create.
+
+        Returns:
+            text (str):
+                The restatement.
+    """
+
+    totals = preview['totals']
+
+    return '\n\n'.join(
+        (
+            labelled(
+                pairs=(
+                    ('Run', run['id']),
+                    ('Calendar', run['calendar']),
+                    ('Window', window_text(window=run['window'])),
+                    ('Would create', str(totals['willCreate'])),
+                    (
+                        'Already in Amplify',
+                        str(totals['alreadyInAmplify'])
+                    )
+                )
+            ),
+            section(
+                heading='OPPORTUNITIES',
+                headers=PREVIEW_HEADERS,
+                rows=[
+                    preview_row(row=row) for row in preview['rows']
+                ],
+                empty='Nothing would be created.'
+            )
+        )
+    )

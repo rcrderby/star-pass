@@ -15,7 +15,7 @@
 # pylint: disable=missing-function-docstring,missing-class-docstring
 
 # Imports - Python Standard Library
-from typing import Any, Callable
+from typing import Any, Callable, Dict, List, Tuple
 
 # Imports - Third-Party
 import pytest
@@ -30,6 +30,10 @@ from star_pass._repository import JobRepository, RunRepository
 from star_pass_cli import _render
 from star_pass_cli._commands import run_command
 from star_pass_client._stream import StreamEvent
+
+# Constants
+# The opportunity every fixture's events send to.
+NEED_ID = '905196'
 
 
 @pytest.fixture(name='collecting_locally')
@@ -378,3 +382,289 @@ class TestWatchingAndResumingAJob:
 
         assert status == 1
         assert 'resumed' in capsys.readouterr().out
+
+
+@pytest.fixture(name='sending_locally')
+def fixture_sending_locally(
+    monkeypatch: pytest.MonkeyPatch,
+    amplify_holds: Callable[..., list]
+) -> None:
+    """ Replace the sending a local command carries out.
+
+        What a send does is pinned in 'test_send.py'.  These tests ask
+        what the command puts to the operator before it, and what it
+        does with each answer.  The opportunity read the endpoint makes
+        before deciding is still answered, because that read is what
+        the confirmed count comes from.
+    """
+    amplify_holds()
+
+    def nothing(**parameters: Any) -> None:
+        """ Stand in for the send. """
+        del parameters
+
+    monkeypatch.setattr('star_pass_client._local_writes.send', nothing)
+
+    return None
+
+
+@pytest.fixture(name='asking_to_send')
+def fixture_asking_to_send(
+    capsys: pytest.CaptureFixture,
+    cli: Callable[..., int],
+    sending_locally: None,
+    collected: str
+) -> Callable[[], Tuple[int, str]]:
+    """ Return a way to ask for a send of the collected run.
+
+        One fixture rather than four on every test: the arrangement is
+        a single thing -- a run that could be sent, and a send that
+        does not reach Amplify -- and what each test varies is only the
+        answer given to the question.
+    """
+    del sending_locally
+
+    def ask() -> Tuple[int, str]:
+        """ Ask, and return how it went and what was written. """
+        return cli('runs', 'send', collected), capsys.readouterr().out
+
+    return ask
+
+
+@pytest.fixture(name='asked_to_send')
+def fixture_asked_to_send(
+    monkeypatch: pytest.MonkeyPatch
+) -> List[Dict[str, Any]]:
+    """ Answer a send without a service, keeping what it was asked.
+
+        A client rather than a database, because what these tests ask
+        is what the command puts to the operator and what it passes on
+        afterwards -- not what the send then does, which is pinned in
+        'test_send.py'.
+    """
+    asked: List[Dict[str, Any]] = []
+
+    class Sending:
+        """ A client with one run, three shifts to create, and a memory. """
+
+        @staticmethod
+        def get_run(run_id: str) -> Dict[str, Any]:
+            """ Return the run being sent. """
+            return {
+                'id': run_id,
+                'calendar': 'events',
+                'window': {
+                    'start': '2026-09-01',
+                    'end': '2026-10-01',
+                    'timezone': 'America/Los_Angeles'
+                }
+            }
+
+        @staticmethod
+        def get_preview(run_id: str) -> Dict[str, Any]:
+            """ Return what sending it would create. """
+            del run_id
+
+            return {
+                'totals': {
+                    'willCreate': 3,
+                    'alreadyInAmplify': 1,
+                    'repeatedRows': 0,
+                    'blockingEvents': 0
+                },
+                'rows': [],
+                'skipped': [],
+                'blockers': []
+            }
+
+        @staticmethod
+        def send_run(**parameters: Any) -> Dict[str, Any]:
+            """ Record what the send was asked for. """
+            asked.append(parameters)
+
+            return {
+                'id': 'a-job',
+                'runId': parameters['run_id'],
+                'kind': 'send',
+                'status': 'queued',
+                'createdAt': '2026-09-01T00:00:00+00:00',
+                'startedAt': None,
+                'finishedAt': None,
+                'detail': None
+            }
+
+    monkeypatch.setattr(
+        'star_pass_cli._commands.client_for',
+        lambda api_url: Sending()
+    )
+
+    return asked
+
+
+@pytest.fixture(name='answering')
+def fixture_answering(
+    monkeypatch: pytest.MonkeyPatch
+) -> Callable[[str], None]:
+    """ Return a way to sit a person at a terminal with an answer. """
+
+    def sits(answer: str) -> None:
+        """ Answer the next question with that. """
+        monkeypatch.setattr(
+            'star_pass_cli._confirm.sys.stdin.isatty',
+            lambda: True
+        )
+        monkeypatch.setattr('builtins.input', lambda: answer)
+
+    return sits
+
+
+class TestConfirmingASend:
+    def test_what_is_about_to_happen_is_restated(
+        self,
+        asking_to_send: Callable[[], Tuple[int, str]],
+        answering: Callable[[str], None]
+    ) -> None:
+        # The confirmation's job is to make somebody read the summary
+        # (D11), so it says the count, the window and the
+        # opportunities before it asks.
+        answering('n')
+
+        _status, shown = asking_to_send()
+
+        assert 'Would create' in shown
+        assert '2026-09-01' in shown
+        assert NEED_ID in shown
+
+    def test_an_answer_of_yes_sends(
+        self,
+        asking_to_send: Callable[[], Tuple[int, str]],
+        answering: Callable[[str], None]
+    ) -> None:
+        answering('y')
+
+        status, shown = asking_to_send()
+
+        assert status == 0
+        assert 'send' in shown
+        assert 'succeeded' in shown
+
+    def test_an_answer_of_no_sends_nothing(
+        self,
+        asking_to_send: Callable[[], Tuple[int, str]],
+        answering: Callable[[str], None],
+        jobs: JobRepository,
+        collected: str
+    ) -> None:
+        answering('n')
+
+        status, shown = asking_to_send()
+
+        assert status == 0
+        assert 'Nothing was sent' in shown
+        assert jobs.list_for_run(run_id=collected) == []
+
+    def test_pressing_return_sends_nothing(
+        self,
+        asking_to_send: Callable[[], Tuple[int, str]],
+        answering: Callable[[str], None],
+        jobs: JobRepository,
+        collected: str
+    ) -> None:
+        # The safe answer is the one somebody gets without reading.
+        answering('')
+
+        _status, shown = asking_to_send()
+
+        assert 'Nothing was sent' in shown
+        assert jobs.list_for_run(run_id=collected) == []
+
+    def test_no_terminal_is_not_a_yes(
+        self,
+        asking_to_send: Callable[[], Tuple[int, str]],
+        jobs: JobRepository,
+        collected: str
+    ) -> None:
+        # A gate with a way around it is a gate somebody eventually
+        # goes around, and what is behind this one cannot be undone.
+        status, shown = asking_to_send()
+
+        assert status == 1
+        assert 'no terminal' in shown
+        assert jobs.list_for_run(run_id=collected) == []
+
+    def test_a_run_with_nothing_left_to_send_is_not_asked_about(
+        self,
+        asking_to_send: Callable[[], Tuple[int, str]],
+        amplify_holds: Callable[..., list],
+        make_amplify_shift: Callable[..., dict]
+    ) -> None:
+        # There is nothing to confirm, and asking whether to do
+        # something irreversible that is not going to happen reads as
+        # a warning about nothing.
+        amplify_holds({NEED_ID: [make_amplify_shift()]})
+
+        status, shown = asking_to_send()
+
+        assert status == 0
+        assert 'already has every shift' in shown
+
+    def test_the_count_restated_is_the_count_that_would_arrive(
+        self,
+        capsys: pytest.CaptureFixture,
+        build_parser: Callable[[], Any],
+        asked_to_send: List[Dict[str, Any]],
+        answering: Callable[[str], None]
+    ) -> None:
+        # The number somebody reads is the number of rows that will
+        # arrive, net of what Amplify already holds; a restatement
+        # saying anything else is a warning about the wrong thing.
+        del asked_to_send
+        answering('n')
+
+        run_command(
+            args=build_parser().parse_args(['runs', 'send', 'a-run'])
+        )
+        said = [
+            line.split()[-1]
+            for line in capsys.readouterr().out.splitlines()
+            if line.startswith(('Would create', 'Already in Amplify'))
+        ]
+
+        assert said == ['3', '1']
+
+    def test_the_count_confirmed_is_the_count_sent(
+        self,
+        build_parser: Callable[[], Any],
+        asked_to_send: List[Dict[str, Any]],
+        answering: Callable[[str], None]
+    ) -> None:
+        # The service checks it again against its own reading, which
+        # is what catches a run that moved between the question and
+        # the answer.
+        answering('y')
+
+        run_command(
+            args=build_parser().parse_args(['runs', 'send', 'a-run'])
+        )
+
+        assert asked_to_send[0]['body'] == {'expectedShiftCount': 3}
+
+    def test_each_attempt_is_claimed_under_a_key_of_its_own(
+        self,
+        build_parser: Callable[[], Any],
+        asked_to_send: List[Dict[str, Any]],
+        answering: Callable[[str], None]
+    ) -> None:
+        # The key stops one request being carried out twice; what
+        # stops a row being created twice is the live read the send
+        # makes, which holds however many attempts there are.
+        answering('y')
+        words = ['runs', 'send', 'a-run']
+
+        run_command(args=build_parser().parse_args(words))
+        run_command(args=build_parser().parse_args(words))
+
+        keys = [asked['idempotency_key'] for asked in asked_to_send]
+
+        assert all(keys)
+        assert len(set(keys)) == 2
