@@ -12,7 +12,7 @@
 
 # Imports - Python Standard Library
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Tuple
 
 # Imports - Third-Party
 import pytest
@@ -211,38 +211,42 @@ class TestWhatPullingOneInAnswers:
 
 
 class TestTheListItWasPulledFrom:
-    def test_the_event_stops_being_addable(
+    @pytest.fixture(name='around')
+    def fixture_around(
         self,
         add: Callable[..., Any],
         collected: str,
         groups: Callable[[str], List[Dict[str, Any]]],
         missed: Callable[..., str]
-    ) -> None:
-        # Which is what takes it off the Not collected tab without
-        # anything being deleted.
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """ Return the list as it stood before the pull-in and after. """
         missed(run_id=collected)
-        assert groups(collected)[0]['events'][0]['addable'] is True
-
+        before = groups(collected)[0]['events']
         add(run_id=collected)
 
-        assert groups(collected)[0]['events'][0]['addable'] is False
+        return before, groups(collected)[0]['events']
+
+    def test_the_event_stops_being_addable(
+        self,
+        around: Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]
+    ) -> None:
+        # Which is what takes it off the Not collected tab without
+        # anything being deleted. Read on both sides of the pull-in,
+        # because an answer that never offered it would pass a test
+        # that only looked afterwards.
+        before, after = around
+
+        assert [before[0]['addable'], after[0]['addable']] == [True, False]
 
     def test_its_entry_is_still_published(
         self,
-        add: Callable[..., Any],
-        collected: str,
-        groups: Callable[[str], List[Dict[str, Any]]],
-        missed: Callable[..., str]
+        around: Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]
     ) -> None:
         # The entry is what reverting to the first revision gives
         # back, so pulling one in does not delete it.
-        missed(run_id=collected)
+        _, after = around
 
-        add(run_id=collected)
-
-        assert [
-            event['id'] for event in groups(collected)[0]['events']
-        ] == [MISSED_ID]
+        assert [event['id'] for event in after] == [MISSED_ID]
 
 
 class TestWhatIsRefused:
