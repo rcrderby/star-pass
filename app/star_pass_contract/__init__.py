@@ -48,6 +48,15 @@ from ._messages import (
     why_not_resume,
     why_not_send
 )
+from ._requests import (
+    AddEventRequest,
+    CollectRequest,
+    EditRequest,
+    EventOperationRequest,
+    RecollectRequest,
+    SendRequest,
+    WindowRequest
+)
 from ._schemas import (
     ApiModel,
     IDEMPOTENCY_KEY_HEADER,
@@ -57,26 +66,20 @@ from ._schemas import (
     EventRoleView,
     EventView,
     JobView,
-    CollectRequest,
     LogEntryView,
     MatchView,
     OpportunityView,
     PreviewRowView,
     PreviewTotalsView,
     PreviewView,
-    RecollectRequest,
     RevisionView,
     RunCountsView,
     RunDetailView,
     RunView,
-    EditRequest,
     EditView,
-    EventOperationRequest,
-    SendRequest,
     SkippedShiftView,
     UncollectedEventView,
     UncollectedGroupView,
-    WindowRequest,
     WindowView
 )
 from ._views import (
@@ -93,6 +96,7 @@ from ._views import (
 )
 
 __all__ = [
+    'AddEventRequest',
     'ApiModel',
     'IDEMPOTENCY_KEY_HEADER',
     'REPLAY_ANSWERED',

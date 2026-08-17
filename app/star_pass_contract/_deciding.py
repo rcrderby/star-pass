@@ -40,7 +40,7 @@ from star_pass._repository import (
     JobRepository,
     RunRepository
 )
-from ._schemas import EditRequest
+from ._requests import EditRequest
 from ._messages import (
     replay,
     REPLAY_DIFFERENT,

@@ -101,6 +101,14 @@ UNAVAILABLE = {
         'Editing a run is done in the web interface, which is what has '
         'the run in front of it. The command line collects, reads and '
         'sends (D2).'
+    ),
+    (
+        'POST', '/v1/runs/{run_id}/events'
+    ): (
+        'Pulling an event in is done in the web interface, beside the '
+        'list it is pulled from. The command line shows that list, '
+        'because asking why an event is not in a run is '
+        'troubleshooting, and stops there (D2).'
     )
 }
 
@@ -482,17 +490,20 @@ class LocalClient(OperationCaller, LocalWrites, Operations):
         """
 
         with self._opened() as connection:
-            uncollected = read_run_uncollected(
+            found = read_run_uncollected(
                 connection=connection,
                 run_id=run_id
             )
 
-        if uncollected is None:
+        if found is None:
             raise self._missing(detail=no_such_run(run_id=run_id))
 
         return [
             view.model_dump(by_alias=True, mode='json')
-            for view in to_uncollected_views(uncollected=uncollected)
+            for view in to_uncollected_views(
+                uncollected=found.uncollected,
+                in_revision=found.in_revision
+            )
         ]
 
     def _preview(

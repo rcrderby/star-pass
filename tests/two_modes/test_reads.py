@@ -82,6 +82,33 @@ class TestTheTwoModesAgree:
             'untitled'
         ]
 
+    def test_an_event_pulled_in_reads_as_not_addable_in_both(
+        self,
+        both: Callable[..., Tuple[Any, Any]],
+        events: Any,
+        make_event: Callable[..., Any],
+        not_collected: Callable[[str], list],
+        populated: str
+    ) -> None:
+        # Whether an event may be pulled in is answered from the
+        # revision as well as the stored row, so a mode that read one
+        # of the two would offer an event the run already holds.
+        left_out = not_collected(populated)
+        searched = next(
+            row for row in left_out if row.reason == 'search'
+        )
+        events.add(
+            run_id=populated,
+            revision=2,
+            event=make_event(id=searched.id)
+        )
+
+        local, remote = both('list_uncollected', run_id=populated)
+
+        assert local == remote
+        assert local[0]['reason'] == 'search'
+        assert local[0]['events'][0]['addable'] is False
+
     def test_the_preview_reads_the_same(
         self,
         both: Callable[..., Tuple[Any, Any]],
@@ -247,6 +274,21 @@ class TestWhatLocalModeCannotDo:
                 run_id='r-1',
                 idempotency_key='an-attempt',
                 body={'operations': []}
+            )
+
+        assert 'web interface' in str(error.value)
+
+    def test_pulling_an_event_in_says_where_it_is_done(
+        self,
+        local_client: LocalClient
+    ) -> None:
+        # Reading the list is troubleshooting and has a command;
+        # pulling one off it is reviewing, and its home is the screen
+        # showing the list (D2).
+        with pytest.raises(LocalOperationUnavailable) as error:
+            local_client.add_event(
+                run_id='r-1',
+                body={'uncollectedId': 'gcal-1'}
             )
 
         assert 'web interface' in str(error.value)

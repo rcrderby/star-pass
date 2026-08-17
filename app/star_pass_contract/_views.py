@@ -56,11 +56,11 @@ from star_pass._records import (
     UNCOLLECTED_REASONS,
     UNCOLLECTED_SEARCH
 )
+from ._requests import EditRequest
 from ._schemas import (
     BlockerView,
     CalendarView,
     ConfigView,
-    EditRequest,
     EditView,
     EventRoleView,
     EventView,
@@ -353,7 +353,8 @@ def to_revision_views(
 
 
 def to_uncollected_views(
-        uncollected: Sequence[UncollectedEvent]
+        uncollected: Sequence[UncollectedEvent],
+        in_revision: AbstractSet[str] = frozenset()
 ) -> List[UncollectedGroupView]:
     """ Return what a run's window held and the run left out.
 
@@ -367,9 +368,22 @@ def to_uncollected_views(
         reason would be a second opinion about what the endpoint that
         adds one will accept, and the two would eventually differ.
 
+        An event already in the revision is not addable, and its row
+        is still published.  The row outlives the pull-in on purpose:
+        reverting to the first revision drops the hand-added events,
+        and the row is what the reviewer gets back.  So what makes it
+        addable again is the revision no longer holding it, which is
+        the same question asked twice rather than a second fact
+        stored.
+
         Args:
             uncollected (Sequence[UncollectedEvent]):
                 Everything the collection left out, earliest first.
+
+            in_revision (AbstractSet[str]):
+                The identifiers the run's current revision holds.
+                Defaults to none, for a caller asking about a run that
+                holds nothing.
 
         Returns:
             views (List[UncollectedGroupView]):
@@ -397,7 +411,10 @@ def to_uncollected_views(
                         date=event.date,
                         calendar_start=event.calendar_start,
                         calendar_end=event.calendar_end,
-                        addable=reason == UNCOLLECTED_SEARCH
+                        addable=(
+                            reason == UNCOLLECTED_SEARCH
+                            and event.id not in in_revision
+                        )
                     )
                     for event in grouped
                 ]

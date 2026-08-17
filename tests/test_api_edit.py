@@ -78,6 +78,15 @@ class TestWhatAnEditAnswers:
         assert answer.status_code == 200
         assert answer.json()['events'][0]['shiftStart'] == '19:00'
 
+    def test_the_entry_records_who_made_the_edit(self, edit, collected):
+        # Every write records the principal, even while there is one
+        # of them and it is a static token (D13).
+        answer = edit(run_id=collected, operations=[a_nudge()])
+
+        assert answer.json()['log'][0]['principalId'] == (
+            _defaults.API_PRINCIPAL_ID
+        )
+
     def test_every_event_comes_back_not_only_the_changed_ones(
         self, edit, collected, events, make_event
     ):

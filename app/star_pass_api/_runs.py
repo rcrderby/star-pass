@@ -297,17 +297,20 @@ async def list_uncollected(
 
     del principal
 
-    uncollected = await read(
+    found = await read(
         lambda connection: read_run_uncollected(
             connection=connection,
             run_id=run_id
         )
     )
 
-    if uncollected is None:
+    if found is None:
         raise missing_run(run_id=run_id)
 
-    return to_uncollected_views(uncollected=uncollected)
+    return to_uncollected_views(
+        uncollected=found.uncollected,
+        in_revision=found.in_revision
+    )
 
 
 @router.get(
