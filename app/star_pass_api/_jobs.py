@@ -20,10 +20,23 @@ from fastapi.responses import StreamingResponse
 # Imports - Local
 from star_pass._records import Job, JOB_STATUSES_FINISHED
 from star_pass._repository import JobRepository
-from star_pass_contract import JobView, no_such_job, to_job_view
+from star_pass._reporting import Reporter
+from star_pass._resume import work_for
+from star_pass_contract import (
+    JobView,
+    no_such_job,
+    resumable,
+    to_job_view
+)
 from . import _defaults
-from ._security import Principal, requires, SCOPE_RUNS_READ
-from ._storage import read
+from ._problems import conflict, not_found
+from ._security import (
+    Principal,
+    requires,
+    SCOPE_RUNS_READ,
+    SCOPE_RUNS_WRITE
+)
+from ._storage import in_database, read
 
 # Constants
 SSE_MEDIA_TYPE = 'text/event-stream'
@@ -46,6 +59,23 @@ POLL_SECONDS = _defaults.JOB_EVENT_POLL_SECONDS
 HEARTBEAT_SECONDS = _defaults.JOB_EVENT_HEARTBEAT_SECONDS
 
 router = APIRouter(tags=[_defaults.API_TAG_JOBS])
+
+
+def missing_job(
+        job_id: str
+) -> HTTPException:
+    """ Return the failure for a job that is not there.
+
+        Args:
+            job_id (str):
+                What the caller asked for.
+
+        Returns:
+            error (HTTPException):
+                A 404 naming the job.
+    """
+
+    return not_found(detail=no_such_job(job_id=job_id))
 
 
 def _find(
@@ -117,10 +147,7 @@ async def get_job(
     )
 
     if job is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=no_such_job(job_id=job_id)
-        )
+        raise missing_job(job_id=job_id)
 
     return to_job_view(job=job)
 
@@ -342,4 +369,100 @@ async def stream_job_events(
         # Nothing between here and the reader may hold frames back to
         # send them together, which is what caching one would do.
         headers={'Cache-Control': 'no-cache'}
+    )
+
+
+@router.post(
+    '/jobs/{job_id}/resume',
+    status_code=status.HTTP_202_ACCEPTED,
+    summary='Run an interrupted job again',
+    description=(
+        'Queues an interrupted job to be run again, and hands it back '
+        'to a worker. A job left queued or running when the service '
+        'stopped is marked interrupted at startup and never resumed on '
+        'its own (D10): a send that resumed itself would write to a '
+        'live volunteer system from state rebuilt after a crash.\n\n'
+        'What runs is the ordinary work, pointed at a job that already '
+        'exists. A resumed send reads every opportunity immediately '
+        'before writing to it and creates exactly the rows the '
+        'interrupted attempt did not, so resuming needs no record of '
+        'how far that attempt got -- the question is answered by '
+        'Amplify rather than by the job.\n\n'
+        'The job keeps its identifier and loses what the interrupted '
+        'attempt recorded about itself: when it began, when it '
+        'stopped, and why. Those described an attempt that is being '
+        'made again, and leaving them would describe two runs of it at '
+        'once.\n\n'
+        'Refused for a job in any other state -- which is what stops a '
+        'second click starting a second worker -- and while another '
+        'job is working on the same run.'
+    ),
+    response_model=JobView
+)
+async def resume_job(
+        request: Request,
+        job_id: str = Path(
+            description='Identifier of the job to run again.'
+        ),
+        principal: Principal = requires(SCOPE_RUNS_WRITE)
+) -> JobView:
+    """ Queue an interrupted job again and hand it to the runner.
+
+        Args:
+            request (Request):
+                The request, which carries the runner that jobs are
+                given to.
+
+            job_id (str):
+                Identifier of the job to resume.
+
+            principal (Principal):
+                The authenticated caller, which the dependency supplies
+                after checking the scope.
+
+        Raises:
+            HTTPException:
+                404 when there is no such job, 409 when it is not one
+                that may be resumed.
+
+        Returns:
+            job (JobView):
+                The job, queued again.
+    """
+
+    found = await read(
+        lambda connection: resumable(
+            connection=connection,
+            job_id=job_id
+        )
+    )
+
+    if found is None:
+        raise missing_job(job_id=job_id)
+
+    job, refusal = found
+
+    if refusal is not None:
+        raise conflict(detail=refusal)
+
+    await read(
+        lambda connection: JobRepository(connection=connection).requeue(
+            job_id=job.id
+        )
+    )
+
+    work = work_for(job=job, principal_id=principal.id)
+
+    def resumed(reporter: Reporter) -> None:
+        """ Run the work on a connection belonging to the job's thread. """
+        in_database(
+            lambda connection: work(connection, reporter)
+        )
+
+    request.app.state.runner.submit(job_id=job.id, work=resumed)
+
+    return to_job_view(
+        job=await read(
+            lambda connection: _find(connection=connection, job_id=job.id)
+        )
     )

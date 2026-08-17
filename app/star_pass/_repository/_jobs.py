@@ -13,6 +13,8 @@ from .._logging import get_logger
 from .._records import (
     Job,
     JobEvent,
+    JOB_HOLDER_SERVICE,
+    JOB_HOLDERS,
     JOB_KINDS,
     JOB_STATUS_INTERRUPTED,
     JOB_STATUS_QUEUED,
@@ -35,6 +37,7 @@ JOB_COLUMNS = (
     'kind',
     'status',
     'principal_id',
+    'held_by',
     'created_at'
 )
 
@@ -62,6 +65,7 @@ def _to_job(
         kind=row['kind'],
         status=row['status'],
         principal_id=row['principal_id'],
+        held_by=row['held_by'],
         created_at=row['created_at'],
         started_at=row['started_at'],
         finished_at=row['finished_at'],
@@ -105,7 +109,8 @@ class JobRepository(Repository):
             self,
             run_id: str,
             kind: str,
-            principal_id: str
+            principal_id: str,
+            held_by: str = JOB_HOLDER_SERVICE
     ) -> Job:
         """ Record a job that has been asked for but not begun.
 
@@ -119,10 +124,16 @@ class JobRepository(Repository):
                 principal_id (str):
                     Who asked for it.
 
+                held_by (str, optional):
+                    Which of 'JOB_HOLDERS' will run it.  Defaults to
+                    the service, which is what wrote every job before
+                    the column existed, so a caller that does not say
+                    is recorded as what it would have been.
+
             Raises:
                 ValidationError:
-                    If the kind is not one a job can have, or there is
-                    no such run.
+                    If the kind or the holder is not one a job can
+                    have, or there is no such run.
 
                 UpstreamError:
                     If the job cannot be written.
@@ -136,6 +147,11 @@ class JobRepository(Repository):
             value=kind,
             allowed=JOB_KINDS,
             description='a job kind'
+        )
+        require_one_of(
+            value=held_by,
+            allowed=JOB_HOLDERS,
+            description='something that can hold a job'
         )
 
         job_id = uuid4().hex
@@ -153,6 +169,7 @@ class JobRepository(Repository):
                 kind,
                 JOB_STATUS_QUEUED,
                 principal_id,
+                held_by,
                 created_at
             )
         )
@@ -166,6 +183,7 @@ class JobRepository(Repository):
             kind=kind,
             status=JOB_STATUS_QUEUED,
             principal_id=principal_id,
+            held_by=held_by,
             created_at=created_at
         )
 
@@ -340,22 +358,37 @@ class JobRepository(Repository):
 
         return None
 
-    def interrupt_unfinished(self) -> int:
-        """ End every job the service was holding when it stopped.
+    def interrupt_unfinished(
+            self,
+            held_by: str = JOB_HOLDER_SERVICE
+    ) -> int:
+        """ End every unfinished job one holder was left with.
 
-            Called while the service starts.  A job left queued or
+            Called while a process starts.  A job left queued or
             running belongs to a process that no longer exists, so
             without this it stays that way for good and a caller
             watching it waits for something nothing is doing.
+
+            Scoped to one holder, and that is the whole point of the
+            column.  The service and the command line write into one
+            database (D2), so a sweep that took everything unfinished
+            would let a command line run mark a live send interrupted
+            -- and the run it belonged to would then accept a second
+            send while the first was still writing into Amplify.
 
             Marked interrupted rather than failed: nothing observed a
             failure, and rather than resumed, because resuming is a
             human action (D10).
 
             Args:
-                None.
+                held_by (str, optional):
+                    Which of 'JOB_HOLDERS' to sweep after.  Defaults to
+                    the service.
 
             Raises:
+                ValidationError:
+                    If the holder is not one a job can have.
+
                 UpstreamError:
                     If the jobs cannot be updated.
 
@@ -363,6 +396,12 @@ class JobRepository(Repository):
                 count (int):
                     How many jobs were ended.
         """
+
+        require_one_of(
+            value=held_by,
+            allowed=JOB_HOLDERS,
+            description='something that can hold a job'
+        )
 
         # An 'IN' list has one placeholder per value and SQLite has no
         # way to bind a whole list, so the placeholders are counted out
@@ -373,22 +412,96 @@ class JobRepository(Repository):
         cursor = execute(
             connection=self._connection,
             statement=(
-                'UPDATE jobs SET status = ?, finished_at = ? '
-                f'WHERE status IN ({placeholders})'  # nosec B608
+                # What is interpolated is the placeholders counted out
+                # above; every value below binds.
+                'UPDATE jobs SET status = ?, finished_at = ? '  # nosec B608
+                f'WHERE held_by = ? AND status IN ({placeholders})'
             ),
             parameters=(
                 JOB_STATUS_INTERRUPTED,
                 utc_now(),
+                held_by,
                 *JOB_STATUSES_UNFINISHED
             )
         )
         count = cursor.rowcount
 
         if count:
-            message = f'Marked {count} unfinished job(s) interrupted'
+            message = (
+                f'Marked {count} unfinished job(s) held by {held_by} '
+                'interrupted'
+            )
             logger.warning(message)
 
         return count
+
+    def requeue(
+            self,
+            job_id: str,
+            held_by: str = JOB_HOLDER_SERVICE
+    ) -> None:
+        """ Put an interrupted job back in the queue (D10).
+
+            Only an interrupted job.  A failed one was observed to
+            fail and a succeeded one is over; queueing either again
+            would be starting new work under the identifier of work
+            that already ended, and the job's own record of when it
+            began and how it went would then describe two runs of it.
+
+            The holder is written again, because the process resuming
+            the job is not the one that was holding it, and it is the
+            new holder that a later sweep has to recognize.
+
+            Args:
+                job_id (str):
+                    Identifier of the job to queue again.
+
+                held_by (str, optional):
+                    Which of 'JOB_HOLDERS' will run it now.  Defaults
+                    to the service.
+
+            Raises:
+                ValidationError:
+                    If the holder is not one a job can have, or there
+                    is no such job, or it is not interrupted.
+
+                UpstreamError:
+                    If the job cannot be updated.
+
+            Returns:
+                None.
+        """
+
+        require_one_of(
+            value=held_by,
+            allowed=JOB_HOLDERS,
+            description='something that can hold a job'
+        )
+
+        cursor = execute(
+            connection=self._connection,
+            statement=(
+                'UPDATE jobs SET status = ?, held_by = ?, '
+                'started_at = NULL, finished_at = NULL, detail = NULL '
+                'WHERE id = ? AND status = ?'
+            ),
+            parameters=(
+                JOB_STATUS_QUEUED,
+                held_by,
+                job_id,
+                JOB_STATUS_INTERRUPTED
+            )
+        )
+
+        require_row(
+            cursor=cursor,
+            message=(
+                f'Job "{job_id}" cannot be resumed: there is no such '
+                'job, or it is not one that was interrupted.'
+            )
+        )
+
+        return None
 
     def add_event(
             self,

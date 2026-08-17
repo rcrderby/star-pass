@@ -256,6 +256,31 @@ class Operations:
             run_id=run_id
         )
 
+    def resume_job(
+            self,
+            job_id: str
+    ) -> Any:
+        """ Run an interrupted job again.
+
+            Args:
+                job_id (str):
+                    Value for the path.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='POST',
+            path='/v1/jobs/{job_id}/resume',
+            job_id=job_id
+        )
+
     def send_run(
             self,
             body: Dict[str, Any],

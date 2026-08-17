@@ -184,16 +184,11 @@ class TestWhatIsRefused:
     def test_a_run_already_being_worked_on_is_refused(
         self,
         sending: Callable[..., Any],
-        jobs: JobRepository,
+        working_on: Callable[..., Any],
         collected: str
     ) -> None:
         # Two sends of one run would both write into Amplify.
-        working = jobs.create(
-            run_id=collected,
-            kind=JOB_KIND_SEND,
-            principal_id='someone-else'
-        )
-        jobs.start(job_id=working.id)
+        working = working_on(collected)
 
         response, asked = sending(collected)
 

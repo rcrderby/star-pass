@@ -24,6 +24,8 @@ from typing import Optional, Tuple
 # Imports - Local
 from star_pass._records import (
     IdempotencyRecord,
+    Job,
+    JOB_STATUS_INTERRUPTED,
     Run,
     RUN_STATUS_COLLECTING,
     RUN_STATUSES_SENT
@@ -273,6 +275,73 @@ def why_not_send(
             run_id=run.id,
             will_create=will_create,
             expected=expected
+        )
+
+    return None
+
+
+def not_interrupted(
+        job_id: str,
+        status: str
+) -> str:
+    """ Return what to say when a job is not one that may be resumed.
+
+        Args:
+            job_id (str):
+                Job the caller asked about.
+
+            status (str):
+                Where it is.
+
+        Returns:
+            message (str):
+                What to tell them.
+    """
+
+    return (
+        f'Job "{job_id}" is {status}, and only an interrupted job may '
+        'be resumed. A job that succeeded is over; one that failed was '
+        'observed to fail, and collecting or sending again is a new '
+        'request rather than the same one continued; and one queued or '
+        'running has something doing it.'
+    )
+
+
+def why_not_resume(
+        job: Job,
+        run: Run
+) -> Optional[str]:
+    """ Return why a job cannot be resumed, if it cannot.
+
+        Two refusals.  A job in any state but interrupted is not one
+        the question applies to.  And a run something else is already
+        working on would gain a second worker writing the same
+        revisions, or a second send writing into Amplify.
+
+        In that order: what the job is comes before what else is
+        happening to its run, because a reader told the run is busy
+        would come back to a job that was never resumable.
+
+        Args:
+            job (Job):
+                The job being resumed.
+
+            run (Run):
+                The run it works on.
+
+        Returns:
+            reason (str | None):
+                What to tell them, or None when the job may be
+                resumed.
+    """
+
+    if job.status != JOB_STATUS_INTERRUPTED:
+        return not_interrupted(job_id=job.id, status=job.status)
+
+    if run.active_job_id is not None:
+        return already_working(
+            run_id=run.id,
+            job_id=run.active_job_id
         )
 
     return None

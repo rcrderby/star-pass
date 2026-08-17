@@ -30,13 +30,22 @@ EXPECTED_TABLES = {
     'sent_shifts'
 }
 
-# Every version this application has written, and the tables the one
-# after it added.  Carrying a database forward is checked at each of
-# them rather than only at the newest, because a release that skipped
-# two versions has to gain both sets.
+# Every version this application has written, and what the one after
+# it added: the tables, and the columns added to a table that already
+# existed.  Carrying a database forward is checked at each of them
+# rather than only at the newest, because a release that skipped two
+# versions has to gain every set.
+#
+# A column is wound back as well as a table, because the two are
+# carried forward by different halves of the schema code: a table
+# arrives from a 'CREATE TABLE IF NOT EXISTS' that does nothing to one
+# already there, and a column can only arrive from a migration.  A
+# test that dropped only tables would pass against a release that had
+# forgotten the migration entirely.
 EARLIER_VERSIONS = (
-    (1, ('job_events', 'jobs')),
-    (2, ('idempotency_keys', 'sent_shifts'))
+    (1, ('job_events', 'jobs'), ()),
+    (2, ('idempotency_keys', 'sent_shifts'), ()),
+    (3, (), (('jobs', 'held_by'),))
 )
 
 
@@ -70,6 +79,19 @@ def table_names(connection: sqlite3.Connection) -> set:
         for row in _database.query(
             connection=connection,
             statement="SELECT name FROM sqlite_master WHERE type = 'table'"
+        )
+    }
+
+
+def column_names(
+    connection: sqlite3.Connection,
+    table: str
+) -> set:
+    return {
+        row['name']
+        for row in _database.query(
+            connection=connection,
+            statement=f'PRAGMA table_info({table})'
         )
     }
 
@@ -245,58 +267,83 @@ def test_a_nested_transaction_leaves_the_commit_to_the_outer_one(
     assert connection.in_transaction is False
 
 
-class TestCarryingAnOlderDatabaseForward:
-    @staticmethod
-    def make_earlier_version(
-        database_path: Path,
-        version: int,
-        tables: tuple
-    ) -> None:
-        # Stands in for a database written before those tables
-        # existed: they are dropped and the version wound back.
-        connection = _database.connect(path=database_path)
-        for table in tables:
-            _database.execute(
-                connection=connection,
-                statement=f'DROP TABLE {table}'
-            )
+@pytest.fixture(name='surviving_run')
+def fixture_surviving_run(database_path: Path) -> str:
+    """ Return a run written before the database is wound back. """
+    connection = _database.connect(path=database_path)
+    insert_run(
+        connection=connection,
+        run_id='survives'
+    )
+    connection.close()
+
+    return 'survives'
+
+
+@pytest.fixture(name='wound_back', params=EARLIER_VERSIONS)
+def fixture_wound_back(
+    request: pytest.FixtureRequest,
+    database_path: Path
+) -> tuple:
+    """ Return a database wound back to an earlier version.
+
+        Stands in for one written before those tables and columns
+        existed: they are dropped and the version is wound back.  A
+        fixture rather than a step in each test, because winding back
+        is one arrangement and the three tests below ask three
+        different things about it.
+    """
+    version, tables, columns = request.param
+    connection = _database.connect(path=database_path)
+
+    for table in tables:
         _database.execute(
             connection=connection,
-            statement=f'PRAGMA user_version = {version}'
+            statement=f'DROP TABLE {table}'
         )
-        connection.close()
 
-    @pytest.mark.parametrize('version, tables', EARLIER_VERSIONS)
+    for table, column in columns:
+        _database.execute(
+            connection=connection,
+            statement=f'ALTER TABLE {table} DROP COLUMN {column}'
+        )
+
+    _database.execute(
+        connection=connection,
+        statement=f'PRAGMA user_version = {version}'
+    )
+    connection.close()
+
+    return database_path, tables, columns
+
+
+class TestCarryingAnOlderDatabaseForward:
     def test_an_earlier_database_gains_what_it_lacked(
         self,
-        database_path: Path,
-        version: int,
-        tables: tuple
+        wound_back: tuple
     ) -> None:
-        self.make_earlier_version(
-            database_path=database_path,
-            version=version,
-            tables=tables
-        )
+        database_path, tables, columns = wound_back
 
         connection = _database.connect(path=database_path)
         names = table_names(connection=connection)
+        gained = {
+            (table, column)
+            for table, _ignored in columns
+            for column in column_names(
+                connection=connection,
+                table=table
+            )
+        }
         connection.close()
 
         assert set(tables) <= names
+        assert set(columns) <= gained
 
-    @pytest.mark.parametrize('version, tables', EARLIER_VERSIONS)
     def test_an_earlier_database_is_recorded_at_the_new_version(
         self,
-        database_path: Path,
-        version: int,
-        tables: tuple
+        wound_back: tuple
     ) -> None:
-        self.make_earlier_version(
-            database_path=database_path,
-            version=version,
-            tables=tables
-        )
+        database_path, _tables, _columns = wound_back
 
         connection = _database.connect(path=database_path)
         row = _database.query_one(
@@ -307,26 +354,15 @@ class TestCarryingAnOlderDatabaseForward:
 
         assert row[0] == _database.SCHEMA_VERSION
 
-    @pytest.mark.parametrize('version, tables', EARLIER_VERSIONS)
     def test_carrying_forward_keeps_what_was_there(
         self,
         database_path: Path,
-        version: int,
-        tables: tuple
+        surviving_run: str,
+        wound_back: tuple
     ) -> None:
         # The upgrade adds; it must not rebuild a table that already
         # holds rows.
-        first = _database.connect(path=database_path)
-        insert_run(
-            connection=first,
-            run_id='survives'
-        )
-        first.close()
-        self.make_earlier_version(
-            database_path=database_path,
-            version=version,
-            tables=tables
-        )
+        del wound_back
 
         connection = _database.connect(path=database_path)
         row = _database.query_one(
@@ -335,7 +371,7 @@ class TestCarryingAnOlderDatabaseForward:
         )
         connection.close()
 
-        assert row['id'] == 'survives'
+        assert row['id'] == surviving_run
 
     def test_a_newer_database_is_refused(
         self,

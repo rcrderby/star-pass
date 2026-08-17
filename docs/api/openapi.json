@@ -1099,6 +1099,54 @@
         ]
       }
     },
+    "/v1/jobs/{job_id}/resume": {
+      "post": {
+        "description": "Queues an interrupted job to be run again, and hands it back to a worker. A job left queued or running when the service stopped is marked interrupted at startup and never resumed on its own (D10): a send that resumed itself would write to a live volunteer system from state rebuilt after a crash.\n\nWhat runs is the ordinary work, pointed at a job that already exists. A resumed send reads every opportunity immediately before writing to it and creates exactly the rows the interrupted attempt did not, so resuming needs no record of how far that attempt got -- the question is answered by Amplify rather than by the job.\n\nThe job keeps its identifier and loses what the interrupted attempt recorded about itself: when it began, when it stopped, and why. Those described an attempt that is being made again, and leaving them would describe two runs of it at once.\n\nRefused for a job in any other state -- which is what stops a second click starting a second worker -- and while another job is working on the same run.",
+        "operationId": "resume_job",
+        "parameters": [
+          {
+            "description": "Identifier of the job to run again.",
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier of the job to run again.",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:write"
+            ]
+          }
+        ],
+        "summary": "Run an interrupted job again",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
     "/v1/runs": {
       "get": {
         "description": "Every run the service holds, most recently collected first, including one still being collected. Each carries what its current revision holds and the job still working on it, so the list is enough to decide what to open without reading each run in turn.",
