@@ -39,200 +39,149 @@ This tool automates bulk operations on the Galaxy Digital Amplify volunteer mana
 
 ## Usage
 
-Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplify-shifts`, or `-s`/`--post-slack-summary`. Every input has a short and long form. Run `./app/__main__.py --help` for the full list.
+Two ways in. A **command word** -- `runs collect`, `runs send`, `jobs
+watch` -- selects something the API publishes, and works against the
+local database or a service (see [Collected runs](#collected-runs)
+below). One **run mode flag**, `-s`/`--post-slack-summary`, selects the
+Slack sign-up summary, which the API deliberately does not publish. Run
+`./app/__main__.py --help` for the full list.
 
-1. Collect Google Calendar Shift data and save shift data in a formatted CSV file:
+The two CSV run modes, `-g`/`--get-gcal-events` and
+`-c`/`--create-amplify-shifts`, are retired. `runs collect` collects a
+calendar window into a run, and `runs send` creates its shifts in
+Amplify -- addressing a run by its identifier rather than a file, and
+skipping a shift Amplify already has rather than trusting a count.
 
-    ```bash
-    # Get events from the "Practices" calendar
-    ./app/__main__.py -g -n practices
+### Posting the Slack sign-up summary
 
-    # Get events from the "Events" calendar
-    ./app/__main__.py --get-gcal-events --gcal-name events
-    ```
+Live counts per shift, for **today** by default:
 
-    Set `GCAL_WINDOW_START` and `GCAL_WINDOW_END` in your `.env` to the date
-    range you are collecting, as plain local dates (`2099-01-01`). They
-    are required, and deliberately have no defaults: the window moves
-    with every run, so a default would go stale and silently collect
-    zero events. The run stops with an error if either is missing,
-    malformed, or does not move forward in time. Only this run mode
-    reads them.
+```bash
+# Dry run (default): build and print the Block Kit message, no send
+./app/__main__.py -s -N 879610
 
-    Each date means midnight local time, and the UTC offset in effect
-    on that date is applied automatically, so Daylight Saving needs no
-    attention. Use the first day of the next month to collect a whole
-    month:
+# Several opportunities in one message; repeat -N or comma-separate
+./app/__main__.py -s -N 879610,879611 -N 879612
 
-    ```bash
-    GCAL_WINDOW_START=2099-01-01
-    GCAL_WINDOW_END=2099-02-01
-    ```
+# Cover today and tomorrow instead of just today
+./app/__main__.py -s -N 879610 -d 2
 
-    Local time means `GCAL_TIMEZONE`, which defaults to `LOCAL_TIMEZONE`
-    (itself `America/Los_Angeles`); set either to any IANA time zone
-    name. Set `LOCAL_TIMEZONE` for the league as a whole, and
-    `GCAL_TIMEZONE` only if the calendar differs from it. A value
-    that carries its own UTC offset
-    (`2099-01-01T00:00:00-08:00`) is honored as written. Prefer plain
-    dates: writing the window in UTC shifts it eight hours earlier
-    during Pacific Standard Time, which silently drops evening events
-    on its final day. The resolved window is logged at the start of
-    each run.
+# Posted on a Friday, covering Saturday and Sunday only
+./app/__main__.py -s -N 879610 -D 1 -d 2
 
-    Events are filtered before shifts are built. An event is skipped,
-    with a logged reason, when its title contains a term in
-    `GCAL_PREFIX_FILTERS` (cancelled events, derby daze, summer camp),
-    when it is an all-day event, or when it has no title. Review the
-    generated CSV file before step 2.
+# Read the IDs from another command
+printf '879610 879611' | ./app/__main__.py -s -N -
 
-2. Create Amplify Shifts using formatted CSV file data:
+# Post live (needs SLACK_BOT_TOKEN); -k overrides the default
+# channel (SLACK_CHANNEL_ID, else SLACK_DEV_CHANNEL_ID)
+./app/__main__.py --post-slack-summary \
+    --need-id 879610 \
+    --slack-channel C0123ABC456 \
+    --check-mode false
+```
 
-    ```bash
-    # Dry run (default); add -C false to send live requests
-    ./app/__main__.py -c \
-        -i gcal_shifts_2099-01-01T00_00_00_000000.csv \
-        -C false
-    ```
+**Which opportunities.** `-N`/`--need-id` may be repeated,
+comma-separated, or given as `-` to read IDs from stdin. With no `-N`
+at all the IDs come from `SLACK_SUMMARY_NEED_IDS` in `.env`, so an
+unattended run needs no arguments.
 
-    A dry run (`-C true`, the default) does not create anything, but it
-    is **not** entirely request-free: it reads each opportunity title
-    from Amplify with a `GET /needs/{id}` so the preview can name the
-    opportunity. `AMPLIFY_TOKEN` is therefore required in both modes.
+**How the message reads.** One row per event and time, with a line
+per role beneath it:
 
-    The run stops before sending anything if any row has no need ID.
-    That happens when an event title matched no category in the shift
-    data model, so the review fallback assigned an empty ID. See
-    [Unmatched event titles](#unmatched-event-titles) below.
+```text
+Juniors Scrimmages 6:00-7:00 p.m.
+4 x NSOs
+6 x SOs
 
-3. Post a shift sign-up summary to Slack (live counts per shift, for
-   **today** by default):
+Adult Scrimmages 7:00-8:00 p.m.
+1 x NSO
+4 x SOs
+```
 
-    ```bash
-    # Dry run (default): build and print the Block Kit message, no send
-    ./app/__main__.py -s -N 879610
+Role labels are shortened using `models/slack_role_labels.yml`, so
+a summary reads `4 x NSOs` rather than
+`4 x Non-Skating Officials`. Entries are keyed on the **role**, not
+the opportunity, so a new opportunity using an existing role needs
+no change there. A role with no entry keeps its full text. An
+opportunity whose title has no role at all uses that file's
+`default` label, so "Officials Practice" reads `1 x Official`.
 
-    # Several opportunities in one message; repeat -N or comma-separate
-    ./app/__main__.py -s -N 879610,879611 -N 879612
+Each opportunity gets a sign-up button at the end, filled rather
+than outlined so it reads as a control on a phone, and ending in an
+arrow because it opens the opportunity in a browser rather than
+acting inside Slack. Set `SLACK_SIGN_UP_BUTTON_STYLE` to change the
+style, or to empty for outlined buttons, and
+`SLACK_SIGN_UP_BUTTON_SUFFIX` to change the arrow. Slack truncates
+a button that outgrows its width, which is why the role is
+shortened there too.
 
-    # Cover today and tomorrow instead of just today
-    ./app/__main__.py -s -N 879610 -d 2
+A count of exactly one reads as a singular label ("1 x NSO"). Rows appear in chronological order, and so do the
+sign-up buttons at the end, so the message reads top to bottom as
+the day happens. When two events run at the same time, they follow
+the order their IDs were given in `-N` or `SLACK_SUMMARY_NEED_IDS`.
 
-    # Posted on a Friday, covering Saturday and Sunday only
-    ./app/__main__.py -s -N 879610 -D 1 -d 2
+When the window covers more than one day, each day's rows sit under
+a date heading. A single-day summary has none, because the title
+already names the day.
 
-    # Read the IDs from another command
-    printf '879610 879611' | ./app/__main__.py -s -N -
+Most of a run is spent waiting on Amplify, because the responses
+endpoint has no server-side need or shift-date filter and the whole
+domain's recent sign-ups have to be paged. A spinner reports
+progress while that happens (`Reading recent sign-ups (page 4)`,
+then `Reading opportunity 2 of 5`). It writes to stderr and only
+when stderr is a terminal, so a scheduled run's log stays clean.
 
-    # Post live (needs SLACK_BOT_TOKEN); -k overrides the default
-    # channel (SLACK_CHANNEL_ID, else SLACK_DEV_CHANNEL_ID)
-    ./app/__main__.py --post-slack-summary \
-        --need-id 879610 \
-        --slack-channel C0123ABC456 \
-        --check-mode false
-    ```
+The event heading and the shortened role labels are derived from the
+opportunity titles themselves, with no mapping file to maintain:
+everything before `SLACK_TITLE_SEPARATOR` (a colon and a space by
+default) becomes the
+event, and what follows becomes the role label, so "Adult
+Scrimmages: Skating Officials" contributes a "Skating Officials"
+line to an "Adult Scrimmages" row. An opportunity whose title has no
+separator keeps its full title as the row heading, and its lines
+report a bare count.
 
-    **Which opportunities.** `-N`/`--need-id` may be repeated,
-    comma-separated, or given as `-` to read IDs from stdin. With no `-N`
-    at all the IDs come from `SLACK_SUMMARY_NEED_IDS` in `.env`, so an
-    unattended run needs no arguments.
+Requires `SLACK_BOT_TOKEN` and a destination channel (`SLACK_CHANNEL_ID` or `SLACK_DEV_CHANNEL_ID`, or `-k`) in your `.env`; see `.env.example`.
 
-    **How the message reads.** One row per event and time, with a line
-    per role beneath it:
+Times, and the calendar day the window covers, are read in
+`LOCAL_TIMEZONE` rather than from the host clock: a container or a
+CI runner usually runs in UTC, where a Portland evening is already
+the next day, which would summarize the wrong day.
 
-    ```text
-    Juniors Scrimmages 6:00-7:00 p.m.
-    4 x NSOs
-    6 x SOs
+**The day window.** `-d`/`--days` sets how many calendar days the
+summary covers, counting today as day one: `1` (the default) is today
+only, `2` adds tomorrow. Set `SLACK_SUMMARY_DAYS` in `.env` to change
+the default. Shifts that already started never appear, so a summary
+posted at noon lists only what is still to come that day.
 
-    Adult Scrimmages 7:00-8:00 p.m.
-    1 x NSO
-    4 x SOs
-    ```
+`-D`/`--start-in-days` moves where the window begins: `0` (the
+default) starts today, `1` starts tomorrow. This is what a notice
+posted ahead of its shifts needs, so a Friday post covering the
+weekend uses `-D 1 -d 2` and lists Saturday and Sunday without
+Friday's own shifts. A window that starts on a later day carries
+that day whole, from midnight. Set `SLACK_SUMMARY_START_IN_DAYS` in
+`.env` to change the default.
 
-    Role labels are shortened using `models/slack_role_labels.yml`, so
-    a summary reads `4 x NSOs` rather than
-    `4 x Non-Skating Officials`. Entries are keyed on the **role**, not
-    the opportunity, so a new opportunity using an existing role needs
-    no change there. A role with no entry keeps its full text. An
-    opportunity whose title has no role at all uses that file's
-    `default` label, so "Officials Practice" reads `1 x Official`.
+When nothing falls inside the window, the run logs that and posts
+nothing. A day with no shifts is routine, so an empty summary is not
+an error and does not produce a message.
 
-    Each opportunity gets a sign-up button at the end, filled rather
-    than outlined so it reads as a control on a phone, and ending in an
-    arrow because it opens the opportunity in a browser rather than
-    acting inside Slack. Set `SLACK_SIGN_UP_BUTTON_STYLE` to change the
-    style, or to empty for outlined buttons, and
-    `SLACK_SIGN_UP_BUTTON_SUFFIX` to change the arrow. Slack truncates
-    a button that outgrows its width, which is why the role is
-    shortened there too.
+Counts come from the Amplify `/responses`
+endpoint, which has no server-side filter for a need or for a shift's
+date, so the run reads the domain's recent responses and filters them
+to the need. `AMPLIFY_RESPONSES_SINCE_DAYS` (default 90) bounds how far
+back that read goes: a sign-up cannot predate the shift it is for, so a
+90-day window comfortably covers sign-ups for upcoming shifts. Each run
+logs how much margin the window had, and warns when it gets thin.
+Note this is unrelated to `-d`/`--days`: it bounds when a *sign-up*
+was created, not when a *shift* starts, so narrowing the day window
+does not shorten that read.
 
-    A count of exactly one reads as a singular label ("1 x NSO"). Rows appear in chronological order, and so do the
-    sign-up buttons at the end, so the message reads top to bottom as
-    the day happens. When two events run at the same time, they follow
-    the order their IDs were given in `-N` or `SLACK_SUMMARY_NEED_IDS`.
-
-    When the window covers more than one day, each day's rows sit under
-    a date heading. A single-day summary has none, because the title
-    already names the day.
-
-    Most of a run is spent waiting on Amplify, because the responses
-    endpoint has no server-side need or shift-date filter and the whole
-    domain's recent sign-ups have to be paged. A spinner reports
-    progress while that happens (`Reading recent sign-ups (page 4)`,
-    then `Reading opportunity 2 of 5`). It writes to stderr and only
-    when stderr is a terminal, so a scheduled run's log stays clean.
-
-    The event heading and the shortened role labels are derived from the
-    opportunity titles themselves, with no mapping file to maintain:
-    everything before `SLACK_TITLE_SEPARATOR` (a colon and a space by
-    default) becomes the
-    event, and what follows becomes the role label, so "Adult
-    Scrimmages: Skating Officials" contributes a "Skating Officials"
-    line to an "Adult Scrimmages" row. An opportunity whose title has no
-    separator keeps its full title as the row heading, and its lines
-    report a bare count.
-
-    Requires `SLACK_BOT_TOKEN` and a destination channel (`SLACK_CHANNEL_ID` or `SLACK_DEV_CHANNEL_ID`, or `-k`) in your `.env`; see `.env.example`.
-
-    Times, and the calendar day the window covers, are read in
-    `LOCAL_TIMEZONE` rather than from the host clock: a container or a
-    CI runner usually runs in UTC, where a Portland evening is already
-    the next day, which would summarize the wrong day.
-
-    **The day window.** `-d`/`--days` sets how many calendar days the
-    summary covers, counting today as day one: `1` (the default) is today
-    only, `2` adds tomorrow. Set `SLACK_SUMMARY_DAYS` in `.env` to change
-    the default. Shifts that already started never appear, so a summary
-    posted at noon lists only what is still to come that day.
-
-    `-D`/`--start-in-days` moves where the window begins: `0` (the
-    default) starts today, `1` starts tomorrow. This is what a notice
-    posted ahead of its shifts needs, so a Friday post covering the
-    weekend uses `-D 1 -d 2` and lists Saturday and Sunday without
-    Friday's own shifts. A window that starts on a later day carries
-    that day whole, from midnight. Set `SLACK_SUMMARY_START_IN_DAYS` in
-    `.env` to change the default.
-
-    When nothing falls inside the window, the run logs that and posts
-    nothing. A day with no shifts is routine, so an empty summary is not
-    an error and does not produce a message.
-
-    Counts come from the Amplify `/responses`
-    endpoint, which has no server-side filter for a need or for a shift's
-    date, so the run reads the domain's recent responses and filters them
-    to the need. `AMPLIFY_RESPONSES_SINCE_DAYS` (default 90) bounds how far
-    back that read goes: a sign-up cannot predate the shift it is for, so a
-    90-day window comfortably covers sign-ups for upcoming shifts. Each run
-    logs how much margin the window had, and warns when it gets thin.
-    Note this is unrelated to `-d`/`--days`: it bounds when a *sign-up*
-    was created, not when a *shift* starts, so narrowing the day window
-    does not shorten that read.
 
 ### Collected runs
 
-A second group of commands works with collected runs. They are selected
-by a word rather than by a mode flag:
+The commands that work with collected runs. They are selected by a word
+rather than by a mode flag:
 
 ```bash
 ./app/__main__.py runs list
@@ -328,19 +277,18 @@ No confident shift-info match for "Jet City vs Cherry City" in the
 "events" calendar; assigning the review fallback
 ```
 
-An empty need ID cannot become a shift, so the `-c` run refuses to send
-anything and names every affected row and its line in the CSV file. To
-resolve it:
+An empty need ID cannot become a shift. The event is still collected,
+named as unmatched, so a reviewer sees everything the calendar held
+rather than a run with holes in it -- and it stops the **send** instead,
+which `runs preview` names with every reason. To resolve it:
 
 1. Find the category the event belongs to in `models/shift_info.yml`.
 2. Add a distinguishing keyword from the title to that category's
    `aliases` list.
-3. Re-run the `-g` collection so the CSV file is regenerated, or edit
-   the `need_id` column in the existing file by hand.
+3. Run `runs recollect` so the run picks up the corrected model.
 
-Alternatively, delete the row from the CSV file if the event should not
-produce shifts at all. Adding the alias is preferable: it fixes every
-future run as well.
+Adding the alias is preferable to any one-off correction: it fixes
+every future run as well.
 
 ## Development
 

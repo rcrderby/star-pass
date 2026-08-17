@@ -1,12 +1,19 @@
 """ Tests for the application entry point (app/__main__.py).
 
     __main__.py is normally executed as a script, so it is loaded here
-    by file path. CreateShifts, GCALData, and the module-level helpers
-    object are replaced with mocks so that main() exercises only the
-    argument parsing, run-mode dispatch, and banner output -- no CSV is
-    read and no API call is made. Run-mode banners are asserted through
-    the 'star_pass' logger via caplog. The mocked helpers keeps the real
+    by file path.  What the Slack summary reaches, and the module-level
+    helpers object, are replaced with mocks so that main() exercises
+    only the argument parsing, the run-mode dispatch and the banner --
+    no API call is made.  The banner is asserted through the
+    'star_pass' logger via caplog.  The mocked helpers keeps the real
     convert_to_bool so that --check-mode parsing is exercised for real.
+
+    **One run mode is left.**  The two CSV modes are retired: the API
+    and the commands over it do what they did.  The Slack summary is
+    not retired with them, because nothing replaces it -- it is out of
+    the API's scope by decision -- and it is on a schedule.  So these
+    tests hold what that schedule depends on: the flags it passes, and
+    that the run opens no database.
 """
 # pylint: disable=missing-function-docstring,missing-class-docstring
 # pylint: disable=redefined-outer-name
@@ -37,8 +44,6 @@ def app_main():
     mock_helpers = Mock()
     mock_helpers.convert_to_bool = Helpers().convert_to_bool
     module.helpers = mock_helpers
-    module.CreateShifts = Mock()
-    module.GCALData = Mock()
     module.AmplifyResponses = Mock()
     module.SlackNotifier = Mock()
     return module
@@ -107,55 +112,6 @@ class TestResolveNeedIds:
 
 
 class TestMainRunModeDispatch:
-    def test_create_mode_short_flags(self, app_main, caplog):
-        with caplog.at_level(logging.INFO, logger='star_pass'):
-            app_main.main(['-c', '-i', 'x.csv'])
-
-        assert 'Run mode is "Create Amplify Shifts"' in caplog.text
-        # Verbosity is a property of the renderer now, so the call
-        # carries a reporter and the level is asserted on it.
-        kwargs = app_main.CreateShifts.call_args.kwargs
-        assert kwargs['input_file'] == 'x.csv'
-        assert kwargs['check_mode'] is True
-        assert kwargs['reporter'].verbosity == 'basic'
-        app_main.CreateShifts.return_value.create_new_shifts \
-            .assert_called_once()
-
-    def test_create_mode_long_flags_and_options(self, app_main):
-        app_main.main(
-            [
-                '--create-amplify-shifts',
-                '--input-file', 'x.csv',
-                '--check-mode', 'false',
-                '--output-verbosity', 'simple'
-            ]
-        )
-
-        # Verbosity is a property of the renderer now, so the call
-        # carries a reporter and the level is asserted on it.
-        kwargs = app_main.CreateShifts.call_args.kwargs
-        assert kwargs['input_file'] == 'x.csv'
-        assert kwargs['check_mode'] is False
-        assert kwargs['reporter'].verbosity == 'simple'
-
-    def test_get_mode_short_flags(self, app_main, caplog):
-        with caplog.at_level(logging.INFO, logger='star_pass'):
-            app_main.main(['-g', '-n', 'events'])
-
-        assert 'Run mode is "Get Google Calendar Events"' in caplog.text
-        kwargs = app_main.GCALData.call_args.kwargs
-        assert kwargs['gcal_name'] == 'events'
-        # The run reports through a renderer the CLI supplies.
-        assert isinstance(kwargs['reporter'], app_main.TerminalReporter)
-
-    def test_get_mode_long_flags(self, app_main):
-        app_main.main(['--get-gcal-events', '--gcal-name', 'practices'])
-
-        kwargs = app_main.GCALData.call_args.kwargs
-        assert kwargs['gcal_name'] == 'practices'
-        # The run reports through a renderer the CLI supplies.
-        assert isinstance(kwargs['reporter'], app_main.TerminalReporter)
-
     def test_slack_mode_short_flags(self, app_main, caplog):
         with caplog.at_level(logging.INFO, logger='star_pass'):
             app_main.main(['-s', '-N', '879610'])
@@ -260,41 +216,33 @@ class TestSlackWindowOffset:
 
 
 class TestMainArgumentErrors:
-    def test_no_mode_exits_nonzero(self, app_main):
+    def test_no_mode_exits_nonzero(self, app_main, capsys):
+        # The message has to name both ways in, because "no arguments"
+        # is what somebody types when they do not yet know either --
+        # and it is a different error from the one a run mode with no
+        # need IDs gives.
         with pytest.raises(SystemExit) as exc_info:
             app_main.main([])
-        assert exc_info.value.code != 0
-        app_main.CreateShifts.assert_not_called()
-        app_main.GCALData.assert_not_called()
 
-    def test_both_modes_exits_nonzero(self, app_main):
-        with pytest.raises(SystemExit) as exc_info:
-            app_main.main(['-c', '-g', '-i', 'x.csv'])
         assert exc_info.value.code != 0
+        # The wording of the no-selection error, not the usage banner
+        # above it, which names every command whatever went wrong.
+        assert 'or a command such as' in capsys.readouterr().err
+        app_main.AmplifyResponses.assert_not_called()
 
-    def test_create_without_input_file_exits_nonzero(self, app_main):
+    @pytest.mark.parametrize(
+        'retired',
+        ('-g', '--get-gcal-events', '-c', '--create-amplify-shifts')
+    )
+    def test_a_retired_run_mode_is_no_longer_a_flag(
+        self, app_main, retired
+    ):
+        # The API and the commands over it do what these did, and a
+        # flag that still parsed would send somebody to a CSV path
+        # that is not there.
         with pytest.raises(SystemExit) as exc_info:
-            app_main.main(['-c'])
+            app_main.main([retired])
         assert exc_info.value.code != 0
-        app_main.CreateShifts.assert_not_called()
-
-    def test_get_without_gcal_name_exits_nonzero(self, app_main):
-        with pytest.raises(SystemExit) as exc_info:
-            app_main.main(['-g'])
-        assert exc_info.value.code != 0
-        app_main.GCALData.assert_not_called()
-
-    def test_get_mode_rejects_create_option(self, app_main):
-        with pytest.raises(SystemExit) as exc_info:
-            app_main.main(['-g', '-n', 'events', '-i', 'x.csv'])
-        assert exc_info.value.code != 0
-        app_main.GCALData.assert_not_called()
-
-    def test_create_mode_rejects_gcal_name(self, app_main):
-        with pytest.raises(SystemExit) as exc_info:
-            app_main.main(['-c', '-i', 'x.csv', '-n', 'events'])
-        assert exc_info.value.code != 0
-        app_main.CreateShifts.assert_not_called()
 
     def test_slack_without_need_id_exits_nonzero(
             self, app_main, monkeypatch
@@ -311,12 +259,6 @@ class TestMainArgumentErrors:
             app_main.main(['-s', '-N', '5', '-i', 'x.csv'])
         assert exc_info.value.code != 0
         app_main.AmplifyResponses.assert_not_called()
-
-    def test_get_mode_rejects_slack_option(self, app_main):
-        with pytest.raises(SystemExit) as exc_info:
-            app_main.main(['-g', '-n', 'events', '-N', '5'])
-        assert exc_info.value.code != 0
-        app_main.GCALData.assert_not_called()
 
     def test_zero_days_exits_nonzero(self, app_main):
         # Day one is today, so a window must cover at least one day.
@@ -335,18 +277,6 @@ class TestMainArgumentErrors:
         with pytest.raises(SystemExit) as exc_info:
             app_main.main(['-s', '-N', '5', '-d', 'today'])
         assert exc_info.value.code != 0
-
-    def test_get_mode_rejects_days(self, app_main):
-        with pytest.raises(SystemExit) as exc_info:
-            app_main.main(['-g', '-n', 'events', '-d', '2'])
-        assert exc_info.value.code != 0
-        app_main.GCALData.assert_not_called()
-
-    def test_create_mode_rejects_days(self, app_main):
-        with pytest.raises(SystemExit) as exc_info:
-            app_main.main(['-c', '-i', 'x.csv', '-d', '2'])
-        assert exc_info.value.code != 0
-        app_main.CreateShifts.assert_not_called()
 
     def test_invalid_check_mode_value_exits_nonzero(self, app_main):
         with pytest.raises(SystemExit) as exc_info:
@@ -377,8 +307,6 @@ class TestCredentialPreflight:
     @pytest.mark.parametrize(
         'argv, missing',
         [
-            (['-g', '-n', 'events'], 'GCAL_TOKEN'),
-            (['-c', '-i', 'x.csv'], 'AMPLIFY_TOKEN'),
             (['-s', '-N', '5'], 'AMPLIFY_TOKEN'),
         ]
     )
@@ -394,8 +322,6 @@ class TestCredentialPreflight:
         assert exc_info.value.code == 1
         assert missing in caplog.text
         # The run mode never started.
-        app_main.CreateShifts.assert_not_called()
-        app_main.GCALData.assert_not_called()
         app_main.AmplifyResponses.assert_not_called()
 
     def test_slack_token_required_only_for_a_live_post(
@@ -426,19 +352,61 @@ class TestRunFailureHandling:
     # without a traceback landing on top of the message it just logged.
 
     def test_value_error_exits_nonzero(self, app_main):
-        app_main.GCALData.side_effect = ValueError(
-            'GCAL_WINDOW_START must be set'
+        app_main.AmplifyResponses.side_effect = ValueError(
+            'LOCAL_TIMEZONE is not a known time zone'
         )
 
         with pytest.raises(SystemExit) as exc_info:
-            app_main.main(['-g', '-n', 'events'])
+            app_main.main(['-s', '-N', '5'])
 
         assert exc_info.value.code == 1
 
     def test_unexpected_error_still_propagates(self, app_main):
         # Only expected failures are converted; a genuine bug must keep
         # its traceback.
-        app_main.GCALData.side_effect = RuntimeError('unexpected')
+        app_main.AmplifyResponses.side_effect = RuntimeError('unexpected')
 
         with pytest.raises(RuntimeError):
-            app_main.main(['-g', '-n', 'events'])
+            app_main.main(['-s', '-N', '5'])
+
+
+class TestWhatTheScheduledSummaryDependsOn:
+    # '.github/workflows/slack-summary.yml' runs
+    # 'python /app/__main__.py -s -C ... -d ... -D ...' inside the
+    # container, twice a week, and it is the only thing in the
+    # repository on a schedule.  These hold what that invocation needs.
+
+    def test_the_flags_the_schedule_passes_are_all_accepted(
+        self, app_main
+    ):
+        app_main.main(
+            ['-s', '-N', '5', '-C', 'true', '-d', '2', '-D', '1']
+        )
+
+        app_main.AmplifyResponses.return_value.build_summary \
+            .assert_called_once_with(
+                need_ids=['5'], title=None, days=2, start_in_days=1
+            )
+
+    def test_the_summary_opens_no_database(
+        self, app_main, monkeypatch
+    ):
+        # The runner is ephemeral with no volume, so a database opened
+        # here would be a file written into a container about to be
+        # destroyed -- and would fail outright where the path is not
+        # writable.  A dispatcher that opened one for every invocation
+        # is the way this would be lost, so it is held here.
+        def refuse(*args, **kwargs):
+            """ Stand in for opening a database, and refuse. """
+            del args, kwargs
+
+            raise AssertionError(
+                'the Slack summary opened a database'
+            )
+
+        monkeypatch.setattr('star_pass._database.connect', refuse)
+
+        app_main.main(['-s', '-N', '5'])
+
+        app_main.SlackNotifier.return_value.post_summary \
+            .assert_called_once()

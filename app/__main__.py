@@ -12,8 +12,6 @@ from slack_sdk.errors import SlackApiError
 
 # Imports - Local
 from star_pass.amplify_responses import AmplifyResponses
-from star_pass.amplify_shifts import CreateShifts
-from star_pass.gcal_data import GCALData
 from star_pass.slack_notify import SlackNotifier
 from star_pass._exceptions import StarPassError
 from star_pass._helpers import Helpers, require_env_vars
@@ -24,9 +22,6 @@ from star_pass_cli import add_commands, run_command, selected, write
 
 # Constants
 VERBOSITY_LEVELS = _defaults.VERBOSITY_LEVELS
-# Valid Google Calendar names, derived from the configured calendars so
-# the choices stay in sync with any deployment overrides.
-GCAL_NAMES = tuple(_defaults.GCAL_CALENDARS)
 # Slack destination channels (deployment config; may be None).
 SLACK_CHANNEL_ID = _defaults.SLACK_CHANNEL_ID
 SLACK_DEV_CHANNEL_ID = _defaults.SLACK_DEV_CHANNEL_ID
@@ -37,11 +32,12 @@ SLACK_SUMMARY_NEED_IDS = _defaults.SLACK_SUMMARY_NEED_IDS
 # mandatory (unbracketed) and optional (bracketed) for each run mode.
 USAGE = (
     'star-pass runs list [--api-url URL]\n'
-    '       star-pass runs {show,revisions,preview} RUN [--api-url URL]\n'
-    '       star-pass jobs show JOB [--api-url URL]\n'
-    '       star-pass -g -n {events,practices}\n'
-    '       star-pass -c -i INPUT_FILE [-C {true,false}] '
-    '[-o {basic,simple,detailed}]\n'
+    '       star-pass runs {show,revisions,preview,send} RUN '
+    '[--api-url URL]\n'
+    '       star-pass runs collect --calendar {events,practices} '
+    '--start DATE --last-day DATE\n'
+    '       star-pass runs recollect RUN --expected-changes N\n'
+    '       star-pass jobs {show,watch,resume} JOB [--api-url URL]\n'
     '       star-pass -s [-N NEED_ID ...] [-C {true,false}] '
     '[-d DAYS] [-D START_IN_DAYS] [-t TITLE] [-k CHANNEL_ID]'
 )
@@ -427,14 +423,17 @@ def resolve_need_ids(
 def build_parser() -> argparse.ArgumentParser:
     """ Build the command-line argument parser.
 
-        The run mode is selected by one of three mutually-exclusive flags
-        ('-g/--get-gcal-events', '-c/--create-amplify-shifts', or
-        '-s/--post-slack-summary'); each input is an option with a short
-        and long form.  '-C/--check-mode' is shared by the create and
-        Slack modes.  Options that are required for a mode cannot be
-        marked required at the argparse level (they are only required
-        within a mode), so 'main' validates them explicitly; the help
-        text and usage line mark them.
+        Two ways in.  A command word -- "runs collect", "jobs watch" --
+        selects something the API publishes and the command line
+        answers in either mode (D2).  The one remaining run mode flag,
+        '-s/--post-slack-summary', selects the Slack sign-up summary,
+        which the API deliberately does not publish, so nothing
+        replaces it and it stays a flag.
+
+        Options that are required for the run mode cannot be marked
+        required at the argparse level (they are only required within
+        it), so 'main' validates them explicitly; the help text and
+        usage line mark them.
 
         Args:
             None.
@@ -453,49 +452,15 @@ def build_parser() -> argparse.ArgumentParser:
         )
     )
 
-    # Run mode: exactly one flag is required
-    # Not required at the argparse level: a command word selects what
-    # to do instead, and requiring a mode flag here would reject every
-    # command.  'main' reports the case where neither was given.
-    mode_group = parser.add_argument_group('run mode (choose one)')
-    mode = mode_group.add_mutually_exclusive_group(required=False)
-    mode.add_argument(
-        '-g', '--get-gcal-events',
-        action='store_true',
-        help='Collect events from a Google Calendar into a CSV file.'
-    )
-    mode.add_argument(
-        '-c', '--create-amplify-shifts',
-        action='store_true',
-        help='Create Amplify shifts from a formatted CSV file.'
-    )
-    mode.add_argument(
+    # The one run mode left.  Not required at the argparse level: a
+    # command word selects what to do instead, and requiring the flag
+    # here would reject every command.  'main' reports the case where
+    # neither was given.
+    mode_group = parser.add_argument_group('run mode')
+    mode_group.add_argument(
         '-s', '--post-slack-summary',
         action='store_true',
         help='Post a shift sign-up summary to Slack.'
-    )
-
-    # Options for 'get-gcal-events' mode
-    get_group = parser.add_argument_group('get-events options')
-    get_group.add_argument(
-        '-n', '--gcal-name',
-        choices=GCAL_NAMES,
-        default=None,
-        help='Google Calendar to collect (required with -g).'
-    )
-
-    # Options for 'create-amplify-shifts' mode
-    create_group = parser.add_argument_group('create-shifts options')
-    create_group.add_argument(
-        '-i', '--input-file',
-        default=None,
-        help='CSV file to read shift data from (required with -c).'
-    )
-    create_group.add_argument(
-        '-o', '--output-verbosity',
-        choices=VERBOSITY_LEVELS,
-        default=None,
-        help='Amount of detail to display (default: basic).'
     )
 
     # Options for 'post-slack-summary' mode
@@ -544,14 +509,12 @@ def build_parser() -> argparse.ArgumentParser:
         )
     )
 
-    # Shared option: valid with -c and -s
-    shared_group = parser.add_argument_group('shared options (-c and -s)')
-    shared_group.add_argument(
+    slack_group.add_argument(
         '-C', '--check-mode',
         type=_bool_arg,
         default=None,
         metavar='{true,false}',
-        help='Dry run without sending requests (default: true).'
+        help='Dry run without posting the message (default: true).'
     )
 
     # The run-based commands, which work against the local database or
@@ -591,17 +554,10 @@ def _command_answered(
     """
 
     if selected(args=args) is None:
-        if not any(
-            (
-                args.get_gcal_events,
-                args.create_amplify_shifts,
-                args.post_slack_summary
-            )
-        ):
+        if not args.post_slack_summary:
             parser.error(
-                'one of -g/--get-gcal-events, '
-                '-c/--create-amplify-shifts or -s/--post-slack-summary '
-                'is required, or a command such as "runs list"'
+                '-s/--post-slack-summary is required, or a command '
+                'such as "runs list"'
             )
 
         return False
@@ -612,67 +568,6 @@ def _command_answered(
         sys.exit(status)
 
     return True
-
-
-def _get_gcal_events(
-        parser: argparse.ArgumentParser,
-        args: argparse.Namespace
-) -> None:
-    """ Collect calendar events into a CSV file.
-
-        Args:
-            parser (argparse.ArgumentParser):
-                The parser, for reporting an option this mode does not
-                take.
-
-            args (argparse.Namespace):
-                The parsed command line.
-
-        Raises:
-            SystemExit:
-                With a non-zero status when the options are not this
-                mode's.
-
-        Returns:
-            None.
-    """
-
-    # Validate that only get-mode options were supplied
-    if args.gcal_name is None:
-        parser.error(
-            '-g/--get-gcal-events requires -n/--gcal-name'
-        )
-    if any(
-        value is not None
-        for value in (
-            args.input_file,
-            args.output_verbosity,
-            args.need_id,
-            args.days,
-            args.slack_title,
-            args.slack_channel,
-            args.check_mode
-        )
-    ):
-        parser.error(
-            'only -n/--gcal-name is valid with '
-            '-g/--get-gcal-events'
-        )
-
-    # Fail before the first request when the credential is missing
-    require_env_vars('GCAL_TOKEN')
-
-    # Announce the run mode
-    logger.info(
-        'Run mode is "Get Google Calendar Events"'
-    )
-    # Create GCALData object
-    GCALData(
-        gcal_name=args.gcal_name,
-        reporter=TerminalReporter()
-    )
-
-    return None
 
 
 # Main application function definition
@@ -738,126 +633,64 @@ def _run(
     if _command_answered(parser=parser, args=args):
         return None
 
-    # Run the application in 'get_gcal_events' mode
-    if args.get_gcal_events:
-        _get_gcal_events(parser=parser, args=args)
+    # The Slack sign-up summary, which is the only run mode left.
+    #
+    # It stays a run mode because nothing in the API replaces it: the
+    # summary is out of scope there by decision, so retiring this
+    # alongside the two CSV modes would have deleted a working
+    # scheduled job and put nothing in its place.  It reads Amplify and
+    # posts to Slack, and it opens no database -- the runner it is
+    # scheduled on is ephemeral with no volume, so a file written there
+    # would go with the container.
+    need_ids = resolve_need_ids(values=args.need_id)
+    if not need_ids:
+        parser.error(
+            '-s/--post-slack-summary requires -N/--need-id or '
+            'SLACK_SUMMARY_NEED_IDS'
+        )
+    if args.days is not None and args.days < 1:
+        parser.error(
+            '-d/--days must be 1 or greater (1 is today only)'
+        )
+    if args.start_in_days is not None and args.start_in_days < 0:
+        parser.error(
+            '-D/--start-in-days must be 0 or greater '
+            '(0 starts today)'
+        )
+    # Apply the check-mode default (dry run) and resolve the channel
+    check_mode = (
+        True if args.check_mode is None else args.check_mode
+    )
+    channel = (
+        args.slack_channel
+        or SLACK_CHANNEL_ID
+        or SLACK_DEV_CHANNEL_ID
+    )
 
-    # Run the application in 'create_amplify_shifts' mode
-    elif args.create_amplify_shifts:
-        # Validate that only create-mode options were supplied
-        if args.input_file is None:
-            parser.error(
-                '-c/--create-amplify-shifts requires -i/--input-file'
-            )
-        if any(
-            value is not None
-            for value in (
-                args.gcal_name,
-                args.need_id,
-                args.days,
-                args.slack_title,
-                args.slack_channel
-            )
-        ):
-            parser.error(
-                '-n/--gcal-name and the -s/--post-slack-summary '
-                'options are not valid with -c/--create-amplify-shifts'
-            )
+    # The summary is read from Amplify in both modes; the Slack
+    # token is only needed when the message is actually sent
+    require_env_vars('AMPLIFY_TOKEN')
+    if check_mode is False:
+        require_env_vars('SLACK_BOT_TOKEN')
 
-        # Apply defaults for the optional create-mode arguments
-        check_mode = (
-            True if args.check_mode is None else args.check_mode
-        )
-        output_verbosity = (
-            args.output_verbosity
-            if args.output_verbosity is not None
-            else VERBOSITY_LEVELS[0]
-        )
-
-        # The opportunity title lookup is sent even in check mode, so
-        # the token is required in both modes
-        require_env_vars('AMPLIFY_TOKEN')
-
-        # Announce the run mode
-        logger.info(
-            'Run mode is "Create Amplify Shifts"'
-        )
-        # Create CreateShifts object
-        shifts = CreateShifts(
-            input_file=args.input_file,
-            check_mode=check_mode,
-            reporter=TerminalReporter(verbosity=output_verbosity)
-        )
-        # Create shifts
-        shifts.create_new_shifts()
-
-    # Run the application in 'post_slack_summary' mode (argparse
-    # guarantees exactly one mode flag, so this is the Slack case)
-    else:
-        # Validate that only Slack-mode options were supplied
-        need_ids = resolve_need_ids(values=args.need_id)
-        if not need_ids:
-            parser.error(
-                '-s/--post-slack-summary requires -N/--need-id or '
-                'SLACK_SUMMARY_NEED_IDS'
-            )
-        if args.days is not None and args.days < 1:
-            parser.error(
-                '-d/--days must be 1 or greater (1 is today only)'
-            )
-        if args.start_in_days is not None and args.start_in_days < 0:
-            parser.error(
-                '-D/--start-in-days must be 0 or greater '
-                '(0 starts today)'
-            )
-        if any(
-            value is not None
-            for value in (
-                args.gcal_name,
-                args.input_file,
-                args.output_verbosity
-            )
-        ):
-            parser.error(
-                '-n/--gcal-name, -i/--input-file, and '
-                '-o/--output-verbosity are not valid with '
-                '-s/--post-slack-summary'
-            )
-
-        # Apply the check-mode default (dry run) and resolve the channel
-        check_mode = (
-            True if args.check_mode is None else args.check_mode
-        )
-        channel = (
-            args.slack_channel
-            or SLACK_CHANNEL_ID
-            or SLACK_DEV_CHANNEL_ID
-        )
-
-        # The summary is read from Amplify in both modes; the Slack
-        # token is only needed when the message is actually sent
-        require_env_vars('AMPLIFY_TOKEN')
-        if check_mode is False:
-            require_env_vars('SLACK_BOT_TOKEN')
-
-        # Announce the run mode
-        logger.info(
-            'Run mode is "Post Slack Summary"'
-        )
-        # Build the sign-up summary and post it to Slack
-        summary = AmplifyResponses().build_summary(
-            need_ids=need_ids,
-            title=args.slack_title,
-            days=args.days,
-            start_in_days=args.start_in_days
-        )
-        SlackNotifier(
-            channel=channel,
-            check_mode=check_mode,
-            reporter=TerminalReporter()
-        ).post_summary(
-            summary=summary
-        )
+    # Announce the run mode
+    logger.info(
+        'Run mode is "Post Slack Summary"'
+    )
+    # Build the sign-up summary and post it to Slack
+    summary = AmplifyResponses().build_summary(
+        need_ids=need_ids,
+        title=args.slack_title,
+        days=args.days,
+        start_in_days=args.start_in_days
+    )
+    SlackNotifier(
+        channel=channel,
+        check_mode=check_mode,
+        reporter=TerminalReporter()
+    ).post_summary(
+        summary=summary
+    )
 
     return None
 
