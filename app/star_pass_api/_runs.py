@@ -20,12 +20,14 @@ from typing import List, Optional, Tuple
 
 # Imports - Third-Party
 from fastapi import APIRouter, HTTPException, Path, Request, status
+from starlette.concurrency import run_in_threadpool
 
 # Imports - Local
 from star_pass._collect import collect
 from star_pass._database import transaction
 from star_pass._defaults import GCAL_CALENDARS
 from star_pass._gcal_time import resolve_window
+from star_pass._opportunities import shifts_in_amplify
 from star_pass._reading import (
     changes_in_current,
     read_run_detail,
@@ -261,12 +263,12 @@ async def list_revisions(
         'An event that cannot become a shift stops the whole send and '
         'is named with every reason it cannot, so fixing one does not '
         'reveal another.\n\n'
-        '**This does not yet say which shifts Amplify already has.** '
-        'That needs a read of the live opportunity, which arrives with '
-        'the send path that re-checks the same thing inside its '
-        'transaction, so that both ask the question the same way. '
-        'Until then the totals describe what the stored revision would '
-        'create, and some of it may already exist.'
+        'Every opportunity the revision touches is read from Amplify '
+        'while this is answered, so a shift that is already there is '
+        'reported as skipped rather than counted in what would be '
+        'created. The send asks the same question again inside its own '
+        'transaction, which is what makes the total shown here the '
+        'number of rows that arrive.'
     ),
     response_model=PreviewView
 )
@@ -290,6 +292,10 @@ async def get_preview(
             HTTPException:
                 404 when there is no such run.
 
+            UpstreamError:
+                If an opportunity cannot be read.  A preview that
+                answered anyway would report every shift as new.
+
         Returns:
             preview (PreviewView):
                 What a send would do.
@@ -309,9 +315,18 @@ async def get_preview(
 
     events, opportunities = gathered
 
+    # Off the event loop, like the database read above and for the same
+    # reason: this is a request per opportunity, and the service has
+    # other callers to answer while it waits for them.
+    existing = await run_in_threadpool(
+        shifts_in_amplify,
+        events=events
+    )
+
     return to_preview_view(
         events=events,
-        opportunities=opportunities
+        opportunities=opportunities,
+        existing=existing
     )
 
 

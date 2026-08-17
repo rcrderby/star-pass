@@ -21,7 +21,7 @@
 """
 
 # Imports - Python Standard Library
-from typing import Dict, Iterable, List, Sequence
+from typing import AbstractSet, Dict, Iterable, List, Sequence
 
 # Imports - Local
 from star_pass._defaults import LOCAL_TIMEZONE
@@ -38,7 +38,8 @@ from star_pass._records import (
     Job,
     Opportunity,
     Revision,
-    Run
+    Run,
+    ShiftIdentity
 )
 from ._schemas import (
     BlockerView,
@@ -55,6 +56,7 @@ from ._schemas import (
     RunCountsView,
     RunDetailView,
     RunView,
+    SkippedShiftView,
     WindowView
 )
 
@@ -300,7 +302,8 @@ def to_revision_views(
 
 def to_preview_view(
         events: Sequence[Event],
-        opportunities: Sequence[Opportunity]
+        opportunities: Sequence[Opportunity],
+        existing: AbstractSet[ShiftIdentity]
 ) -> PreviewView:
     """ Return what sending a revision would create.
 
@@ -316,6 +319,13 @@ def to_preview_view(
             opportunities (Sequence[Opportunity]):
                 Every opportunity the run resolved.
 
+            existing (AbstractSet[ShiftIdentity]):
+                The shifts Amplify already holds, read live by
+                '_opportunities.shifts_in_amplify'.  Required rather
+                than defaulted: a preview answered without asking would
+                promise rows that a send then skips, and neither mode
+                would have anything to say about the difference.
+
         Returns:
             view (PreviewView):
                 What a send would do, shaped for the contract.
@@ -323,12 +333,14 @@ def to_preview_view(
 
     result = preview(
         events=events,
-        opportunities=_by_need_id(opportunities=opportunities)
+        opportunities=_by_need_id(opportunities=opportunities),
+        existing=existing
     )
 
     return PreviewView(
         totals=PreviewTotalsView(
             will_create=result.will_create,
+            already_in_amplify=result.already_in_amplify,
             repeated_rows=result.repeated_rows,
             blocking_events=result.blocking_events
         ),
@@ -337,11 +349,21 @@ def to_preview_view(
                 need_id=row.need_id,
                 title=row.title,
                 will_create=row.will_create,
+                already_in_amplify=row.already_in_amplify,
                 slots=row.slots,
                 first_date=row.first_date,
                 last_date=row.last_date
             )
             for row in result.rows
+        ],
+        skipped=[
+            SkippedShiftView(
+                need_id=shift.need_id,
+                date=shift.date,
+                shift_start=shift.shift_start,
+                shift_end=shift.shift_end
+            )
+            for shift in result.skipped
         ],
         blockers=[
             BlockerView(

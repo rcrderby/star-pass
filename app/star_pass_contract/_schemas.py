@@ -446,7 +446,17 @@ class PreviewTotalsView(ApiModel):
         description=(
             'Shifts that would be created. Counted by identity -- '
             'need ID, date, start and end -- so two events asking for '
-            'the same row count once.'
+            'the same row count once, and without the ones Amplify '
+            'already holds. This is the number of rows that will '
+            'arrive, and the number a send confirms against.'
+        )
+    )
+    already_in_amplify: int = Field(
+        description=(
+            'Shifts the revision asks for that Amplify already has, '
+            'read live from the opportunities themselves rather than '
+            'from any record of what this run sent. They are skipped '
+            'rather than created again; `skipped` names them.'
         )
     )
     repeated_rows: int = Field(
@@ -482,21 +492,66 @@ class PreviewRowView(ApiModel):
         )
     )
     will_create: int = Field(
-        description='Shifts this opportunity would receive.'
+        description=(
+            'Shifts this opportunity would receive, without the ones '
+            'it already holds.'
+        )
+    )
+    already_in_amplify: int = Field(
+        description=(
+            'Shifts this opportunity is asked for that it already '
+            'holds, and which a send would skip. A row where this is '
+            'the whole ask and `willCreate` is zero is an opportunity '
+            'a send has nothing left to do for.'
+        )
     )
     slots: int = Field(
-        description='Volunteers wanted across those shifts.'
-    )
-    first_date: str = Field(
-        description='Earliest day a shift would be created on.'
-    )
-    last_date: str = Field(
         description=(
-            'Latest day a shift would be created on. Of the shifts '
-            'that would be created, not of every event under this '
-            'opportunity: these are the days about to arrive in '
-            'Amplify.'
+            'Volunteers wanted across the shifts that would be '
+            'created. A skipped shift asks for nobody: it exists '
+            'already, wanting whatever it was created wanting.'
         )
+    )
+    first_date: str | None = Field(
+        default=None,
+        description=(
+            'Earliest day a shift would be created on, or null when '
+            'none would be.'
+        )
+    )
+    last_date: str | None = Field(
+        default=None,
+        description=(
+            'Latest day a shift would be created on, or null when '
+            'none would be. Of the shifts that would be created, not '
+            'of every event under this opportunity: these are the days '
+            'about to arrive in Amplify.'
+        )
+    )
+
+
+class SkippedShiftView(ApiModel):
+    """ One shift the revision asks for that Amplify already has.
+
+        Named per shift and never only counted (D16). A count says how
+        many rows will not arrive; it does not say which, and the
+        reader deciding whether that is right is deciding about
+        particular days and times.
+    """
+
+    need_id: str = Field(
+        description=(
+            'Opportunity the shift would have been created under.'
+        )
+    )
+    date: str = Field(
+        description='Day it falls on, as an ISO date.'
+    )
+    shift_start: str = Field(
+        description='Time of day it starts.'
+    )
+    shift_end: str = Field(
+        description='Time of day it ends.'
     )
 
 
@@ -522,6 +577,12 @@ class PreviewView(ApiModel):
         categories share one Amplify listing, so grouping by category
         would show that listing twice under two names and split a
         total the reader is about to check against Amplify.
+
+        Every opportunity the revision touches is read live while this
+        is answered, so the totals are net of what Amplify already
+        holds. The send re-reads the same way inside its own
+        transaction, which is what makes the number shown here the
+        number of rows that arrive.
     """
 
     totals: PreviewTotalsView = Field(
@@ -532,9 +593,16 @@ class PreviewView(ApiModel):
     )
     rows: List[PreviewRowView] = Field(
         description=(
-            'One per opportunity that would receive a shift, by need '
-            'ID. An opportunity the run resolved but would send '
-            'nothing to has no row.'
+            'One per opportunity the revision asks for a shift under, '
+            'by need ID. An opportunity the run resolved but asks '
+            'nothing of has no row; one whose shifts Amplify already '
+            'holds keeps its row and says so.'
+        )
+    )
+    skipped: List[SkippedShiftView] = Field(
+        description=(
+            'Every shift Amplify already has, by need ID and then by '
+            'when it falls. A send skips exactly these.'
         )
     )
     blockers: List[BlockerView] = Field(

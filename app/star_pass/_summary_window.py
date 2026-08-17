@@ -17,39 +17,14 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 # Imports - Local
 from . import _defaults
+from ._helpers import parse_amplify_datetime
 from ._logging import get_logger
 
 # Constants
-AMPLIFY_SHIFT_DATETIME_FORMAT = _defaults.AMPLIFY_SHIFT_DATETIME_FORMAT
 LOCAL_TIMEZONE = _defaults.LOCAL_TIMEZONE
 
 # Module logger
 logger = get_logger(__name__)
-
-
-def _parse_amplify_dt(
-        value: Any
-) -> Optional[datetime]:
-    """ Parse an Amplify datetime string, tolerating absent seconds.
-
-        Args:
-            value (Any):
-                A datetime string (a shift 'start'/'end' or a response
-                'created_at'/'response_date_added'), or None.
-
-        Returns:
-            parsed (datetime | None):
-                The parsed datetime, or None when 'value' is missing or
-                cannot be parsed.
-    """
-
-    for date_format in (AMPLIFY_SHIFT_DATETIME_FORMAT, '%Y-%m-%d %H:%M'):
-        try:
-            return datetime.strptime(value, date_format)
-        except (TypeError, ValueError):
-            continue
-
-    return None
 
 
 def _shift_start_dt(
@@ -66,7 +41,7 @@ def _shift_start_dt(
                 The parsed start datetime, or None.
     """
 
-    return _parse_amplify_dt((shift or {}).get('start'))
+    return parse_amplify_datetime((shift or {}).get('start'))
 
 
 def _response_created_dt(
@@ -88,7 +63,7 @@ def _response_created_dt(
 
     raw = response.get('created_at') or response.get('response_date_added')
 
-    return _parse_amplify_dt(raw)
+    return parse_amplify_datetime(raw)
 
 
 def local_now() -> datetime:
@@ -391,8 +366,8 @@ def _format_slot_when(
                 parsing fails.
     """
 
-    start_dt = _parse_amplify_dt(shift.get('start'))
-    end_dt = _parse_amplify_dt(shift.get('end'))
+    start_dt = parse_amplify_datetime(shift.get('start'))
+    end_dt = parse_amplify_datetime(shift.get('end'))
 
     if start_dt is None or end_dt is None:
         return shift.get('start') or 'Time TBD'

@@ -40,7 +40,7 @@ from ._gcal_time import gcal_timezone, resolve_window
 from .gcal_data import GCALData
 from ._helpers import CategoryMatch, Helpers
 from ._logging import get_logger
-from ._opportunities import public_url, read_title
+from ._opportunities import public_url, read_need, title_of
 from ._records import (
     Event,
     EventRole,
@@ -56,10 +56,8 @@ from ._repository import (
 )
 
 # Constants
+ISO_DATE_FORMAT = _defaults.ISO_DATE_FORMAT
 SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
-
-# How a date is written where one is stored.
-ISO_DATE_FORMAT = '%Y-%m-%d'
 
 # What a revision a collection produced is called.  Which of the two
 # it is says whether anything was there before, which is the one thing
@@ -578,7 +576,9 @@ def _collected(
         _opportunity_from(
             need_id=need_id,
             timing=timing,
-            title=read_title(helpers=helpers, need_id=need_id)
+            title=title_of(
+                need=read_need(helpers=helpers, need_id=need_id)
+            )
         )
         for need_id, timing in sorted(timings.items())
     ]

@@ -36,6 +36,7 @@ from star_pass._job_runner import JobRunner
 from star_pass._database import connect, transaction
 from star_pass._defaults import GCAL_CALENDARS
 from star_pass._gcal_time import resolve_window
+from star_pass._opportunities import shifts_in_amplify
 from star_pass._reading import (
     changes_in_current,
     read_run_detail,
@@ -417,6 +418,10 @@ class LocalClient(Operations):
                 ApiProblem:
                     If there is no such run.
 
+                UpstreamError:
+                    If an opportunity cannot be read.  A preview that
+                    answered anyway would report every shift as new.
+
             Returns:
                 answer (Dict[str, Any]):
                     What a send would do.
@@ -435,7 +440,8 @@ class LocalClient(Operations):
 
         return to_preview_view(
             events=events,
-            opportunities=opportunities
+            opportunities=opportunities,
+            existing=shifts_in_amplify(events=events)
         ).model_dump(by_alias=True, mode='json')
 
     def _job(

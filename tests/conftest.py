@@ -7,6 +7,7 @@
 
 # Imports - Python Standard Library
 import importlib.util
+import json
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -51,6 +52,7 @@ os.environ.setdefault('GCAL_WINDOW_END', '2099-01-31T00:00:00-00:00')
 import pytest  # noqa: E402
 from fastapi import FastAPI  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+from requests import Response  # noqa: E402
 
 # Imports - Local
 from star_pass import _database  # noqa: E402
@@ -109,6 +111,111 @@ def fixture_entry_point() -> Any:
 def helpers() -> Helpers:
     """ Return a fresh Helpers instance for each test. """
     return Helpers()
+
+
+@pytest.fixture(name='make_amplify_shift')
+def fixture_make_amplify_shift() -> Callable[..., dict]:
+    """ Return a factory building a shift as Amplify describes one.
+
+        The default is the row the default event would create, so a
+        test arranging "Amplify already has this shift" says only that.
+    """
+
+    def build(**overrides: Any) -> dict:
+        """ Return a shift, replacing any field named in 'overrides'. """
+        shift: dict = {
+            'id': 1,
+            'start': '2026-09-03 19:15:00',
+            'end': '2026-09-03 21:30:00',
+            'duration': 135
+        }
+        shift.update(overrides)
+
+        return shift
+
+    return build
+
+
+@pytest.fixture(name='answer_requests')
+def fixture_answer_requests(
+    monkeypatch: pytest.MonkeyPatch
+) -> Callable[[Callable[[str], dict]], None]:
+    """ Return a way to answer every request the core sends.
+
+        Everything reaching the calendar or Amplify goes through
+        'Helpers.send_api_request', which this replaces, so a test
+        using it makes no live request.  Here rather than beside any
+        one caller: how a scripted answer is built is the same
+        wherever one is scripted, and a second copy would be a second
+        thing to keep in step with what the code reads.
+    """
+
+    def script(body_for: Callable[[str], dict]) -> None:
+        """ Answer each request with the body chosen for its address. """
+
+        def send(
+            _self: Any,
+            api_request_data: dict,
+            **_ignored: Any
+        ) -> Response:
+            """ Answer one request. """
+            response = Response()
+            response.status_code = 200
+            response.headers['Content-Type'] = 'application/json'
+            # pylint: disable-next=protected-access
+            response._content = json.dumps(
+                body_for(api_request_data['url'])
+            ).encode('utf-8')
+
+            return response
+
+        monkeypatch.setattr(
+            'star_pass._helpers.Helpers.send_api_request',
+            send
+        )
+
+    return script
+
+
+@pytest.fixture(name='amplify_holds')
+def fixture_amplify_holds(
+    answer_requests: Callable[[Callable[[str], dict]], None]
+) -> Callable[..., None]:
+    """ Return a way to say what Amplify's opportunities already hold.
+
+        Every read of an opportunity is answered from here, so a test
+        that asks what a send would create makes no live request.  The
+        title is answered by the same call, because one request carries
+        both.
+
+        An opportunity the mapping does not name answers without a
+        'shifts' key at all, which is Amplify's own way of saying it
+        holds none.
+    """
+
+    def script(
+        shifts: dict | None = None,
+        titled: bool = True
+    ) -> None:
+        """ Answer each opportunity with the shifts named against it. """
+        held = shifts if shifts is not None else {}
+
+        def need_body(url: str) -> dict:
+            """ Return what Amplify says about one opportunity. """
+            need_id = url.rsplit('/', 1)[-1]
+            data: dict = {}
+
+            if titled:
+                data['need_title'] = f'Need {need_id}'
+
+            if need_id in held:
+                data['shifts'] = held[need_id]
+
+            return {'data': data}
+
+        answer_requests(need_body)
+
+    return script
 
 
 @pytest.fixture(name='database_path')

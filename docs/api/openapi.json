@@ -428,15 +428,34 @@
       "PreviewRowView": {
         "description": "What one Amplify opportunity would receive. ",
         "properties": {
+          "alreadyInAmplify": {
+            "description": "Shifts this opportunity is asked for that it already holds, and which a send would skip. A row where this is the whole ask and `willCreate` is zero is an opportunity a send has nothing left to do for.",
+            "title": "Alreadyinamplify",
+            "type": "integer"
+          },
           "firstDate": {
-            "description": "Earliest day a shift would be created on.",
-            "title": "Firstdate",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Earliest day a shift would be created on, or null when none would be.",
+            "title": "Firstdate"
           },
           "lastDate": {
-            "description": "Latest day a shift would be created on. Of the shifts that would be created, not of every event under this opportunity: these are the days about to arrive in Amplify.",
-            "title": "Lastdate",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Latest day a shift would be created on, or null when none would be. Of the shifts that would be created, not of every event under this opportunity: these are the days about to arrive in Amplify.",
+            "title": "Lastdate"
           },
           "needId": {
             "description": "Amplify need ID the shifts would be created under.",
@@ -444,7 +463,7 @@
             "type": "string"
           },
           "slots": {
-            "description": "Volunteers wanted across those shifts.",
+            "description": "Volunteers wanted across the shifts that would be created. A skipped shift asks for nobody: it exists already, wanting whatever it was created wanting.",
             "title": "Slots",
             "type": "integer"
           },
@@ -461,7 +480,7 @@
             "title": "Title"
           },
           "willCreate": {
-            "description": "Shifts this opportunity would receive.",
+            "description": "Shifts this opportunity would receive, without the ones it already holds.",
             "title": "Willcreate",
             "type": "integer"
           }
@@ -469,9 +488,8 @@
         "required": [
           "needId",
           "willCreate",
-          "slots",
-          "firstDate",
-          "lastDate"
+          "alreadyInAmplify",
+          "slots"
         ],
         "title": "PreviewRowView",
         "type": "object"
@@ -479,6 +497,11 @@
       "PreviewTotalsView": {
         "description": "What a send would do, totalled over the whole revision. ",
         "properties": {
+          "alreadyInAmplify": {
+            "description": "Shifts the revision asks for that Amplify already has, read live from the opportunities themselves rather than from any record of what this run sent. They are skipped rather than created again; `skipped` names them.",
+            "title": "Alreadyinamplify",
+            "type": "integer"
+          },
           "blockingEvents": {
             "description": "Events that cannot be sent. Above zero means nothing can be sent at all: the run stops and names them rather than dropping them, because a missing shift is invisible until volunteers cannot sign up.",
             "title": "Blockingevents",
@@ -490,13 +513,14 @@
             "type": "integer"
           },
           "willCreate": {
-            "description": "Shifts that would be created. Counted by identity -- need ID, date, start and end -- so two events asking for the same row count once.",
+            "description": "Shifts that would be created. Counted by identity -- need ID, date, start and end -- so two events asking for the same row count once, and without the ones Amplify already holds. This is the number of rows that will arrive, and the number a send confirms against.",
             "title": "Willcreate",
             "type": "integer"
           }
         },
         "required": [
           "willCreate",
+          "alreadyInAmplify",
           "repeatedRows",
           "blockingEvents"
         ],
@@ -504,7 +528,7 @@
         "type": "object"
       },
       "PreviewView": {
-        "description": "What sending the current revision would create.\n\nGrouped by opportunity and never by category: several\ncategories share one Amplify listing, so grouping by category\nwould show that listing twice under two names and split a\ntotal the reader is about to check against Amplify.",
+        "description": "What sending the current revision would create.\n\nGrouped by opportunity and never by category: several\ncategories share one Amplify listing, so grouping by category\nwould show that listing twice under two names and split a\ntotal the reader is about to check against Amplify.\n\nEvery opportunity the revision touches is read live while this\nis answered, so the totals are net of what Amplify already\nholds. The send re-reads the same way inside its own\ntransaction, which is what makes the number shown here the\nnumber of rows that arrive.",
         "properties": {
           "blockers": {
             "description": "Every reason an event cannot be sent, in the order the events are shown.",
@@ -515,11 +539,19 @@
             "type": "array"
           },
           "rows": {
-            "description": "One per opportunity that would receive a shift, by need ID. An opportunity the run resolved but would send nothing to has no row.",
+            "description": "One per opportunity the revision asks for a shift under, by need ID. An opportunity the run resolved but asks nothing of has no row; one whose shifts Amplify already holds keeps its row and says so.",
             "items": {
               "$ref": "#/components/schemas/PreviewRowView"
             },
             "title": "Rows",
+            "type": "array"
+          },
+          "skipped": {
+            "description": "Every shift Amplify already has, by need ID and then by when it falls. A send skips exactly these.",
+            "items": {
+              "$ref": "#/components/schemas/SkippedShiftView"
+            },
+            "title": "Skipped",
             "type": "array"
           },
           "totals": {
@@ -530,6 +562,7 @@
         "required": [
           "totals",
           "rows",
+          "skipped",
           "blockers"
         ],
         "title": "PreviewView",
@@ -803,6 +836,39 @@
           "counts"
         ],
         "title": "RunView",
+        "type": "object"
+      },
+      "SkippedShiftView": {
+        "description": "One shift the revision asks for that Amplify already has.\n\nNamed per shift and never only counted (D16). A count says how\nmany rows will not arrive; it does not say which, and the\nreader deciding whether that is right is deciding about\nparticular days and times.",
+        "properties": {
+          "date": {
+            "description": "Day it falls on, as an ISO date.",
+            "title": "Date",
+            "type": "string"
+          },
+          "needId": {
+            "description": "Opportunity the shift would have been created under.",
+            "title": "Needid",
+            "type": "string"
+          },
+          "shiftEnd": {
+            "description": "Time of day it ends.",
+            "title": "Shiftend",
+            "type": "string"
+          },
+          "shiftStart": {
+            "description": "Time of day it starts.",
+            "title": "Shiftstart",
+            "type": "string"
+          }
+        },
+        "required": [
+          "needId",
+          "date",
+          "shiftStart",
+          "shiftEnd"
+        ],
+        "title": "SkippedShiftView",
         "type": "object"
       },
       "Version": {
@@ -1146,7 +1212,7 @@
     },
     "/v1/runs/{run_id}/preview": {
       "get": {
-        "description": "What a send would do, grouped by Amplify opportunity and never by category: several categories share one listing, so grouping by category would show it twice under two names and split a total the reader is about to check against Amplify.\n\nShifts are counted by identity -- need ID, date, start and end -- so two events asking for the same row count once, and a reader is told how many rows repeat rather than left to wonder why the total is below what they can see.\n\nAn event that cannot become a shift stops the whole send and is named with every reason it cannot, so fixing one does not reveal another.\n\n**This does not yet say which shifts Amplify already has.** That needs a read of the live opportunity, which arrives with the send path that re-checks the same thing inside its transaction, so that both ask the question the same way. Until then the totals describe what the stored revision would create, and some of it may already exist.",
+        "description": "What a send would do, grouped by Amplify opportunity and never by category: several categories share one listing, so grouping by category would show it twice under two names and split a total the reader is about to check against Amplify.\n\nShifts are counted by identity -- need ID, date, start and end -- so two events asking for the same row count once, and a reader is told how many rows repeat rather than left to wonder why the total is below what they can see.\n\nAn event that cannot become a shift stops the whole send and is named with every reason it cannot, so fixing one does not reveal another.\n\nEvery opportunity the revision touches is read from Amplify while this is answered, so a shift that is already there is reported as skipped rather than counted in what would be created. The send asks the same question again inside its own transaction, which is what makes the total shown here the number of rows that arrive.",
         "operationId": "get_preview",
         "parameters": [
           {

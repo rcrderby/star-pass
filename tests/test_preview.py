@@ -21,6 +21,11 @@ from star_pass._preview import (
 )
 from star_pass._records import Event, EventRole, Opportunity
 
+# Constants
+# The row the default event would create, which is what a test saying
+# "Amplify already has it" arranges.
+IDENTITY = ('905196', '2026-09-03', '19:15', '21:30')
+
 
 class TestBlockers:
     def test_an_event_that_can_be_sent_blocks_nothing(
@@ -85,7 +90,8 @@ class TestWhatWouldBeCreated:
     ) -> None:
         assert preview(
             events=[make_event()],
-            opportunities={}
+            opportunities={},
+            existing=set()
         ).will_create == 1
 
     def test_an_event_creates_a_shift_per_role(
@@ -101,7 +107,11 @@ class TestWhatWouldBeCreated:
             )
         )
 
-        assert preview(events=[event], opportunities={}).will_create == 2
+        assert preview(
+            events=[event],
+            opportunities={},
+            existing=set()
+        ).will_create == 2
 
     def test_two_events_sending_the_same_row_create_one_shift(
         self,
@@ -113,7 +123,8 @@ class TestWhatWouldBeCreated:
                 make_event(id='event-1'),
                 make_event(id='event-2')
             ],
-            opportunities={}
+            opportunities={},
+            existing=set()
         )
 
         assert result.will_create == 1
@@ -131,7 +142,8 @@ class TestWhatWouldBeCreated:
                     roles=(EventRole(need_id='905197', slots=2),)
                 )
             ],
-            opportunities={}
+            opportunities={},
+            existing=set()
         )
 
         assert result.will_create == 2
@@ -148,7 +160,8 @@ class TestWhatWouldBeCreated:
                 make_event(id='event-1', shift_end='21:30'),
                 make_event(id='event-2', shift_end='22:30')
             ],
-            opportunities={}
+            opportunities={},
+            existing=set()
         )
 
         assert result.will_create == 2
@@ -172,7 +185,8 @@ class TestWhatWouldBeCreated:
                     )
                 )
             ],
-            opportunities={}
+            opportunities={},
+            existing=set()
         )
 
         assert result.will_create == 2
@@ -190,14 +204,15 @@ class TestWhatWouldBeCreated:
                     roles=(EventRole(need_id='905197', slots=0),)
                 )
             ],
-            opportunities={}
+            opportunities={},
+            existing=set()
         )
 
         assert result.will_create == 1
         assert result.blocking_events == 1
 
     def test_an_empty_revision_would_create_nothing(self) -> None:
-        result = preview(events=[], opportunities={})
+        result = preview(events=[], opportunities={}, existing=set())
 
         assert result.will_create == 0
         assert result.rows == ()
@@ -220,7 +235,11 @@ class TestTheRowsAPreviewGroups:
             )
         ]
 
-        rows = preview(events=events, opportunities={}).rows
+        rows = preview(
+            events=events,
+            opportunities={},
+            existing=set()
+        ).rows
 
         assert [row.need_id for row in rows] == ['905196']
         assert rows[0].will_create == 2
@@ -234,7 +253,8 @@ class TestTheRowsAPreviewGroups:
 
         rows = preview(
             events=[make_event()],
-            opportunities={opportunity.need_id: opportunity}
+            opportunities={opportunity.need_id: opportunity},
+            existing=set()
         ).rows
 
         assert rows[0].title == 'Adult Scrimmages: Skating Officials'
@@ -245,7 +265,11 @@ class TestTheRowsAPreviewGroups:
     ) -> None:
         # The shifts would still be created, so the row belongs; the
         # missing title is what says collection resolved nothing.
-        rows = preview(events=[make_event()], opportunities={}).rows
+        rows = preview(
+            events=[make_event()],
+            opportunities={},
+            existing=set()
+        ).rows
 
         assert rows[0].need_id == '905196'
         assert rows[0].title is None
@@ -263,7 +287,11 @@ class TestTheRowsAPreviewGroups:
             )
         ]
 
-        rows = preview(events=events, opportunities={}).rows
+        rows = preview(
+            events=events,
+            opportunities={},
+            existing=set()
+        ).rows
 
         assert rows[0].slots == 10
 
@@ -277,7 +305,11 @@ class TestTheRowsAPreviewGroups:
             make_event(id='event-3', date='2026-09-07')
         ]
 
-        rows = preview(events=events, opportunities={}).rows
+        rows = preview(
+            events=events,
+            opportunities={},
+            existing=set()
+        ).rows
 
         assert rows[0].first_date == '2026-09-03'
         assert rows[0].last_date == '2026-09-10'
@@ -297,7 +329,11 @@ class TestTheRowsAPreviewGroups:
             )
         ]
 
-        rows = preview(events=events, opportunities={}).rows
+        rows = preview(
+            events=events,
+            opportunities={},
+            existing=set()
+        ).rows
 
         assert rows[0].last_date == '2026-09-03'
 
@@ -313,7 +349,8 @@ class TestTheRowsAPreviewGroups:
 
         rows = preview(
             events=[make_event()],
-            opportunities=opportunities
+            opportunities=opportunities,
+            existing=set()
         ).rows
 
         assert [row.need_id for row in rows] == ['905196']
@@ -326,7 +363,8 @@ class TestWhatStopsASend:
     ) -> None:
         result = preview(
             events=[make_event(id='event-2', category=None, roles=())],
-            opportunities={}
+            opportunities={},
+            existing=set()
         )
 
         assert [
@@ -345,7 +383,8 @@ class TestWhatStopsASend:
                     roles=(EventRole(need_id='905196', slots=0),)
                 )
             ],
-            opportunities={}
+            opportunities={},
+            existing=set()
         )
 
         assert [item.reason for item in result.blockers] == [
@@ -358,7 +397,186 @@ class TestWhatStopsASend:
         self,
         make_event: Callable[..., Event]
     ) -> None:
-        result = preview(events=[make_event()], opportunities={})
+        result = preview(
+            events=[make_event()],
+            opportunities={},
+            existing=set()
+        )
 
         assert result.blockers == ()
         assert result.blocking_events == 0
+
+
+class TestWhatAmplifyAlreadyHas:
+    def test_a_shift_amplify_has_is_not_counted_as_arriving(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # The total is what the confirmation restates (D11), so it has
+        # to be the number of rows that will arrive.
+        result = preview(
+            events=[make_event()],
+            opportunities={},
+            existing={IDENTITY}
+        )
+
+        assert result.will_create == 0
+        assert result.already_in_amplify == 1
+
+    def test_a_shift_amplify_does_not_have_still_arrives(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        result = preview(
+            events=[
+                make_event(id='event-1'),
+                make_event(id='event-2', date='2026-09-10')
+            ],
+            opportunities={},
+            existing={IDENTITY}
+        )
+
+        assert result.will_create == 1
+        assert result.already_in_amplify == 1
+
+    def test_a_shift_amplify_has_is_named_not_only_counted(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # A count says how many rows will not arrive; the reader
+        # deciding whether that is right is deciding about days and
+        # times (D16).
+        result = preview(
+            events=[make_event()],
+            opportunities={},
+            existing={IDENTITY}
+        )
+
+        assert [
+            (
+                shift.need_id,
+                shift.date,
+                shift.shift_start,
+                shift.shift_end
+            )
+            for shift in result.skipped
+        ] == [IDENTITY]
+
+    def test_the_skipped_shifts_are_in_a_settled_order(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # A list that reordered itself between two readings of one run
+        # would look like a change.
+        later = ('905196', '2026-09-10', '19:15', '21:30')
+        result = preview(
+            events=[
+                make_event(id='event-1', date='2026-09-10'),
+                make_event(id='event-2')
+            ],
+            opportunities={},
+            existing={later, IDENTITY}
+        )
+
+        assert [shift.date for shift in result.skipped] == [
+            '2026-09-03',
+            '2026-09-10'
+        ]
+
+    def test_an_existing_shift_of_another_opportunity_is_no_match(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        result = preview(
+            events=[make_event()],
+            opportunities={},
+            existing={('905197', '2026-09-03', '19:15', '21:30')}
+        )
+
+        assert result.will_create == 1
+        assert result.already_in_amplify == 0
+
+    def test_a_row_reports_what_it_would_create_and_what_exists(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        rows = preview(
+            events=[
+                make_event(id='event-1'),
+                make_event(id='event-2', date='2026-09-10')
+            ],
+            opportunities={},
+            existing={IDENTITY}
+        ).rows
+
+        assert rows[0].will_create == 1
+        assert rows[0].already_in_amplify == 1
+
+    def test_a_row_counts_only_the_volunteers_it_would_ask_for(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # A skipped shift exists already, wanting whatever it was
+        # created wanting.
+        rows = preview(
+            events=[
+                make_event(id='event-1'),
+                make_event(
+                    id='event-2',
+                    date='2026-09-10',
+                    roles=(EventRole(need_id='905196', slots=6),)
+                )
+            ],
+            opportunities={},
+            existing={IDENTITY}
+        ).rows
+
+        assert rows[0].slots == 6
+
+    def test_an_opportunity_with_nothing_left_to_do_keeps_its_row(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # The row is what says a send has nothing left to do for this
+        # opportunity, which an absent row could not.
+        rows = preview(
+            events=[make_event()],
+            opportunities={},
+            existing={IDENTITY}
+        ).rows
+
+        assert [row.need_id for row in rows] == ['905196']
+        assert rows[0].will_create == 0
+        assert rows[0].already_in_amplify == 1
+
+    def test_a_row_creating_nothing_names_no_days(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # The dates are the days about to arrive in Amplify, and none
+        # are.
+        rows = preview(
+            events=[make_event()],
+            opportunities={},
+            existing={IDENTITY}
+        ).rows
+
+        assert rows[0].first_date is None
+        assert rows[0].last_date is None
+
+    def test_a_repeat_of_a_shift_amplify_has_is_still_a_repeat(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        result = preview(
+            events=[
+                make_event(id='event-1'),
+                make_event(id='event-2')
+            ],
+            opportunities={},
+            existing={IDENTITY}
+        )
+
+        assert result.repeated_rows == 1
+        assert result.already_in_amplify == 1
+        assert result.will_create == 0
