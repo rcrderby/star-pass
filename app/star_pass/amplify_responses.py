@@ -22,7 +22,7 @@ from typing import (
 
 # Imports - Local
 from . import _defaults
-from ._helpers import Helpers, load_env_file
+from ._helpers import amplify_headers, Helpers, load_env_file
 from ._logging import get_logger
 from ._progress import Spinner
 from ._summary_window import (
@@ -37,12 +37,12 @@ from ._summary_window import (
     _window_start,
     _window_title
 )
-from .amplify_shifts import BASE_AMPLIFY_HEADERS, BASE_AMPLIFY_URL
 
 # Load environment variables
 load_env_file()
 
 # Constants
+BASE_AMPLIFY_URL = _defaults.BASE_AMPLIFY_URL
 HTTP_TIMEOUT = _defaults.HTTP_TIMEOUT
 RESPONSES_HTTP_TIMEOUT = _defaults.AMPLIFY_RESPONSES_TIMEOUT
 RESPONSES_SINCE_DAYS = _defaults.AMPLIFY_RESPONSES_SINCE_DAYS
@@ -209,7 +209,7 @@ class AmplifyResponses:
         api_request_data = {
             'method': 'GET',
             'url': url,
-            'headers': BASE_AMPLIFY_HEADERS,
+            'headers': amplify_headers(),
             'json': None,
             'timeout': self.timeout
         }
@@ -252,7 +252,7 @@ class AmplifyResponses:
             api_request_data={
                 'method': 'GET',
                 'url': f'{BASE_AMPLIFY_URL}/responses',
-                'headers': BASE_AMPLIFY_HEADERS,
+                'headers': amplify_headers(),
                 'json': None,
                 'timeout': RESPONSES_HTTP_TIMEOUT,
                 'params': params

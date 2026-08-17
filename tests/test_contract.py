@@ -10,12 +10,13 @@
     duplicate characterization test reads as coverage while testing
     nothing new.  Those are:
 
-      - duration capped at 'max_length', and a duration of zero or less
-        exiting: 'test_gcal_data.TestGetShiftTimeData'
-      - fully duplicate rows dropped:
-        'test_amplify_shifts.test_fully_duplicate_rows_are_removed'
-      - an empty need ID stopping the run:
-        'test_amplify_shifts.test_invalid_need_id_fails_schema_validation'
+      - duration capped at 'max_length': 'test_derived.TestCappingMaximum'
+      - a shift ending no later than it starts stopping the run:
+        'test_collect.TestWhatStopsTheRun'
+      - two events that would create the same shift named as repeats:
+        'test_derived.TestRepeated'
+      - an empty need ID blocking the run:
+        'test_derived.TestBlocksTheRun'
       - an unmatched title routing to review:
         'test_helpers.test_unmatched_title_routes_to_review'
 
@@ -34,19 +35,31 @@ import pytest
 
 # Imports - Local
 from star_pass import _defaults
+from star_pass._gcal_time import resolve_window
 from star_pass._helpers import Helpers
-from star_pass.gcal_data import GCALData, get_gcal_time_window
+from star_pass.gcal_data import GCALData
 
 
 @pytest.fixture
 def gcal() -> GCALData:
-    # auto_prep_data=False prevents any Google Calendar API calls.
-    return GCALData(gcal_name='practices', auto_prep_data=False)
+    # Construction sends no request, so no Google Calendar API call is
+    # made here.
+    return GCALData(gcal_name='practices')
 
 
 @pytest.fixture
 def helpers() -> Helpers:
     return Helpers()
+
+
+def _resolve(start: str, end: str):
+    # The window a run carries, read the way a collection reads it.
+    return resolve_window(
+        start=start,
+        end=end,
+        start_name='the window start',
+        end_name='the window end'
+    )
 
 
 def _item(summary: str, key: str, start: str, end: str) -> dict:
@@ -187,36 +200,23 @@ class TestSearchWindow:
     # it is not real, and a monthly run over a long window must not be
     # rejected.
 
-    def test_a_window_longer_than_sixty_days_is_accepted(
-        self, monkeypatch
-    ):
-        monkeypatch.setenv('GCAL_WINDOW_START', '2099-01-01')
-        monkeypatch.setenv('GCAL_WINDOW_END', '2099-12-31')
-
-        window_start, window_end = get_gcal_time_window()
+    def test_a_window_longer_than_sixty_days_is_accepted(self):
+        window_start, window_end = _resolve('2099-01-01', '2099-12-31')
 
         assert window_start.startswith('2099-01-01')
         assert window_end.startswith('2099-12-31')
 
-    def test_a_one_day_window_is_accepted(self, monkeypatch):
-        monkeypatch.setenv('GCAL_WINDOW_START', '2099-01-01')
-        monkeypatch.setenv('GCAL_WINDOW_END', '2099-01-02')
-
-        window_start, window_end = get_gcal_time_window()
+    def test_a_one_day_window_is_accepted(self):
+        window_start, window_end = _resolve('2099-01-01', '2099-01-02')
 
         assert window_start.startswith('2099-01-01')
         assert window_end.startswith('2099-01-02')
 
-    def test_a_window_that_does_not_move_forward_is_rejected(
-        self, monkeypatch
-    ):
+    def test_a_window_that_does_not_move_forward_is_rejected(self):
         # End equal to start is empty, not a one-day window: the end is
         # exclusive, so an equal pair can only collect nothing.
-        monkeypatch.setenv('GCAL_WINDOW_START', '2099-01-01')
-        monkeypatch.setenv('GCAL_WINDOW_END', '2099-01-01')
-
         with pytest.raises(ValueError):
-            get_gcal_time_window()
+            _resolve('2099-01-01', '2099-01-01')
 
     def test_the_window_end_reaches_the_request_unchanged(
         self, gcal, monkeypatch

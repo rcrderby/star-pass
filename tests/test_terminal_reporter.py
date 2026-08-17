@@ -1,9 +1,7 @@
 """ Tests for the CLI's terminal renderer.
 
-    'CreateShifts' no longer formats its own output, so the text an
-    operator sees is produced here.  These tests pin that text, because
-    the move was meant to change where it is decided and not what it
-    says.
+    The core reports events and never formats them, so the text an
+    operator sees is produced here.  These tests pin that text.
 
     'app/__main__.py' is normally executed as a script, so it is loaded
     by file path.  The renderer writes to the real stdout, which is what
@@ -91,16 +89,6 @@ class TestSteps:
 
         assert capsys.readouterr().out == '\nReading shift data...\n'
 
-    def test_schema_validation_failure_is_named(
-        self, reporter_class, capsys
-    ):
-        reporter = reporter_class()
-        reporter.schema_validation_failed()
-
-        assert capsys.readouterr().out == (
-            '\n\n** Error validating shift data **\n\n'
-        )
-
 
 class TestCollectionEvents:
     def test_the_calendar_read_is_announced_on_its_own_line(
@@ -128,17 +116,6 @@ class TestCollectionEvents:
         assert capsys.readouterr().out == (
             '\nReading data from the Google Calendar service...\n'
             'Processing Google Calendar event data...done.\n'
-        )
-
-    def test_the_written_file_is_named(self, reporter_class, capsys):
-        reporter = reporter_class()
-        reporter.step_started(label='Writing Amplify shift data to a CSV file')
-        reporter.step_finished()
-        reporter.csv_written(path='/data/csv/gcal_shifts_2099.csv')
-
-        assert capsys.readouterr().out == (
-            '\nWriting Amplify shift data to a CSV file...done.\n'
-            '\nWrote CSV data to "/data/csv/gcal_shifts_2099.csv"\n\n'
         )
 
 
@@ -238,28 +215,4 @@ class TestSlackEvents:
         assert capsys.readouterr().out == (
             'No shifts in the summary window; skipped posting to '
             'Slack.\n'
-        )
-
-
-class TestInvalidShiftData:
-    def test_the_reason_is_appended_when_there_is_one(
-        self, reporter_class, capsys
-    ):
-        reporter = reporter_class()
-        reporter.shift_data_invalid(detail="'duration' is a required property")
-
-        # The trailing blank line is the message's own newline plus
-        # printer's; both were there before the renderer moved.
-        assert capsys.readouterr().out == (
-            '** Unable to create shifts while shift data is invalid **\n\n'
-            "'duration' is a required property\n\n"
-        )
-
-    def test_unvalidated_data_still_reports(self, reporter_class, capsys):
-        # Returning in silence would read as though shifts were created.
-        reporter = reporter_class()
-        reporter.shift_data_invalid()
-
-        assert capsys.readouterr().out == (
-            '** Unable to create shifts while shift data is invalid **\n\n'
         )

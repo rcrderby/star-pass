@@ -2,9 +2,9 @@
 """ Slack notification classes and methods.
 
     Builds Block Kit messages from a plain summary data structure and
-    posts them to Slack with the Slack Web API (slack_sdk).  A dry-run
-    ('check_mode') mirrors the CreateShifts pattern: the message is
-    built and displayed but no request is sent.
+    posts them to Slack with the Slack Web API (slack_sdk).  In a dry
+    run ('check_mode') the message is built and displayed but no
+    request is sent.
 """
 
 # Imports - Python Standard Library

@@ -240,9 +240,7 @@ class TestTheReporterBridge:
 
         reporter.calendar_read_started()
         reporter.sending_started()
-        reporter.check_mode()
         reporter.summary_skipped()
-        reporter.schema_validation_failed()
 
         assert [
             event.kind
@@ -250,9 +248,7 @@ class TestTheReporterBridge:
         ] == [
             'calendar_read_started',
             'sending_started',
-            'check_mode',
-            'summary_skipped',
-            'schema_validation_failed'
+            'summary_skipped'
         ]
 
     def test_a_step_carries_its_label(
@@ -267,20 +263,6 @@ class TestTheReporterBridge:
 
         assert jobs.events(job_id=job_id)[0].payload == {
             'label': 'Removing duplicate shifts'
-        }
-
-    def test_a_written_file_carries_its_path(
-        self,
-        jobs: JobRepository,
-        job_id: str
-    ) -> None:
-        JobReporter(
-            jobs=jobs,
-            job_id=job_id
-        ).csv_written(path='/data/csv/shifts.csv')
-
-        assert jobs.events(job_id=job_id)[0].payload == {
-            'path': '/data/csv/shifts.csv'
         }
 
     def test_sent_shifts_do_not_record_the_request_body(
@@ -318,17 +300,3 @@ class TestTheReporterBridge:
         )
 
         assert jobs.events(job_id=job_id)[0].payload == {'blocks': 2}
-
-    def test_invalid_shift_data_carries_its_detail(
-        self,
-        jobs: JobRepository,
-        job_id: str
-    ) -> None:
-        JobReporter(
-            jobs=jobs,
-            job_id=job_id
-        ).shift_data_invalid(detail='need_id is required')
-
-        assert jobs.events(job_id=job_id)[0].payload == {
-            'detail': 'need_id is required'
-        }

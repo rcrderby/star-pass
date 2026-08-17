@@ -23,14 +23,21 @@ through the Amplify API. It is run once per month.
   database**, and a test holds that: it is the only thing in the
   repository on a schedule, the runner is ephemeral with no volume, and
   a dispatcher that opened one for every invocation would be writing
-  into a container about to be destroyed. The two CSV run modes are
-  retired; `runs collect` and `runs send` do what they did.
-- `app/star_pass/gcal_data.py` — collect and transform Google Calendar
-  events (`GCALData`).
-- `app/star_pass/amplify_shifts.py` — build and upload Amplify shifts
-  (`CreateShifts`).
+  into a container about to be destroyed. `runs collect` and
+  `runs send` are what create shifts.
+- `app/star_pass/gcal_data.py` — read a Google Calendar window
+  (`GCALData`): the paged request and the filter that removes items
+  which must not become shifts. Construction sends nothing; the caller
+  supplies the window, because a run carries its own.
+- `app/star_pass/_gcal_time.py` — reading a search window's bounds
+  (`resolve_window`) and the zone an offset-less value is read in
+  (`gcal_timezone`). A bound without a UTC offset is local time in
+  `GCAL_TIMEZONE`, which is what makes Daylight Saving automatic.
 - `app/star_pass/_helpers.py` — shared helpers (`Helpers`), including
-  `send_api_request`.
+  `send_api_request` and `amplify_headers`, which is read when a
+  request is about to be made rather than held from import time, so a
+  deployment that rotates the credential and restarts nothing still
+  sends the current one.
 - `app/star_pass/_defaults.py` — central configuration and constants,
   including the data-model file paths.
 - `app/star_pass/_models.py` — reads `shift_info.yml` and
@@ -75,9 +82,8 @@ through the Amplify API. It is run once per month.
   the caller has not read.
 - `app/star_pass/_collect.py` — turning a calendar window into a
   stored run: read the calendar, match each title to a category, and
-  write the events, their roles and the opportunities they name. What
-  the CSV path does to a file, in the shape a revision holds. An event
-  that cannot become a correct shift stops the run and is named,
+  write the events, their roles and the opportunities they name. An
+  event that cannot become a correct shift stops the run and is named,
   including two cases about what a stored event can express: a
   category whose need IDs disagree about their offsets, and a shift
   that would run past midnight.
@@ -133,8 +139,6 @@ through the Amplify API. It is run once per month.
   level via the `LOG_LEVEL` environment variable. Diagnostics and status
   flow through `logging`; report data goes to the caller's
   `Reporter` (`app/star_pass/_reporting.py`), which the CLI renders.
-- `app/star_pass/_validation.py` — shift input file checks, run before
-  the transformation pipeline.
 - `models/shift_info.yml` — shift data model: per calendar, `categories`
   (need IDs, slots, timing) each with an `aliases` list of title
   keywords. Add a team by adding its keyword to a category's `aliases`.
@@ -190,9 +194,8 @@ through the Amplify API. It is run once per month.
   renderer to show its answer with, and the same rows build the
   parser, so a command the command line offers and the dispatcher does
   not answer is not expressible. Separate from
-  `__main__.py`, which holds the three CSV-based run modes: those
-  cannot be reached over HTTP, because the contract deliberately
-  publishes nothing addressed by a file path, so they stay local. A
+  `__main__.py`, which holds the Slack summary run mode: the
+  contract deliberately publishes no summary, so it stays local. A
   command renders the answer a client gave and never knows which mode
   produced it — that is what makes one renderer correct for both.
 - `app/star_pass_client/` — the client the command line client uses
@@ -210,8 +213,6 @@ through the Amplify API. It is run once per month.
   mapping of a problem document onto an exception. Generated code is
   excluded from the duplicate-code check, which one method per
   endpoint would otherwise trip.
-- `app/schema/amplify.shifts.schema.json` — JSON Schema for shift
-  payloads.
 - `tests/` — pytest suite.
 
 ## Running the workflow
@@ -251,8 +252,8 @@ The notes below are the ones that are not obvious from the commands.
 
 - Tests must be hermetic: no network calls and no real `.env`.
 - `tests/conftest.py` sets dummy credentials before import.
-- Construct `GCALData` / `CreateShifts` with `auto_prep_data=False`, and
-  mock `Helpers.send_api_request`, to avoid live API calls.
+- Mock `Helpers.send_api_request` to avoid live API calls.
+  Constructing `GCALData` sends no request on its own.
 - A test that asserts a failure should assert the logged message as
   well as the exit, so an error stays actionable.
 

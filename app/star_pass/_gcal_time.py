@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """ Google Calendar search window.
 
-    Reads and validates 'GCAL_WINDOW_START' and 'GCAL_WINDOW_END', the bounds
-    of the calendar search.  They have no defaults: the window moves
-    with every run, so a default would go stale and silently collect
-    zero events.
+    Reads and validates the bounds of a calendar search.  A run carries
+    its own window, so the bounds arrive as arguments rather than from
+    the environment: a window that moves with every run has no default
+    that would not go stale and silently collect zero events.
 
     A bound written without a UTC offset is local time in
     'GCAL_TIMEZONE', which is what makes Daylight Saving automatic.
@@ -21,7 +21,7 @@ from . import _defaults
 from ._logging import get_logger
 
 # Time zone applied to a search window value written without a UTC
-# offset (see 'get_gcal_time_window').
+# offset (see 'resolve_window').
 GCAL_TIMEZONE = _defaults.GCAL_TIMEZONE
 
 # Module logger
@@ -107,64 +107,6 @@ def _parse_gcal_time(
         parsed = parsed.replace(tzinfo=timezone)
 
     return parsed
-
-
-def get_gcal_time_window() -> Tuple[str, str]:
-    """ Read and validate the Google Calendar search window.
-
-        'GCAL_WINDOW_START' and 'GCAL_WINDOW_END' bound the calendar search and
-        have no default: the window moves with every run, so a default
-        would go stale and silently collect zero events.  They are read
-        here, when a calendar request is about to run, rather than at
-        import time, so the other run modes ('-c' and '-s') do not
-        require Google Calendar configuration.
-
-        Each value may be a plain local date or datetime, which is
-        interpreted in 'GCAL_TIMEZONE' with the UTC offset in effect on
-        that date, so Daylight Saving needs no attention.  A value that
-        carries its own offset is honored as written.
-
-        Raises:
-            ValueError:
-                If either value is unset, unparseable, or the window does
-                not move forward in time, or if 'GCAL_TIMEZONE' does not
-                name a known time zone.
-
-        Returns:
-            window (Tuple[str, str]):
-                The validated ('GCAL_WINDOW_START', 'GCAL_WINDOW_END') values
-                as RFC 3339 strings with an explicit UTC offset, ready to
-                send as request parameters.
-    """
-
-    window_start = getenv('GCAL_WINDOW_START')
-    window_end = getenv('GCAL_WINDOW_END')
-
-    # Both values are required for a calendar request
-    missing = [
-        name
-        for name, value in (
-            ('GCAL_WINDOW_START', window_start),
-            ('GCAL_WINDOW_END', window_end)
-        )
-        if not value
-    ]
-    if missing:
-        message = (
-            f'{" and ".join(missing)} must be set to collect Google '
-            'Calendar events.  Set the calendar search window in your '
-            '.env file (see .env.example); there is no default, because '
-            'a stale window silently collects zero events.'
-        )
-        logger.error(message)
-        raise ValueError(message)
-
-    return resolve_window(
-        start=window_start,
-        end=window_end,
-        start_name='GCAL_WINDOW_START',
-        end_name='GCAL_WINDOW_END'
-    )
 
 
 def resolve_window(

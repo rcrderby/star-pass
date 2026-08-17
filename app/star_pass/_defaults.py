@@ -45,7 +45,6 @@ LOCAL_TIMEZONE = getenv(
 AMPLIFY_DATE_TIME_FORMAT = '%Y-%m-%d %H:%M'
 # Amplify returns shift/response datetimes with seconds.
 AMPLIFY_SHIFT_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
-FILE_NAME_DATE_TIME_FORMAT = '%Y-%m-%dT%H_%M_%S_%f'
 # How a date is written wherever one is stored or compared.
 ISO_DATE_FORMAT = '%Y-%m-%d'
 SIMPLE_DATE_FORMAT = '%A, %B %d %Y'
@@ -90,37 +89,11 @@ DATA_DIR_PATH = Path.joinpath(
     APP_DIR_PATH.parent,
     'data'
 )
-# 'input' directory path
-INPUT_DIR_PATH = Path.joinpath(
-    DATA_DIR_PATH,
-    'csv'
-)
 # 'models' directory path
 MODELS_DIR_PATH = Path.joinpath(
     APP_DIR_PATH.parent,
     'models'
 )
-# 'output' directory path
-OUTPUT_DIR_PATH = Path.joinpath(
-    DATA_DIR_PATH,
-    'json'
-)
-# 'schema' directory path
-SCHEMA_DIR_PATH = Path.joinpath(
-    APP_DIR_PATH,
-    'schema'
-)
-# JSON Schema file path
-JSON_SCHEMA_DIR = SCHEMA_DIR_PATH
-JSON_SCHEMA_SHIFT_FILE_NAME = 'amplify.shifts.schema.json'
-JSON_SCHEMA_SHIFT_FILE = Path.joinpath(
-    JSON_SCHEMA_DIR,
-    JSON_SCHEMA_SHIFT_FILE_NAME
-)
-
-# Input and output data file extensions
-INPUT_FILE_EXTENSION = '.csv'
-OUTPUT_FILE_EXTENSION = '.json'
 
 # SQLite database file path.  Holds the state the repository layer
 # owns: runs, the revisions of each one, their events and the change
@@ -222,11 +195,9 @@ BASE_GCAL_ENDPOINT = '/events'
 GCAL_ORDER_BY = 'startTime'
 GCAL_SHOW_DELETED = 'false'
 GCAL_SINGLE_EVENTS = 'true'
-# 'GCAL_WINDOW_START' and 'GCAL_WINDOW_END' have no default here.  They
-# bound the calendar search window, which moves with every run, so no
-# default stays correct, and a stale one collects zero events and
-# writes an empty CSV.  'gcal_data' requires them from the environment
-# and reports a clear error when they are missing.
+# The calendar search window has no default here.  It moves with every
+# run, so no default stays correct and a stale one collects zero
+# events; a run carries its own window and `runs collect` requires it.
 # Time zone applied to a search window value written without a UTC
 # offset, so a plain local date means the same thing year round and
 # Daylight Saving is applied automatically.  A value that carries its

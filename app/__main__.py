@@ -134,20 +134,6 @@ class TerminalReporter(Reporter):
 
         return None
 
-    def schema_validation_failed(self) -> None:
-        """ Report shift data that did not match the JSON Schema.
-
-            Args:
-                None.
-
-            Returns:
-                None.
-        """
-
-        write('\n\n** Error validating shift data **\n')
-
-        return None
-
     def calendar_read_started(self) -> None:
         """ Announce the calendar read.
 
@@ -163,24 +149,6 @@ class TerminalReporter(Reporter):
 
         return None
 
-    def csv_written(
-            self,
-            path: str
-    ) -> None:
-        """ Name the file the run produced.
-
-            Args:
-                path (str):
-                    Full path to the file that was written.
-
-            Returns:
-                None.
-        """
-
-        write(f'\nWrote CSV data to "{path}"\n')
-
-        return None
-
     def sending_started(self) -> None:
         """ Announce the send.
 
@@ -192,20 +160,6 @@ class TerminalReporter(Reporter):
         """
 
         write('\nSending shift data to Amplify...')
-
-        return None
-
-    def check_mode(self) -> None:
-        """ Announce that the run sends nothing.
-
-            Args:
-                None.
-
-            Returns:
-                None.
-        """
-
-        write(_defaults.HTTP_CHECK_MODE_MESSAGE)
 
         return None
 
@@ -303,30 +257,6 @@ class TerminalReporter(Reporter):
             )
 
         write(message)
-
-        return None
-
-    def shift_data_invalid(
-            self,
-            detail: str | None = None
-    ) -> None:
-        """ Report that no shifts were created.
-
-            Args:
-                detail (str, optional):
-                    The validation error, when there is one.
-
-            Returns:
-                None.
-        """
-
-        message = (
-            '** Unable to create shifts while shift data is invalid **'
-        )
-        if detail is not None:
-            message += f'\n\n{detail}'
-
-        write(f'{message}\n')
 
         return None
 
@@ -579,7 +509,7 @@ def main(
         Dispatches to a run mode and converts an expected failure into a
         non-zero exit.  The core raises 'StarPassError' rather than
         exiting, so deciding the status code belongs here, where the
-        process is owned.  'get_gcal_time_window', 'SlackNotifier.post',
+        process is owned.  'resolve_window', 'SlackNotifier.post',
         the Slack Web API and the core all log the cause before raising,
         so the handler exits without repeating the message or printing a
         traceback over a report the operator has already been given.  An

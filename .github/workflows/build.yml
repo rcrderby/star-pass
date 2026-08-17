@@ -50,7 +50,6 @@ jobs:
         run: |
           docker run --rm star-pass:ci python -c "
           import star_pass.amplify_responses
-          import star_pass.amplify_shifts
           import star_pass.gcal_data
           import star_pass.slack_notify
           import star_pass_api

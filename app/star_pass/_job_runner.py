@@ -161,18 +161,6 @@ class JobReporter(Reporter):
 
         return self._record(kind='step_failed')
 
-    def schema_validation_failed(self) -> None:
-        """ Shift data did not match the JSON Schema.
-
-            Args:
-                None.
-
-            Returns:
-                None.
-        """
-
-        return self._record(kind='schema_validation_failed')
-
     def calendar_read_started(self) -> None:
         """ The run began reading the Google Calendar service.
 
@@ -185,22 +173,6 @@ class JobReporter(Reporter):
 
         return self._record(kind='calendar_read_started')
 
-    def csv_written(
-            self,
-            path: str
-    ) -> None:
-        """ Collected shifts were written to a CSV file.
-
-            Args:
-                path (str):
-                    Full path to the file that was written.
-
-            Returns:
-                None.
-        """
-
-        return self._record(kind='csv_written', path=path)
-
     def sending_started(self) -> None:
         """ The run began sending shift data to Amplify.
 
@@ -212,18 +184,6 @@ class JobReporter(Reporter):
         """
 
         return self._record(kind='sending_started')
-
-    def check_mode(self) -> None:
-        """ The run is a dry run and will send no shift data.
-
-            Args:
-                None.
-
-            Returns:
-                None.
-        """
-
-        return self._record(kind='check_mode')
 
     def slack_dry_run(
             self,
@@ -289,23 +249,6 @@ class JobReporter(Reporter):
             url=batch.url,
             shifts=batch.shifts
         )
-
-    def shift_data_invalid(
-            self,
-            detail: str | None = None
-    ) -> None:
-        """ No shifts were created, because the data did not validate.
-
-            Args:
-                detail (str, optional):
-                    The validation error, when there is one.  Defaults
-                    to None.
-
-            Returns:
-                None.
-        """
-
-        return self._record(kind='shift_data_invalid', detail=detail)
 
 
 class JobRunner:
