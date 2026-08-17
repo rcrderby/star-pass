@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """ The command line client's run-based commands.
 
-    Separate from '__main__.py', which holds the three run modes that
-    work from CSV files and predate the API.  Those cannot be reached
-    over HTTP -- the contract deliberately publishes nothing addressed
-    by a file path -- so they stay local, and the commands here are
-    the ones that work either way (D2).
+    Separate from '__main__.py', which holds the Slack sign-up
+    summary.  The contract deliberately publishes no summary, so that
+    stays local; the commands here are the ones a service can answer
+    as well (D2).
 """
 
 # Imports - Local

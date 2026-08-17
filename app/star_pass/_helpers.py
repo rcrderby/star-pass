@@ -240,8 +240,9 @@ class Helpers:
         )
 
         # 'dateparser.parse' returns None rather than raising when it
-        # cannot make sense of the input.  The shift CSV file is
-        # reviewed and edited by hand, so a typo here is expected input.
+        # cannot make sense of the input, and what it is given can come
+        # from a calendar somebody typed, so a value it cannot read is
+        # expected input rather than a fault.
         if dt_object is None:
             raise ValueError(
                 f'Cannot read {date_time_string!r} as a date and time.'
