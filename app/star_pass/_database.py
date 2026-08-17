@@ -47,7 +47,7 @@ DATABASE_BUSY_TIMEOUT = _defaults.DATABASE_BUSY_TIMEOUT
 # forward.  A later one means the file was written by a newer version
 # of the application, which is a deployment problem rather than
 # something to guess at.
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 # Pragmas applied to every connection.  'foreign_keys' is off by
 # default and is per-connection rather than stored in the file, so
@@ -151,6 +151,28 @@ SCHEMA_STATEMENTS = (
         PRIMARY KEY (run_id, revision, event_id, need_id),
         FOREIGN KEY (run_id, revision, event_id)
             REFERENCES events (run_id, revision, id) ON DELETE CASCADE
+    )
+    """,
+    # What the run's window held and the run does not, with the reason
+    # each one was left out.  Belongs to the run rather than to a
+    # revision: it describes the window the collection read, which is
+    # the same whatever editing has since done to the events.
+    #
+    # Every column but the identifier and the reason may be empty,
+    # because the reasons name exactly the events that are missing
+    # something -- an untitled event has no title, an all-day event has
+    # no times.
+    """
+    CREATE TABLE IF NOT EXISTS uncollected_events (
+        run_id          TEXT NOT NULL
+                             REFERENCES runs (id) ON DELETE CASCADE,
+        id              TEXT NOT NULL,
+        reason          TEXT NOT NULL,
+        title           TEXT,
+        date            TEXT,
+        calendar_start  TEXT,
+        calendar_end    TEXT,
+        PRIMARY KEY (run_id, id)
     )
     """,
     """

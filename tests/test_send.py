@@ -374,12 +374,14 @@ class TestWhatIsWrittenDown:
         ]
 
 
-def _refusing_the_second_create() -> Callable[[str], dict]:
+def _refusing_the_second_create() -> Callable[[dict], dict]:
     """ Return a script whose second create request fails. """
     created: List[str] = []
 
-    def body_for(url: str) -> dict:
+    def body_for(request: Dict[str, Any]) -> dict:
         """ Answer a read, and refuse the second create. """
+        url = request['url']
+
         if not url.endswith(CREATE_SUFFIX):
             return {'data': {'need_title': 'Need'}}
 

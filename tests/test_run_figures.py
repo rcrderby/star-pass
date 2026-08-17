@@ -19,12 +19,16 @@ from star_pass._records import (
     Event,
     EventRole,
     JOB_KIND_SEND,
-    JOB_STATUS_SUCCEEDED
+    JOB_STATUS_SUCCEEDED,
+    UncollectedEvent,
+    UNCOLLECTED_ALL_DAY,
+    UNCOLLECTED_SEARCH
 )
 from star_pass._repository import (
     EventRepository,
     JobRepository,
-    RunRepository
+    RunRepository,
+    UncollectedRepository
 )
 
 
@@ -39,6 +43,63 @@ class TestRunFigures:
         assert run.event_count == 0
         assert run.shift_count == 0
         assert run.unmatched_count == 0
+        assert run.uncollected_count == 0
+
+    def test_what_the_window_held_and_the_run_left_out_is_counted(
+        self,
+        runs: RunRepository,
+        uncollected: UncollectedRepository,
+        run_id: str
+    ) -> None:
+        uncollected.replace(
+            run_id=run_id,
+            uncollected=[
+                UncollectedEvent(id='gcal-1', reason=UNCOLLECTED_SEARCH),
+                UncollectedEvent(id='gcal-2', reason=UNCOLLECTED_ALL_DAY)
+            ]
+        )
+
+        assert runs.get(run_id=run_id).uncollected_count == 2
+
+    def test_that_count_does_not_follow_the_current_revision(
+        self,
+        events: EventRepository,
+        runs: RunRepository,
+        uncollected: UncollectedRepository,
+        edited: str,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # It describes the window the collection read, so editing the
+        # events cannot change it.
+        uncollected.replace(
+            run_id=edited,
+            uncollected=[
+                UncollectedEvent(id='gcal-1', reason=UNCOLLECTED_SEARCH)
+            ]
+        )
+        events.add(
+            run_id=edited,
+            revision=2,
+            event=make_event(id='event-2')
+        )
+
+        assert runs.get(run_id=edited).uncollected_count == 1
+
+    def test_another_runs_window_is_not_counted_against_this_one(
+        self,
+        runs: RunRepository,
+        uncollected: UncollectedRepository,
+        run_id: str,
+        other_run_id: str
+    ) -> None:
+        uncollected.replace(
+            run_id=other_run_id,
+            uncollected=[
+                UncollectedEvent(id='gcal-1', reason=UNCOLLECTED_SEARCH)
+            ]
+        )
+
+        assert runs.get(run_id=run_id).uncollected_count == 0
 
     def test_the_events_of_the_current_revision_are_counted(
         self,
