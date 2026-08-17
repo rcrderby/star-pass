@@ -9,6 +9,8 @@ import pytest
 # Imports - Local
 from star_pass._exceptions import ValidationError
 from star_pass._records import (
+    JOB_HOLDER_LOCAL,
+    JOB_HOLDER_SERVICE,
     JOB_KIND_COLLECT,
     JOB_KIND_SEND,
     JOB_STATUS_FAILED,
@@ -18,6 +20,18 @@ from star_pass._records import (
     JOB_STATUS_SUCCEEDED
 )
 from star_pass._repository import JobRepository, RunRepository
+
+
+@pytest.fixture(name='interrupted_job')
+def fixture_interrupted_job(
+    jobs: JobRepository,
+    job_id: str
+) -> str:
+    """ Return a job left interrupted by a process that stopped. """
+    jobs.start(job_id=job_id)
+    jobs.finish(job_id=job_id, status=JOB_STATUS_INTERRUPTED)
+
+    return job_id
 
 
 class TestAskingForAJob:
@@ -362,3 +376,131 @@ class TestDeletingTheRun:
 
         assert jobs.get(job_id=job_id) is None
         assert jobs.events(job_id=job_id) == []
+
+
+class TestHoldingAndResumingAJob:
+    def test_a_job_says_who_holds_it(
+        self,
+        jobs: JobRepository,
+        job_principal: str,
+        run_id: str
+    ) -> None:
+        job = jobs.create(
+            run_id=run_id,
+            kind=JOB_KIND_COLLECT,
+            principal_id=job_principal,
+            held_by=JOB_HOLDER_LOCAL
+        )
+
+        assert jobs.get(job_id=job.id).held_by == JOB_HOLDER_LOCAL
+
+    def test_a_holder_nothing_can_hold_a_job_with_is_refused(
+        self,
+        jobs: JobRepository,
+        job_principal: str,
+        run_id: str
+    ) -> None:
+        with pytest.raises(ValidationError):
+            jobs.create(
+                run_id=run_id,
+                kind=JOB_KIND_COLLECT,
+                principal_id=job_principal,
+                held_by='something-else'
+            )
+
+    def test_a_sweep_leaves_alone_what_it_never_held(
+        self,
+        jobs: JobRepository,
+        job_principal: str,
+        run_id: str
+    ) -> None:
+        # The command line and the service write into one database, so
+        # a sweep taking everything unfinished would mark a live send
+        # interrupted.
+        theirs = jobs.create(
+            run_id=run_id,
+            kind=JOB_KIND_SEND,
+            principal_id=job_principal,
+            held_by=JOB_HOLDER_SERVICE
+        )
+        jobs.start(job_id=theirs.id)
+
+        ended = jobs.interrupt_unfinished(held_by=JOB_HOLDER_LOCAL)
+
+        assert ended == 0
+        assert jobs.get(job_id=theirs.id).status == JOB_STATUS_RUNNING
+
+    def test_a_sweep_ends_what_its_own_holder_left(
+        self,
+        jobs: JobRepository,
+        job_principal: str,
+        run_id: str
+    ) -> None:
+        mine = jobs.create(
+            run_id=run_id,
+            kind=JOB_KIND_SEND,
+            principal_id=job_principal,
+            held_by=JOB_HOLDER_LOCAL
+        )
+        jobs.start(job_id=mine.id)
+
+        ended = jobs.interrupt_unfinished(held_by=JOB_HOLDER_LOCAL)
+
+        assert ended == 1
+        assert jobs.get(job_id=mine.id).status == JOB_STATUS_INTERRUPTED
+
+    def test_an_interrupted_job_is_queued_again(
+        self,
+        jobs: JobRepository,
+        interrupted_job: str
+    ) -> None:
+        jobs.requeue(job_id=interrupted_job)
+
+        assert jobs.get(job_id=interrupted_job).status == JOB_STATUS_QUEUED
+
+    def test_what_the_interrupted_attempt_said_is_cleared(
+        self,
+        jobs: JobRepository,
+        interrupted_job: str
+    ) -> None:
+        # When it began and when it stopped described an attempt being
+        # made again; leaving them would describe two runs of it at
+        # once.
+        jobs.requeue(job_id=interrupted_job)
+        job = jobs.get(job_id=interrupted_job)
+
+        assert job.started_at is None
+        assert job.finished_at is None
+        assert job.detail is None
+
+    def test_the_job_passes_to_whoever_is_running_it_now(
+        self,
+        jobs: JobRepository,
+        interrupted_job: str
+    ) -> None:
+        # It is the new holder a later sweep has to recognize.
+        jobs.requeue(
+            job_id=interrupted_job,
+            held_by=JOB_HOLDER_LOCAL
+        )
+
+        assert jobs.get(
+            job_id=interrupted_job
+        ).held_by == JOB_HOLDER_LOCAL
+
+    def test_a_job_that_is_not_interrupted_is_refused(
+        self,
+        jobs: JobRepository,
+        job_id: str
+    ) -> None:
+        # Queueing a finished job again would start new work under the
+        # identifier of work that already ended.
+        with pytest.raises(ValidationError):
+            jobs.requeue(job_id=job_id)
+
+    def test_an_unknown_job_is_refused(
+        self,
+        jobs: JobRepository
+    ) -> None:
+        with pytest.raises(ValidationError):
+            jobs.requeue(job_id='no-such-job')

@@ -23,6 +23,7 @@
 # Imports - Python Standard Library
 import sqlite3
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator, List, Optional, Sequence
 
@@ -46,7 +47,7 @@ DATABASE_BUSY_TIMEOUT = _defaults.DATABASE_BUSY_TIMEOUT
 # forward.  A later one means the file was written by a newer version
 # of the application, which is a deployment problem rather than
 # something to guess at.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 # Pragmas applied to every connection.  'foreign_keys' is off by
 # default and is per-connection rather than stored in the file, so
@@ -175,6 +176,7 @@ SCHEMA_STATEMENTS = (
         kind          TEXT NOT NULL,
         status        TEXT NOT NULL,
         principal_id  TEXT NOT NULL,
+        held_by       TEXT NOT NULL DEFAULT 'service',
         created_at    TEXT NOT NULL,
         started_at    TEXT,
         finished_at   TEXT,
@@ -252,6 +254,68 @@ SCHEMA_STATEMENTS = (
         ON idempotency_keys (run_id, created_at)
     """
 )
+
+
+@dataclass(frozen=True)
+class AddedColumn:
+    """ A column added to a table that already existed.
+
+        Attributes:
+            table (str):
+                Table the column belongs to.
+
+            column (str):
+                What it is called, which is what says whether the step
+                still has anything to do.
+
+            statement (str):
+                What adds it.  It declares the column exactly as the
+                create above declares it, so a database carried here
+                and one built here are the same database.
+    """
+
+    table: str
+    column: str
+    statement: str
+
+
+# What carries a database that already exists forward, by the version
+# each step raises it to.  Separate from the statements above because
+# those create things and these change a thing that is already there:
+# a 'CREATE TABLE IF NOT EXISTS' does nothing at all to a table that
+# exists, so a column added to one arrives here or not at all.
+#
+# A step runs on a database below its version whose table still lacks
+# the column.  The second half of that matters: a database from before
+# the table itself existed is given the current table by the
+# statements above, so there is nothing left for the step to add and
+# adding it again would fail.
+#
+# Nothing here may be edited after a release has run it, because a
+# database already carried past it will never run it again; a
+# correction is a further step.
+MIGRATIONS = {
+    4: (
+        # Which process is holding a job, so a sweep of what a stopped
+        # process left behind can leave alone what it never held.  The
+        # service and the command line share a database, and a sweep
+        # that took everything unfinished would mark a live send
+        # interrupted.
+        #
+        # The default is what a job written before the column existed
+        # was held by: the service, which was the only thing writing
+        # jobs then.  It is a literal because a schema statement takes
+        # one, and it is the value of '_records.JOB_HOLDER_SERVICE'.
+        AddedColumn(
+            table='jobs',
+            column='held_by',
+            statement=(
+                'ALTER TABLE jobs '
+                "ADD COLUMN held_by TEXT NOT NULL DEFAULT 'service'"
+            )
+        ),
+    )
+}
 
 # Module logger
 logger = get_logger(__name__)
@@ -350,6 +414,77 @@ def _apply_pragmas(
     return None
 
 
+def _lacks_column(
+        connection: sqlite3.Connection,
+        table: str,
+        column: str
+) -> bool:
+    """ Return whether a table is still without one of its columns.
+
+        Args:
+            connection (sqlite3.Connection):
+                The database to look at.
+
+            table (str):
+                Table to examine.
+
+            column (str):
+                Column to look for.
+
+        Returns:
+            lacking (bool):
+                Whether the column has still to be added.
+    """
+
+    # A pragma takes a literal rather than a placeholder, and the value
+    # is this module's own, so nothing a caller supplies reaches it.
+    rows = query(
+        connection=connection,
+        statement=f'PRAGMA table_info({table})'  # nosec B608
+    )
+
+    return column not in {row['name'] for row in rows}
+
+
+def _migrations_from(
+        connection: sqlite3.Connection,
+        version: int
+) -> List[str]:
+    """ Return the migrations that carry a database forward.
+
+        None at all for a database being created: the statements above
+        build it at the current version, and a step replaying their
+        work would fail on a column that is already there.
+
+        Args:
+            connection (sqlite3.Connection):
+                The database being carried forward, which is asked
+                what it already has.
+
+            version (int):
+                The version the database is at, zero for one that does
+                not exist yet.
+
+        Returns:
+            statements (List[str]):
+                What to run, in the order the versions came.
+    """
+
+    if not version:
+        return []
+
+    return [
+        step.statement
+        for level in range(version + 1, SCHEMA_VERSION + 1)
+        for step in MIGRATIONS.get(level, ())
+        if _lacks_column(
+            connection=connection,
+            table=step.table,
+            column=step.column
+        )
+    ]
+
+
 def _apply_schema(
         connection: sqlite3.Connection,
         database_path: Path
@@ -399,12 +534,21 @@ def _apply_schema(
     # already there, so running them all against an earlier database
     # adds what that version lacked and leaves the rest untouched.
     #
-    # That carries an ADDITIVE change and nothing else.  A column whose
-    # type changed, one that was removed, or data that has to be
-    # rewritten needs a migration step here; bumping the version alone
-    # would record that it happened without doing it.
+    # That carries a NEW table or index and nothing else.  A column
+    # added to a table that already exists is not created by a
+    # 'CREATE TABLE IF NOT EXISTS' -- the table is already there, so
+    # the statement does nothing -- which is what 'MIGRATIONS' is for.
     with transaction(connection=connection):
         for statement in SCHEMA_STATEMENTS:
+            execute(
+                connection=connection,
+                statement=statement
+            )
+
+        for statement in _migrations_from(
+            connection=connection,
+            version=version
+        ):
             execute(
                 connection=connection,
                 statement=statement

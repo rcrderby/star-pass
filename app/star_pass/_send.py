@@ -55,6 +55,7 @@ from ._reading import read_run_for_send
 from ._records import (
     IdempotencyRecord,
     Job,
+    JOB_HOLDER_SERVICE,
     JOB_KIND_SEND,
     Opportunity,
     Run,
@@ -315,7 +316,9 @@ def claim(
         run_id: str,
         key: str,
         fingerprint: str,
-        principal_id: str
+        principal_id: str,
+        *,
+        held_by: str = JOB_HOLDER_SERVICE
 ) -> Tuple[Optional[IdempotencyRecord], Optional[Job]]:
     """ Claim a key for a send and record the job, or say who was first.
 
@@ -347,6 +350,10 @@ def claim(
             principal_id (str):
                 Who asked (D13).
 
+            held_by (str, optional):
+                Which of 'JOB_HOLDERS' will run the job.  Defaults to
+                the service.
+
         Raises:
             ValidationError:
                 If there is no such run, or neither can be written.
@@ -375,7 +382,8 @@ def claim(
         return None, JobRepository(connection=connection).create(
             run_id=run_id,
             kind=JOB_KIND_SEND,
-            principal_id=principal_id
+            principal_id=principal_id,
+            held_by=held_by
         )
 
 

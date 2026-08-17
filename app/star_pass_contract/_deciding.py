@@ -26,9 +26,15 @@ from typing import Any, Callable, Dict, Optional, Tuple
 # Imports - Local
 from star_pass._opportunities import shifts_in_amplify
 from star_pass._reading import read_run_for_send
-from star_pass._records import IdempotencyRecord, Run
-from star_pass._repository import RunRepository
-from ._messages import replay, REPLAY_DIFFERENT, REPLAY_RUNNING, why_not_send
+from star_pass._records import IdempotencyRecord, Job, Run
+from star_pass._repository import JobRepository, RunRepository
+from ._messages import (
+    replay,
+    REPLAY_DIFFERENT,
+    REPLAY_RUNNING,
+    why_not_resume,
+    why_not_send
+)
 from ._views import previewed
 
 
@@ -85,6 +91,47 @@ def sendable(
         will_create=result.will_create,
         expected=expected
     )
+
+
+def resumable(
+        connection: sqlite3.Connection,
+        job_id: str
+) -> Optional[Tuple[Job, Optional[str]]]:
+    """ Read a job and decide whether it may be resumed (D10).
+
+        The run is read as well as the job, and not only to know it
+        exists: whether something else is already working on it is
+        half of the answer, and a job read without it would be
+        resumable on paper while a send was in hand.
+
+        Args:
+            connection (sqlite3.Connection):
+                The database to read.
+
+            job_id (str):
+                Job to resume.
+
+        Raises:
+            UpstreamError:
+                If the job cannot be read.
+
+        Returns:
+            found (Tuple[Job, str | None] | None):
+                The job and why it may not be resumed, or None when
+                there is no such job.
+    """
+
+    job = JobRepository(connection=connection).get(job_id=job_id)
+
+    if job is None:
+        return None
+
+    run = RunRepository(connection=connection).get(run_id=job.run_id)
+
+    if run is None:
+        return None
+
+    return job, why_not_resume(job=job, run=run)
 
 
 def replayed(

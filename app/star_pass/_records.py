@@ -437,6 +437,25 @@ JOB_STATUSES_UNFINISHED = (
 )
 
 
+# Who is holding a job, and so who may end it when it is found
+# unfinished.  The service and the command line write into one
+# database (D2), and a sweep of what a stopped process left behind has
+# to leave alone what it never held: a command line run that swept
+# everything unfinished would mark a live send interrupted.
+#
+# The role rather than the process.  One service serves a deployment
+# (D5), so a job held by 'service' and still unfinished at startup
+# belongs to the process that just stopped; a command line process is
+# short-lived and waits for its own job, so one still unfinished is
+# one whose process is gone.
+JOB_HOLDER_SERVICE = 'service'
+JOB_HOLDER_LOCAL = 'local-cli'
+JOB_HOLDERS = (
+    JOB_HOLDER_SERVICE,
+    JOB_HOLDER_LOCAL
+)
+
+
 @dataclass(frozen=True)
 class Job:
     """ One long operation, and where it got to.
@@ -458,6 +477,13 @@ class Job:
             principal_id (str):
                 Who asked for it (D13).
 
+            held_by (str):
+                Which of 'JOB_HOLDERS' is running it.  Separate from
+                'principal_id', which says who asked: a person may ask
+                a service to do something the service then holds, and
+                only the holder may end the job when it is found
+                unfinished.
+
             created_at (str):
                 When it was asked for, as an ISO-8601 UTC timestamp.
 
@@ -477,6 +503,7 @@ class Job:
     kind: str
     status: str
     principal_id: str
+    held_by: str
     created_at: str
     started_at: Optional[str] = None
     finished_at: Optional[str] = None

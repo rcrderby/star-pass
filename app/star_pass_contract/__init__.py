@@ -20,7 +20,7 @@
 """
 
 # Imports - Local
-from ._deciding import replayed, sendable
+from ._deciding import replayed, resumable, sendable
 from ._messages import (
     already_sent,
     already_working,
@@ -29,6 +29,7 @@ from ._messages import (
     key_used_differently,
     no_such_job,
     no_such_run,
+    not_interrupted,
     replay,
     REPLAY_ANSWERED,
     REPLAY_DIFFERENT,
@@ -38,6 +39,7 @@ from ._messages import (
     shift_count_moved,
     still_collecting,
     why_not_recollect,
+    why_not_resume,
     why_not_send
 )
 from ._schemas import (
@@ -107,9 +109,11 @@ __all__ = [
     'key_used_differently',
     'no_such_job',
     'no_such_run',
+    'not_interrupted',
     'previewed',
     'replay',
     'replayed',
+    'resumable',
     'sendable',
     'send_in_flight',
     'shift_count_moved',
@@ -120,5 +124,6 @@ __all__ = [
     'to_revision_views',
     'to_run_view',
     'why_not_recollect',
+    'why_not_resume',
     'why_not_send'
 ]

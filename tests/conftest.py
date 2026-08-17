@@ -63,6 +63,7 @@ from star_pass._records import (  # noqa: E402
     Event,
     EventRole,
     JOB_KIND_COLLECT,
+    JOB_KIND_SEND,
     Match,
     MATCH_KIND_FUZZY,
     Opportunity,
@@ -510,6 +511,35 @@ def fixture_job_id(
         kind=JOB_KIND_COLLECT,
         principal_id=job_principal
     ).id
+
+
+@pytest.fixture(name='working_on')
+def fixture_working_on(
+    jobs: JobRepository
+) -> Callable[..., Any]:
+    """ Return a way to put a running job on a run.
+
+        The arrangement more than one test of "something else is
+        already working on this" needs, made once: what a run refuses
+        while a job holds it is asked of every write.
+    """
+
+    def start(
+        run_id: str,
+        kind: str = JOB_KIND_SEND,
+        principal_id: str = 'someone-else'
+    ) -> Any:
+        """ Return a job that has begun on that run. """
+        job = jobs.create(
+            run_id=run_id,
+            kind=kind,
+            principal_id=principal_id
+        )
+        jobs.start(job_id=job.id)
+
+        return job
+
+    return start
 
 
 @pytest.fixture(name='make_event')
