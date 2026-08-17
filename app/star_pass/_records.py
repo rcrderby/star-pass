@@ -419,6 +419,15 @@ JOB_STATUSES_FINISHED = (
     JOB_STATUS_INTERRUPTED
 )
 
+# Statuses that mean shifts of this run are in Amplify.  Amplify has
+# no way to take a shift back, so anything that would replace the
+# events describing what was sent is refused for a run in one of
+# these.
+RUN_STATUSES_SENT = (
+    RUN_STATUS_PARTLY_SENT,
+    RUN_STATUS_SENT
+)
+
 # Statuses a restart ends.  Whatever was running them is gone: the
 # process that held the work no longer exists, and a queued job was
 # waiting on the same process.

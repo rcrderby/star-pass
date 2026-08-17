@@ -225,6 +225,37 @@ class Operations:
             path='/v1/runs'
         )
 
+    def recollect_run(
+            self,
+            body: Dict[str, Any],
+            run_id: str
+    ) -> Any:
+        """ Collect a run's calendar window again.
+
+            Args:
+                body (Dict[str, Any]):
+                    What the operation is sent, shaped as the
+                    contract publishes it.
+
+                run_id (str):
+                    Value for the path.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='POST',
+            path='/v1/runs/{run_id}/recollect',
+            body=body,
+            run_id=run_id
+        )
+
     def stream_job_events(
             self,
             job_id: str

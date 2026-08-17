@@ -78,12 +78,19 @@ class RevisionRepository(Repository):
     def create(
             self,
             run_id: str,
-            label: str
+            label: str,
+            replacing: bool = False
     ) -> Revision:
-        """ Add a revision holding a copy of the current one.
+        """ Add a revision, continuing from the current one or replacing it.
 
-            The first revision of a run has nothing to copy and starts
-            empty, ready for the events collection found.
+            An edit continues: the new revision holds a copy, so what
+            was there is still there and only the edit differs.  A
+            collection replaces: what the calendar says now is the
+            whole of it, and carrying the old events forward would
+            leave behind ones the calendar no longer has.
+
+            The first revision of a run has nothing to copy either
+            way.
 
             Args:
                 run_id (str):
@@ -91,6 +98,11 @@ class RevisionRepository(Repository):
 
                 label (str):
                     How to name the revision to a reader.
+
+                replacing (bool, optional):
+                    Whether the revision starts empty rather than
+                    holding a copy of the current one.  Defaults to
+                    False, which continues from it.
 
             Raises:
                 ValidationError:
@@ -110,7 +122,7 @@ class RevisionRepository(Repository):
             return self._add(
                 run_id=run_id,
                 label=label,
-                source=current or None
+                source=None if replacing else (current or None)
             )
 
     def revert_to(

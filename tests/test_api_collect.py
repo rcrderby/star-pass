@@ -11,7 +11,7 @@
 # pylint: disable=missing-function-docstring,missing-class-docstring
 
 # Imports - Python Standard Library
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Tuple
 
 # Imports - Third-Party
 import pytest
@@ -20,7 +20,7 @@ from fastapi.testclient import TestClient
 # Imports - Local
 from star_pass._exceptions import ValidationError as CoreValidationError
 from star_pass._job_runner import JobRunner
-from star_pass._repository import JobRepository
+from star_pass._repository import JobRepository, RunRepository
 from star_pass_api import _defaults
 
 # Constants
@@ -254,3 +254,156 @@ class TestCollectingARun:
             for requirement in published['security']
             for scope in requirement.values()
         ] == [['runs:write']]
+
+
+@pytest.fixture(name='recollecting')
+def fixture_recollecting(
+    started_client: TestClient,
+    collecting: Callable[..., Any]
+) -> Tuple[str, Callable[..., Any], List[str]]:
+    """ Return a collected run, a way to collect it again, and what
+        the collecting was asked to do.
+
+        The list is the one the replaced collection appends to, so a
+        test reads what actually ran rather than what was answered.
+    """
+    response, collected = collecting()
+    run_id = response.json()['runId']
+
+    def again(expected: int = 0, run: str = None) -> Any:
+        """ Ask for a recollection, and wait for the job it started. """
+        answered = started_client.post(
+            f'{run_path(run_id=run if run is not None else run_id)}'
+            '/recollect',
+            json={'expectedChangeCount': expected}
+        )
+
+        for future in started_client.app.state.runner.futures:
+            future.result()
+
+        return answered
+
+    return run_id, again, collected
+
+
+class TestCollectingARunAgain:
+    def test_a_recollection_is_accepted_with_the_job_doing_it(
+        self,
+        recollecting: Any
+    ) -> None:
+        _, again, _collected = recollecting
+
+        response = again()
+
+        assert response.status_code == 202
+        assert response.json()['kind'] == 'recollect'
+
+    def test_the_run_keeps_its_identifier(
+        self,
+        recollecting: Any
+    ) -> None:
+        run_id, again, _collected = recollecting
+
+        assert again().json()['runId'] == run_id
+
+    def test_the_run_is_collected_into_again(
+        self,
+        recollecting: Any
+    ) -> None:
+        run_id, again, collected = recollecting
+
+        again()
+
+        assert collected == [run_id, run_id]
+
+    def test_a_run_that_is_not_there_is_not_found(
+        self,
+        recollecting: Any
+    ) -> None:
+        _, again, _collected = recollecting
+
+        response = again(run='no-such-run')
+
+        assert response.status_code == 404
+        assert 'no-such-run' in response.json()['detail']
+
+    def test_a_change_count_that_has_moved_is_refused(
+        self,
+        recollecting: Any
+    ) -> None:
+        # The stale-tab case a confirmation dialog cannot see.
+        _, again, _collected = recollecting
+
+        response = again(expected=3)
+
+        # Both numbers, each in its own place: swapped, the message
+        # would still hold the one the caller sent.
+        assert response.status_code == 409
+        assert 'holds 0 change(s), not the 3' in response.json()['detail']
+
+    def test_a_change_count_that_has_moved_collects_nothing(
+        self,
+        recollecting: Any
+    ) -> None:
+        run_id, again, collected = recollecting
+
+        again(expected=3)
+
+        assert collected == [run_id]
+
+    def test_a_run_something_is_already_doing_is_refused(
+        self,
+        recollecting: Any,
+        connection: Any
+    ) -> None:
+        # Two jobs writing one run's revisions would race.
+        run_id, again, collected = recollecting
+        JobRepository(connection=connection).create(
+            run_id=run_id,
+            kind='collect',
+            principal_id='static-token'
+        )
+
+        response = again()
+
+        assert response.status_code == 409
+        assert 'working on it' in response.json()['detail']
+        assert collected == [run_id]
+
+    def test_the_run_says_it_is_being_collected_again(
+        self,
+        recollecting: Any,
+        started_client: TestClient,
+        connection: Any
+    ) -> None:
+        # A run being collected says so while it is, which is what a
+        # reader watching the list sees.
+        run_id, again, _collected = recollecting
+        RunRepository(connection=connection).set_status(
+            run_id=run_id,
+            status='unsent'
+        )
+
+        again()
+
+        assert started_client.get(
+            run_path(run_id=run_id)
+        ).json()['status'] == 'collecting'
+
+    def test_a_run_that_has_sent_shifts_is_refused(
+        self,
+        recollecting: Any,
+        connection: Any
+    ) -> None:
+        # Amplify cannot take a shift back, so the events describing
+        # what was sent are not replaced.
+        run_id, again, _collected = recollecting
+        RunRepository(connection=connection).set_status(
+            run_id=run_id,
+            status='sent'
+        )
+
+        response = again()
+
+        assert response.status_code == 409
+        assert 'cannot be taken back' in response.json()['detail']

@@ -535,6 +535,25 @@
         "title": "PreviewView",
         "type": "object"
       },
+      "RecollectRequest": {
+        "description": "What the operator was shown before asking to collect again. ",
+        "properties": {
+          "expectedChangeCount": {
+            "description": "How many changes the operator was told a recollection would discard. Collecting again replaces the run's events with what the calendar has now, so any editing done since it was collected is left behind in the revision it was done in.\n\nThe service refuses when this does not match what the run actually holds. That is the stale-tab case: a number read from a page somebody left open describes a run that has moved on, and a confirmation dialog cannot tell the difference. Read the run again and ask again with what it says now.",
+            "examples": [
+              0
+            ],
+            "minimum": 0.0,
+            "title": "Expectedchangecount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expectedChangeCount"
+        ],
+        "title": "RecollectRequest",
+        "type": "object"
+      },
       "RevisionView": {
         "description": "One numbered version of a run's events. ",
         "properties": {
@@ -1168,6 +1187,64 @@
           }
         ],
         "summary": "Report what sending this run would create",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/recollect": {
+      "post": {
+        "description": "Reads the same calendar over the same days and replaces what the run holds with what is there now. The run keeps its identifier and its window; a new revision holds the fresh events, and the revisions before it stay readable, so what was replaced is still there to look at.\n\n**Editing done since the run was collected is left behind.** That is what `expectedChangeCount` is for: the operator is shown how much would be discarded and sends the number back, and a number that no longer matches means they were looking at a page describing a run that has moved on.\n\nRefused while another job is working on the run, and refused for a run that has sent shifts, which Amplify cannot take back.",
+        "operationId": "recollect_run",
+        "parameters": [
+          {
+            "description": "Identifier the run was created with.",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the run was created with.",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecollectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:write"
+            ]
+          }
+        ],
+        "summary": "Collect a run's calendar window again",
         "tags": [
           "runs"
         ]

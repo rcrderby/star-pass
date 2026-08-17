@@ -16,7 +16,7 @@
 
 # Imports - Python Standard Library
 import sqlite3
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 # Imports - Third-Party
 from fastapi import APIRouter, HTTPException, Path, Request, status
@@ -27,17 +27,24 @@ from star_pass._database import transaction
 from star_pass._defaults import GCAL_CALENDARS
 from star_pass._gcal_time import resolve_window
 from star_pass._reading import (
+    changes_in_current,
     read_run_detail,
     read_run_for_send,
     read_run_history
 )
-from star_pass._records import JOB_KIND_COLLECT, Run
+from star_pass._records import (
+    JOB_KIND_COLLECT,
+    JOB_KIND_RECOLLECT,
+    Run,
+    RUN_STATUS_COLLECTING
+)
 from star_pass._reporting import Reporter
 from star_pass._repository import JobRepository, RunRepository
 from star_pass_contract import (
     CollectRequest,
     JobView,
     no_such_run,
+    RecollectRequest,
     PreviewView,
     RevisionView,
     RunDetailView,
@@ -46,7 +53,8 @@ from star_pass_contract import (
     to_job_view,
     to_preview_view,
     to_revision_views,
-    to_run_view
+    to_run_view,
+    why_not_recollect
 )
 from . import _defaults
 from ._security import (
@@ -307,6 +315,54 @@ async def get_preview(
     )
 
 
+async def _handed_over(
+        request: Request,
+        job_id: str,
+        run_id: str
+) -> JobView:
+    """ Give the collecting to the runner and answer with the job.
+
+        The same three steps whether the run is new or is being
+        collected again, because the work is the same work: the run
+        says which calendar and which days, and the difference is only
+        what was there before.
+
+        Args:
+            request (Request):
+                The request, which carries the runner.
+
+            job_id (str):
+                Job the work is recorded against, already queued.
+
+            run_id (str):
+                Run to collect into.
+
+        Returns:
+            job (JobView):
+                The job, as it stands when the answer is sent.
+    """
+
+    def work(reporter: Reporter) -> None:
+        """ Collect, on a connection belonging to the job's thread. """
+        in_database(
+            lambda connection: collect(
+                connection=connection,
+                run_id=run_id,
+                reporter=reporter
+            )
+        )
+
+    request.app.state.runner.submit(job_id=job_id, work=work)
+
+    job = await read(
+        lambda connection: JobRepository(
+            connection=connection
+        ).get(job_id=job_id)
+    )
+
+    return to_job_view(job=job)
+
+
 def _checked_calendar(
         calendar: str
 ) -> str:
@@ -500,22 +556,196 @@ async def collect_run(
         )
     )
 
-    def work(reporter: Reporter) -> None:
-        """ Collect, on a connection belonging to the job's thread. """
-        in_database(
-            lambda connection: collect(
-                connection=connection,
-                run_id=run.id,
-                reporter=reporter
-            )
-        )
-
-    request.app.state.runner.submit(job_id=job_id, work=work)
-
-    job = await read(
-        lambda connection: JobRepository(
-            connection=connection
-        ).get(job_id=job_id)
+    return await _handed_over(
+        request=request,
+        job_id=job_id,
+        run_id=run.id
     )
 
-    return to_job_view(job=job)
+
+def _current_change_count(
+        connection: sqlite3.Connection,
+        run_id: str
+) -> Optional[Tuple[Run, int]]:
+    """ Return a run and how much has been done to its current revision.
+
+        Args:
+            connection (sqlite3.Connection):
+                The database to read.
+
+            run_id (str):
+                Run to read.
+
+        Returns:
+            found (Tuple[Run, int] | None):
+                The run and its current revision's change count, or
+                None when there is no such run.  A run with no
+                revision yet counts as none, which is true: nothing
+                has been changed in a revision that does not exist.
+    """
+
+    history = read_run_history(
+        connection=connection,
+        run_id=run_id
+    )
+
+    if history is None:
+        return None
+
+    run, revisions = history
+
+    return run, changes_in_current(run=run, revisions=revisions)
+
+
+def _conflict(
+        detail: str
+) -> HTTPException:
+    """ Return the failure for a run that is not in a state to be asked.
+
+        Args:
+            detail (str):
+                What to tell the caller.
+
+        Returns:
+            error (HTTPException):
+                A conflict naming the reason.
+    """
+
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=detail
+    )
+
+
+@router.post(
+    '/runs/{run_id}/recollect',
+    status_code=status.HTTP_202_ACCEPTED,
+    summary='Collect a run\'s calendar window again',
+    description=(
+        'Reads the same calendar over the same days and replaces what '
+        'the run holds with what is there now. The run keeps its '
+        'identifier and its window; a new revision holds the fresh '
+        'events, and the revisions before it stay readable, so what '
+        'was replaced is still there to look at.\n\n'
+        '**Editing done since the run was collected is left behind.** '
+        'That is what `expectedChangeCount` is for: the operator is '
+        'shown how much would be discarded and sends the number back, '
+        'and a number that no longer matches means they were looking '
+        'at a page describing a run that has moved on.\n\n'
+        'Refused while another job is working on the run, and refused '
+        'for a run that has sent shifts, which Amplify cannot take '
+        'back.'
+    ),
+    response_model=JobView
+)
+async def recollect_run(
+        request: Request,
+        recollection: RecollectRequest,
+        run_id: str = Path(
+            description='Identifier the run was created with.'
+        ),
+        principal: Principal = requires(SCOPE_RUNS_WRITE)
+) -> JobView:
+    """ Collect a run's window again, replacing what it holds.
+
+        Args:
+            request (Request):
+                The request, which carries the runner that jobs are
+                given to.
+
+            recollection (RecollectRequest):
+                How many changes the operator was told would be
+                discarded.
+
+            run_id (str):
+                Identifier of the run to collect again.
+
+            principal (Principal):
+                The authenticated caller, which the dependency supplies
+                after checking the scope.
+
+        Raises:
+            HTTPException:
+                404 when there is no such run, 409 when the run is not
+                one a recollection may replace.
+
+        Returns:
+            job (JobView):
+                The job collecting the run again, queued.
+    """
+
+    found = await read(
+        lambda connection: _current_change_count(
+            connection=connection,
+            run_id=run_id
+        )
+    )
+
+    if found is None:
+        raise _missing(run_id=run_id)
+
+    run, changed = found
+    refusal = why_not_recollect(
+        run=run,
+        changed=changed,
+        expected=recollection.expected_change_count
+    )
+
+    if refusal is not None:
+        raise _conflict(detail=refusal)
+
+    job_id = await read(
+        lambda connection: _restarted(
+            connection=connection,
+            run_id=run_id,
+            principal_id=principal.id
+        )
+    )
+
+    return await _handed_over(
+        request=request,
+        job_id=job_id,
+        run_id=run_id
+    )
+
+
+def _restarted(
+        connection: sqlite3.Connection,
+        run_id: str,
+        principal_id: str
+) -> str:
+    """ Mark a run as being collected again, and record the job doing it.
+
+        Both in one transaction, so a run cannot be left saying it is
+        being collected with nothing collecting it.
+
+        Args:
+            connection (sqlite3.Connection):
+                The database to write to.
+
+            run_id (str):
+                Run being collected again.
+
+            principal_id (str):
+                Who asked (D13).
+
+        Raises:
+            ValidationError:
+                If either cannot be written.
+
+        Returns:
+            job_id (str):
+                Identifier of the job doing the work.
+    """
+
+    with transaction(connection=connection):
+        RunRepository(connection=connection).set_status(
+            run_id=run_id,
+            status=RUN_STATUS_COLLECTING
+        )
+
+        return JobRepository(connection=connection).create(
+            run_id=run_id,
+            kind=JOB_KIND_RECOLLECT,
+            principal_id=principal_id
+        ).id

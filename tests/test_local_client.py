@@ -35,6 +35,8 @@ from requests.adapters import BaseAdapter
 
 # Imports - Local
 from star_pass._exceptions import ValidationError as CoreValidationError
+from star_pass._records import RUN_STATUS_SENT
+from star_pass._repository import RunRepository
 from star_pass._repository import JobRepository
 from star_pass_api._defaults import API_PRINCIPAL_ID
 from star_pass_client import (
@@ -56,6 +58,9 @@ A_COLLECTION = {
     'calendar': 'events',
     'window': {'start': '2026-09-01', 'end': '2026-10-01'}
 }
+
+# A recollection of a run nothing has been done to since.
+NO_CHANGES = {'expectedChangeCount': 0}
 
 
 class InProcessAdapter(BaseAdapter):
@@ -159,6 +164,21 @@ def fixture_collecting_service(
     return None
 
 
+@pytest.fixture(name='collected_in_both')
+def fixture_collected_in_both(
+    both: Callable[..., Tuple[Any, Any]]
+) -> Tuple[str, str]:
+    """ Return a run each mode collected, for asking about again.
+
+        Two runs rather than one: each mode mints its own identifier,
+        and a recollection is about a run rather than about a shape,
+        so the pair is what a comparison needs.
+    """
+    local, remote = both('collect_run', body=A_COLLECTION)
+
+    return local['runId'], remote['runId']
+
+
 @pytest.fixture(name='both')
 def fixture_both(
     adapter: InProcessAdapter,
@@ -175,10 +195,28 @@ def fixture_both(
 
     def ask(operation: str, **parameters: Any) -> Tuple[Any, Any]:
         """ Return what each client answered, local first. """
+        return asked(
+            operation=operation,
+            local=parameters,
+            remote=parameters
+        )
+
+    def asked(
+        operation: str,
+        local: dict,
+        remote: dict
+    ) -> Tuple[Any, Any]:
+        """ Ask each client with parameters of its own.
+
+            A run is minted by whichever mode collected it, so an
+            operation addressing one is asked with a different
+            identifier in each mode.  What is compared is still one
+            answer from each.
+        """
         before = len(adapter.requests)
         answers = (
-            getattr(local_client, operation)(**parameters),
-            getattr(remote_client, operation)(**parameters)
+            getattr(local_client, operation)(**local),
+            getattr(remote_client, operation)(**remote)
         )
 
         assert len(adapter.requests) == before + 1, (
@@ -188,7 +226,43 @@ def fixture_both(
 
         return answers
 
+    ask.asked = asked
+
     return ask
+
+
+def both_refuse(
+    local_client: Any,
+    remote_client: Any,
+    collected: Tuple[str, str],
+    body: dict
+) -> int:
+    """ Return the status both modes refused a recollection with.
+
+        The run identifiers differ, because each mode minted its own,
+        so they are taken out of the messages before those are
+        compared.  What is left is the wording, which must not differ.
+    """
+    local_run, remote_run = collected
+    local = problem_from(
+        local_client,
+        'recollect_run',
+        run_id=local_run,
+        body=body
+    )
+    remote = problem_from(
+        remote_client,
+        'recollect_run',
+        run_id=remote_run,
+        body=body
+    )
+
+    assert local.status == remote.status
+    assert local.detail.replace(local_run, '') == (
+        remote.detail.replace(remote_run, '')
+    )
+
+    return local.status
 
 
 def problem_from(
@@ -442,6 +516,89 @@ class TestTheTwoModesCollectTheSame:
                 client.collect_run(body=asked)
 
         assert local_client.list_runs() == []
+
+
+class TestTheTwoModesCollectAgainTheSame:
+    def test_a_recollection_answers_with_a_job_on_the_same_run(
+        self,
+        both: Callable[..., Tuple[Any, Any]],
+        collecting_service: None,
+        collected_in_both: Tuple[str, str]
+    ) -> None:
+        # One question, not two: a recollection answers with a job of
+        # the right kind, working on the run it was asked about, and
+        # a mode that got either wrong would be answering about
+        # something else.
+        del collecting_service
+        local_run, remote_run = collected_in_both
+
+        local, remote = both.asked(
+            operation='recollect_run',
+            local={'run_id': local_run, 'body': NO_CHANGES},
+            remote={'run_id': remote_run, 'body': NO_CHANGES}
+        )
+
+        assert local['kind'] == remote['kind'] == 'recollect'
+        assert local['runId'] == local_run
+        assert remote['runId'] == remote_run
+
+    def test_a_run_neither_mode_has_fails_the_same(
+        self,
+        local_client: LocalClient,
+        remote_client: Client
+    ) -> None:
+        local = problem_from(
+            local_client,
+            'recollect_run',
+            run_id='no-such-run',
+            body=NO_CHANGES
+        )
+        remote = problem_from(
+            remote_client,
+            'recollect_run',
+            run_id='no-such-run',
+            body=NO_CHANGES
+        )
+
+        assert local.status == remote.status == 404
+        assert local.detail == remote.detail
+
+    def test_a_change_count_that_has_moved_fails_the_same(
+        self,
+        collecting_service: None,
+        collected_in_both: Tuple[str, str],
+        local_client: LocalClient,
+        remote_client: Client
+    ) -> None:
+        del collecting_service
+        moved = {'expectedChangeCount': 3}
+
+        assert both_refuse(
+            local_client=local_client,
+            remote_client=remote_client,
+            collected=collected_in_both,
+            body=moved
+        ) == 409
+
+    def test_a_sent_run_fails_the_same(
+        self,
+        collecting_service: None,
+        collected_in_both: Tuple[str, str],
+        local_client: LocalClient,
+        remote_client: Client,
+        runs: RunRepository
+    ) -> None:
+        del collecting_service
+
+        for run_id in collected_in_both:
+            runs.set_status(run_id=run_id, status=RUN_STATUS_SENT)
+
+        assert both_refuse(
+            local_client=local_client,
+            remote_client=remote_client,
+            collected=collected_in_both,
+            body=NO_CHANGES
+        ) == 409
 
 
 class TestWhatLocalModeCannotDo:

@@ -37,22 +37,29 @@ from star_pass._database import connect, transaction
 from star_pass._defaults import GCAL_CALENDARS
 from star_pass._gcal_time import resolve_window
 from star_pass._reading import (
+    changes_in_current,
     read_run_detail,
     read_run_for_send,
     read_run_history
 )
-from star_pass._records import JOB_KIND_COLLECT
+from star_pass._records import (
+    JOB_KIND_COLLECT,
+    JOB_KIND_RECOLLECT,
+    RUN_STATUS_COLLECTING
+)
 from star_pass._reporting import Reporter
 from star_pass._repository import JobRepository, RunRepository
 from star_pass_contract import (
     CollectRequest,
     no_such_job,
     no_such_run,
+    RecollectRequest,
     to_detail_view,
     to_job_view,
     to_preview_view,
     to_revision_views,
-    to_run_view
+    to_run_view,
+    why_not_recollect
 )
 from ._client import ApiProblem
 from ._operations import Operations
@@ -65,6 +72,7 @@ from ._stream import StreamEvent
 HANDLERS = {
     ('GET', '/v1/version'): '_version',
     ('POST', '/v1/runs'): '_collect',
+    ('POST', '/v1/runs/{run_id}/recollect'): '_recollect',
     ('GET', '/v1/runs'): '_runs',
     ('GET', '/v1/runs/{run_id}'): '_run',
     ('GET', '/v1/runs/{run_id}/revisions'): '_revisions',
@@ -98,6 +106,10 @@ UNAVAILABLE = {
 # one branch.
 NOT_FOUND = 404
 NOT_FOUND_TITLE = 'Not Found'
+
+# What a run that is not in a state to be asked is reported as.
+CONFLICT = 409
+CONFLICT_TITLE = 'Conflict'
 
 # What a request the service would refuse is reported as, so that a
 # caller handling one mode has handled both.
@@ -620,6 +632,115 @@ class LocalClient(Operations):
             document={
                 'title': UNPROCESSABLE_TITLE,
                 'status': UNPROCESSABLE,
+                'detail': detail
+            }
+        )
+
+    def _recollect(
+            self,
+            run_id: str,
+            body: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """ Collect a run's window again, here and now.
+
+            The same three refusals the service makes, and the same
+            work, run in the call for the same reason a first
+            collection is (D2).
+
+            Args:
+                run_id (str):
+                    Run to collect again.
+
+                body (Dict[str, Any]):
+                    How many changes the operator was told would be
+                    discarded.
+
+            Raises:
+                ApiProblem:
+                    If there is no such run, or it is not one a
+                    recollection may replace.
+
+                StarPassError:
+                    If the collection cannot be carried out.
+
+            Returns:
+                answer (Dict[str, Any]):
+                    The job, as it ended.
+        """
+
+        asked = RecollectRequest.model_validate(body)
+
+        with self._opened() as connection:
+            history = read_run_history(
+                connection=connection,
+                run_id=run_id
+            )
+
+            if history is None:
+                raise self._missing(detail=no_such_run(run_id=run_id))
+
+            run, revisions = history
+            refusal = why_not_recollect(
+                run=run,
+                changed=changes_in_current(
+                    run=run,
+                    revisions=revisions
+                ),
+                expected=asked.expected_change_count
+            )
+
+            if refusal is not None:
+                raise self._conflicted(detail=refusal)
+
+            with transaction(connection=connection):
+                RunRepository(connection=connection).set_status(
+                    run_id=run_id,
+                    status=RUN_STATUS_COLLECTING
+                )
+                jobs = JobRepository(connection=connection)
+                job = jobs.create(
+                    run_id=run_id,
+                    kind=JOB_KIND_RECOLLECT,
+                    principal_id=LOCAL_PRINCIPAL_ID
+                )
+
+            JobRunner(
+                connect=self._connect_to,
+                workers=1
+            ).submit(
+                job_id=job.id,
+                work=lambda reporter: self._collected(
+                    run_id=run_id,
+                    reporter=reporter
+                )
+            ).result()
+
+            return to_job_view(
+                job=jobs.get(job_id=job.id)
+            ).model_dump(by_alias=True, mode='json')
+
+    def _conflicted(
+            self,
+            detail: str
+    ) -> ApiProblem:
+        """ Return the failure for a run not in a state to be asked.
+
+            Args:
+                detail (str):
+                    What to tell the caller.
+
+            Returns:
+                error (ApiProblem):
+                    A conflict carrying that reason.
+        """
+
+        del self
+
+        return ApiProblem(
+            status=CONFLICT,
+            document={
+                'title': CONFLICT_TITLE,
+                'status': CONFLICT,
                 'detail': detail
             }
         )

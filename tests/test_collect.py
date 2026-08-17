@@ -22,6 +22,7 @@ from requests import Response
 from star_pass import _models
 from star_pass._collect import collect
 from star_pass._exceptions import ValidationError
+from star_pass._reading import changes_in_current, read_run_history
 from star_pass._records import (
     MATCH_KIND_KEYWORD,
     RUN_STATUS_COLLECTING,
@@ -686,3 +687,102 @@ class TestReadingTheCalendarTwice:
         collect_run(items=[an_item()], run_id=run_id)
 
         assert len(events.list_all(run_id=run_id, revision=1)) == 1
+
+
+class TestCollectingARunAgain:
+    def test_a_second_collection_adds_a_revision(
+        self,
+        collect_run: Callable[..., Any],
+        collecting: str,
+        revisions: RevisionRepository
+    ) -> None:
+        collect_run(items=[an_item()])
+        collect_run(items=[an_item()])
+
+        assert [
+            revision.number
+            for revision in revisions.list_all(run_id=collecting)
+        ] == [1, 2]
+
+    def test_a_second_collection_is_labelled_as_one(
+        self,
+        collect_run: Callable[..., Any],
+        collecting: str,
+        revisions: RevisionRepository
+    ) -> None:
+        # Which of the two it is says whether anything was there
+        # before, which is what a reader wants from the label.
+        collect_run(items=[an_item()])
+        collect_run(items=[an_item()])
+
+        assert [
+            revision.label
+            for revision in revisions.list_all(run_id=collecting)
+        ] == ['As collected', 'As recollected']
+
+    def test_a_second_collection_holds_only_what_the_calendar_has_now(
+        self,
+        collect_run: Callable[..., Any],
+        collecting: str,
+        events: EventRepository
+    ) -> None:
+        # Replacing, not continuing: an event the calendar no longer
+        # has must not be carried forward into the new revision.
+        collect_run(
+            items=[an_item(), an_item(identifier='gcal-2')]
+        )
+        collect_run(items=[an_item()])
+
+        assert [
+            event.id
+            for event in events.list_all(run_id=collecting, revision=2)
+        ] == ['gcal-1']
+
+    def test_the_revision_that_was_replaced_is_still_readable(
+        self,
+        collect_run: Callable[..., Any],
+        collecting: str,
+        events: EventRepository
+    ) -> None:
+        collect_run(
+            items=[an_item(), an_item(identifier='gcal-2')]
+        )
+        collect_run(items=[an_item()])
+
+        assert len(
+            events.list_all(run_id=collecting, revision=1)
+        ) == 2
+
+    def test_the_change_count_read_is_the_current_revision_s(
+        self,
+        collect_run: Callable[..., Any],
+        collecting: str,
+        connection: sqlite3.Connection,
+        add_log_entry: Callable[..., Any]
+    ) -> None:
+        # Two revisions with different counts, so a reader taking the
+        # first one it finds gets the wrong number.
+        collect_run(items=[an_item()])
+        add_log_entry(
+            run_id=collecting,
+            revision=1,
+            entry='Nudged one event'
+        )
+        add_log_entry(
+            run_id=collecting,
+            revision=1,
+            entry='Nudged another'
+        )
+        collect_run(items=[an_item()])
+        add_log_entry(
+            run_id=collecting,
+            revision=2,
+            entry='Nudged one more'
+        )
+
+        run, listed = read_run_history(
+            connection=connection,
+            run_id=collecting
+        )
+
+        assert changes_in_current(run=run, revisions=listed) == 1

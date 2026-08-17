@@ -61,8 +61,11 @@ SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
 # How a date is written where one is stored.
 ISO_DATE_FORMAT = '%Y-%m-%d'
 
-# What the first revision of a run is called.
+# What a revision a collection produced is called.  Which of the two
+# it is says whether anything was there before, which is the one thing
+# a reader wants from the label.
 FIRST_REVISION_LABEL = 'As collected'
+LATER_REVISION_LABEL = 'As recollected'
 
 # How many minutes a day holds, for saying that a shift ran past the
 # end of one.
@@ -593,9 +596,14 @@ def collect(
     """ Fill in a run from the calendar it names.
 
         The run exists before this is called, holding the calendar and
-        the window that were asked for and nothing else.  That is what
-        makes a collection watchable: the job that does this work is
-        recorded against a run, so it has to have one.
+        the window that were asked for.  That is what makes a
+        collection watchable: the job that does this work is recorded
+        against a run, so it has to have one.
+
+        The same work whether the run is new or is being collected
+        again.  A run collected again gains a revision holding what
+        the calendar has now, and the revisions before it stay
+        readable, so what was replaced is still there to look at.
 
         Everything the collection produces is written in one
         transaction.  A run left holding events but no opportunities
@@ -626,7 +634,8 @@ def collect(
 
         Returns:
             run (Run):
-                The run as it now stands, with its first revision.
+                The run as it now stands, with a revision holding what
+                the calendar has now.
     """
 
     runs = RunRepository(connection=connection)
@@ -648,9 +657,17 @@ def collect(
     reporter.step_started(label='Storing the collected events')
 
     with transaction(connection=connection):
+        # Replacing, not continuing.  What the calendar says now is
+        # the whole of the revision, so carrying the previous events
+        # forward would leave behind ones the calendar no longer has.
         revision = RevisionRepository(connection=connection).create(
             run_id=run_id,
-            label=FIRST_REVISION_LABEL
+            label=(
+                FIRST_REVISION_LABEL
+                if run.current_revision == 0
+                else LATER_REVISION_LABEL
+            ),
+            replacing=True
         )
         EventRepository(connection=connection).add_all(
             run_id=run_id,
