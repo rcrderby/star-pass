@@ -25,6 +25,7 @@ from typing import AbstractSet, Dict, Iterable, List, Sequence
 
 # Imports - Local
 from star_pass._defaults import LOCAL_TIMEZONE
+from star_pass._editing import Operation
 from star_pass._derived import (
     blocks_the_run,
     capping_maximum,
@@ -36,6 +37,7 @@ from star_pass._reading import RunDetail
 from star_pass._records import (
     Event,
     Job,
+    LogEntry,
     Opportunity,
     Revision,
     Run,
@@ -43,6 +45,8 @@ from star_pass._records import (
 )
 from ._schemas import (
     BlockerView,
+    EditRequest,
+    EditView,
     EventRoleView,
     EventView,
     JobView,
@@ -210,6 +214,33 @@ def _to_event_view(
     )
 
 
+def _to_log_entry_view(
+        entry: LogEntry
+) -> LogEntryView:
+    """ Return one change log entry as a caller sees it.
+
+        Below both callers: a run's detail carries its whole log, and
+        an edit answers with the entries it just wrote.  Written twice,
+        the two could describe the same row differently.
+
+        Args:
+            entry (LogEntry):
+                The stored entry.
+
+        Returns:
+            view (LogEntryView):
+                The entry, shaped for the contract.
+    """
+
+    return LogEntryView(
+        id=entry.id,
+        revision=entry.revision,
+        logged_at=entry.logged_at,
+        principal_id=entry.principal_id,
+        entry=entry.entry
+    )
+
+
 def to_detail_view(
         detail: RunDetail
 ) -> RunDetailView:
@@ -254,13 +285,7 @@ def to_detail_view(
             for opportunity in detail.opportunities
         ],
         log=[
-            LogEntryView(
-                id=entry.id,
-                revision=entry.revision,
-                logged_at=entry.logged_at,
-                principal_id=entry.principal_id,
-                entry=entry.entry
-            )
+            _to_log_entry_view(entry=entry)
             for entry in detail.log
         ]
     )
@@ -409,3 +434,80 @@ def to_preview_view(
             for blocker in result.blockers
         ]
     )
+
+
+def to_edit_view(
+        events: Sequence[Event],
+        opportunities: Sequence[Opportunity],
+        entries: Sequence[LogEntry]
+) -> EditView:
+    """ Return a revision after an edit, and what the edit logged.
+
+        The whole revision rather than the events that changed: a
+        reviewer's screen is redrawn from this, and the derived figures
+        beside a row -- whether another event would create the same
+        shift, above all -- are answers about the revision as a whole
+        and change for rows the edit never named.
+
+        Args:
+            events (Sequence[Event]):
+                The revision's events as they now are.
+
+            opportunities (Sequence[Opportunity]):
+                The run's opportunities, for labelling the roles.
+
+            entries (Sequence[LogEntry]):
+                What the edit added to the change log.
+
+        Returns:
+            view (EditView):
+                The revision and the entries, shaped for the contract.
+    """
+
+    keyed = _by_need_id(opportunities=opportunities)
+    repeats = repeated(events=events)
+
+    return EditView(
+        events=[
+            _to_event_view(
+                event=event,
+                opportunities=keyed,
+                repeats=repeats
+            )
+            for event in events
+        ],
+        log=[_to_log_entry_view(entry=entry) for entry in entries]
+    )
+
+
+def to_operations(
+        asked: EditRequest
+) -> List[Operation]:
+    """ Return a request's operations as the core takes them.
+
+        Below both halves, like every other conversion here: the
+        service and the command line client are given the same shape
+        and must hand the core the same record, and two conversions
+        could differ about a field that is absent.
+
+        Args:
+            asked (EditRequest):
+                The request, as it arrived.
+
+        Returns:
+            operations (List[Operation]):
+                One 'Operation' per operation asked for, in order.
+    """
+
+    return [
+        Operation(
+            op=operation.op,
+            event_ids=tuple(operation.event_ids),
+            category=operation.category,
+            time=operation.time,
+            need_id=operation.need_id,
+            slots=operation.slots,
+            minutes=operation.minutes
+        )
+        for operation in asked.operations
+    ]

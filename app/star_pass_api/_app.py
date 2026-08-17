@@ -31,6 +31,7 @@ from star_pass._job_runner import JobRunner
 from star_pass._logging import get_logger
 from star_pass._repository import JobRepository
 from . import _defaults
+from ._editing import router as editing_router
 from ._health import router as health_router
 from ._jobs import router as jobs_router
 from ._problems import add_problem_handlers, PROBLEM_MEDIA_TYPE
@@ -164,6 +165,7 @@ def create_app() -> FastAPI:
         health_router,
         version_router,
         runs_router,
+        editing_router,
         sending_router,
         jobs_router
     ):

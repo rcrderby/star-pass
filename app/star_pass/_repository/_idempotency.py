@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 # Imports - Local
 from .._database import execute, query_one
 from .._logging import get_logger
-from .._records import IdempotencyRecord, JOB_KINDS
+from .._records import IdempotencyRecord, IDEMPOTENT_OPERATIONS
 from ._common import (
     insert_statement,
     Repository,
@@ -94,7 +94,7 @@ class IdempotencyRepository(Repository):
 
             Args:
                 operation (str):
-                    Which write, one of 'JOB_KINDS'.
+                    Which write, one of 'IDEMPOTENT_OPERATIONS'.
 
                 key (str):
                     What the caller supplied.
@@ -128,7 +128,7 @@ class IdempotencyRepository(Repository):
 
         require_one_of(
             value=operation,
-            allowed=JOB_KINDS,
+            allowed=IDEMPOTENT_OPERATIONS,
             description=OPERATION_DESCRIPTION
         )
 
@@ -188,7 +188,7 @@ class IdempotencyRepository(Repository):
 
             Args:
                 operation (str):
-                    Which write, one of 'JOB_KINDS'.
+                    Which write, one of 'IDEMPOTENT_OPERATIONS'.
 
                 key (str):
                     The key it was reserved under.
@@ -215,7 +215,7 @@ class IdempotencyRepository(Repository):
 
         require_one_of(
             value=operation,
-            allowed=JOB_KINDS,
+            allowed=IDEMPOTENT_OPERATIONS,
             description=OPERATION_DESCRIPTION
         )
 
@@ -254,7 +254,7 @@ class IdempotencyRepository(Repository):
 
             Args:
                 operation (str):
-                    Which write, one of 'JOB_KINDS'.
+                    Which write, one of 'IDEMPOTENT_OPERATIONS'.
 
                 key (str):
                     The key to look up.

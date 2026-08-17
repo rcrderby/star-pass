@@ -14,7 +14,7 @@
 """
 
 # Imports - Python Standard Library
-from typing import List
+from typing import List, Optional
 
 # Imports - Third-Party
 from pydantic import BaseModel, ConfigDict, Field
@@ -724,3 +724,128 @@ class SendRequest(ApiModel):
         """
 
         return f'expected_shift_count={self.expected_shift_count}'
+
+
+class EventOperationRequest(ApiModel):
+    """ One thing a reviewer did, over one or more events. """
+
+    op: str = Field(
+        description=(
+            'What was done. One of: `set_category`, `set_start`, '
+            '`set_end`, `set_slots`, `nudge`, `reset_slots`, `remove`, '
+            '`undo`.\n\n'
+            '`set_start` and `set_end` name the **shift** times, which '
+            'are what reaches Amplify. An event\'s calendar times '
+            'never move: they are what the calendar said, and they are '
+            'what `undo` works back from.'
+        ),
+        examples=['nudge']
+    )
+    event_ids: List[str] = Field(
+        min_length=1,
+        description=(
+            'The events this applies to. A selection of thirty rows is '
+            'one operation naming thirty, which is one log entry '
+            'rather than thirty.'
+        ),
+        examples=[['gcal-1', 'gcal-2']]
+    )
+    category: Optional[str] = Field(
+        default=None,
+        description='Category to set, for `set_category`.',
+        examples=['adult_game']
+    )
+    time: Optional[str] = Field(
+        default=None,
+        description=(
+            'Time of day to set, for `set_start` and `set_end`, as '
+            '`HH:MM` in the league\'s own zone.'
+        ),
+        examples=['18:15']
+    )
+    need_id: Optional[str] = Field(
+        default=None,
+        description=(
+            'Which of an event\'s roles to set, for `set_slots`. A '
+            'role rather than the event, because an event serving '
+            'skating and non-skating officials wants different '
+            'numbers of each.'
+        ),
+        examples=['879609']
+    )
+    slots: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description='Volunteers wanted, for `set_slots`.',
+        examples=[4]
+    )
+    minutes: Optional[int] = Field(
+        default=None,
+        description=(
+            'How far to move both shift times, for `nudge`. Negative '
+            'moves the shift earlier.'
+        ),
+        examples=[-15]
+    )
+
+
+class EditRequest(ApiModel):
+    """ One user action, as the operations it is made of. """
+
+    operations: List[EventOperationRequest] = Field(
+        min_length=1,
+        description=(
+            'What to do, in order. Each one sees what the one before '
+            'it produced.\n\n'
+            'The whole list is applied or none of it is: an operation '
+            'that would leave an event unable to become a correct '
+            'shift refuses the call, and nothing is written. A partly '
+            'applied action is worse than a refused one, because the '
+            'reviewer cannot see which rows moved.'
+        )
+    )
+
+    def fingerprint(self) -> str:
+        """ Return the operations this request asks for.
+
+            An edit is claimed on what it does, field by field, so a
+            retry carrying a different nudge is a different request
+            rather than a replay of the first one.
+
+            Args:
+                None.
+
+            Returns:
+                fingerprint (str):
+                    Every operation, in order, as name and value pairs.
+        """
+
+        return '|'.join(
+            ','.join(
+                f'{name}={value}'
+                for name, value in sorted(
+                    operation.model_dump(exclude_none=True).items()
+                )
+            )
+            for operation in self.operations
+        )
+
+
+class EditView(ApiModel):
+    """ A revision after an edit, and what the edit wrote down. """
+
+    events: List[EventView] = Field(
+        description=(
+            'The revision\'s events as they now are, in the order they '
+            'are stored. Every event, not only the ones that changed: '
+            'a reviewer\'s screen is redrawn from this, and a partial '
+            'list would leave it guessing what it still holds.'
+        )
+    )
+    log: List[LogEntryView] = Field(
+        description=(
+            'The entries this call added to the run\'s change log, one '
+            'per operation. Written server-side, so the log survives a '
+            'reload and reads the same in a browser and a terminal.'
+        )
+    )
