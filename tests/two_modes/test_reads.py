@@ -205,6 +205,22 @@ class TestWhatLocalModeCannotDo:
 
         assert 'local mode' in str(error.value)
 
+    def test_editing_says_where_a_run_is_edited(
+        self,
+        local_client: LocalClient
+    ) -> None:
+        # Not a gap to be filled in later: the command line covers what
+        # the web interface cannot, and parity with it is not a goal
+        # (D2).  The reason says where to go rather than "not yet".
+        with pytest.raises(LocalOperationUnavailable) as error:
+            local_client.edit_events(
+                run_id='r-1',
+                idempotency_key='an-attempt',
+                body={'operations': []}
+            )
+
+        assert 'web interface' in str(error.value)
+
     def test_the_two_clients_offer_the_same_operations(
         self,
         local_client: LocalClient,
