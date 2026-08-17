@@ -46,12 +46,15 @@ from ._mode import API_URL_VARIABLE, client_for
 from ._output import write
 from ._render import (
     after,
-    event_line,
-    job_text,
-    preview_text,
     revisions_table,
     run_detail,
     runs_table,
+    uncollected_text
+)
+from ._sending import (
+    event_line,
+    job_text,
+    preview_text,
     send_restatement
 )
 
@@ -256,6 +259,17 @@ COMMANDS = (
         summary='List a run\'s revisions, oldest first.',
         operation='list_revisions',
         render=revisions_table,
+        argument='run_id'
+    ),
+    Command(
+        group='runs',
+        word='uncollected',
+        summary=(
+            'Show what a run\'s window held and the run did not '
+            'collect.'
+        ),
+        operation='list_uncollected',
+        render=uncollected_text,
         argument='run_id'
     ),
     Command(

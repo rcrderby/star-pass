@@ -72,6 +72,8 @@ from ._schemas import (
     EventOperationRequest,
     SendRequest,
     SkippedShiftView,
+    UncollectedEventView,
+    UncollectedGroupView,
     WindowRequest,
     WindowView
 )
@@ -83,7 +85,8 @@ from ._views import (
     to_operations,
     to_preview_view,
     to_revision_views,
-    to_run_view
+    to_run_view,
+    to_uncollected_views
 )
 
 __all__ = [
@@ -114,6 +117,8 @@ __all__ = [
     'EventOperationRequest',
     'SendRequest',
     'SkippedShiftView',
+    'UncollectedEventView',
+    'UncollectedGroupView',
     'WindowRequest',
     'WindowView',
     'already_sent',
@@ -141,6 +146,7 @@ __all__ = [
     'to_preview_view',
     'to_revision_views',
     'to_run_view',
+    'to_uncollected_views',
     'why_not_recollect',
     'why_not_resume',
     'why_not_send'

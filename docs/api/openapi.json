@@ -795,6 +795,11 @@
             "title": "Shifts",
             "type": "integer"
           },
+          "uncollected": {
+            "description": "Things the run's window held that did not become events. Counted over the run rather than the current revision, because it describes the window the collection read and editing the events does not change it.",
+            "title": "Uncollected",
+            "type": "integer"
+          },
           "unmatched": {
             "description": "Events that would create no shift at all, and so stop the run being sent. A title that matched nothing has no opportunity to create a shift under, and a category that resolved to no need ID leaves the same absence.",
             "title": "Unmatched",
@@ -804,7 +809,8 @@
         "required": [
           "events",
           "shifts",
-          "unmatched"
+          "unmatched",
+          "uncollected"
         ],
         "title": "RunCountsView",
         "type": "object"
@@ -1044,6 +1050,99 @@
           "shiftEnd"
         ],
         "title": "SkippedShiftView",
+        "type": "object"
+      },
+      "UncollectedEventView": {
+        "description": "One thing a run's window held that did not become an event. ",
+        "properties": {
+          "addable": {
+            "description": "Whether this event may be pulled into the run. The server's answer rather than the client's, so that a button and the endpoint behind it cannot disagree: an event nobody searched for is addable, and one that cannot become a correct shift is refused here as well as there.",
+            "title": "Addable",
+            "type": "boolean"
+          },
+          "calendarEnd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "End time on the calendar, or null for an all-day event.",
+            "title": "Calendarend"
+          },
+          "calendarStart": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Start time on the calendar, or null for an all-day event, which has none.",
+            "title": "Calendarstart"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Day of the event as an ISO date, in the run's own zone, or null when the calendar gave a value that could not be read as one.",
+            "title": "Date"
+          },
+          "id": {
+            "description": "Calendar identifier of the event. The same identifier an event of the run carries, which is what names one when it is pulled in.",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Event title, or null when it has none.",
+            "title": "Title"
+          }
+        },
+        "required": [
+          "id",
+          "addable"
+        ],
+        "title": "UncollectedEventView",
+        "type": "object"
+      },
+      "UncollectedGroupView": {
+        "description": "What a run's window held and the run left out, by reason. ",
+        "properties": {
+          "events": {
+            "description": "The events left out for this reason, earliest first.",
+            "items": {
+              "$ref": "#/components/schemas/UncollectedEventView"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "reason": {
+            "description": "Why these were left out: search, excluded, allday, untitled. \"search\" is the one no calendar event can carry -- it means no configured query string returned it, so nobody looked for it -- and it is the only reason an event may be pulled in under. The other three describe events that cannot become a correct shift.",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "events"
+        ],
+        "title": "UncollectedGroupView",
         "type": "object"
       },
       "Version": {
@@ -1726,6 +1825,58 @@
           }
         ],
         "summary": "Create this run's shifts in Amplify",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/uncollected": {
+      "get": {
+        "description": "Everything the run's window held that did not become one of its events, grouped by the reason it was left out and earliest first within each group. A reason nothing was left out for is not published, so the groups are what there is to look at.\n\nAnswered from what the collection stored, never from a calendar read. This is read on every load of the screen, and a live read would cost a Google request per look and give the run a second opinion about its own window. It therefore describes the window as the collection found it, not as the calendar stands now; recollecting is what refreshes it.\n\n\"search\" means no configured query string returned the event, so nobody looked for it, and it is the only reason an event may be pulled into the run under. The other three describe events that cannot become a correct shift, and each event says which it is rather than leaving a client to work it out from the reason.",
+        "operationId": "list_uncollected",
+        "parameters": [
+          {
+            "description": "Identifier the run was created with.",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the run was created with.",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UncollectedGroupView"
+                  },
+                  "title": "Response List Uncollected",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:read"
+            ]
+          }
+        ],
+        "summary": "List what the window held and the run did not collect",
         "tags": [
           "runs"
         ]

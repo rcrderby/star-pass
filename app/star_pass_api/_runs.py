@@ -32,7 +32,8 @@ from star_pass._reading import (
     changes_in_current,
     read_run_detail,
     read_run_for_send,
-    read_run_history
+    read_run_history,
+    read_run_uncollected
 )
 from star_pass._records import (
     JOB_KIND_COLLECT,
@@ -56,6 +57,8 @@ from star_pass_contract import (
     to_preview_view,
     to_revision_views,
     to_run_view,
+    to_uncollected_views,
+    UncollectedGroupView,
     why_not_recollect
 )
 from . import _defaults
@@ -239,6 +242,72 @@ async def list_revisions(
     run, revisions = history
 
     return to_revision_views(run=run, revisions=revisions)
+
+
+@router.get(
+    '/runs/{run_id}/uncollected',
+    summary='List what the window held and the run did not collect',
+    description=(
+        'Everything the run\'s window held that did not become one of '
+        'its events, grouped by the reason it was left out and '
+        'earliest first within each group. A reason nothing was left '
+        'out for is not published, so the groups are what there is to '
+        'look at.\n\n'
+        'Answered from what the collection stored, never from a '
+        'calendar read. This is read on every load of the screen, and '
+        'a live read would cost a Google request per look and give '
+        'the run a second opinion about its own window. It therefore '
+        'describes the window as the collection found it, not as the '
+        'calendar stands now; recollecting is what refreshes it.\n\n'
+        '"search" means no configured query string returned the '
+        'event, so nobody looked for it, and it is the only reason an '
+        'event may be pulled into the run under. The other three '
+        'describe events that cannot become a correct shift, and each '
+        'event says which it is rather than leaving a client to work '
+        'it out from the reason.'
+    ),
+    response_model=List[UncollectedGroupView]
+)
+async def list_uncollected(
+        run_id: str = Path(
+            description='Identifier the run was created with.'
+        ),
+        principal: Principal = requires(SCOPE_RUNS_READ)
+) -> List[UncollectedGroupView]:
+    """ Return what a run's window held and the run left out.
+
+        Args:
+            run_id (str):
+                Identifier of the run to read.
+
+            principal (Principal):
+                The authenticated caller, which the dependency supplies
+                after checking the scope.
+
+        Raises:
+            HTTPException:
+                404 when there is no such run.  A run whose window
+                held nothing else answers with an empty list, which is
+                a different fact and reads differently.
+
+        Returns:
+            groups (List[UncollectedGroupView]):
+                One group per reason anything was left out for.
+    """
+
+    del principal
+
+    uncollected = await read(
+        lambda connection: read_run_uncollected(
+            connection=connection,
+            run_id=run_id
+        )
+    )
+
+    if uncollected is None:
+        raise missing_run(run_id=run_id)
+
+    return to_uncollected_views(uncollected=uncollected)
 
 
 @router.get(

@@ -63,6 +63,25 @@ class TestTheTwoModesAgree:
         assert local == remote
         assert [item['number'] for item in local] == [1, 2]
 
+    def test_what_the_window_left_out_reads_the_same(
+        self,
+        both: Callable[..., Tuple[Any, Any]],
+        not_collected: Callable[[str], list],
+        populated: str
+    ) -> None:
+        not_collected(populated)
+
+        local, remote = both('list_uncollected', run_id=populated)
+
+        assert local == remote
+        # Guard against both answering an empty document identically.
+        assert [group['reason'] for group in local] == [
+            'search',
+            'excluded',
+            'allday',
+            'untitled'
+        ]
+
     def test_the_preview_reads_the_same(
         self,
         both: Callable[..., Tuple[Any, Any]],

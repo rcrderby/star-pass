@@ -36,7 +36,8 @@ from star_pass._opportunities import shifts_in_amplify
 from star_pass._reading import (
     read_run_detail,
     read_run_for_send,
-    read_run_history
+    read_run_history,
+    read_run_uncollected
 )
 from star_pass._records import Revision, Run
 from star_pass._repository import JobRepository, RunRepository
@@ -47,7 +48,8 @@ from star_pass_contract import (
     to_job_view,
     to_preview_view,
     to_revision_views,
-    to_run_view
+    to_run_view,
+    to_uncollected_views
 )
 from ._calling import Operation, OperationCaller
 from ._client import ApiProblem
@@ -68,6 +70,7 @@ HANDLERS = {
     ('GET', '/v1/runs'): '_runs',
     ('GET', '/v1/runs/{run_id}'): '_run',
     ('GET', '/v1/runs/{run_id}/revisions'): '_revisions',
+    ('GET', '/v1/runs/{run_id}/uncollected'): '_uncollected',
     ('GET', '/v1/runs/{run_id}/preview'): '_preview',
     ('GET', '/v1/jobs/{job_id}'): '_job'
 }
@@ -425,6 +428,45 @@ class LocalClient(OperationCaller, LocalWrites, Operations):
         return [
             view.model_dump(by_alias=True, mode='json')
             for view in to_revision_views(run=run, revisions=revisions)
+        ]
+
+    def _uncollected(
+            self,
+            run_id: str
+    ) -> List[Dict[str, Any]]:
+        """ Return what the run's window held and the run left out.
+
+            Answered locally rather than declared unavailable: "why is
+            this event not in the run" is a troubleshooting question,
+            and troubleshooting is what the command line is for (D2).
+            It costs nothing to answer either, because the collection
+            already stored it.
+
+            Args:
+                run_id (str):
+                    Run to read.
+
+            Raises:
+                ApiProblem:
+                    If there is no such run.
+
+            Returns:
+                answer (List[Dict[str, Any]]):
+                    One group per reason anything was left out for.
+        """
+
+        with self._opened() as connection:
+            uncollected = read_run_uncollected(
+                connection=connection,
+                run_id=run_id
+            )
+
+        if uncollected is None:
+            raise self._missing(detail=no_such_run(run_id=run_id))
+
+        return [
+            view.model_dump(by_alias=True, mode='json')
+            for view in to_uncollected_views(uncollected=uncollected)
         ]
 
     def _preview(

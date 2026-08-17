@@ -222,8 +222,9 @@ through the Amplify API. It is run once per month.
   questions and a mode that read one fewer thing than the other would
   answer differently with nothing saying so.
 - `app/star_pass_cli/` — the commands (`runs list`, `runs show`, `runs
-  revisions`, `runs preview`, `runs collect`, `runs recollect`, `jobs
-  show`, `jobs watch` and `jobs resume`), which work against the local
+  revisions`, `runs uncollected`, `runs preview`, `runs collect`, `runs
+  recollect`, `jobs show`, `jobs watch` and `jobs resume`), which work
+  against the local
   database by default and a service when `--api-url` or
   `STAR_PASS_API_URL` names one (D2). Each is a row in
   `_commands.COMMANDS` naming the contract operation to ask and the
@@ -240,6 +241,10 @@ through the Amplify API. It is run once per month.
   a goal (D2), so an operation whose home is the review screen is
   published by the API and declared unavailable in local mode. Editing
   a run's events is the first of those; do not add commands for it.
+  `_render.py` shows what a run holds and `_sending.py` shows what
+  would become of it — the preview, the restatement a send is
+  confirmed with, and the job that does it — with the second importing
+  its table and label primitives from the first.
 - `app/star_pass_client/` — the client the command line client uses
   to reach a remote service, and the local half that answers the same
   operations from the database in this process (D2). Both inherit the

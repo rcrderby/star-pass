@@ -27,7 +27,7 @@ from star_pass._records import (
     JOB_STATUS_INTERRUPTED
 )
 from star_pass._repository import JobRepository, RunRepository
-from star_pass_cli import _render
+from star_pass_cli import _sending
 from star_pass_cli._commands import run_command
 from star_pass_client._stream import StreamEvent
 
@@ -317,7 +317,7 @@ class TestHowAJobsReportsAreShown:
     def test_a_report_is_worded_for_a_reader(self) -> None:
         # The kinds are named by the reporting methods that produced
         # them, which is right for a program and wrong for a person.
-        line = _render.event_line(
+        line = _sending.event_line(
             answer=StreamEvent(
                 kind='step_started',
                 payload={'label': 'Reading the Amplify opportunities'}
@@ -331,7 +331,7 @@ class TestHowAJobsReportsAreShown:
     def test_a_report_with_no_wording_names_itself(self) -> None:
         # A kind added to the core and not to the list should say what
         # it is rather than vanish.
-        line = _render.event_line(
+        line = _sending.event_line(
             answer=StreamEvent(kind='something_new', payload={})
         )
 

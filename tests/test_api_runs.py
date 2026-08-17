@@ -158,8 +158,26 @@ class TestListingRuns:
         assert listed['counts'] == {
             'events': 1,
             'shifts': 1,
-            'unmatched': 0
+            'unmatched': 0,
+            'uncollected': 0
         }
+
+    def test_the_run_counts_what_its_window_left_out(
+        self,
+        running_client: TestClient,
+        not_collected: Callable[[str], list],
+        collected: str
+    ) -> None:
+        # The figure beside the run and the list behind it are one
+        # answer, so a reader is never told to look at rows that are
+        # not there.
+        left_out = not_collected(collected)
+
+        counts = running_client.get(
+            run_path(run_id=collected)
+        ).json()['counts']
+
+        assert counts['uncollected'] == len(left_out)
 
     def test_the_list_names_the_job_still_working_on_a_run(
         self,

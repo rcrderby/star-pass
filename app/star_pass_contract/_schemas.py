@@ -27,7 +27,8 @@ from star_pass._records import (
     JOB_STATUSES,
     MATCH_KIND_FUZZY,
     MATCH_KIND_KEYWORD,
-    RUN_STATUSES
+    RUN_STATUSES,
+    UNCOLLECTED_REASONS
 )
 
 
@@ -133,6 +134,14 @@ class RunCountsView(ApiModel):
             'the run being sent. A title that matched nothing has no '
             'opportunity to create a shift under, and a category that '
             'resolved to no need ID leaves the same absence.'
+        )
+    )
+    uncollected: int = Field(
+        description=(
+            'Things the run\'s window held that did not become '
+            'events. Counted over the run rather than the current '
+            'revision, because it describes the window the collection '
+            'read and editing the events does not change it.'
         )
     )
 
@@ -438,6 +447,69 @@ class RevisionView(ApiModel):
             'everything below it is history and is never written to '
             'again.'
         )
+    )
+
+
+class UncollectedEventView(ApiModel):
+    """ One thing a run's window held that did not become an event. """
+
+    id: str = Field(
+        description=(
+            'Calendar identifier of the event. The same identifier an '
+            'event of the run carries, which is what names one when '
+            'it is pulled in.'
+        )
+    )
+    title: str | None = Field(
+        default=None,
+        description='Event title, or null when it has none.'
+    )
+    date: str | None = Field(
+        default=None,
+        description=(
+            'Day of the event as an ISO date, in the run\'s own zone, '
+            'or null when the calendar gave a value that could not be '
+            'read as one.'
+        )
+    )
+    calendar_start: str | None = Field(
+        default=None,
+        description=(
+            'Start time on the calendar, or null for an all-day '
+            'event, which has none.'
+        )
+    )
+    calendar_end: str | None = Field(
+        default=None,
+        description='End time on the calendar, or null for an all-day event.'
+    )
+    addable: bool = Field(
+        description=(
+            'Whether this event may be pulled into the run. The '
+            'server\'s answer rather than the client\'s, so that a '
+            'button and the endpoint behind it cannot disagree: an '
+            'event nobody searched for is addable, and one that '
+            'cannot become a correct shift is refused here as well as '
+            'there.'
+        )
+    )
+
+
+class UncollectedGroupView(ApiModel):
+    """ What a run's window held and the run left out, by reason. """
+
+    reason: str = Field(
+        description=(
+            f'Why these were left out: {", ".join(UNCOLLECTED_REASONS)}. '
+            '"search" is the one no calendar event can carry -- it '
+            'means no configured query string returned it, so nobody '
+            'looked for it -- and it is the only reason an event may '
+            'be pulled in under. The other three describe events that '
+            'cannot become a correct shift.'
+        )
+    )
+    events: List[UncollectedEventView] = Field(
+        description='The events left out for this reason, earliest first.'
     )
 
 
