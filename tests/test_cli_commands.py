@@ -11,8 +11,7 @@
 # pylint: disable=too-many-arguments,too-many-positional-arguments
 
 # Imports - Python Standard Library
-from pathlib import Path
-from typing import Any, Callable, Tuple
+from typing import Any, Callable, List, Tuple
 
 # Imports - Third-Party
 import pytest
@@ -21,7 +20,7 @@ import pytest
 from star_pass._exceptions import ConfigurationError
 from star_pass._preview import BLOCKER_NO_OPPORTUNITY, BLOCKER_REASONS
 from star_pass_cli import _mode, _render
-from star_pass_cli._commands import COMMANDS, GROUPS, run_command, selected
+from star_pass_cli._commands import COMMANDS, GROUPS, selected
 from star_pass_client import Client, LocalClient
 from star_pass_contract import EventView
 
@@ -30,37 +29,15 @@ from star_pass_contract import EventView
 # preview's tables are found by.
 NEED_ID = '905196'
 
-
-@pytest.fixture(name='build_parser')
-def fixture_build_parser(
-    entry_point: Any
-) -> Callable[[], Any]:
-    """ Return the entry point's parser builder. """
-    return entry_point.build_parser
-
-
-@pytest.fixture(name='cli')
-def fixture_cli(
-    build_parser: Callable[[], Any],
-    monkeypatch: pytest.MonkeyPatch,
-    service_database: Path
-) -> Callable[..., int]:
-    """ Return a way to run a command against the test's database.
-
-        Nothing is stubbed: the command picks its own client, so the
-        mode selection is exercised rather than replaced. The database
-        it opens is redirected instead, which is the one thing a test
-        cannot let it choose.
-    """
-    del service_database
-
-    monkeypatch.delenv(_mode.API_URL_VARIABLE, raising=False)
-
-    def run(*argv: str) -> int:
-        """ Parse the arguments and run what they selected. """
-        return run_command(args=build_parser().parse_args(argv))
-
-    return run
+# A value for each flag a command takes, so a test about whether a
+# command is reachable can supply what it insists on without also
+# describing it.
+EXAMPLE_VALUES = {
+    'calendar': 'events',
+    'start': '2026-09-01',
+    'last_day': '2026-09-30',
+    'expected_changes': '0'
+}
 
 
 @pytest.fixture(name='previewed')
@@ -636,6 +613,24 @@ class TestWhyAnEventCannotBeSent:
         )
 
 
+def words_for(command: Any) -> List[str]:
+    """ Return the shortest command line that selects one command.
+
+        Every value it insists on, and nothing else: a test about
+        whether a command is reachable should not also be a test of
+        what each of them takes.
+    """
+    words = [command.group, command.word]
+
+    if command.argument is not None:
+        words.append('a-value')
+
+    for option in command.options:
+        words += [option.flag, EXAMPLE_VALUES[option.name]]
+
+    return words
+
+
 class TestTheCommandsOnOffer:
     def test_every_command_asks_an_operation_both_clients_offer(
         self
@@ -656,12 +651,7 @@ class TestTheCommandsOnOffer:
         build_parser: Callable[[], Any]
     ) -> None:
         for command in COMMANDS:
-            words = [command.group, command.word]
-
-            if command.argument is not None:
-                words.append('a-value')
-
-            args = build_parser().parse_args(words)
+            args = build_parser().parse_args(words_for(command=command))
 
             assert selected(args=args) == (command.group, command.word)
 
@@ -672,13 +662,9 @@ class TestTheCommandsOnOffer:
         # Held on a parent parser, so a command added later cannot be
         # the one that forgets to offer the remote mode (D2).
         for command in COMMANDS:
-            words = [command.group, command.word]
-
-            if command.argument is not None:
-                words.append('a-value')
-
             args = build_parser().parse_args(
-                words + ['--api-url', 'https://star-pass.test']
+                words_for(command=command)
+                + ['--api-url', 'https://star-pass.test']
             )
 
             assert args.api_url == 'https://star-pass.test'
@@ -694,7 +680,7 @@ class TestTheCommandsOnOffer:
                 continue
 
             args = build_parser().parse_args(
-                [command.group, command.word, 'a-value']
+                words_for(command=command)
             )
 
             assert getattr(args, command.argument) == 'a-value'
@@ -718,3 +704,23 @@ class TestSelectingACommand:
         args = build_parser().parse_args(['runs', 'list'])
 
         assert selected(args=args) == ('runs', 'list')
+
+
+class TestWhatEveryCommandDeclares:
+    def test_every_flag_a_command_takes_has_an_example_value(
+        self
+    ) -> None:
+        # The list above is what lets a test supply what a command
+        # insists on; a flag added without one would leave the tests
+        # of reachability silently describing fewer commands.
+        assert {
+            option.name
+            for command in COMMANDS
+            for option in command.options
+        } <= set(EXAMPLE_VALUES)
+
+    def test_a_command_that_is_sent_something_says_what(self) -> None:
+        # A body with no flags to build it from, or flags with nothing
+        # to build, would be a command that could not be carried out.
+        for command in COMMANDS:
+            assert bool(command.options) == bool(command.body)

@@ -24,6 +24,12 @@
     logs its own cause before raising, which is the same arrangement
     the run modes use, and writing it here as well would show the
     operator the same sentence twice.
+
+    A command that writes is the same three things.  What it is given
+    arrives as flags rather than as a path value, and the row says what
+    turns those into the request the contract publishes -- a function
+    rather than a mapping, because a request is allowed to be shaped
+    differently from a command line, and the collection's window is.
 """
 
 # Imports - Python Standard Library
@@ -37,6 +43,8 @@ from star_pass_client import ApiProblem, LocalOperationUnavailable
 from ._mode import API_URL_VARIABLE, client_for
 from ._output import write
 from ._render import (
+    after,
+    event_line,
     job_text,
     preview_text,
     revisions_table,
@@ -49,15 +57,58 @@ from ._render import (
 FAILURE = 1
 SUCCESS = 0
 
-# The word each group of commands is selected by, and what it reads.
+# The word each group of commands is selected by, and what it covers.
 GROUPS = {
-    'runs': 'Read collected runs.',
-    'jobs': 'Read the jobs that long operations are watched through.'
+    'runs': 'Collect, read and send runs.',
+    'jobs': 'Watch and resume the jobs long operations run as.'
 }
 
 
 @dataclass(frozen=True)
-class Command:
+class Option:
+    """ One value a command takes as a flag.
+
+        Attributes:
+            flag (str):
+                What it is written as on the command line.
+
+            summary (str):
+                What it is for, shown in the help.
+
+            reads (Callable[[str], Any]):
+                What turns the typed value into what the request
+                carries.  Defaults to leaving it as text.
+
+            example (str, optional):
+                A value to show in the help, or None.
+    """
+
+    flag: str
+    summary: str
+    reads: Callable[[str], Any] = str
+    example: Optional[str] = None
+
+    @property
+    def name(self) -> str:
+        """ Return what the parsed value is called.
+
+            Args:
+                None.
+
+            Returns:
+                name (str):
+                    The flag as an identifier.
+        """
+
+        return self.flag.lstrip('-').replace('-', '_')
+
+
+# A command holds one field per thing that makes it work, which is
+# more attributes than a class carrying behavior should have.  The
+# limit is aimed at classes that do something; this one only holds
+# values, and the function below does the doing for all of them.
+@dataclass(frozen=True)
+class Command:  # pylint: disable=too-many-instance-attributes
     """ One command, and everything that makes it work.
 
         Attributes:
@@ -83,6 +134,22 @@ class Command:
                 The path value the operation takes, named as the
                 operation names it.  Defaults to None, for an operation
                 that addresses nothing.
+
+            options (Tuple[Option, ...]):
+                The flags it takes.  Empty for a command that takes
+                none.
+
+            body (Callable[..., Dict[str, Any]], optional):
+                What turns the flags into the request the contract
+                publishes.  Defaults to None, for an operation that is
+                sent nothing.  A function rather than a mapping of flag
+                to field, because a request is allowed to be shaped
+                differently from a command line.
+
+            streams (bool):
+                Whether the operation is answered over time, so the
+                renderer is given each thing as it arrives rather than
+                one answer at the end.
     """
 
     group: str
@@ -91,6 +158,59 @@ class Command:
     operation: str
     render: Callable[..., str]
     argument: Optional[str] = None
+    options: Tuple[Option, ...] = ()
+    body: Optional[Callable[..., Dict[str, Any]]] = None
+    streams: bool = False
+
+
+def _collection(
+        args: argparse.Namespace
+) -> Dict[str, Any]:
+    """ Return what a collection is asked for.
+
+        The last day is turned into the day after it here, through the
+        one function that converts between the two, because the window
+        crosses the wire with an exclusive end and is spoken about by
+        the last day it covers.  A command line takes the day it
+        displays.
+
+        Args:
+            args (argparse.Namespace):
+                The parsed command line.
+
+        Raises:
+            ValueError:
+                If a date is not a date.
+
+        Returns:
+            body (Dict[str, Any]):
+                The request the contract publishes.
+    """
+
+    return {
+        'calendar': args.calendar,
+        'window': {
+            'start': args.start,
+            'end': after(last_day_covered=args.last_day)
+        }
+    }
+
+
+def _recollection(
+        args: argparse.Namespace
+) -> Dict[str, Any]:
+    """ Return what a recollection is asked for.
+
+        Args:
+            args (argparse.Namespace):
+                The parsed command line.
+
+        Returns:
+            body (Dict[str, Any]):
+                The request the contract publishes.
+    """
+
+    return {'expectedChangeCount': args.expected_changes}
 
 
 # Every command, in the order the help lists them.
@@ -127,10 +247,79 @@ COMMANDS = (
         argument='run_id'
     ),
     Command(
+        group='runs',
+        word='collect',
+        summary='Collect a calendar window into a new run.',
+        operation='collect_run',
+        render=job_text,
+        options=(
+            Option(
+                flag='--calendar',
+                summary='Which configured calendar to read.',
+                example='events'
+            ),
+            Option(
+                flag='--start',
+                summary='First day to cover, as an ISO date.',
+                example='2026-09-01'
+            ),
+            Option(
+                flag='--last-day',
+                summary=(
+                    'Last day to cover, as an ISO date. The day '
+                    'itself, not the day after it.'
+                ),
+                example='2026-09-30'
+            )
+        ),
+        body=_collection
+    ),
+    Command(
+        group='runs',
+        word='recollect',
+        summary='Collect a run\'s window again, replacing what it holds.',
+        operation='recollect_run',
+        render=job_text,
+        argument='run_id',
+        options=(
+            Option(
+                flag='--expected-changes',
+                summary=(
+                    'How many changes this would discard, which '
+                    '"runs revisions" reports for the current '
+                    'revision. The service refuses a number that no '
+                    'longer matches, which is what stops a run that '
+                    'has moved on being replaced from a stale reading '
+                    'of it.'
+                ),
+                reads=int,
+                example='0'
+            ),
+        ),
+        body=_recollection
+    ),
+    Command(
         group='jobs',
         word='show',
         summary='Show where a job has got to.',
         operation='get_job',
+        render=job_text,
+        argument='job_id'
+    ),
+    Command(
+        group='jobs',
+        word='watch',
+        summary='Follow a job as it reports, until it is over.',
+        operation='stream_job_events',
+        render=event_line,
+        argument='job_id',
+        streams=True
+    ),
+    Command(
+        group='jobs',
+        word='resume',
+        summary='Run an interrupted job again.',
+        operation='resume_job',
         render=job_text,
         argument='job_id'
     )
@@ -203,6 +392,43 @@ def _add_argument(
     return None
 
 
+def _add_option(
+        parser: argparse.ArgumentParser,
+        option: Option
+) -> None:
+    """ Add one of the values a command is given.
+
+        Required, every one of them.  A write the contract publishes
+        takes what it takes, and a flag defaulted here would be this
+        module deciding on the operator's behalf what to collect or how
+        much to discard.
+
+        Args:
+            parser (argparse.ArgumentParser):
+                The command's own parser.
+
+            option (Option):
+                What to add.
+
+        Returns:
+            None.
+    """
+
+    parser.add_argument(
+        option.flag,
+        required=True,
+        type=option.reads,
+        metavar=option.name.split('_')[-1].upper(),
+        help=(
+            option.summary
+            if option.example is None
+            else f'{option.summary} For example: {option.example}.'
+        )
+    )
+
+    return None
+
+
 def add_commands(
         parser: argparse.ArgumentParser
 ) -> None:
@@ -247,6 +473,9 @@ def add_commands(
         if command.argument is not None:
             _add_argument(parser=added, argument=command.argument)
 
+        for option in command.options:
+            _add_option(parser=added, option=option)
+
     return None
 
 
@@ -278,19 +507,55 @@ def _answer(
     """
 
     client = client_for(api_url=args.api_url)
-    parameters = (
-        {}
-        if command.argument is None
-        else {command.argument: getattr(args, command.argument)}
+    answer = getattr(client, command.operation)(
+        **_asked(command=command, args=args)
     )
 
-    write(
-        command.render(
-            answer=getattr(client, command.operation)(**parameters)
-        )
-    )
+    if command.streams:
+        # Written as each arrives, rather than gathered and written at
+        # the end: the point of watching a job is being told while it
+        # is still running.
+        for event in answer:
+            write(command.render(answer=event))
+
+        return None
+
+    write(command.render(answer=answer))
 
     return None
+
+
+def _asked(
+        command: Command,
+        args: argparse.Namespace
+) -> Dict[str, Any]:
+    """ Return what one command gives its operation.
+
+        Args:
+            command (Command):
+                The command the words selected.
+
+            args (argparse.Namespace):
+                The parsed command line.
+
+        Raises:
+            ValueError:
+                If a value the body is built from cannot be read.
+
+        Returns:
+            asked (Dict[str, Any]):
+                What to call the operation with.
+    """
+
+    asked: Dict[str, Any] = {}
+
+    if command.argument is not None:
+        asked[command.argument] = getattr(args, command.argument)
+
+    if command.body is not None:
+        asked['body'] = command.body(args=args)
+
+    return asked
 
 
 def selected(
@@ -349,6 +614,14 @@ def run_command(
     except (ApiProblem, LocalOperationUnavailable) as error:
         # Nothing has reported these: they are raised by a client, and
         # a client does not decide what an operator is shown.
+        write(str(error))
+
+        return FAILURE
+
+    except ValueError as error:
+        # A value the operator typed that could not be read -- a date
+        # that is not one.  Nothing has reported it: argparse checked
+        # what it could, and the rest is checked where it is used.
         write(str(error))
 
         return FAILURE

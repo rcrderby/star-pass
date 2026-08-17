@@ -141,6 +141,33 @@ NOTHING_SENDABLE = 'Nothing can be sent while an event is blocked.'
 # reads, so they are worded here -- the module that decides how things
 # are shown.  A reason with no wording shows as itself, and a test
 # holds this to what the core publishes so that never happens quietly.
+# How each thing a job reports is put to a reader, by the name of the
+# reporting method that produced it.
+EVENT_PHRASES = {
+    'step_started': 'Started:',
+    'step_finished': 'Done.',
+    'step_failed': 'Failed.',
+    'calendar_read_started': 'Reading the calendar.',
+    'sending_started': 'Sending to Amplify.',
+    'check_mode': 'A dry run; nothing will be created.',
+    'shifts_sent': 'Sent shifts to:',
+    'shift_data_invalid': 'The shift data did not validate.',
+    'schema_validation_failed': 'The shift data did not match the schema.',
+    'csv_written': 'Wrote:',
+    'job_finished': 'The job is over:'
+}
+
+# Where the readable part of an event's payload is, in the order the
+# first one found is used.  An event carrying none of them says only
+# what it is, which is all several of them have to say.
+EVENT_DETAIL_FIELDS = (
+    'label',
+    'title',
+    'status',
+    'path',
+    'detail'
+)
+
 BLOCKER_PHRASES = {
     BLOCKER_NO_OPPORTUNITY: 'No opportunity to create a shift under.',
     BLOCKER_ENDS_BEFORE_START: 'The shift ends before it starts.',
@@ -164,6 +191,36 @@ def last_day(
 
     return str(
         date.fromisoformat(window['end']) - timedelta(days=1)
+    )
+
+
+def after(
+        last_day_covered: str
+) -> str:
+    """ Return the exclusive end a window covering that last day has.
+
+        The inverse of 'last_day', and here beside it for the same
+        reason: the window is authoritative with an exclusive end
+        everywhere it is stored, sent or compared, and the one place
+        that converts is the one place a reader is spoken to.  A
+        command line takes the day it displays and hands the contract
+        the day after.
+
+        Args:
+            last_day_covered (str):
+                The last day to cover, as an ISO date.
+
+        Raises:
+            ValueError:
+                If the value is not a date.
+
+        Returns:
+            end (str):
+                The day after it, as an ISO date.
+    """
+
+    return str(
+        date.fromisoformat(last_day_covered) + timedelta(days=1)
     )
 
 
@@ -812,3 +869,37 @@ def job_text(
             ('Detail', shown(answer['detail']))
         )
     )
+
+
+def event_line(
+        answer: Any
+) -> str:
+    """ Return one thing a job reported, as a line to read.
+
+        The kinds are named by the reporting methods that produced
+        them, which is right for something a program branches on and
+        wrong for something a person reads, so they are worded here --
+        the module that decides how things are shown.  A kind with no
+        wording shows as itself, which is what a kind added to the core
+        and not to this list should do: name itself rather than vanish.
+
+        Args:
+            answer (Any):
+                One 'StreamEvent' from a job's stream.
+
+        Returns:
+            line (str):
+                What happened, and what it was about.
+    """
+
+    said = EVENT_PHRASES.get(answer.kind, answer.kind)
+    about = next(
+        (
+            str(answer.payload[field])
+            for field in EVENT_DETAIL_FIELDS
+            if field in answer.payload
+        ),
+        ''
+    )
+
+    return f'{said} {about}'.rstrip()

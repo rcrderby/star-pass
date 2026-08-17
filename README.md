@@ -229,10 +229,10 @@ Select the run mode with a flag: `-g`/`--get-gcal-events`, `-c`/`--create-amplif
     was created, not when a *shift* starts, so narrowing the day window
     does not shorten that read.
 
-### Reading collected runs
+### Collected runs
 
-A second group of commands reads what has been collected. They are
-selected by a word rather than by a mode flag:
+A second group of commands works with collected runs. They are selected
+by a word rather than by a mode flag:
 
 ```bash
 ./app/__main__.py runs list
@@ -252,7 +252,47 @@ both modes answer with the same document.
 `runs show` gives one run, the events its current revision holds, the
 Amplify opportunities they are created under, and every change made to
 it. `runs preview` gives what sending it would create, per opportunity,
-and every reason an event cannot be sent.
+the shifts Amplify already has, and every reason an event cannot be
+sent.
+
+### Collecting a run
+
+```bash
+./app/__main__.py runs collect \
+  --calendar events --start 2026-09-01 --last-day 2026-09-30
+```
+
+`--last-day` is the last day to cover, not the day after it. The
+contract takes a window whose end is exclusive; the command line speaks
+about the last day it covers, the same way it displays one.
+
+Collecting again replaces what a run holds with what the calendar has
+now, so any editing done since it was collected is left behind:
+
+```bash
+./app/__main__.py runs recollect <run_id> --expected-changes 0
+```
+
+`--expected-changes` is how many changes that would discard, which
+`runs revisions` reports against the current revision. A number that no
+longer matches is refused, which is what stops a run that has moved on
+being replaced from a stale reading of it.
+
+### Watching and resuming a job
+
+```bash
+./app/__main__.py jobs watch <job_id>
+./app/__main__.py jobs resume <job_id>
+```
+
+`jobs watch` holds a stream open and writes what the job reports as it
+reports it, so it needs `--api-url`: nothing is serving in local mode,
+where a job runs inside the command that asked for it and is over by
+the time it answers.
+
+`jobs resume` runs an interrupted job again. A job is left interrupted
+when the process holding it stopped part way through, and resuming is a
+deliberate act: nothing writes to Amplify without somebody asking.
 
 ## Unmatched event titles
 
