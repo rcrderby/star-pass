@@ -45,6 +45,162 @@
         "title": "CollectRequest",
         "type": "object"
       },
+      "EditRequest": {
+        "description": "One user action, as the operations it is made of. ",
+        "properties": {
+          "operations": {
+            "description": "What to do, in order. Each one sees what the one before it produced.\n\nThe whole list is applied or none of it is: an operation that would leave an event unable to become a correct shift refuses the call, and nothing is written. A partly applied action is worse than a refused one, because the reviewer cannot see which rows moved.",
+            "items": {
+              "$ref": "#/components/schemas/EventOperationRequest"
+            },
+            "minItems": 1,
+            "title": "Operations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "operations"
+        ],
+        "title": "EditRequest",
+        "type": "object"
+      },
+      "EditView": {
+        "description": "A revision after an edit, and what the edit wrote down. ",
+        "properties": {
+          "events": {
+            "description": "The revision's events as they now are, in the order they are stored. Every event, not only the ones that changed: a reviewer's screen is redrawn from this, and a partial list would leave it guessing what it still holds.",
+            "items": {
+              "$ref": "#/components/schemas/EventView"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "log": {
+            "description": "The entries this call added to the run's change log, one per operation. Written server-side, so the log survives a reload and reads the same in a browser and a terminal.",
+            "items": {
+              "$ref": "#/components/schemas/LogEntryView"
+            },
+            "title": "Log",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events",
+          "log"
+        ],
+        "title": "EditView",
+        "type": "object"
+      },
+      "EventOperationRequest": {
+        "description": "One thing a reviewer did, over one or more events. ",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Category to set, for `set_category`.",
+            "examples": [
+              "adult_game"
+            ],
+            "title": "Category"
+          },
+          "eventIds": {
+            "description": "The events this applies to. A selection of thirty rows is one operation naming thirty, which is one log entry rather than thirty.",
+            "examples": [
+              [
+                "gcal-1",
+                "gcal-2"
+              ]
+            ],
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Eventids",
+            "type": "array"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How far to move both shift times, for `nudge`. Negative moves the shift earlier.",
+            "examples": [
+              -15
+            ],
+            "title": "Minutes"
+          },
+          "needId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which of an event's roles to set, for `set_slots`. A role rather than the event, because an event serving skating and non-skating officials wants different numbers of each.",
+            "examples": [
+              "879609"
+            ],
+            "title": "Needid"
+          },
+          "op": {
+            "description": "What was done. One of: `set_category`, `set_start`, `set_end`, `set_slots`, `nudge`, `reset_slots`, `remove`, `undo`.\n\n`set_start` and `set_end` name the **shift** times, which are what reaches Amplify. An event's calendar times never move: they are what the calendar said, and they are what `undo` works back from.",
+            "examples": [
+              "nudge"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "slots": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Volunteers wanted, for `set_slots`.",
+            "examples": [
+              4
+            ],
+            "title": "Slots"
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Time of day to set, for `set_start` and `set_end`, as `HH:MM` in the league's own zone.",
+            "examples": [
+              "18:15"
+            ],
+            "title": "Time"
+          }
+        },
+        "required": [
+          "op",
+          "eventIds"
+        ],
+        "title": "EventOperationRequest",
+        "type": "object"
+      },
       "EventRoleView": {
         "description": "One opportunity an event creates a shift for. ",
         "properties": {
@@ -1272,6 +1428,76 @@
           }
         ],
         "summary": "Read one run in full",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/events": {
+      "patch": {
+        "description": "One user action, sent as the operations it is made of: set the opportunity, set a shift start or end, set how many volunteers one role wants, nudge a selection, put slots back to usual, remove events, undo an event's changes.\n\nSent as a list so a bulk action over thirty selected rows is one request, one log entry and one revision delta rather than thirty of each. The operations apply in order, each seeing what the one before it produced.\n\n**The whole call is applied or none of it is.** An operation that would leave an event unable to become a correct shift refuses the request and nothing is written, because a partly applied action is one the reviewer cannot see the shape of.\n\n`set_start` and `set_end` name the **shift** times, which are what reaches Amplify. An event's calendar times never move: they are what the calendar said, and they are what `undo` works back from.\n\nRequires an `Idempotency-Key` header. An edit is not idempotent in itself -- a nudge applied twice moves a shift twice -- so a retry after a lost answer is given the first answer rather than being carried out again. A key carrying different operations is refused rather than answered from the first request, because a key is a promise that the request is the one already made.",
+        "operationId": "edit_events",
+        "parameters": [
+          {
+            "description": "Identifier the run was created with.",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the run was created with.",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A value of the caller's choosing, unique to this action. Repeat it when retrying a request whose answer was lost; choose a new one for a new action.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "A value of the caller's choosing, unique to this action. Repeat it when retrying a request whose answer was lost; choose a new one for a new action.",
+              "minLength": 1,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:write"
+            ]
+          }
+        ],
+        "summary": "Edit the events in this run's current revision",
         "tags": [
           "runs"
         ]

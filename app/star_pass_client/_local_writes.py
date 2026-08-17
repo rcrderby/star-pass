@@ -52,6 +52,9 @@ from star_pass._resume import work_for
 from star_pass._send import claim, send
 from star_pass_contract import (
     CollectRequest,
+    edited,
+    EditRefusals,
+    EditRequest,
     IDEMPOTENCY_KEY_HEADER,
     no_such_job,
     no_such_run,
@@ -633,3 +636,68 @@ class LocalWrites:
             work(connection, reporter)
 
         return None
+
+    def _edit(
+            self,
+            run_id: str,
+            body: Dict[str, Any],
+            headers: Dict[str, str]
+    ) -> Dict[str, Any]:
+        """ Edit a run's current revision, here and now.
+
+            The same sequence the service runs, from the same module,
+            for the reason a local collection is run in the call (D2).
+            A local edit is recorded as 'local-cli' rather than as the
+            service's principal, because the column exists so that two
+            writers can be told apart (D13).
+
+            Args:
+                run_id (str):
+                    Run to edit.
+
+                body (Dict[str, Any]):
+                    What the reviewer did.
+
+                headers (Dict[str, str]):
+                    Carries the key this action is claimed under.
+
+            Raises:
+                ApiProblem:
+                    If there is no such run, an operation cannot be
+                    applied, or the key carries a different request.
+
+            Returns:
+                answer (Dict[str, Any]):
+                    The revision as it now is, and what was logged.
+        """
+
+        with self._writing() as connection:
+            return edited(
+                connection=connection,
+                run_id=run_id,
+                asked=EditRequest.model_validate(body),
+                key=headers[IDEMPOTENCY_KEY_HEADER],
+                principal_id=LOCAL_PRINCIPAL_ID,
+                refusals=EditRefusals(
+                    missing=self._missing_run,
+                    conflict=self._conflicted,
+                    refuse=self._refused
+                )
+            )
+
+    def _missing_run(
+            self,
+            run_id: str
+    ) -> ApiProblem:
+        """ Return the failure for a run that is not there.
+
+            Args:
+                run_id (str):
+                    What was asked for.
+
+            Returns:
+                problem (ApiProblem):
+                    The failure to raise.
+        """
+
+        return self._missing(detail=no_such_run(run_id=run_id))

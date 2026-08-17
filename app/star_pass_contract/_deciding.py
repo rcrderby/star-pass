@@ -21,13 +21,26 @@
 
 # Imports - Python Standard Library
 import sqlite3
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional, Tuple
 
 # Imports - Local
+from star_pass._editing import edit
+from star_pass._exceptions import ValidationError
 from star_pass._opportunities import shifts_in_amplify
 from star_pass._reading import read_run_for_send
-from star_pass._records import IdempotencyRecord, Job, Run
-from star_pass._repository import JobRepository, RunRepository
+from star_pass._records import (
+    IdempotencyRecord,
+    Job,
+    OPERATION_EDIT,
+    Run
+)
+from star_pass._repository import (
+    IdempotencyRepository,
+    JobRepository,
+    RunRepository
+)
+from ._schemas import EditRequest
 from ._messages import (
     replay,
     REPLAY_DIFFERENT,
@@ -35,7 +48,38 @@ from ._messages import (
     why_not_resume,
     why_not_send
 )
-from ._views import previewed
+from ._views import previewed, to_edit_view, to_operations
+
+# Constants
+# What an edit answers with.  It is carried out in the request that
+# asked for it, so there is nothing to watch and nothing to accept.
+EDIT_STATUS_CODE = 200
+
+
+@dataclass(frozen=True)
+class EditRefusals:
+    """ How one half says no to an edit.
+
+        A record rather than three parameters: a status code belongs to
+        the transport, so each half supplies its own way of refusing,
+        and three callables in a signature is a signature nobody reads.
+
+        Attributes:
+            missing (Callable):
+                Called with 'run_id' when there is no such run.
+
+            conflict (Callable):
+                Called with 'detail' when an operation cannot be
+                applied.
+
+            refuse (Callable):
+                Called with 'detail' when a key carries a different
+                request.
+    """
+
+    missing: Callable[..., Exception]
+    conflict: Callable[..., Exception]
+    refuse: Callable[..., Exception]
 
 
 def sendable(
@@ -188,3 +232,117 @@ def replayed(
         raise conflict(reason)
 
     return record.response
+
+
+def edited(
+        connection: sqlite3.Connection,
+        run_id: str,
+        asked: EditRequest,
+        key: str,
+        principal_id: str,
+        *,
+        refusals: 'EditRefusals'
+) -> Dict[str, Any]:
+    """ Claim the key, carry the edit out, and record what it answered.
+
+        Below both halves for the reason the rest of this module is:
+        the sequence is the decision.  Claiming the key after the write
+        would let a retry write twice; recording the answer before the
+        write would answer a retry from something that never happened;
+        and reading the run after the claim would spend a reservation
+        on a run that is not there.  A half that ordered those
+        differently would behave differently while looking the same.
+
+        Args:
+            connection (sqlite3.Connection):
+                Connection to write on.
+
+            run_id (str):
+                Run whose current revision to edit.
+
+            asked (EditRequest):
+                What the reviewer did.
+
+            key (str):
+                What this action is claimed under (D13, D16).
+
+            principal_id (str):
+                Who did it (D13).
+
+            refusals (EditRefusals):
+                How this half says no.  A status code belongs to the
+                transport, so each half supplies its own.
+
+        Raises:
+            Whatever 'refusals' raises: the run is not there, an
+            operation cannot be applied, or the key carries a different
+            request.
+
+        Returns:
+            answer (Dict[str, Any]):
+                The revision as it now is and what was logged, shaped
+                as the contract publishes it.
+    """
+
+    fingerprint = asked.fingerprint()
+
+    # Before the key is claimed: a run that does not exist would make
+    # the reservation a foreign key violation, which reads as a
+    # malformed request rather than as the missing run it is.
+    if RunRepository(connection=connection).get(run_id=run_id) is None:
+        raise refusals.missing(run_id=run_id)
+
+    # Named for what a non-empty answer means here: the action was
+    # already claimed, and this request is its second arrival.
+    keys = IdempotencyRepository(connection=connection)
+    claimed = keys.reserve(
+        operation=OPERATION_EDIT,
+        run_id=run_id,
+        key=key,
+        principal_id=principal_id,
+        fingerprint=fingerprint
+    )
+
+    if claimed is not None:
+        return replayed(
+            record=claimed,
+            run_id=run_id,
+            fingerprint=fingerprint,
+            refuse=refusals.refuse,
+            conflict=refusals.conflict
+        )
+
+    try:
+        result = edit(
+            connection=connection,
+            run_id=run_id,
+            operations=to_operations(asked=asked),
+            principal_id=principal_id
+        )
+
+    except ValidationError as error:
+        # The reservation stays, holding this key against the request
+        # that failed: a retry with the same key and the same
+        # operations is the same failed action, not a new one.
+        raise refusals.conflict(detail=str(error)) from error
+
+    if result is None:
+        raise refusals.missing(run_id=run_id)
+
+    events, entries = result
+    answer = to_edit_view(
+        events=events,
+        opportunities=RunRepository(
+            connection=connection
+        ).get_opportunities(run_id=run_id),
+        entries=entries
+    ).model_dump(by_alias=True, mode='json')
+
+    keys.complete(
+        operation=OPERATION_EDIT,
+        key=key,
+        status_code=EDIT_STATUS_CODE,
+        response=answer
+    )
+
+    return answer

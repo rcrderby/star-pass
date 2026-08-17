@@ -390,6 +390,15 @@ JOB_KINDS = (
     JOB_KIND_SEND
 )
 
+# What an idempotency key may be used on.  Every job is one of these,
+# because a job is asked for once and must not be started twice; but
+# an edit is answered in the request that asked for it and starts no
+# job, so the two vocabularies are not the same one.  A key is per
+# operation, so the same value used on an edit and a send is two
+# reservations rather than one replaying the other's answer.
+OPERATION_EDIT = 'edit'
+IDEMPOTENT_OPERATIONS = JOB_KINDS + (OPERATION_EDIT,)
+
 # Where a job is in its life.  'interrupted' is the one that needs
 # explaining: it means the service stopped while the job was in hand,
 # so nobody knows how far it got.  It is separate from 'failed' because
@@ -613,12 +622,11 @@ class IdempotencyRecord:
 
         Attributes:
             operation (str):
-                Which write the key was used for, one of 'JOB_KINDS'.
-                Every idempotent write starts a job of that kind, so
-                the two vocabularies are the same one.  Part of the
-                key, so the same value used on two operations is two
-                reservations rather than one operation replaying the
-                other's answer.
+                Which write the key was used for, one of
+                'IDEMPOTENT_OPERATIONS'.  Part of the key, so the same
+                value used on two operations is two reservations
+                rather than one operation replaying the other's
+                answer.
 
             key (str):
                 What the caller supplied, unread and uninterpreted.

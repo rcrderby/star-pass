@@ -28,6 +28,7 @@
 """
 
 # Imports - Python Standard Library
+import sqlite3
 from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -41,10 +42,16 @@ from ._event_edits import (
     timed,
     with_slots
 )
+from ._database import transaction
 from ._exceptions import ValidationError
 from ._helpers import Helpers
 from ._logging import get_logger
-from ._records import Event, Opportunity
+from ._records import Event, LogEntry, Opportunity
+from ._repository import (
+    ChangeLogRepository,
+    EventRepository,
+    RunRepository
+)
 
 # What a caller may ask for.  Named here rather than left as loose
 # strings so the contract, the command line and this module cannot
@@ -582,3 +589,92 @@ def _selected(
         raise ValidationError(message)
 
     return [current[event_id] for event_id in operation.event_ids]
+
+
+def edit(
+        connection: sqlite3.Connection,
+        run_id: str,
+        operations: Sequence[Operation],
+        principal_id: str
+) -> Optional[Tuple[List[Event], List[LogEntry]]]:
+    """ Apply operations to a run's current revision and store them.
+
+        Below both halves, the way a send is: the service answers over
+        HTTP and the command line answers from the same database in the
+        same process (D2), and an edit worked out twice would let one
+        of them change something the other did not.
+
+        The whole call is one transaction.  'apply' has already refused
+        anything it cannot do, so what is left is writing; but a write
+        that failed partway would leave a revision holding some of an
+        action, which is the state a reviewer cannot read.
+
+        Args:
+            connection (sqlite3.Connection):
+                Connection to write on.
+
+            run_id (str):
+                Run whose current revision to edit.
+
+            operations (Sequence[Operation]):
+                What the reviewer did, in order.
+
+            principal_id (str):
+                Who did it (D13).
+
+        Raises:
+            ValidationError:
+                If an operation cannot be applied.
+
+            UpstreamError:
+                If the revision cannot be written.
+
+        Returns:
+            edited (Tuple[List[Event], List[LogEntry]] | None):
+                The revision's events as they now are and the entries
+                the edit added, or None when there is no such run.
+    """
+
+    runs = RunRepository(connection=connection)
+    run = runs.get(run_id=run_id)
+
+    if run is None:
+        return None
+
+    events = EventRepository(connection=connection)
+    revision = run.current_revision
+    applied = apply(
+        operations=operations,
+        events=events.list_all(run_id=run_id, revision=revision),
+        opportunities=runs.get_opportunities(run_id=run_id),
+        calendar=run.calendar
+    )
+
+    change_log = ChangeLogRepository(connection=connection)
+
+    with transaction(connection=connection):
+        for event_id in applied.removed:
+            events.remove(
+                run_id=run_id,
+                revision=revision,
+                event_id=event_id
+            )
+
+        for event in applied.events:
+            events.replace(
+                run_id=run_id,
+                revision=revision,
+                event=event
+            )
+
+        entries = [
+            change_log.add(
+                run_id=run_id,
+                revision=revision,
+                principal_id=principal_id,
+                entry=entry
+            )
+            for entry in applied.entries
+        ]
+
+    return list(applied.events), entries

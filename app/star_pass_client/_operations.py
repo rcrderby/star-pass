@@ -59,6 +59,42 @@ class Operations:
             body=body
         )
 
+    def edit_events(
+            self,
+            body: Dict[str, Any],
+            run_id: str,
+            idempotency_key: str
+    ) -> Any:
+        """ Edit the events in this run's current revision.
+
+            Args:
+                body (Dict[str, Any]):
+                    What the operation is sent, shaped as the
+                    contract publishes it.
+
+                run_id (str):
+                    Value for the path.
+
+                idempotency_key (str):
+                    Value for the Idempotency-Key header.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='PATCH',
+            path='/v1/runs/{run_id}/events',
+            body=body,
+            headers={'Idempotency-Key': idempotency_key},
+            run_id=run_id
+        )
+
     def get_health(
             self
     ) -> Any:
