@@ -566,9 +566,9 @@ def _run(
     # The Slack sign-up summary, which is the only run mode left.
     #
     # It stays a run mode because nothing in the API replaces it: the
-    # summary is out of scope there by decision, so retiring this
-    # alongside the two CSV modes would have deleted a working
-    # scheduled job and put nothing in its place.  It reads Amplify and
+    # summary is out of scope there by decision, so retiring it would
+    # delete a working scheduled job and put nothing in its place.  It
+    # reads Amplify and
     # posts to Slack, and it opens no database -- the runner it is
     # scheduled on is ephemeral with no volume, so a file written there
     # would go with the container.

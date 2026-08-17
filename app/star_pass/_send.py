@@ -108,8 +108,8 @@ def _shift_body(
         long the shift is, so the number that arrives is the number
         they were shown.
 
-        Every value is a string.  That is what the published schema
-        asks for, and what the earlier CSV path sent.
+        Every value is a string, which is what the published schema
+        asks for.
 
         Args:
             shift (PlannedShift):

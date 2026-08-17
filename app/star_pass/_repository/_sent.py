@@ -67,8 +67,8 @@ class SentShiftRepository(Repository):
         claim a shift exists that does not.
 
         Nothing here deletes.  The record is what duplicate safety
-        rests on, so it outlives the CSVs and the job logs that expire
-        around it (D12).
+        rests on, so it outlives the job logs and superseded revisions
+        that expire around it (D12).
     """
 
     def record(

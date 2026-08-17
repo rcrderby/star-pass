@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 
 # Environment
-# Encoding for file *content* (CSV, JSON, YAML, .env).  Not the
+# Encoding for file *content* (JSON, YAML, .env).  Not the
 # filesystem encoding, which describes path names and is not
 # guaranteed to be UTF-8; a non-ASCII event title needs this one.
 FILE_ENCODING = 'utf-8'
@@ -255,18 +255,10 @@ GCAL_PREFIX_FILTERS = (
     'summer camp'
 )
 
-# Amplify CSV input file management
-GROUP_BY_COLUMN = 'need_id'
-NEED_NAME_COLUMN = 'need_name'
+# The key Amplify's create endpoint takes its shifts under.
 SHIFTS_DICT_KEY_NAME = 'shifts'
-START_COLUMN = 'start'
-START_DATE_COLUMN = 'start_date'
-START_TIME_COLUMN = 'start_time'
-DROP_COLUMNS = f'{NEED_NAME_COLUMN}, {START_DATE_COLUMN}, {START_TIME_COLUMN}'
-KEEP_COLUMNS = f'{START_COLUMN}, duration, slots'
 
 # Amplify shift output formatting
-HTTP_CHECK_MODE_MESSAGE = '\n** HTTP API Check Mode Run **'
 VERBOSITY_LEVELS = (
     'basic',    # Shift name and number of new shifts
     'simple',   # Basic data plus shift dates and times
