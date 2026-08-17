@@ -18,7 +18,7 @@ from urllib3.util.retry import Retry
 
 # Imports - Local
 from . import _defaults
-from ._exceptions import ConfigurationError, UpstreamError
+from ._exceptions import ConfigurationError, UpstreamError, ValidationError
 from ._logging import get_logger
 from . import _models
 from ._records import Match, MATCH_KIND_FUZZY, MATCH_KIND_KEYWORD
@@ -399,6 +399,57 @@ class Helpers:
             gcal_name=gcal_name,
             need_name=need_name
         ).need_details
+
+    def category_named(
+            self,
+            gcal_name: str,
+            category: str
+    ) -> CategoryMatch:
+        """ Return a category by name, for a person who chose it.
+
+            Beside 'match_shift_info' because both answer "what does
+            this category ask for", and they differ only in how the
+            category was reached.  A chosen category carries no 'Match':
+            nothing was matched, somebody decided, and a run that
+            recorded a match here would claim the model did work it did
+            not do.
+
+            Args:
+                gcal_name (str):
+                    Google Calendar the category belongs to.  For
+                    example: 'events' or 'practices'.
+
+                category (str):
+                    The category's name in the shift data model.
+
+            Raises:
+                ValidationError:
+                    If the calendar defines no category by that name.
+                    Refused rather than fallen back on: a person naming
+                    a category that is not there has made a mistake
+                    they would not see in a silent default.
+
+            Returns:
+                matched (CategoryMatch):
+                    The category and its configuration, with no match.
+        """
+
+        calendar = _models.get_shifts_info()['calendar'][gcal_name.lower()]
+        categories = calendar['categories']
+
+        if category not in categories:
+            known = ', '.join(sorted(categories))
+            message = (
+                f'The "{gcal_name}" calendar has no "{category}" '
+                f'category. It defines: {known}.'
+            )
+            logger.error(message)
+            raise ValidationError(message)
+
+        return CategoryMatch(
+            need_details=self._category_need_details(categories[category]),
+            category=category
+        )
 
     def match_shift_info(
             self,
