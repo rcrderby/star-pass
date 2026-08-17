@@ -63,7 +63,6 @@ HANDLERS = {
     ('GET', '/v1/version'): '_version',
     ('POST', '/v1/runs'): '_collect',
     ('POST', '/v1/runs/{run_id}/recollect'): '_recollect',
-    ('PATCH', '/v1/runs/{run_id}/events'): '_edit',
     ('POST', '/v1/runs/{run_id}/send'): '_send',
     ('POST', '/v1/jobs/{job_id}/resume'): '_resume',
     ('GET', '/v1/runs'): '_runs',
@@ -90,6 +89,13 @@ UNAVAILABLE = {
     ): (
         'Following a job as it runs is not available in local mode '
         'yet. Read the job instead.'
+    ),
+    (
+        'PATCH', '/v1/runs/{run_id}/events'
+    ): (
+        'Editing a run is done in the web interface, which is what has '
+        'the run in front of it. The command line collects, reads and '
+        'sends (D2).'
     )
 }
 

@@ -38,8 +38,20 @@ one core is cheaper than a mandatory service.
 **Rejected:** HTTP-only CLI (server becomes required); CLI booting an ephemeral
 local server (worst of both).
 
-**Revisit if:** local mode and remote mode start behaving differently — that
-would mean the core boundary has leaked, and HTTP-only becomes the honest fix.
+**Scope (2026-08-17):** this decision is about *availability*, not coverage.
+The command line exists for what the web interface cannot do — the Slack
+summary the API deliberately does not publish, troubleshooting (`jobs
+show`/`watch`/`resume`, `runs revisions`, `runs preview`), and the monthly
+workflow, which has to work with no server running. **Parity with the web
+interface is not a goal.** An operation whose natural home is the review
+screen may be published by the API and declared unavailable in local mode,
+with its reason, in `star_pass_client/_local.UNAVAILABLE`; the test binding
+that list to the contract is what keeps the gap deliberate rather than
+forgotten. Editing a run's events is the first such operation.
+
+**Revisit if:** local mode and remote mode start answering the *same* operation
+differently — that would mean the core boundary has leaked, and HTTP-only
+becomes the honest fix. An operation only one mode offers is not that.
 
 ---
 

@@ -198,6 +198,12 @@ through the Amplify API. It is run once per month.
   contract deliberately publishes no summary, so it stays local. A
   command renders the answer a client gave and never knows which mode
   produced it — that is what makes one renderer correct for both.
+  **The command line covers what the web interface cannot** — the
+  Slack summary, troubleshooting, and the monthly workflow, which has
+  to work with no server running. Parity with the web interface is not
+  a goal (D2), so an operation whose home is the review screen is
+  published by the API and declared unavailable in local mode. Editing
+  a run's events is the first of those; do not add commands for it.
 - `app/star_pass_client/` — the client the command line client uses
   to reach a remote service, and the local half that answers the same
   operations from the database in this process (D2). Both inherit the
@@ -205,7 +211,9 @@ through the Amplify API. It is run once per month.
   only how an answer is reached differs. An operation with no local
   answer is listed in `_local.UNAVAILABLE` with the reason, and a test
   holds that list to exactly what the contract publishes and the
-  handlers do not cover. `_operations.py` is **generated** from
+  handlers do not cover — which is what keeps a gap deliberate rather
+  than forgotten, and what makes adding an endpoint a decision about
+  both modes. `_operations.py` is **generated** from
   the committed contract, one method per operation, so an endpoint the
   client cannot reach is a failing test rather than something nobody
   notices (D15). `_client.py` is written by hand and holds everything
