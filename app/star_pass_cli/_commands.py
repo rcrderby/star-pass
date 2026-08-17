@@ -42,6 +42,7 @@ from uuid import uuid4
 from star_pass._exceptions import StarPassError
 from star_pass_client import ApiProblem, LocalOperationUnavailable
 from ._confirm import confirmed, ConfirmationUnavailable
+from ._configuration import config_text
 from ._mode import API_URL_VARIABLE, client_for
 from ._output import write
 from ._render import (
@@ -77,7 +78,8 @@ NOT_SENT = 'Nothing was sent.'
 # The word each group of commands is selected by, and what it covers.
 GROUPS = {
     'runs': 'Collect, read and send runs.',
-    'jobs': 'Watch and resume the jobs long operations run as.'
+    'jobs': 'Watch and resume the jobs long operations run as.',
+    'config': 'Read what the deployment was configured with.'
 }
 
 
@@ -365,6 +367,15 @@ COMMANDS = (
         operation='resume_job',
         render=job_text,
         argument='job_id'
+    ),
+    Command(
+        group='config',
+        word='show',
+        summary=(
+            'Show the settings a collection is carried out under.'
+        ),
+        operation='get_config',
+        render=config_text
     )
 )
 

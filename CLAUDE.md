@@ -223,7 +223,8 @@ through the Amplify API. It is run once per month.
   answer differently with nothing saying so.
 - `app/star_pass_cli/` — the commands (`runs list`, `runs show`, `runs
   revisions`, `runs uncollected`, `runs preview`, `runs collect`, `runs
-  recollect`, `jobs show`, `jobs watch` and `jobs resume`), which work
+  recollect`, `jobs show`, `jobs watch`, `jobs resume` and `config
+  show`), which work
   against the local
   database by default and a service when `--api-url` or
   `STAR_PASS_API_URL` names one (D2). Each is a row in
@@ -244,7 +245,9 @@ through the Amplify API. It is run once per month.
   `_render.py` shows what a run holds and `_sending.py` shows what
   would become of it — the preview, the restatement a send is
   confirmed with, and the job that does it — with the second importing
-  its table and label primitives from the first.
+  its table and label primitives from the first. `_configuration.py`
+  shows what the deployment was configured with, which is neither, and
+  imports the same primitives.
 - `app/star_pass_client/` — the client the command line client uses
   to reach a remote service, and the local half that answers the same
   operations from the database in this process (D2). Both inherit the

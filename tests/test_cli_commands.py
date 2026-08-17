@@ -24,7 +24,7 @@ from star_pass._records import (
     UNCOLLECTED_REASONS,
     UNCOLLECTED_SEARCH
 )
-from star_pass_cli import _mode, _render, _sending
+from star_pass_cli import _configuration, _mode, _render, _sending
 from star_pass_cli._commands import COMMANDS, GROUPS, selected
 from star_pass_client import Client, LocalClient
 from star_pass_contract import EventView
@@ -33,6 +33,10 @@ from star_pass_contract import EventView
 # The opportunity every fixture's events send to, and so the row a
 # preview's tables are found by.
 NEED_ID = '905196'
+
+# Where the settings a configuration reports are read, so a test can
+# show a value reaching the display from the setting it belongs to.
+SETTINGS_READ_IN = 'star_pass_contract._views'
 
 # A value for each flag a command takes, so a test about whether a
 # command is reachable can supply what it insists on without also
@@ -703,6 +707,67 @@ class TestShowingWhatARunLeftOut:
         cli('runs', 'show', populated)
 
         assert f'Not collected  {len(left_out)}' in capsys.readouterr().out
+
+
+class TestShowingTheConfiguration:
+    def test_the_settings_a_collection_runs_under_are_shown(
+        self,
+        capsys: pytest.CaptureFixture,
+        cli: Callable[..., int],
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(SETTINGS_READ_IN + '.GCAL_TIMEZONE', 'UTC')
+        monkeypatch.setattr(SETTINGS_READ_IN + '.FUZZY_MATCH_THRESHOLD', 55)
+
+        status = cli('config', 'show')
+        shown = capsys.readouterr().out
+
+        assert status == 0
+        assert 'Timezone         UTC' in shown
+        assert 'Match threshold  55' in shown
+
+    def test_each_calendar_is_shown_with_what_it_is_searched_for(
+        self,
+        capsys: pytest.CaptureFixture,
+        cli: Callable[..., int],
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            SETTINGS_READ_IN + '.GCAL_CALENDARS',
+            {
+                'practices': {
+                    'gcal_id': 'a-calendar',
+                    'query_strings': ['officials', 'scrimmage']
+                }
+            }
+        )
+
+        cli('config', 'show')
+
+        assert 'practices  officials, scrimmage' in capsys.readouterr().out
+
+    def test_a_calendar_searched_for_nothing_says_what_that_means(
+        self
+    ) -> None:
+        # The contract publishes the empty query string the deployment
+        # configured; what it means to a reader is worded here.
+        row = _configuration.calendar_row(
+            calendar={'key': 'events', 'searchTerms': ['']}
+        )
+
+        assert row[_configuration.CALENDAR_HEADERS.index('SEARCHED FOR')] == (
+            _configuration.EVERYTHING
+        )
+
+    def test_the_terms_a_title_is_never_collected_under_are_listed(
+        self
+    ) -> None:
+        assert _configuration.excluded_text(
+            terms=['derby daze', 'summer camp']
+        ) == 'derby daze, summer camp'
+
+    def test_a_deployment_excluding_nothing_shows_a_dash(self) -> None:
+        assert _configuration.excluded_text(terms=[]) == _render.NOTHING
 
 
 class TestWhyAnEventCannotBeSent:

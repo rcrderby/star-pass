@@ -95,6 +95,28 @@ class Operations:
             run_id=run_id
         )
 
+    def get_config(
+            self
+    ) -> Any:
+        """ Report what the service was configured with.
+
+            Args:
+                None.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='GET',
+            path='/v1/config'
+        )
+
     def get_health(
             self
     ) -> Any:

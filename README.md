@@ -187,6 +187,7 @@ rather than by a mode flag:
 ./app/__main__.py runs list
 ./app/__main__.py runs show <run_id>
 ./app/__main__.py runs revisions <run_id>
+./app/__main__.py runs uncollected <run_id>
 ./app/__main__.py runs preview <run_id>
 ./app/__main__.py jobs show <job_id>
 ```
@@ -200,9 +201,29 @@ both modes answer with the same document.
 
 `runs show` gives one run, the events its current revision holds, the
 Amplify opportunities they are created under, and every change made to
-it. `runs preview` gives what sending it would create, per opportunity,
-the shifts Amplify already has, and every reason an event cannot be
-sent.
+it. `runs uncollected` gives what the run's window held that did not
+become one of its events, grouped by the reason for each. `runs
+preview` gives what sending it would create, per opportunity, the
+shifts Amplify already has, and every reason an event cannot be sent.
+
+### Reading the configuration
+
+```bash
+./app/__main__.py config show
+```
+
+The settings a collection is carried out under: the zone a window's
+dates are read in, the score a fuzzy title match has to reach, the
+terms a title is never collected under, and which calendars a
+collection may name with the query strings each is searched for. A
+calendar shown as searched for everything in the window is one
+configured with an empty query string, so nothing in it can be left
+out for want of a term.
+
+Read only. Changing any of these means changing the environment and
+restarting: no endpoint and no command writes a setting (D8), and the
+same goes for credentials, which are rotated the same way and are
+never displayed.
 
 ### Collecting a run
 
