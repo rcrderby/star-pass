@@ -261,6 +261,31 @@ class Operations:
             path='/v1/runs'
         )
 
+    def list_uncollected(
+            self,
+            run_id: str
+    ) -> Any:
+        """ List what the window held and the run did not collect.
+
+            Args:
+                run_id (str):
+                    Value for the path.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='GET',
+            path='/v1/runs/{run_id}/uncollected',
+            run_id=run_id
+        )
+
     def recollect_run(
             self,
             body: Dict[str, Any],

@@ -67,7 +67,12 @@ from star_pass._records import (  # noqa: E402
     MATCH_KIND_FUZZY,
     Opportunity,
     RUN_STATUS_UNSENT,
-    ShiftIdentity
+    ShiftIdentity,
+    UncollectedEvent,
+    UNCOLLECTED_ALL_DAY,
+    UNCOLLECTED_EXCLUDED,
+    UNCOLLECTED_SEARCH,
+    UNCOLLECTED_UNTITLED
 )
 from star_pass._repository import (  # noqa: E402
     ChangeLogRepository,
@@ -461,6 +466,59 @@ def fixture_populated(
     return edited
 
 
+@pytest.fixture(name='not_collected')
+def fixture_not_collected(
+    uncollected: UncollectedRepository
+) -> Callable[[str], List[Any]]:
+    """ Return a way to record what a run's window left out.
+
+        One of each reason, because a grouping read correctly for one
+        group can be read wrongly for the rest, and only the first is
+        addable.  Dated in the order the reasons are declared is
+        deliberately avoided: the rows go in by date and come out
+        grouped, so a group order taken from the row order would show.
+    """
+
+    def record(run_id: str) -> List[Any]:
+        """ Store one left-out event per reason, and return them. """
+        rows = [
+            UncollectedEvent(
+                id='gcal-8',
+                reason=UNCOLLECTED_UNTITLED,
+                date='2026-09-08',
+                calendar_start='08:00',
+                calendar_end='09:00'
+            ),
+            UncollectedEvent(
+                id='gcal-9',
+                reason=UNCOLLECTED_ALL_DAY,
+                title='Board Retreat',
+                date='2026-09-09'
+            ),
+            UncollectedEvent(
+                id='gcal-10',
+                reason=UNCOLLECTED_EXCLUDED,
+                title='CANCELED: Adult Scrimmages',
+                date='2026-09-10',
+                calendar_start='19:00',
+                calendar_end='21:00'
+            ),
+            UncollectedEvent(
+                id='gcal-11',
+                reason=UNCOLLECTED_SEARCH,
+                title='Junior Bout',
+                date='2026-09-11',
+                calendar_start='18:00',
+                calendar_end='20:00'
+            )
+        ]
+        uncollected.replace(run_id=run_id, uncollected=rows)
+
+        return rows
+
+    return record
+
+
 @pytest.fixture(name='add_second_event')
 def fixture_add_second_event(
     events: EventRepository,
@@ -655,7 +713,8 @@ def fixture_make_run_document() -> Callable[..., dict]:
             'counts': {
                 'events': overrides.get('events', 1),
                 'shifts': overrides.get('shifts', 1),
-                'unmatched': overrides.get('unmatched', 0)
+                'unmatched': overrides.get('unmatched', 0),
+                'uncollected': overrides.get('uncollected', 0)
             }
         }
 

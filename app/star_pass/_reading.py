@@ -29,12 +29,20 @@ from dataclasses import dataclass
 from typing import List, Optional, Sequence, Tuple
 
 # Imports - Local
-from ._records import Event, LogEntry, Opportunity, Revision, Run
+from ._records import (
+    Event,
+    LogEntry,
+    Opportunity,
+    Revision,
+    Run,
+    UncollectedEvent
+)
 from ._repository import (
     ChangeLogRepository,
     EventRepository,
     RevisionRepository,
-    RunRepository
+    RunRepository,
+    UncollectedRepository
 )
 
 
@@ -141,6 +149,41 @@ def read_run_history(
     return (
         run,
         RevisionRepository(connection=connection).list_all(run_id=run_id)
+    )
+
+
+def read_run_uncollected(
+        connection: sqlite3.Connection,
+        run_id: str
+) -> Optional[List[UncollectedEvent]]:
+    """ Read what a run's window held and the run left out.
+
+        The run is read as well, and only to know it exists: a run
+        that collected nothing and a run that is not there both hold
+        no rows, and only one of them is a mistake the caller made.
+
+        Args:
+            connection (sqlite3.Connection):
+                Connection to read on.
+
+            run_id (str):
+                Run to read.
+
+        Raises:
+            UpstreamError:
+                If the run cannot be read.
+
+        Returns:
+            uncollected (List[UncollectedEvent] | None):
+                Everything the collection left out, earliest first, or
+                None when there is no such run.
+    """
+
+    if RunRepository(connection=connection).get(run_id=run_id) is None:
+        return None
+
+    return UncollectedRepository(connection=connection).list_all(
+        run_id=run_id
     )
 
 

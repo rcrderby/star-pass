@@ -19,7 +19,12 @@ import pytest
 # Imports - Local
 from star_pass._exceptions import ConfigurationError
 from star_pass._preview import BLOCKER_NO_OPPORTUNITY, BLOCKER_REASONS
-from star_pass_cli import _mode, _render
+from star_pass._records import (
+    UNCOLLECTED_EXCLUDED,
+    UNCOLLECTED_REASONS,
+    UNCOLLECTED_SEARCH
+)
+from star_pass_cli import _mode, _render, _sending
 from star_pass_cli._commands import COMMANDS, GROUPS, selected
 from star_pass_client import Client, LocalClient
 from star_pass_contract import EventView
@@ -305,7 +310,7 @@ class TestPreviewingARun:
         shown = capsys.readouterr().out
 
         assert 'event-3' in shown
-        assert _render.BLOCKER_PHRASES[BLOCKER_NO_OPPORTUNITY] in shown
+        assert _sending.BLOCKER_PHRASES[BLOCKER_NO_OPPORTUNITY] in shown
 
     def test_a_blocked_run_says_nothing_can_be_sent(
         self,
@@ -320,7 +325,7 @@ class TestPreviewingARun:
 
         cli('runs', 'preview', populated)
 
-        assert _render.NOTHING_SENDABLE in capsys.readouterr().out
+        assert _sending.NOTHING_SENDABLE in capsys.readouterr().out
 
     def test_a_shift_amplify_already_has_is_shown_as_skipped(
         self,
@@ -597,18 +602,121 @@ class TestWhatAnOpportunityShows:
         )
 
 
+class TestShowingWhatARunLeftOut:
+    @pytest.fixture(name='listed')
+    def fixture_listed(
+        self,
+        capsys: pytest.CaptureFixture,
+        cli: Callable[..., int],
+        not_collected: Callable[[str], list],
+        populated: str
+    ) -> str:
+        """ Return what the command shows for a run that left things out.
+
+            One arrangement, because every question below is a
+            different reading of the same displayed answer.
+        """
+        not_collected(populated)
+
+        assert cli('runs', 'uncollected', populated) == 0
+
+        return capsys.readouterr().out
+
+    @pytest.fixture(name='rows')
+    def fixture_rows(
+        self,
+        listed: str
+    ) -> List[List[str]]:
+        """ Return the displayed event rows, split into their columns. """
+        return [
+            line.split()
+            for line in listed.splitlines()
+            if line.startswith('gcal-')
+        ]
+
+    def test_the_groups_are_headed_by_what_the_reason_means(
+        self,
+        listed: str
+    ) -> None:
+        assert _render.UNCOLLECTED_PHRASES[UNCOLLECTED_SEARCH] in listed
+        assert _render.UNCOLLECTED_PHRASES[UNCOLLECTED_EXCLUDED] in listed
+
+    def test_an_event_shows_what_the_calendar_said_about_it(
+        self,
+        listed: str
+    ) -> None:
+        assert 'Junior Bout' in listed
+        assert '2026-09-11' in listed
+        assert '18:00-20:00' in listed
+
+    def test_an_all_day_event_shows_no_times_rather_than_empty_ones(
+        self,
+        rows: List[List[str]]
+    ) -> None:
+        when = _render.UNCOLLECTED_HEADERS.index('WHEN')
+
+        assert [row[when] for row in rows] == [
+            '18:00-20:00',
+            '19:00-21:00',
+            _render.NOTHING,
+            '08:00-09:00'
+        ]
+
+    def test_only_an_event_that_may_be_pulled_in_is_marked(
+        self,
+        rows: List[List[str]]
+    ) -> None:
+        assert [row[-1] for row in rows] == [
+            _render.ADDABLE,
+            _render.NOTHING,
+            _render.NOTHING,
+            _render.NOTHING
+        ]
+
+    def test_a_run_that_left_nothing_out_says_so(
+        self,
+        capsys: pytest.CaptureFixture,
+        cli: Callable[..., int],
+        populated: str
+    ) -> None:
+        # A heading over a table of nothing but column names reads as
+        # an answer that failed rather than as one that is empty.
+        status = cli('runs', 'uncollected', populated)
+
+        assert status == 0
+        assert 'was collected' in capsys.readouterr().out
+
+    def test_every_reason_the_core_publishes_is_worded(self) -> None:
+        # A reason with no wording heads its group as its identifier,
+        # which is written for a program to branch on.
+        assert set(_render.UNCOLLECTED_PHRASES) == set(UNCOLLECTED_REASONS)
+
+    def test_a_run_showing_one_counts_what_it_left_out(
+        self,
+        capsys: pytest.CaptureFixture,
+        cli: Callable[..., int],
+        not_collected: Callable[[str], list],
+        populated: str
+    ) -> None:
+        left_out = not_collected(populated)
+
+        cli('runs', 'show', populated)
+
+        assert f'Not collected  {len(left_out)}' in capsys.readouterr().out
+
+
 class TestWhyAnEventCannotBeSent:
     def test_every_reason_the_core_publishes_is_worded(self) -> None:
         # A reason with no wording shows as its identifier, which is
         # written for a program to branch on rather than to be read.
-        assert set(_render.BLOCKER_PHRASES) == set(BLOCKER_REASONS)
+        assert set(_sending.BLOCKER_PHRASES) == set(BLOCKER_REASONS)
 
     def test_a_reason_with_no_wording_shows_as_itself(self) -> None:
-        row = _render.blocker_row(
+        row = _sending.blocker_row(
             blocker={'eventId': 'event-1', 'reason': 'invented_later'}
         )
 
-        assert row[_render.BLOCKER_HEADERS.index('REASON')] == (
+        assert row[_sending.BLOCKER_HEADERS.index('REASON')] == (
             'invented_later'
         )
 

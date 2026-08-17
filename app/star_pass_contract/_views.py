@@ -41,7 +41,10 @@ from star_pass._records import (
     Opportunity,
     Revision,
     Run,
-    ShiftIdentity
+    ShiftIdentity,
+    UncollectedEvent,
+    UNCOLLECTED_REASONS,
+    UNCOLLECTED_SEARCH
 )
 from ._schemas import (
     BlockerView,
@@ -61,6 +64,8 @@ from ._schemas import (
     RunDetailView,
     RunView,
     SkippedShiftView,
+    UncollectedEventView,
+    UncollectedGroupView,
     WindowView
 )
 
@@ -145,7 +150,8 @@ def to_run_view(
         counts=RunCountsView(
             events=run.event_count,
             shifts=run.shift_count,
-            unmatched=run.unmatched_count
+            unmatched=run.unmatched_count,
+            uncollected=run.uncollected_count
         ),
         active_job_id=run.active_job_id
     )
@@ -323,6 +329,61 @@ def to_revision_views(
         )
         for revision in revisions
     ]
+
+
+def to_uncollected_views(
+        uncollected: Sequence[UncollectedEvent]
+) -> List[UncollectedGroupView]:
+    """ Return what a run's window held and the run left out.
+
+        Grouped by reason, in the order the reasons are declared, so
+        the one a reviewer can act on comes first.  A reason nothing
+        was left out for is not published as an empty group: a reader
+        counting the groups is counting what there is to look at.
+
+        Whether an event may be pulled in is decided here rather than
+        by whoever is showing it.  A client working it out from the
+        reason would be a second opinion about what the endpoint that
+        adds one will accept, and the two would eventually differ.
+
+        Args:
+            uncollected (Sequence[UncollectedEvent]):
+                Everything the collection left out, earliest first.
+
+        Returns:
+            views (List[UncollectedGroupView]):
+                One group per reason anything was left out for.
+    """
+
+    groups = []
+
+    for reason in UNCOLLECTED_REASONS:
+        grouped = [
+            event for event in uncollected
+            if event.reason == reason
+        ]
+
+        if not grouped:
+            continue
+
+        groups.append(
+            UncollectedGroupView(
+                reason=reason,
+                events=[
+                    UncollectedEventView(
+                        id=event.id,
+                        title=event.title,
+                        date=event.date,
+                        calendar_start=event.calendar_start,
+                        calendar_end=event.calendar_end,
+                        addable=reason == UNCOLLECTED_SEARCH
+                    )
+                    for event in grouped
+                ]
+            )
+        )
+
+    return groups
 
 
 def previewed(
