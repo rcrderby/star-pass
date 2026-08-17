@@ -219,19 +219,25 @@ no gate (one click writes irreversibly to a live volunteer system).
 
 ---
 
-## D12 — Retention: sent record forever, CSVs and logs 90 days
+## D12 — Retention: sent record forever, job logs 90 days
 
-**Decided:** The sent record is never purged. CSVs and job logs expire after 90
-days. Superseded revisions are deleted immediately. Both windows are config
-values.
+**Decided:** The sent record is never purged. Job logs expire after 90 days.
+Superseded revisions are deleted immediately. Both windows are config values.
 
 **Why:** Duplicate safety depends on the sent record, so it can't expire. The
-driver for expiring the rest is PII, not disk — stale CSVs hold volunteer names
-and schedules.
+driver for expiring the rest is PII, not disk — a job log holds volunteer
+names and schedules.
 
 **Rejected:** keep everything (unbounded PII at rest with no expiry); 30-day logs
 (shorter than the monthly feedback loop — a problem found at next collection
 would have no evidence left).
+
+**Narrowed (2026-08-17):** this decision named CSVs as the first thing to
+expire, because a run's product was a file on disk. Nothing writes a CSV any
+more — the CSV run modes were retired and what only they reached was deleted —
+so the CSV half of this decision describes a file the tool no longer produces.
+The PII rationale is unchanged and now applies to the job logs alone. Work-order
+step 9 was amended to match.
 
 **Revisit if:** an investigation needs evidence older than 90 days, or PII policy
 tightens.
