@@ -76,6 +76,15 @@ class InProcessAdapter(BaseAdapter):
         the remote half was really used.  Without that, a harness that
         asked the same client twice would compare an answer with
         itself and pass while testing nothing.
+
+        **Waits for what the request started.**  A write the service
+        answers leaves a job running on a thread, and it answers before
+        that job is done -- which is the whole point of a job.  The
+        local half has no such gap: the process that would run the work
+        is the one about to return.  So a comparison made without this
+        would be comparing what one mode has finished doing with what
+        the other has only begun, and would pass or fail depending on
+        which thread got there first.
     """
 
     def __init__(
@@ -101,6 +110,9 @@ class InProcessAdapter(BaseAdapter):
             content=request.body
         )
 
+        for started in self._served_by.app.state.runner.futures:
+            started.result()
+
         response = Response()
         response.status_code = answered.status_code
         response.headers.update(answered.headers)
@@ -118,10 +130,15 @@ class InProcessAdapter(BaseAdapter):
 
 @pytest.fixture(name='adapter')
 def fixture_adapter(
-    running_client: TestClient
+    started_client: TestClient
 ) -> InProcessAdapter:
-    """ Return the adapter the remote client answers through. """
-    return InProcessAdapter(served_by=running_client)
+    """ Return the adapter the remote client answers through.
+
+        A service whose jobs can be waited for, because the adapter
+        waits for them: what these tests compare is what each mode has
+        finished doing.
+    """
+    return InProcessAdapter(served_by=started_client)
 
 
 @pytest.fixture(name='remote_client')
@@ -694,7 +711,7 @@ def fixture_send_asked_of_both(
 
 @pytest.fixture(name='sendable_in_both')
 def fixture_sendable_in_both(
-    both: Callable[..., Tuple[Any, Any]],
+    collecting_service: None,
     runs: RunRepository,
     collected_in_both: Tuple[str, str]
 ) -> Tuple[str, str]:
@@ -702,9 +719,10 @@ def fixture_sendable_in_both(
 
         A run with no events, so the count both modes confirm against
         is zero in either.  What is compared is the claiming and the
-        refusing, not the calendar.
+        refusing, not the calendar -- which is why the collecting that
+        makes the pair is replaced as well.
     """
-    del both
+    del collecting_service
 
     for run_id in collected_in_both:
         runs.set_status(run_id=run_id, status=RUN_STATUS_UNSENT)
