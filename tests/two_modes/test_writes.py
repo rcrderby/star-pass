@@ -366,7 +366,7 @@ def fixture_interrupted_in_both(
 
 @pytest.fixture(name='sendable_in_both')
 def fixture_sendable_in_both(
-    both: Callable[..., Tuple[Any, Any]],
+    collecting_service: None,
     runs: RunRepository,
     collected_in_both: Tuple[str, str]
 ) -> Tuple[str, str]:
@@ -374,9 +374,10 @@ def fixture_sendable_in_both(
 
         A run with no events, so the count both modes confirm against
         is zero in either.  What is compared is the claiming and the
-        refusing, not the calendar.
+        refusing, not the calendar -- which is why the collecting that
+        makes the pair is replaced as well.
     """
-    del both
+    del collecting_service
 
     for run_id in collected_in_both:
         runs.set_status(run_id=run_id, status=RUN_STATUS_UNSENT)
