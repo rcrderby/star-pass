@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, List
 import pytest
 
 # Imports - Local
-from star_pass import _models
+from conftest import a_category, a_need
 from star_pass._collect import collect
 from star_pass._exceptions import ValidationError
 from star_pass._reading import changes_in_current, read_run_history
@@ -59,47 +59,6 @@ def an_item(
     }
 
 
-def a_category(
-    need_ids: List[Dict[str, Any]],
-    aliases: tuple = ('wheels',)
-) -> Dict[str, Any]:
-    return {
-        'description': 'Adult Games',
-        'aliases': list(aliases),
-        'need_ids': need_ids
-    }
-
-
-def a_need(
-    identifier: str = NEED_ID,
-    offset_start: int = 15,
-    offset_end: int = 30,
-    max_length: Any = 165,
-    slots: int = 12
-) -> Dict[str, Any]:
-    return {
-        'id': identifier,
-        'offset_start': offset_start,
-        'offset_end': offset_end,
-        'max_length': max_length,
-        'slots': slots
-    }
-
-
-def a_model(categories: Dict[str, Any]) -> Dict[str, Any]:
-    # Every configured calendar is given the same categories, so a
-    # test can collect either one without arranging a second model.
-    entry = {
-        'categories': categories,
-        'default': {
-            'description': 'Unknown Game',
-            'need_ids': [a_need(identifier='')]
-        }
-    }
-
-    return {'calendar': {CALENDAR: entry, REPEATING_CALENDAR: entry}}
-
-
 @pytest.fixture(name='answers')
 def fixture_answers(
     answer_requests: Callable[[Callable[[str], Dict[str, Any]]], None]
@@ -137,20 +96,6 @@ def fixture_answers(
     return script
 
 
-@pytest.fixture(name='model')
-def fixture_model(monkeypatch: pytest.MonkeyPatch) -> Callable[..., None]:
-    """ Return a way to replace the shift data model. """
-
-    def replace(categories: Dict[str, Any]) -> None:
-        monkeypatch.setattr(
-            _models,
-            'get_shifts_info',
-            lambda: a_model(categories=categories)
-        )
-
-    return replace
-
-
 @pytest.fixture(name='window')
 def fixture_window(monkeypatch: pytest.MonkeyPatch) -> None:
     """ Read an offset-less window in a fixed zone. """
@@ -179,7 +124,7 @@ def fixture_collect_run(
     connection: sqlite3.Connection,
     collecting: str,
     answers: Callable[..., None],
-    model: Callable[..., None],
+    shift_model: Callable[..., None],
     window: None
 ) -> Callable[..., Any]:
     """ Return a way to script the reads and collect a run. """
@@ -192,7 +137,7 @@ def fixture_collect_run(
         titled: bool = True
     ):
         """ Collect, with the calendar and Amplify answering to plan. """
-        model(
+        shift_model(
             categories=(
                 categories
                 if categories is not None

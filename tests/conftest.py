@@ -13,7 +13,7 @@ import sqlite3
 from contextlib import contextmanager
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Iterator
+from typing import Any, Callable, Dict, Iterator, List
 
 # Imports - Third-Party
 import dotenv
@@ -54,6 +54,7 @@ from requests import Response  # noqa: E402
 
 # Imports - Local
 from star_pass import _database  # noqa: E402
+from star_pass import _models  # noqa: E402
 from star_pass._database import connect  # noqa: E402
 from star_pass._helpers import Helpers  # noqa: E402
 from star_pass._job_runner import JobRunner  # noqa: E402
@@ -836,3 +837,81 @@ def fixture_running_client(
     """ Return a client for a service that has actually started. """
     with start_service() as client:
         yield client
+
+
+# The shift data model, as a test arranges one.  Here rather than in
+# either test module: collection and editing both read what a category
+# asks for, and two builders would let the two see different models
+# while both claimed to describe the same one.
+SHIFT_CALENDAR = 'events'
+REPEATING_SHIFT_CALENDAR = 'practices'
+SHIFT_NEED_ID = '879609'
+OTHER_SHIFT_NEED_ID = '879610'
+
+
+def a_need(
+    identifier: str = SHIFT_NEED_ID,
+    offset_start: int = 15,
+    offset_end: int = 30,
+    max_length: Any = 165,
+    slots: int = 12
+) -> Dict[str, Any]:
+    """ Return one need ID's entry in a category. """
+    return {
+        'id': identifier,
+        'offset_start': offset_start,
+        'offset_end': offset_end,
+        'max_length': max_length,
+        'slots': slots
+    }
+
+
+def a_category(
+    need_ids: List[Dict[str, Any]],
+    aliases: tuple = ('wheels',)
+) -> Dict[str, Any]:
+    """ Return one category of the shift data model. """
+    return {
+        'description': 'Adult Games',
+        'aliases': list(aliases),
+        'need_ids': need_ids
+    }
+
+
+def a_model(
+    categories: Dict[str, Any],
+    calendars: tuple = (SHIFT_CALENDAR, REPEATING_SHIFT_CALENDAR)
+) -> Dict[str, Any]:
+    """ Return a shift data model holding one set of categories.
+
+        Every named calendar is given the same categories, so a test
+        can read either one without arranging a second model.
+    """
+    entry = {
+        'categories': categories,
+        'default': {
+            'description': 'Unknown Game',
+            'need_ids': [a_need(identifier='')]
+        }
+    }
+
+    return {'calendar': {calendar: entry for calendar in calendars}}
+
+
+@pytest.fixture(name='shift_model')
+def fixture_shift_model(
+    monkeypatch: pytest.MonkeyPatch
+) -> Callable[..., None]:
+    """ Return a way to replace the shift data model. """
+
+    def replace(
+        categories: Dict[str, Any],
+        calendars: tuple = (SHIFT_CALENDAR, REPEATING_SHIFT_CALENDAR)
+    ) -> None:
+        monkeypatch.setattr(
+            _models,
+            'get_shifts_info',
+            lambda: a_model(categories=categories, calendars=calendars)
+        )
+
+    return replace
