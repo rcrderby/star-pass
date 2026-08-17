@@ -65,20 +65,16 @@ from ._security import (
     SCOPE_RUNS_READ,
     SCOPE_RUNS_WRITE
 )
+from ._problems import conflict, not_found, unprocessable
 from ._storage import in_database, read
 
 router = APIRouter(tags=[_defaults.API_TAG_RUNS])
 
 
-def _missing(
+def missing_run(
         run_id: str
 ) -> HTTPException:
     """ Return the failure for a run that is not there.
-
-        Raised by the endpoint rather than left to the repository,
-        which reports a value it cannot use and a missing run the same
-        way; only the endpoint knows it was asked for one by
-        identifier.
 
         Args:
             run_id (str):
@@ -89,10 +85,7 @@ def _missing(
                 A 404 naming the run.
     """
 
-    return HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=no_such_run(run_id=run_id)
-    )
+    return not_found(detail=no_such_run(run_id=run_id))
 
 
 @router.get(
@@ -183,7 +176,7 @@ async def get_run(
     )
 
     if detail is None:
-        raise _missing(run_id=run_id)
+        raise missing_run(run_id=run_id)
 
     return to_detail_view(detail=detail)
 
@@ -241,7 +234,7 @@ async def list_revisions(
     )
 
     if history is None:
-        raise _missing(run_id=run_id)
+        raise missing_run(run_id=run_id)
 
     run, revisions = history
 
@@ -311,7 +304,7 @@ async def get_preview(
     )
 
     if gathered is None:
-        raise _missing(run_id=run_id)
+        raise missing_run(run_id=run_id)
 
     events, opportunities = gathered
 
@@ -405,8 +398,7 @@ def _checked_calendar(
     if calendar in GCAL_CALENDARS:
         return calendar
 
-    raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+    raise unprocessable(
         detail=(
             f'"{calendar}" is not a calendar this service reads. '
             f'Use one of: {", ".join(sorted(GCAL_CALENDARS))}.'
@@ -449,10 +441,7 @@ def _checked_window(
         )
 
     except ValueError as error:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=str(error)
-        ) from error
+        raise unprocessable(detail=str(error)) from error
 
     return window.window.start, window.window.end
 
@@ -612,26 +601,6 @@ def _current_change_count(
     return run, changes_in_current(run=run, revisions=revisions)
 
 
-def _conflict(
-        detail: str
-) -> HTTPException:
-    """ Return the failure for a run that is not in a state to be asked.
-
-        Args:
-            detail (str):
-                What to tell the caller.
-
-        Returns:
-            error (HTTPException):
-                A conflict naming the reason.
-    """
-
-    return HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail=detail
-    )
-
-
 @router.post(
     '/runs/{run_id}/recollect',
     status_code=status.HTTP_202_ACCEPTED,
@@ -697,7 +666,7 @@ async def recollect_run(
     )
 
     if found is None:
-        raise _missing(run_id=run_id)
+        raise missing_run(run_id=run_id)
 
     run, changed = found
     refusal = why_not_recollect(
@@ -707,7 +676,7 @@ async def recollect_run(
     )
 
     if refusal is not None:
-        raise _conflict(detail=refusal)
+        raise conflict(detail=refusal)
 
     job_id = await read(
         lambda connection: _restarted(

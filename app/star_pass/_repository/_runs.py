@@ -14,7 +14,8 @@ from .._records import (
     Opportunity,
     Run,
     RUN_STATUS_COLLECTING,
-    RUN_STATUSES
+    RUN_STATUSES,
+    RUN_STATUSES_SENT
 )
 from ._common import (
     insert_statement,
@@ -395,6 +396,53 @@ class RunRepository(Repository):
         )
 
         return None
+
+    def mark_sent(
+            self,
+            run_id: str,
+            status: str
+    ) -> None:
+        """ Record that shifts of this run reached Amplify, and when.
+
+            The time is minted here rather than by the send, for the
+            same reason every other stored time is: a caller reading a
+            clock would decide what "now" means, and two callers could
+            decide differently.  It is set once and kept -- the first
+            batch that reached Amplify is when this run began writing
+            to it, and a later batch does not move that.
+
+            Args:
+                run_id (str):
+                    Identifier of the run to update.
+
+                status (str):
+                    One of 'RUN_STATUSES_SENT': 'partly_sent' while
+                    there is more to send or a batch is unaccounted
+                    for, 'sent' once everything asked for is there.
+
+            Raises:
+                ValidationError:
+                    If the status is not one that means shifts reached
+                    Amplify, or there is no such run.
+
+                UpstreamError:
+                    If the run cannot be updated.
+
+            Returns:
+                None.
+        """
+
+        require_one_of(
+            value=status,
+            allowed=RUN_STATUSES_SENT,
+            description='a status meaning shifts reached Amplify'
+        )
+
+        return self.set_status(
+            run_id=run_id,
+            status=status,
+            sent_at=utc_now()
+        )
 
     def set_opportunities(
             self,

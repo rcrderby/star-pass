@@ -256,6 +256,42 @@ class Operations:
             run_id=run_id
         )
 
+    def send_run(
+            self,
+            body: Dict[str, Any],
+            run_id: str,
+            idempotency_key: str
+    ) -> Any:
+        """ Create this run's shifts in Amplify.
+
+            Args:
+                body (Dict[str, Any]):
+                    What the operation is sent, shaped as the
+                    contract publishes it.
+
+                run_id (str):
+                    Value for the path.
+
+                idempotency_key (str):
+                    Value for the Idempotency-Key header.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='POST',
+            path='/v1/runs/{run_id}/send',
+            body=body,
+            headers={'Idempotency-Key': idempotency_key},
+            run_id=run_id
+        )
+
     def stream_job_events(
             self,
             job_id: str

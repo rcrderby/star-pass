@@ -31,7 +31,7 @@ from star_pass._derived import (
     repeated,
     shift_length
 )
-from star_pass._preview import preview
+from star_pass._preview import Preview, preview
 from star_pass._reading import RunDetail
 from star_pass._records import (
     Event,
@@ -300,6 +300,42 @@ def to_revision_views(
     ]
 
 
+def previewed(
+        events: Sequence[Event],
+        opportunities: Sequence[Opportunity],
+        existing: AbstractSet[ShiftIdentity]
+) -> Preview:
+    """ Return what a send would do, as the core works it out.
+
+        The step before shaping.  A caller deciding something from a
+        preview -- whether a send may go ahead, say -- reads the core's
+        own answer rather than the published one, so a rename on the
+        wire cannot change what a refusal decides.  The keying of the
+        opportunities happens here, so both callers preview the same
+        revision against the same set.
+
+        Args:
+            events (Sequence[Event]):
+                The current revision's events.
+
+            opportunities (Sequence[Opportunity]):
+                Every opportunity the run resolved.
+
+            existing (AbstractSet[ShiftIdentity]):
+                The shifts Amplify already holds.
+
+        Returns:
+            preview (Preview):
+                What a send would do.
+    """
+
+    return preview(
+        events=events,
+        opportunities=_by_need_id(opportunities=opportunities),
+        existing=existing
+    )
+
+
 def to_preview_view(
         events: Sequence[Event],
         opportunities: Sequence[Opportunity],
@@ -331,9 +367,9 @@ def to_preview_view(
                 What a send would do, shaped for the contract.
     """
 
-    result = preview(
+    result = previewed(
         events=events,
-        opportunities=_by_need_id(opportunities=opportunities),
+        opportunities=opportunities,
         existing=existing
     )
 

@@ -35,9 +35,12 @@ from requests.adapters import BaseAdapter
 
 # Imports - Local
 from star_pass._exceptions import ValidationError as CoreValidationError
-from star_pass._records import RUN_STATUS_SENT
-from star_pass._repository import RunRepository
-from star_pass._repository import JobRepository
+from star_pass._records import (
+    JOB_KIND_SEND,
+    RUN_STATUS_SENT,
+    RUN_STATUS_UNSENT
+)
+from star_pass._repository import JobRepository, RunRepository
 from star_pass_api._defaults import API_PRINCIPAL_ID
 from star_pass_client import (
     ApiProblem,
@@ -61,6 +64,9 @@ A_COLLECTION = {
 
 # A recollection of a run nothing has been done to since.
 NO_CHANGES = {'expectedChangeCount': 0}
+
+# What a run holding no events is asked to send.
+NOTHING_TO_SEND = {'expectedShiftCount': 0}
 
 
 class InProcessAdapter(BaseAdapter):
@@ -235,9 +241,14 @@ def both_refuse(
     local_client: Any,
     remote_client: Any,
     collected: Tuple[str, str],
-    body: dict
+    operation: str = 'recollect_run',
+    **parameters: Any
 ) -> int:
-    """ Return the status both modes refused a recollection with.
+    """ Return the status both modes refused one operation with.
+
+        A parameter whose value is a 'PerMode' is given to each client
+        separately, for the things each mode has its own of -- a run it
+        minted, a key it claimed.  Everything else is given to both.
 
         The run identifiers differ, because each mode minted its own,
         so they are taken out of the messages before those are
@@ -246,15 +257,15 @@ def both_refuse(
     local_run, remote_run = collected
     local = problem_from(
         local_client,
-        'recollect_run',
+        operation,
         run_id=local_run,
-        body=body
+        **for_mode(parameters=parameters, index=0)
     )
     remote = problem_from(
         remote_client,
-        'recollect_run',
+        operation,
         run_id=remote_run,
-        body=body
+        **for_mode(parameters=parameters, index=1)
     )
 
     assert local.status == remote.status
@@ -263,6 +274,25 @@ def both_refuse(
     )
 
     return local.status
+
+
+class PerMode(tuple):
+    """ Two values for one parameter, local first.
+
+        A plain tuple would be indistinguishable from a parameter whose
+        value happens to be one, so it is named rather than guessed at.
+    """
+
+
+def for_mode(
+    parameters: dict,
+    index: int
+) -> dict:
+    """ Return one mode's half of the parameters. """
+    return {
+        name: value[index] if isinstance(value, PerMode) else value
+        for name, value in parameters.items()
+    }
 
 
 def problem_from(
@@ -608,6 +638,145 @@ class TestTheTwoModesCollectAgainTheSame:
             collected=collected_in_both,
             body=NO_CHANGES
         ) == 409
+
+
+@pytest.fixture(name='sending_service')
+def fixture_sending_service(
+    monkeypatch: pytest.MonkeyPatch,
+    amplify_holds: Callable[..., list]
+) -> None:
+    """ Replace the sending itself in both modes.
+
+        What a send does is pinned in 'test_send.py'.  What these tests
+        ask is whether the two modes claim the key, refuse the same
+        requests and answer with the same job -- which writing into a
+        stand-in for Amplify would only obscure.  The opportunity read
+        each mode makes before deciding is still answered, because that
+        read is what the expected count is checked against.
+    """
+    amplify_holds()
+
+    def nothing(**parameters: Any) -> None:
+        """ Stand in for the send. """
+        del parameters
+
+    monkeypatch.setattr('star_pass_api._sending.send', nothing)
+    monkeypatch.setattr('star_pass_client._local.send', nothing)
+
+    return None
+
+
+@pytest.fixture(name='send_asked_of_both')
+def fixture_send_asked_of_both(
+    sendable_in_both: Tuple[str, str]
+) -> dict:
+    """ Return the per-mode parameters for sending each mode's run.
+
+        A key each, because one database holds both modes and a key
+        claims one send, not one send per mode.
+    """
+    local_run, remote_run = sendable_in_both
+
+    return {
+        'operation': 'send_run',
+        'local': {
+            'run_id': local_run,
+            'body': NOTHING_TO_SEND,
+            'idempotency_key': 'local-attempt'
+        },
+        'remote': {
+            'run_id': remote_run,
+            'body': NOTHING_TO_SEND,
+            'idempotency_key': 'remote-attempt'
+        }
+    }
+
+
+@pytest.fixture(name='sendable_in_both')
+def fixture_sendable_in_both(
+    both: Callable[..., Tuple[Any, Any]],
+    runs: RunRepository,
+    collected_in_both: Tuple[str, str]
+) -> Tuple[str, str]:
+    """ Return a run each mode may send, holding nothing to create.
+
+        A run with no events, so the count both modes confirm against
+        is zero in either.  What is compared is the claiming and the
+        refusing, not the calendar.
+    """
+    del both
+
+    for run_id in collected_in_both:
+        runs.set_status(run_id=run_id, status=RUN_STATUS_UNSENT)
+
+    return collected_in_both
+
+
+class TestSendingInEitherMode:
+    def test_a_send_answers_with_the_same_job(
+        self,
+        both: Callable[..., Tuple[Any, Any]],
+        sending_service: None,
+        send_asked_of_both: dict,
+        sendable_in_both: Tuple[str, str]
+    ) -> None:
+        del sending_service
+        local_run, remote_run = sendable_in_both
+
+        local, remote = both.asked(**send_asked_of_both)
+
+        assert local['kind'] == remote['kind'] == JOB_KIND_SEND
+        assert local['runId'] == local_run
+        assert remote['runId'] == remote_run
+
+    def test_a_local_send_is_recorded_as_the_command_line(
+        self,
+        both: Callable[..., Tuple[Any, Any]],
+        sending_service: None,
+        jobs: JobRepository,
+        send_asked_of_both: dict
+    ) -> None:
+        # Two writers into one live volunteer system are two different
+        # people acting (D13).
+        del sending_service
+
+        local, remote = both.asked(**send_asked_of_both)
+
+        assert jobs.get(job_id=local['id']).principal_id == 'local-cli'
+        assert jobs.get(
+            job_id=remote['id']
+        ).principal_id != 'local-cli'
+
+    def test_both_refuse_a_count_that_has_moved_the_same_way(
+        self,
+        local_client: LocalClient,
+        remote_client: Client,
+        sending_service: None,
+        sendable_in_both: Tuple[str, str]
+    ) -> None:
+        del sending_service
+
+        assert both_refuse(
+            local_client=local_client,
+            remote_client=remote_client,
+            collected=sendable_in_both,
+            operation='send_run',
+            body={'expectedShiftCount': 5},
+            idempotency_key='a-key'
+        ) == 409
+
+    def test_both_answer_a_replay_with_the_job_they_started(
+        self,
+        both: Callable[..., Tuple[Any, Any]],
+        sending_service: None,
+        send_asked_of_both: dict
+    ) -> None:
+        del sending_service
+        first = both.asked(**send_asked_of_both)
+
+        again = both.asked(**send_asked_of_both)
+
+        assert again == first
 
 
 class TestWhatLocalModeCannotDo:

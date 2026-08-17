@@ -838,6 +838,25 @@
         "title": "RunView",
         "type": "object"
       },
+      "SendRequest": {
+        "description": "What the operator was shown before asking to send. ",
+        "properties": {
+          "expectedShiftCount": {
+            "description": "How many shifts the operator was told a send would create. This is the preview's `totals.willCreate`, which is net of what Amplify already holds -- the number of rows that will arrive, and so the number the confirmation restates.\n\nThe service refuses when this does not match what a send would create now. Two things move it: the run being edited, and Amplify itself gaining or losing a shift. Both mean the number somebody confirmed against described a moment that has passed. Read the preview again and ask again with what it says now.",
+            "examples": [
+              12
+            ],
+            "minimum": 0.0,
+            "title": "Expectedshiftcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expectedShiftCount"
+        ],
+        "title": "SendRequest",
+        "type": "object"
+      },
       "SkippedShiftView": {
         "description": "One shift the revision asks for that Amplify already has.\n\nNamed per shift and never only counted (D16). A count says how\nmany rows will not arrive; it does not say which, and the\nreader deciding whether that is right is deciding about\nparticular days and times.",
         "properties": {
@@ -1363,6 +1382,76 @@
           }
         ],
         "summary": "List a run's revisions, oldest first",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/send": {
+      "post": {
+        "description": "Creates every shift the run's current revision asks for that Amplify does not already have. **This is the one thing star-pass does that cannot be undone**: Amplify has no way to take a shift back.\n\nRequires an `Idempotency-Key` header. The key is stored with what this request answered, so a retry after a lost response is given the first answer rather than sending again. A key carrying a different `expectedShiftCount` is refused rather than answered from the first request, because a key is a promise that the request is the one already made.\n\nDuplicate safety does not rest on that key. Every opportunity is read from Amplify immediately before the request that writes to it, and a shift already there is skipped -- by row identity, never by a count, so nothing depends on knowing which shifts a previous attempt reached. The same read is made here, before the job is queued, and is what `expectedShiftCount` is checked against.\n\nAnswers as soon as the job exists. One request is sent per opportunity, carrying every shift it is missing; a batch is recorded as sent only once its request has succeeded, so a batch whose answer never arrived leaves the run `partly_sent` and the next send reads the opportunity and sends the difference.\n\nRefused while another job is working on the run, while the run is still being collected, and while any event in it cannot become a shift -- a missing shift is invisible until volunteers cannot sign up, so the run stops rather than sending the rest.",
+        "operationId": "send_run",
+        "parameters": [
+          {
+            "description": "Identifier the run was created with.",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the run was created with.",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A value of the caller's choosing, unique to this attempt to send this run. Repeat it when retrying a request whose answer was lost; choose a new one when asking for something different.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "A value of the caller's choosing, unique to this attempt to send this run. Repeat it when retrying a request whose answer was lost; choose a new one when asking for something different.",
+              "minLength": 1,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "send:execute"
+            ]
+          }
+        ],
+        "summary": "Create this run's shifts in Amplify",
         "tags": [
           "runs"
         ]
