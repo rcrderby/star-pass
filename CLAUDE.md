@@ -172,10 +172,11 @@ through the Amplify API. It is run once per month.
   callers, because the service and the local client ask the same
   questions and a mode that read one fewer thing than the other would
   answer differently with nothing saying so.
-- `app/star_pass_cli/` — the reading commands (`runs list`, `runs
-  show`, `runs revisions`, `runs preview` and `jobs show`), which read
-  the local database by default and a service when
-  `--api-url` or `STAR_PASS_API_URL` names one (D2). Each is a row in
+- `app/star_pass_cli/` — the commands (`runs list`, `runs show`, `runs
+  revisions`, `runs preview`, `runs collect`, `runs recollect`, `jobs
+  show`, `jobs watch` and `jobs resume`), which work against the local
+  database by default and a service when `--api-url` or
+  `STAR_PASS_API_URL` names one (D2). Each is a row in
   `_commands.COMMANDS` naming the contract operation to ask and the
   renderer to show its answer with, and the same rows build the
   parser, so a command the command line offers and the dispatcher does
@@ -329,10 +330,12 @@ The notes below are the ones that are not obvious from the commands.
   given, because an internal failure can carry a credential, a
   volunteer's name, or an upstream body holding either. A 4xx does
   carry its reason: the caller is the one who can act on it.
-- The window crosses the wire with an exclusive `end` and is
-  *displayed* by the last day it covers. The conversion happens in
-  `star_pass_cli/_render.py` and nowhere else, so the authoritative
-  value stays unconverted everywhere it is stored, sent or compared.
+- The window crosses the wire with an exclusive `end` and is *spoken
+  about* by the last day it covers — displayed as one by `last_day`,
+  and taken as one by `runs collect --last-day`, which `after` turns
+  back. Both conversions are in `star_pass_cli/_render.py` and nowhere
+  else, so the authoritative value stays unconverted everywhere it is
+  stored, sent or compared.
 - Endpoints live under `/v1`. Changes within a version are additive;
   a breaking change is served at a new prefix alongside the old one.
 - Field names are camelCase on the wire and snake_case in Python.

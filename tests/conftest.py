@@ -81,6 +81,8 @@ from star_pass._repository import (  # noqa: E402
 )
 from star_pass_api import create_app  # noqa: E402
 from star_pass_api._defaults import API_PRINCIPAL_ID  # noqa: E402
+from star_pass_cli._commands import run_command  # noqa: E402
+from star_pass_cli._mode import API_URL_VARIABLE  # noqa: E402
 
 
 # What the address of a shift create ends with, so the scripted
@@ -511,6 +513,38 @@ def fixture_job_id(
         kind=JOB_KIND_COLLECT,
         principal_id=job_principal
     ).id
+
+
+@pytest.fixture(name='build_parser')
+def fixture_build_parser(
+    entry_point: Any
+) -> Callable[[], Any]:
+    """ Return the entry point's parser builder. """
+    return entry_point.build_parser
+
+
+@pytest.fixture(name='cli')
+def fixture_cli(
+    build_parser: Callable[[], Any],
+    monkeypatch: pytest.MonkeyPatch,
+    service_database: Path
+) -> Callable[..., int]:
+    """ Return a way to run a command against the test's database.
+
+        Nothing is stubbed: the command picks its own client, so the
+        mode selection is exercised rather than replaced.  The database
+        it opens is redirected instead, which is the one thing a test
+        cannot let it choose.
+    """
+    del service_database
+
+    monkeypatch.delenv(API_URL_VARIABLE, raising=False)
+
+    def run(*argv: str) -> int:
+        """ Parse the arguments and run what they selected. """
+        return run_command(args=build_parser().parse_args(argv))
+
+    return run
 
 
 @pytest.fixture(name='working_on')
