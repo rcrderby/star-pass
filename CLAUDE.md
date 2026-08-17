@@ -116,6 +116,17 @@ through the Amplify API. It is run once per month.
   pulled-in event may name an opportunity the run has never read, so
   the run gains it, and that is the one upstream request the operation
   makes.
+- `app/star_pass/_revising.py` — sealing the revision a run is working
+  in (`seal`). An edit changes a revision in place, so sealing is what
+  fixes a point in that work as something to come back to: it opens a
+  revision holding a copy and leaves the sealed one's rows where they
+  are. **No change log entry**, because the change count on a revision
+  is what was done *while it was current*, and one written as a
+  revision opens would have every sealed revision starting at a change
+  nobody made; who sealed it is recorded against the idempotency key
+  instead (D13). A run that has collected nothing is refused: the
+  first revision belongs to the collection, which labels it for what
+  filled it.
 - `app/star_pass/_shift_timing.py` — what a category asks of an event
   and the shift times it produces (`role_timings`, `shift_times`).
   Below both callers: collection works them out from a calendar item
@@ -428,14 +439,17 @@ The notes below are the ones that are not obvious from the commands.
   routers are included under it; writing it twice produces a working
   service and a contract describing `/v1/v1/...`.
 - An idempotency key names an **operation**, one of
-  `IDEMPOTENT_OPERATIONS`, which is wider than `JOB_KINDS`: an edit is
-  idempotent and answered in the request that asked for it, so not
+  `IDEMPOTENT_OPERATIONS`, which is wider than `JOB_KINDS`: an edit and
+  a seal are answered in the request that asked for them, so not
   every keyed write starts a job. Where a write claims its key is part
   of the decision, not an implementation detail — the run is read
   before the key is claimed, the key claimed before the write, and the
   answer recorded after it. Reading the run last spends a reservation
   on a run that is not there and reports a foreign key violation as a
-  malformed request.
+  malformed request. That sequence is written once, in
+  `star_pass_contract._deciding.keyed_write`; a write supplies a
+  `KeyedWrite` saying which operation it is and what carrying it out
+  means, and each half supplies its own `WriteRefusals`.
 - Field names are camelCase on the wire and snake_case in Python.
   Every published shape inherits from `ApiModel` in
   `star_pass_contract`, which does the translation once.

@@ -473,7 +473,8 @@ JOB_KINDS = (
 # operation, so the same value used on an edit and a send is two
 # reservations rather than one replaying the other's answer.
 OPERATION_EDIT = 'edit'
-IDEMPOTENT_OPERATIONS = JOB_KINDS + (OPERATION_EDIT,)
+OPERATION_SEAL = 'seal'
+IDEMPOTENT_OPERATIONS = JOB_KINDS + (OPERATION_EDIT, OPERATION_SEAL)
 
 # Where a job is in its life.  'interrupted' is the one that needs
 # explaining: it means the service stopped while the job was in hand,

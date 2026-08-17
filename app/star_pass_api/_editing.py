@@ -42,11 +42,11 @@ from star_pass._repository import EventRepository, RunRepository
 from star_pass_contract import (
     AddEventRequest,
     edited,
-    EditRefusals,
     EditRequest,
     EditView,
     IDEMPOTENCY_KEY_HEADER,
-    to_edit_view
+    to_edit_view,
+    WriteRefusals
 )
 from . import _defaults
 from ._problems import conflict, unprocessable
@@ -58,7 +58,7 @@ router = APIRouter(tags=[_defaults.API_TAG_RUNS])
 
 # How this half says no.  A status code belongs to the transport, so
 # the shared sequence is given these rather than choosing them.
-REFUSALS = EditRefusals(
+REFUSALS = WriteRefusals(
     missing=missing_run,
     conflict=conflict,
     refuse=unprocessable

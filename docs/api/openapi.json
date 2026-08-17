@@ -1952,6 +1952,64 @@
         "tags": [
           "runs"
         ]
+      },
+      "post": {
+        "description": "Fixes what the run holds now as a numbered revision and moves the work to a new one holding a copy of it. Editing changes the revision a run is working in as it goes, so this is what makes a point in that work something to come back to.\n\nNothing is deleted and nothing is lost: the revision that was current keeps its rows and stays readable at its own number, which is what reverting to it later reads.\n\nA run that has collected nothing is refused. The first revision belongs to the collection, which labels it for what filled it.\n\nRequires an `Idempotency-Key` header. Sealing is not idempotent in itself -- twice is two revisions -- so a retry after a lost answer is given the first answer rather than opening a second one. The request carries nothing else, so a key already used on this run is a replay whatever it is sent with.",
+        "operationId": "seal_revision",
+        "parameters": [
+          {
+            "description": "Identifier the run was created with.",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the run was created with.",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A value of the caller's choosing, unique to this action. Repeat it when retrying a request whose answer was lost; choose a new one to seal again.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "A value of the caller's choosing, unique to this action. Repeat it when retrying a request whose answer was lost; choose a new one to seal again.",
+              "minLength": 1,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:write"
+            ]
+          }
+        ],
+        "summary": "Seal the revision being worked in and open the next",
+        "tags": [
+          "runs"
+        ]
       }
     },
     "/v1/runs/{run_id}/send": {
