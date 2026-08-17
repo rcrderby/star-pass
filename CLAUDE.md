@@ -99,6 +99,23 @@ through the Amplify API. It is run once per month.
   worked out later: the figure is shown on every reading of the run,
   and a live calendar read would cost a request per look and give the
   run a second opinion about its own window.
+- `app/star_pass/_building.py` — the event a run stores and the
+  opportunity it names, built below both the things that store one
+  (`event_from`, `opportunity_read`). A collection builds one per event
+  its window held; pulling an event in by hand builds one from a stored
+  row. A hand-added event that reached its shift times a second way
+  would be a row nobody could tell from a collected one until Amplify
+  received a different shift.
+- `app/star_pass/_adding.py` — pulling into a run an event the search
+  missed (`add_event`). **Only the `search` reason may be pulled in**;
+  the other three describe events that cannot become a correct shift
+  and are refused here rather than by a disabled button. The record of
+  what the window left out is **not** deleted — what keeps a pulled-in
+  event off the Not collected list is the revision holding it, which
+  is what lets reverting to the first revision give it back. A
+  pulled-in event may name an opportunity the run has never read, so
+  the run gains it, and that is the one upstream request the operation
+  makes.
 - `app/star_pass/_shift_timing.py` — what a category asks of an event
   and the shift times it produces (`role_timings`, `shift_times`).
   Below both callers: collection works them out from a calendar item
