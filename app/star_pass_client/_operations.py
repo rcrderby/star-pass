@@ -33,6 +33,37 @@ class Operations:
     _call: Callable[..., Any]
     _stream: Callable[..., Iterator[StreamEvent]]
 
+    def add_event(
+            self,
+            body: Dict[str, Any],
+            run_id: str
+    ) -> Any:
+        """ Pull an event the search missed into this run.
+
+            Args:
+                body (Dict[str, Any]):
+                    What the operation is sent, shaped as the
+                    contract publishes it.
+
+                run_id (str):
+                    Value for the path.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='POST',
+            path='/v1/runs/{run_id}/events',
+            body=body,
+            run_id=run_id
+        )
+
     def collect_run(
             self,
             body: Dict[str, Any]

@@ -216,8 +216,11 @@ through the Amplify API. It is run once per month.
 - `docs/api/openapi.json` — the generated OpenAPI 3.1 contract,
   written by `scripts/generate_contract.py`, which also writes the
   client generated from it.
-- `app/star_pass_contract/` — the shapes the contract publishes
-  (`_schemas.py`), how stored records become them (`_views.py`), what a
+- `app/star_pass_contract/` — the shapes the contract answers with
+  (`_schemas.py`) and the shapes a caller sends (`_requests.py`, which
+  reads the first for the base they share and is read by nothing in
+  it: a request is checked on the way in and a view is built on the
+  way out), how stored records become them (`_views.py`), what a
   caller is told when a request is refused (`_messages.py`), and the
   refusals themselves (`_deciding.py`, which reads what a decision
   needs and makes it — a half that read one fewer thing would refuse a
@@ -258,7 +261,10 @@ through the Amplify API. It is run once per month.
   to work with no server running. Parity with the web interface is not
   a goal (D2), so an operation whose home is the review screen is
   published by the API and declared unavailable in local mode. Editing
-  a run's events is the first of those; do not add commands for it.
+  a run's events and pulling one in are the two so far; do not add
+  commands for either. Reading what a run left out **is** a command,
+  because asking why an event is not in a run is troubleshooting —
+  the line falls between reading that list and acting on it.
   `_render.py` shows what a run holds and `_sending.py` shows what
   would become of it — the preview, the restatement a send is
   confirmed with, and the job that does it — with the second importing

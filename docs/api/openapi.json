@@ -1,6 +1,25 @@
 {
   "components": {
     "schemas": {
+      "AddEventRequest": {
+        "description": "Which of the events nobody searched for to pull into the run. ",
+        "properties": {
+          "uncollectedId": {
+            "description": "Identifier of the event to pull in, as the run's record of what it did not collect carries it. Only an event that record marks addable may be named: the other reasons describe events that cannot become a correct shift, and naming one is refused here rather than left to a client to avoid.",
+            "examples": [
+              "1a2b3c4d5e6f7g8h9i0j"
+            ],
+            "minLength": 1,
+            "title": "Uncollectedid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uncollectedId"
+        ],
+        "title": "AddEventRequest",
+        "type": "object"
+      },
       "BlockerView": {
         "description": "One reason one event cannot become a shift. ",
         "properties": {
@@ -149,7 +168,7 @@
         "type": "object"
       },
       "EditView": {
-        "description": "A revision after an edit, and what the edit wrote down. ",
+        "description": "A revision after a change, and what the change wrote down. ",
         "properties": {
           "events": {
             "description": "The revision's events as they now are, in the order they are stored. Every event, not only the ones that changed: a reviewer's screen is redrawn from this, and a partial list would leave it guessing what it still holds.",
@@ -1140,7 +1159,7 @@
         "description": "One thing a run's window held that did not become an event. ",
         "properties": {
           "addable": {
-            "description": "Whether this event may be pulled into the run. The server's answer rather than the client's, so that a button and the endpoint behind it cannot disagree: an event nobody searched for is addable, and one that cannot become a correct shift is refused here as well as there.",
+            "description": "Whether this event may be pulled into the run. The server's answer rather than the client's, so that a button and the endpoint behind it cannot disagree: an event nobody searched for is addable until the run holds it, and one that cannot become a correct shift is refused here as well as there.\n\nAn event already pulled in keeps its entry here and stops being addable. The entry is what a revert gives back: reverting to the first revision drops the hand-added events, and this list is where they return to.",
             "title": "Addable",
             "type": "boolean"
           },
@@ -1716,6 +1735,62 @@
           }
         ],
         "summary": "Edit the events in this run's current revision",
+        "tags": [
+          "runs"
+        ]
+      },
+      "post": {
+        "description": "Adds to the run's current revision one of the events its window held and the collection did not take, named by the identifier the \"uncollected\" list carries.\n\n**Only an event nobody searched for may be pulled in.** The other three reasons -- an excluded title, an all-day event, an untitled one -- describe events that cannot become a correct shift, and naming one is refused here rather than left to a client to avoid. So is naming an event the revision already holds, which is what makes a second arrival of one request a refusal rather than a second row: no idempotency key is needed, for the reason resuming a job needs none.\n\nThe event that arrives is the one a collection would have produced, matched to a category and timed the same way. It is marked as added by hand, because reverting to the first revision drops the events a person pulled in and returns them to the uncollected list -- which is why the entry there is kept rather than deleted.\n\nThe run gains any Amplify opportunity the event names and the run has not read, so that the row can be labelled. That is the one upstream request this makes.\n\nAnswers with the revision as it now is, because the screen that asked is redrawn from it.",
+        "operationId": "add_event",
+        "parameters": [
+          {
+            "description": "Identifier the run was created with.",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the run was created with.",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:write"
+            ]
+          }
+        ],
+        "summary": "Pull an event the search missed into this run",
         "tags": [
           "runs"
         ]

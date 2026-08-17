@@ -26,7 +26,7 @@
 # Imports - Python Standard Library
 import sqlite3
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple
+from typing import FrozenSet, List, Optional, Sequence, Tuple
 
 # Imports - Local
 from ._records import (
@@ -152,15 +152,39 @@ def read_run_history(
     )
 
 
+@dataclass(frozen=True)
+class RunUncollected:
+    """ What a run's window held that the run does not hold now.
+
+        Two readings rather than one, because "does the run hold it"
+        is not a property of the stored row.  A row stays after the
+        event it describes is pulled in, so the revision is what says
+        whether it is still missing -- and reading the two together is
+        what keeps a caller from being told it may pull in something
+        the run already has.
+
+        Attributes:
+            uncollected (List[UncollectedEvent]):
+                Everything the collection left out, earliest first.
+
+            in_revision (FrozenSet[str]):
+                The identifiers the current revision holds.
+    """
+
+    uncollected: List[UncollectedEvent]
+    in_revision: FrozenSet[str]
+
+
 def read_run_uncollected(
         connection: sqlite3.Connection,
         run_id: str
-) -> Optional[List[UncollectedEvent]]:
+) -> Optional[RunUncollected]:
     """ Read what a run's window held and the run left out.
 
-        The run is read as well, and only to know it exists: a run
-        that collected nothing and a run that is not there both hold
-        no rows, and only one of them is a mistake the caller made.
+        The run is read to know it exists and to know which revision
+        is being edited: a run that collected nothing and a run that
+        is not there both hold no rows, and only one of them is a
+        mistake the caller made.
 
         Args:
             connection (sqlite3.Connection):
@@ -174,16 +198,27 @@ def read_run_uncollected(
                 If the run cannot be read.
 
         Returns:
-            uncollected (List[UncollectedEvent] | None):
-                Everything the collection left out, earliest first, or
-                None when there is no such run.
+            read (RunUncollected | None):
+                What the run left out and what its current revision
+                holds, or None when there is no such run.
     """
 
-    if RunRepository(connection=connection).get(run_id=run_id) is None:
+    run = RunRepository(connection=connection).get(run_id=run_id)
+
+    if run is None:
         return None
 
-    return UncollectedRepository(connection=connection).list_all(
-        run_id=run_id
+    return RunUncollected(
+        uncollected=UncollectedRepository(
+            connection=connection
+        ).list_all(run_id=run_id),
+        in_revision=frozenset(
+            event.id
+            for event in EventRepository(connection=connection).list_all(
+                run_id=run_id,
+                revision=run.current_revision
+            )
+        )
     )
 
 
