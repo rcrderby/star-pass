@@ -318,6 +318,15 @@ through the Amplify API. It is run once per month.
   log, composed by `screen.js`, which owns the client-only state the
   design lists and redraws the body while leaving the header alone —
   which is what keeps an open popover open while a filter is applied.
+  **An edit is one call and its answer is what the screen redraws
+  from**: the service applies an action whole or not at all and hands
+  back the revision it produced, so a bulk nudge over thirty rows is
+  one operation naming thirty, one key and one log entry. One at a
+  time — every control is disabled while a call is in flight, because
+  two edits in the air would each be applied to a revision the other
+  had already changed. A key names one action and is never reused for
+  the next: it makes a *resend* safe, and two nudges are two actions
+  that must move the shift twice.
   `api.js` is the only
   thing that talks to the service, and holds the three rules no screen
   should repeat: the CSRF header on a write, an `Idempotency-Key`

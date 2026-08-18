@@ -274,3 +274,35 @@ export function listRevisions(runId, options = {}) {
 export function getConfig(options = {}) {
   return ask('/config', options);
 }
+
+/** Apply one thing somebody did to a run's current revision.
+ *
+ * **One call per user action, not per event.** A nudge over thirty
+ * selected rows is one operation naming thirty, which the service
+ * applies whole or not at all and records as one log entry. Thirty
+ * calls would be thirty entries, thirty keys, and a half-applied
+ * action if one of them failed.
+ *
+ * The key names the action. A second arrival of the same key with the
+ * same request is answered with what the first one answered rather
+ * than writing again; the same key carrying a *different* request is
+ * refused, and a key whose first request has not finished yet is a
+ * conflict. So a key is minted per action and never reused for the
+ * next one -- two nudges are two actions and must move the shift
+ * twice.
+ *
+ * @param {string} runId Which run.
+ * @param {Array<Object>} operations What to do, in order.
+ * @param {string} key The `Idempotency-Key` naming this action.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The revision as it now is, and the
+ *     entries the edit added to the change log.
+ */
+export function editEvents(runId, operations, key, options = {}) {
+  return ask(`/runs/${encodeURIComponent(runId)}/events`, {
+    ...options,
+    method: 'PATCH',
+    body: { operations },
+    key
+  });
+}
