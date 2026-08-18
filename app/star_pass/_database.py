@@ -279,7 +279,10 @@ SCHEMA_STATEMENTS = (
     # model is edited.  A sighting rather than a title: the same title
     # seen in two runs is two rows, because how often something turns
     # up is what says whether it is worth an alias, and one row
-    # overwritten would answer "once" forever.
+    # overwritten would answer "once" forever.  One row per run per
+    # title, so that collecting a window again -- which is how a
+    # corrected model is picked up -- does not read as the title
+    # coming back.
     #
     # Belongs to no run.  A run is a window that was collected and is
     # eventually superseded; what the model is missing outlives it,

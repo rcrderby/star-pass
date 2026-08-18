@@ -8,12 +8,20 @@
     every title that has wanted an alias -- across runs, and after the
     run that showed it has been superseded.
 
-    So this belongs to no run.  A row records **one sighting**: the
-    same title seen twice is two rows, because how often a title turns
-    up is what says whether it is worth an alias, and a single row
-    overwritten would answer "once" forever.  Read back, the sightings
-    are counted into one entry per title, because a list showing the
-    same title eleven times is a list nobody works through.
+    So this belongs to no run.  A row records **one sighting**, and a
+    run contributes at most one of them per title: a window holding
+    the same unmatched title four times saw one title, and collecting
+    that window again is the same window read twice rather than a
+    title that came back.  What the count therefore measures is how
+    many **runs** a title turned up in -- which is the question being
+    asked of it, since a title that turns up every month is a category
+    the model is missing and one that turned up once is an event that
+    happened once.  A sighting recorded by hand against no run is
+    always a new one, because nothing else can say it is the same.
+
+    Read back, the sightings are counted into one entry per title,
+    because a list showing the same title eleven times is a list
+    nobody works through.
 
     Append-only.  Nothing here updates a row or deletes one: the log
     is the evidence for a decision somebody has not made yet.
@@ -24,7 +32,7 @@ import sqlite3
 from typing import List, Optional
 
 # Imports - Local
-from .._database import execute, query, query_one
+from .._database import execute, query, query_one, transaction
 from .._logging import get_logger
 from .._records import UnmatchedTitle
 from ._common import insert_statement, Repository, utc_now
@@ -105,6 +113,14 @@ class UnmatchedTitleRepository(Repository):
     ) -> UnmatchedTitle:
         """ Record one sighting of a title the model did not match.
 
+            A run that has already recorded the title records nothing
+            further.  The rule is here rather than left to the caller
+            because both callers would otherwise have to know it, and
+            the one that most needs it is the collection: collecting a
+            window again is how a corrected model is picked up, so a
+            count that grew with every recollection would report the
+            operator's own fixing as the title coming back.
+
             Args:
                 calendar (str):
                     Which configured calendar it was seen in.
@@ -129,30 +145,78 @@ class UnmatchedTitleRepository(Repository):
                     included.
         """
 
-        execute(
-            connection=self._connection,
-            statement=insert_statement(
-                table='unmatched_titles',
-                columns=UNMATCHED_COLUMNS
-            ),
-            parameters=(
-                calendar,
-                title,
-                run_id,
-                utc_now(),
-                principal_id
-            )
-        )
+        with transaction(connection=self._connection):
+            if not self._recorded_by(
+                run_id=run_id,
+                calendar=calendar,
+                title=title
+            ):
+                execute(
+                    connection=self._connection,
+                    statement=insert_statement(
+                        table='unmatched_titles',
+                        columns=UNMATCHED_COLUMNS
+                    ),
+                    parameters=(
+                        calendar,
+                        title,
+                        run_id,
+                        utc_now(),
+                        principal_id
+                    )
+                )
 
-        message = (
-            f'Recorded an unmatched title in the "{calendar}" calendar'
-        )
-        logger.info(message)
+                message = (
+                    'Recorded an unmatched title in the '
+                    f'"{calendar}" calendar'
+                )
+                logger.info(message)
 
         # Read back rather than assembled here: what the caller is
         # given is the count over every sighting, and this one is not
         # the only one.
         return self.get(calendar=calendar, title=title)
+
+    def _recorded_by(
+            self,
+            run_id: Optional[str],
+            calendar: str,
+            title: str
+    ) -> bool:
+        """ Return whether a run has already recorded a title.
+
+            Args:
+                run_id (str | None):
+                    Run to ask about, or None for a sighting recorded
+                    against no run, which nothing can be the same as.
+
+                calendar (str):
+                    Which configured calendar it was seen in.
+
+                title (str):
+                    The title.
+
+            Raises:
+                UpstreamError:
+                    If the log cannot be read.
+
+            Returns:
+                recorded (bool):
+                    Whether that run's sighting is already there.
+        """
+
+        if run_id is None:
+            return False
+
+        return query_one(
+            connection=self._connection,
+            statement=(
+                'SELECT 1 FROM unmatched_titles '
+                'WHERE run_id = ? AND calendar = ? AND title = ? '
+                'LIMIT 1'
+            ),
+            parameters=(run_id, calendar, title)
+        ) is not None
 
     def get(
             self,

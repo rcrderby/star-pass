@@ -226,3 +226,60 @@ class TestWhatTheLogOutlives:
         runs.delete(run_id=run_id)
 
         assert len(unmatched.list_all()) == 1
+
+
+class TestHowOftenOneRunMayBeCounted:
+    def test_a_run_recording_a_title_twice_is_one_sighting(
+        self,
+        record: Callable[..., Any],
+        run_id: str
+    ) -> None:
+        # A run saw a title or it did not; saying so twice adds
+        # nothing to what the count is asked for.
+        record(run_id=run_id)
+
+        assert record(run_id=run_id).times_seen == 1
+
+    def test_a_second_run_seeing_it_counts_again(
+        self,
+        other_run_id: str,
+        record: Callable[..., Any],
+        run_id: str
+    ) -> None:
+        record(run_id=run_id)
+
+        assert record(run_id=other_run_id).times_seen == 2
+
+    def test_the_same_run_seeing_another_title_counts_it(
+        self,
+        record: Callable[..., Any],
+        run_id: str,
+        unmatched: UnmatchedTitleRepository
+    ) -> None:
+        # The rule holds a run to one sighting of a *title*, not to
+        # one sighting.
+        record(run_id=run_id)
+        record(title=OTHER_TITLE, run_id=run_id)
+
+        assert sorted(
+            entry.title for entry in unmatched.list_all()
+        ) == sorted((TITLE, OTHER_TITLE))
+
+    def test_a_sighting_against_no_run_is_always_a_new_one(
+        self,
+        record: Callable[..., Any]
+    ) -> None:
+        # Nothing can say it is the same sighting as another, so it is
+        # not treated as one.
+        record()
+
+        assert record().times_seen == 2
+
+    def test_a_run_does_not_dedupe_a_hand_recorded_sighting(
+        self,
+        record: Callable[..., Any],
+        run_id: str
+    ) -> None:
+        record(run_id=run_id)
+
+        assert record().times_seen == 2

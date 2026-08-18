@@ -47,9 +47,14 @@ def fixture_collecting_locally(
         typed, and shows the job it ended as.
     """
 
-    def nothing(connection: Any, run_id: str, reporter: Any) -> None:
+    def nothing(
+        connection: Any,
+        run_id: str,
+        reporter: Any,
+        principal_id: str
+    ) -> None:
         """ Stand in for the collection. """
-        del connection, run_id, reporter
+        del connection, run_id, reporter, principal_id
 
     monkeypatch.setattr('star_pass_client._local_writes.collect', nothing)
 

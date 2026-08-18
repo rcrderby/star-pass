@@ -8,14 +8,22 @@
     scrolled back to in a log.
 
     So this is a log of its own, belonging to no run, read when the
-    model is about to be edited and appended to whenever a title turns
-    up that wants an alias.  **Append-only**: nothing updates an entry
-    and nothing deletes one, because how often a title has turned up
-    is the evidence for a decision nobody has made yet.
+    model is about to be edited.  **Append-only**: nothing updates an
+    entry and nothing deletes one, because how often a title has
+    turned up is the evidence for a decision nobody has made yet.
 
-    No idempotency key.  A row is a sighting rather than a state, so a
-    retry after a lost answer records that the title was seen again --
-    which is true, and is what the count means.  Nothing here is
+    Most of what it holds is written by collections rather than
+    through here: a collection is where a title is discovered to match
+    nothing, and a log that depended on somebody remembering to say so
+    would hold what people remembered rather than what happened.  This
+    endpoint is for the sighting that arrives another way -- somebody
+    looking at a blocked event, or at a calendar nobody has collected
+    yet.
+
+    No idempotency key.  A run is held to one sighting of a title by
+    the repository, so a retry naming one adds nothing on its own; a
+    sighting naming no run is one nothing can be the same as, and
+    recording it twice means it was seen twice.  Nothing here is
     irreversible, and nothing about a run changes.
 """
 
@@ -51,7 +59,8 @@ router = APIRouter(tags=[_defaults.API_TAG_SERVICE])
     summary='List titles the data model has not matched',
     description=(
         'One entry per title in a calendar, with how many sightings '
-        'have been recorded and when the first and most recent were. '
+        'have been recorded -- one per run it turned up in, plus any '
+        'recorded by hand -- and when the first and most recent were. '
         'Newest sighting first, so a title that has just started '
         'turning up is read before one somebody has already decided '
         'about.\n\n'
@@ -95,10 +104,13 @@ async def list_unmatched_titles(
     status_code=status.HTTP_201_CREATED,
     summary='Record a title the data model did not match',
     description=(
-        'Adds one sighting. The same title recorded twice is two '
-        'sightings and one entry: how often a title turns up is what '
-        'says whether it is worth an alias, and an entry overwritten '
-        'would answer "once" forever.\n\n'
+        'Adds one sighting, for a title noticed outside a '
+        'collection: collections record what they find themselves.\n\n'
+        'A title recorded twice against no run is two sightings and '
+        'one entry, because how often a title turns up is what says '
+        'whether it is worth an alias and an entry overwritten would '
+        'answer "once" forever. A run counts once however often it is '
+        'named, so a retry adds nothing.\n\n'
         'Answers with the entry as the log now holds it, this '
         'sighting counted.\n\n'
         'The calendar has to be one the deployment configured, '
@@ -106,9 +118,9 @@ async def list_unmatched_titles(
         'a calendar. The run is optional provenance: the log outlives '
         'the run, and deleting one does not take the reason somebody '
         'was going to edit the model.\n\n'
-        'No `Idempotency-Key`. A sighting is not a state, so a retry '
-        'after a lost answer records that the title was seen again, '
-        'which is true.'
+        'No `Idempotency-Key`. A request naming a run is already '
+        'answered the same way twice, and one naming none records '
+        'that the title was seen again, which is true.'
     ),
     response_model=UnmatchedTitleView
 )

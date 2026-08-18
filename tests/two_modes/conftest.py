@@ -144,9 +144,14 @@ def fixture_collecting_service(
         calendar would only slow down.
     """
 
-    def nothing(connection: Any, run_id: str, reporter: Any) -> None:
+    def nothing(
+        connection: Any,
+        run_id: str,
+        reporter: Any,
+        principal_id: str
+    ) -> None:
         """ Stand in for the collection. """
-        del connection, run_id, reporter
+        del connection, run_id, reporter, principal_id
 
     monkeypatch.setattr('star_pass_api._runs.collect', nothing)
     monkeypatch.setattr('star_pass_client._local_writes.collect', nothing)
