@@ -26,6 +26,7 @@
 """
 
 # Imports - Python Standard Library
+from datetime import date, timedelta
 from typing import AbstractSet, Dict, Iterable, List, Sequence
 
 # Imports - Local
@@ -39,6 +40,7 @@ from star_pass._defaults import (
     RETENTION_UNMATCHED_TITLE_DAYS
 )
 from star_pass._editing import Operation
+from star_pass._models import get_shifts_info
 from star_pass._derived import (
     blocks_the_run,
     capping_maximum,
@@ -65,6 +67,7 @@ from ._requests import EditRequest
 from ._schemas import (
     BlockerView,
     CalendarView,
+    CategoryView,
     ConfigView,
     CredentialView,
     EditView,
@@ -88,6 +91,88 @@ from ._schemas import (
     UnmatchedTitleView,
     WindowView
 )
+
+
+def _window_view(
+        run: Run
+) -> WindowView:
+    """ Return a run's window, said both ways.
+
+        The stored end is exclusive and stays that way: it is what is
+        compared and what a collection is asked for.  The last day it
+        covers is worked out here rather than by each client, because
+        every client that shows a window has to say it the way a
+        reader means it, and the command line already had this
+        subtraction written once.  Two of them would be two answers to
+        "which days does this run cover".
+
+        Args:
+            run (Run):
+                The run whose window is being shown.
+
+        Returns:
+            view (WindowView):
+                The window, with its last day and its zone.
+    """
+
+    return WindowView(
+        start=run.window_start,
+        end=run.window_end,
+        last_day=str(
+            date.fromisoformat(run.window_end) - timedelta(days=1)
+        ),
+        timezone=GCAL_TIMEZONE
+    )
+
+
+def _categories_of(
+        calendar: str
+) -> List[CategoryView]:
+    """ Return the categories a calendar's data model offers.
+
+        What a reviewer may put an event under, which is a different
+        list from the opportunities a run happens to hold: the run has
+        the ones its own events reached, and an event that matched
+        nothing needs one no other event used.
+
+        The fallback the model falls back to is not among them.  It is
+        a sibling of the categories rather than one of them, and its
+        need IDs are empty on purpose -- an event under it could not
+        become a shift, so offering it would be offering a choice the
+        write refuses.  A category configured with no usable need ID
+        is left out for the same reason.
+
+        Args:
+            calendar (str):
+                Which calendar's model to read.
+
+        Returns:
+            categories (List[CategoryView]):
+                The categories, in the order the model names them.
+    """
+
+    model = get_shifts_info()['calendar'].get(calendar, {})
+    categories = []
+
+    for key, category in (model.get('categories') or {}).items():
+        need_ids = [
+            str(need['id'])
+            for need in (category.get('need_ids') or [])
+            if str(need.get('id', '')).strip()
+        ]
+
+        if not need_ids:
+            continue
+
+        categories.append(
+            CategoryView(
+                key=key,
+                label=category.get('description') or key,
+                need_ids=need_ids
+            )
+        )
+
+    return categories
 
 
 def _by_need_id(
@@ -166,11 +251,7 @@ def to_run_view(
     return RunView(
         id=run.id,
         calendar=run.calendar,
-        window=WindowView(
-            start=run.window_start,
-            end=run.window_end,
-            timezone=GCAL_TIMEZONE
-        ),
+        window=_window_view(run=run),
         status=run.status,
         collected_at=run.collected_at,
         sent_at=run.sent_at,
@@ -650,7 +731,8 @@ def to_config_view() -> ConfigView:
         calendars=[
             CalendarView(
                 key=key,
-                search_terms=list(GCAL_CALENDARS[key]['query_strings'])
+                search_terms=list(GCAL_CALENDARS[key]['query_strings']),
+                categories=_categories_of(calendar=key)
             )
             for key in sorted(GCAL_CALENDARS)
         ],

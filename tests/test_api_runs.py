@@ -267,6 +267,47 @@ class TestReadingOneRun:
         assert window['start'] == '2026-09-01'
         assert window['end'] == '2026-10-01'
 
+    def test_the_window_carries_the_last_day_as_a_reader_means_it(
+        self,
+        read_run: Callable[[str], Dict[str, Any]],
+        run_id: str
+    ) -> None:
+        # Published rather than left to each client. Every client
+        # showing a window has to say it this way, and the subtraction
+        # written once per client is a client that can disagree with
+        # the server about which days a run covers.
+        window = read_run(run_id)['window']
+
+        assert window['lastDay'] == '2026-09-30'
+
+    def test_the_last_day_of_a_one_day_window_is_its_only_day(
+        self,
+        read_run: Callable[[str], Dict[str, Any]],
+        runs: RunRepository
+    ) -> None:
+        # The edge the exclusive end is easiest to get wrong at: one
+        # day covered is two consecutive dates on the wire.
+        run_id = runs.create(
+            calendar='practices',
+            window_start='2026-09-01',
+            window_end='2026-09-02'
+        ).id
+        window = read_run(run_id)['window']
+
+        assert window['start'] == window['lastDay'] == '2026-09-01'
+        assert window['end'] == '2026-09-02'
+
+    def test_the_last_day_is_never_the_end(
+        self,
+        read_run: Callable[[str], Dict[str, Any]],
+        run_id: str
+    ) -> None:
+        # What a client publishing the end under the other name would
+        # produce, which reads as a run covering a day it does not.
+        window = read_run(run_id)['window']
+
+        assert window['lastDay'] != window['end']
+
     def test_the_window_carries_the_zone_the_calendar_was_read_in(
         self,
         monkeypatch: pytest.MonkeyPatch,

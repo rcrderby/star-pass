@@ -106,7 +106,19 @@ class WindowView(ApiModel):
         description=(
             'Day after the last day the run covers, as an ISO date. '
             'Exclusive, so a run covering one day carries two '
-            'consecutive dates.'
+            'consecutive dates. This is the authoritative value: it '
+            'is what is stored, sent and compared, and "lastDay" is '
+            'the same window said the way a reader means it.'
+        )
+    )
+    last_day: str = Field(
+        description=(
+            'Last day the run covers, as an ISO date, and as a reader '
+            'means it -- the day before "end". Published rather than '
+            'worked out by each client, because every client that '
+            'shows a window has to say it this way and a second '
+            'implementation of one subtraction is a client that can '
+            'disagree with the server about which days a run covers.'
         )
     )
     timezone: str = Field(
@@ -725,6 +737,42 @@ class EditView(ApiModel):
 # What the deployment was configured with, rather than anything a run
 # holds.  Below, because a reader working through this file is reading
 # about runs until they reach these two.
+class CategoryView(ApiModel):
+    """ One category of the data model, for a calendar that offers it.
+
+        What a reviewer chooses from when an event matched nothing, or
+        matched the wrong thing.  The identifier is what an edit
+        sends; the label is what the data model calls it, and a
+        client shows the Amplify titles for the need IDs where it has
+        them, because those are what a shift is created under.
+    """
+
+    key: str = Field(
+        description=(
+            'What an edit names this category by, which is what the '
+            '"category" field of a "set_category" operation takes.'
+        ),
+        examples=['adult_game']
+    )
+    label: str = Field(
+        description=(
+            'What the data model calls this category. Written for a '
+            'person, and not an Amplify opportunity title: one '
+            'category can create shifts under more than one need.'
+        ),
+        examples=['Adult Games']
+    )
+    need_ids: List[str] = Field(
+        description=(
+            'Amplify need IDs an event in this category creates a '
+            'shift under, one each. More than one is ordinary -- an '
+            'event serving skating and non-skating officials creates '
+            'two shifts -- and several categories may share a need.'
+        ),
+        examples=[['879609', '879610']]
+    )
+
+
 class CalendarView(ApiModel):
     """ One calendar a run may be collected from. """
 
@@ -746,6 +794,16 @@ class CalendarView(ApiModel):
             'returned.'
         ),
         examples=[['officials', 'scrimmage']]
+    )
+    categories: List[CategoryView] = Field(
+        description=(
+            'The categories this calendar\'s data model offers, which '
+            'are what a "set_category" edit may name. The fallback '
+            'the model uses when a title matches nothing is not among '
+            'them: its need IDs are empty on purpose, so an event put '
+            'under it could not become a shift, and offering it would '
+            'be offering a choice the write refuses.'
+        )
     )
 
 
