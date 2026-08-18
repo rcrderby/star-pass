@@ -26,6 +26,7 @@ from ._deciding import (
     keyed_write,
     replayed,
     resumable,
+    reverted,
     sealed,
     sendable,
     WriteRefusals
@@ -146,6 +147,7 @@ __all__ = [
     'edited',
     'KeyedWrite',
     'keyed_write',
+    'reverted',
     'sealed',
     'WriteRefusals',
     'replayed',

@@ -28,12 +28,13 @@ from typing import Any, Callable, Dict, Optional, Tuple
 from star_pass._editing import edit
 from star_pass._exceptions import ValidationError
 from star_pass._opportunities import shifts_in_amplify
-from star_pass._reading import read_run_for_send
-from star_pass._revising import seal
+from star_pass._reading import read_run_detail, read_run_for_send
+from star_pass._revising import revert, seal
 from star_pass._records import (
     IdempotencyRecord,
     Job,
     OPERATION_EDIT,
+    OPERATION_REVERT,
     OPERATION_SEAL,
     Run
 )
@@ -52,6 +53,7 @@ from ._messages import (
 )
 from ._views import (
     previewed,
+    to_detail_view,
     to_edit_view,
     to_operations,
     to_revision_views
@@ -65,6 +67,11 @@ EDIT_STATUS_CODE = 200
 # What sealing a revision answers with.  A revision that was not there
 # before is a thing created, and the answer names it.
 SEAL_STATUS_CODE = 201
+
+# What reverting answers with.  A revert opens a revision too, but
+# what it answers with is the run: everything on the screen that asked
+# has changed, and the run is not a thing this created.
+REVERT_STATUS_CODE = 200
 
 
 @dataclass(frozen=True)
@@ -528,6 +535,90 @@ def sealed(
             fingerprint=OPERATION_SEAL,
             status_code=SEAL_STATUS_CODE,
             carry_out=seal_the_revision
+        ),
+        refusals=refusals
+    )
+
+
+def reverted(
+        connection: sqlite3.Connection,
+        run_id: str,
+        number: int,
+        key: str,
+        principal_id: str,
+        *,
+        refusals: WriteRefusals
+) -> Dict[str, Any]:
+    """ Take a run back to what an earlier revision holds.
+
+        The fingerprint is the revision asked for, so a retry after a
+        lost answer is recognised while going back to a *different*
+        revision under the same key is refused -- two reverts are two
+        actions, and the number is the whole of what tells them apart.
+
+        The answer is the run in full rather than the revision that
+        was opened, because reverting changes every row the screen is
+        showing.
+
+        Args:
+            connection (sqlite3.Connection):
+                Connection to write on.
+
+            run_id (str):
+                Run to take back.
+
+            number (int):
+                Revision to go back to the contents of.
+
+            key (str):
+                What the revert is claimed under, so a retry opens no
+                second revision (D13, D16).
+
+            principal_id (str):
+                Who reverted it (D13).
+
+            refusals (WriteRefusals):
+                What this half raises when it will not carry the write
+                out.
+
+        Raises:
+            Whatever 'refusals' raises: no such run, no such revision
+            to go back to, or a key already carrying another request.
+
+        Returns:
+            answer (Dict[str, Any]):
+                The run as it now stands, shaped as the contract
+                publishes it.
+    """
+
+    def revert_the_run(
+            open_connection: sqlite3.Connection
+    ) -> Optional[Dict[str, Any]]:
+        """ Take the run back and return everything it now holds. """
+        if revert(
+            connection=open_connection,
+            run_id=run_id,
+            number=number
+        ) is None:
+            return None
+
+        return to_detail_view(
+            detail=read_run_detail(
+                connection=open_connection,
+                run_id=run_id
+            )
+        ).model_dump(by_alias=True, mode='json')
+
+    return keyed_write(
+        connection=connection,
+        run_id=run_id,
+        key=key,
+        principal_id=principal_id,
+        write=KeyedWrite(
+            operation=OPERATION_REVERT,
+            fingerprint=str(number),
+            status_code=REVERT_STATUS_CODE,
+            carry_out=revert_the_run
         ),
         refusals=refusals
     )

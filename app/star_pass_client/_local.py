@@ -110,6 +110,14 @@ UNAVAILABLE = {
         'reads the revisions a run has been through (D2).'
     ),
     (
+        'POST', '/v1/runs/{run_id}/revisions/{number}/revert'
+    ): (
+        'Reverting is done in the web interface, by a reviewer looking '
+        'at what the run holds now and deciding it was better before. '
+        'The command line reads the revisions a run has been through '
+        '(D2).'
+    ),
+    (
         'POST', '/v1/runs/{run_id}/events'
     ): (
         'Pulling an event in is done in the web interface, beside the '

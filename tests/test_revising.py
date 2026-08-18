@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-""" Sealing the revision a run is working in.
+""" Sealing the revision a run is working in, and going back to one.
 
     An edit changes a revision in place, so what a reviewer has at any
-    moment is only recoverable if something fixed it first.  These
-    tests pin what sealing leaves behind, which is the half of
-    reverting that has to be true before reverting is worth having.
+    moment is only recoverable if something fixed it first.  Sealing
+    is what fixes it; reverting is what going back to it means.
+
+    Two things these pin that nothing else can: that a revert adds one
+    revision rather than sealing and then reverting, and that going
+    back to the revision a collection filled drops the events somebody
+    pulled in by hand.
 """
 
 # pylint: disable=missing-function-docstring,missing-class-docstring
@@ -20,7 +24,7 @@ import pytest
 from star_pass._exceptions import ValidationError
 from star_pass._records import Event
 from star_pass._repository import EventRepository, RevisionRepository
-from star_pass._revising import seal
+from star_pass._revising import revert, seal
 
 
 @pytest.fixture(name='sealing')
@@ -34,6 +38,64 @@ def fixture_sealing(
         return seal(connection=connection, run_id=run_id)
 
     return apply
+
+
+@pytest.fixture(name='reverting')
+def fixture_reverting(
+    connection: sqlite3.Connection
+) -> Callable[..., Any]:
+    """ Return a way to take one run back to an earlier revision. """
+
+    def apply(run_id: str, number: int) -> Any:
+        """ Go back to it and return the revision that was opened. """
+        return revert(
+            connection=connection,
+            run_id=run_id,
+            number=number
+        )
+
+    return apply
+
+
+@pytest.fixture(name='pulled_in')
+def fixture_pulled_in(
+    events: EventRepository,
+    make_event: Callable[..., Event]
+) -> Callable[..., None]:
+    """ Return a way to put a hand-added event into a revision.
+
+        Written straight into the revision rather than through the
+        operation that pulls one in: what these tests ask about is
+        what happens to such an event afterwards, and arranging it the
+        long way would make the calendar and the search part of the
+        arrangement.
+    """
+
+    def add(run_id: str, revision: int) -> None:
+        """ Add one event, marked as somebody having pulled it in. """
+        events.add(
+            run_id=run_id,
+            revision=revision,
+            event=make_event(id='event-2', added_by_hand=True)
+        )
+
+    return add
+
+
+@pytest.fixture(name='numbers')
+def fixture_numbers(
+    revisions: RevisionRepository
+) -> Callable[[str], Any]:
+    """ Return a way to read the revisions a run has been through. """
+
+    def listed(run_id: str) -> Any:
+        """ Return their numbers, oldest first. """
+        return [
+            revision.number
+            for revision in revisions.list_all(run_id=run_id)
+        ]
+
+    return listed
 
 
 class TestWhatSealingOpens:
@@ -180,3 +242,242 @@ class TestWhatIsLogged:
             sealing(run_id)
 
         assert 'collected nothing' in caplog.text
+
+
+class TestWhatRevertingOpens:
+    def test_it_holds_what_the_revision_reverted_to_held(
+        self,
+        collected: str,
+        events: EventRepository,
+        pulled_in: Callable[..., None],
+        reverting: Callable[..., Any],
+        sealing: Callable[..., Any]
+    ) -> None:
+        # Revision 2 is where the second event was added, so going
+        # back to revision 1 is asking for the run without it.
+        sealing(collected)
+        pulled_in(collected, 2)
+
+        opened = reverting(collected, 1)
+
+        assert [
+            event.id
+            for event in events.list_all(
+                run_id=collected,
+                revision=opened.number
+            )
+        ] == ['event-1']
+
+    def test_it_becomes_the_revision_the_run_is_working_in(
+        self,
+        collected: str,
+        reverting: Callable[..., Any],
+        runs: Any,
+        sealing: Callable[..., Any]
+    ) -> None:
+        sealing(collected)
+
+        opened = reverting(collected, 1)
+
+        assert opened.number == 3
+        assert runs.get(run_id=collected).current_revision == 3
+
+    def test_it_says_which_revision_it_went_back_to(
+        self,
+        collected: str,
+        reverting: Callable[..., Any],
+        sealing: Callable[..., Any]
+    ) -> None:
+        sealing(collected)
+        sealing(collected)
+
+        assert reverting(collected, 2).label == 'Reverted to revision 2'
+
+
+class TestHowManyRevisionsARevertAdds:
+    def test_one(
+        self,
+        collected: str,
+        numbers: Callable[[str], Any],
+        reverting: Callable[..., Any],
+        sealing: Callable[..., Any]
+    ) -> None:
+        # The decision this pins: nothing a revert does is
+        # destructive, so the revision it leaves is already safe at
+        # its own number and sealing it first would add a second
+        # revision holding an identical copy of it.
+        sealing(collected)
+
+        reverting(collected, 1)
+
+        assert numbers(collected) == [1, 2, 3]
+
+    def test_the_revision_it_left_keeps_its_events(
+        self,
+        collected: str,
+        events: EventRepository,
+        pulled_in: Callable[..., None],
+        reverting: Callable[..., Any]
+    ) -> None:
+        # Which is what makes a revert something that can itself be
+        # reverted: what was on the screen is still readable at the
+        # number it was under.
+        pulled_in(collected, 1)
+
+        reverting(collected, 1)
+
+        assert [
+            event.id
+            for event in events.list_all(run_id=collected, revision=1)
+        ] == ['event-1', 'event-2']
+
+    def test_nothing_is_written_to_the_change_log(
+        self,
+        change_log: Any,
+        collected: str,
+        reverting: Callable[..., Any]
+    ) -> None:
+        # For the reason sealing writes none: the count on a revision
+        # is what was done while it was current, and who reverted is
+        # recorded against the key instead (D13).
+        reverting(collected, 1)
+
+        assert change_log.list_all(run_id=collected) == []
+
+
+class TestTheEventsSomebodyPulledIn:
+    def test_going_back_to_the_collection_drops_them(
+        self,
+        collected: str,
+        events: EventRepository,
+        pulled_in: Callable[..., None],
+        reverting: Callable[..., Any]
+    ) -> None:
+        # Revision 1 is the run as the calendar gave it, so an event
+        # somebody pulled in is not part of what it holds -- and the
+        # row saying the collection left it out was never deleted, so
+        # dropping it here is what offers it again.
+        pulled_in(collected, 1)
+
+        opened = reverting(collected, 1)
+
+        assert [
+            event.id
+            for event in events.list_all(
+                run_id=collected,
+                revision=opened.number
+            )
+        ] == ['event-1']
+
+    def test_going_back_to_a_later_revision_keeps_them(
+        self,
+        collected: str,
+        events: EventRepository,
+        pulled_in: Callable[..., None],
+        reverting: Callable[..., Any],
+        sealing: Callable[..., Any]
+    ) -> None:
+        # A later revision holds whatever it held, hand-added or not:
+        # what is being asked for is that revision, not the calendar.
+        sealing(collected)
+        pulled_in(collected, 2)
+        sealing(collected)
+
+        opened = reverting(collected, 2)
+
+        assert [
+            event.id
+            for event in events.list_all(
+                run_id=collected,
+                revision=opened.number
+            )
+        ] == ['event-1', 'event-2']
+
+    def test_their_roles_go_with_them(
+        self,
+        collected: str,
+        events: EventRepository,
+        pulled_in: Callable[..., None],
+        reverting: Callable[..., Any]
+    ) -> None:
+        # A role left behind would be a row pointing at an event the
+        # revision no longer holds.
+        pulled_in(collected, 1)
+
+        opened = reverting(collected, 1)
+
+        assert [
+            role.need_id
+            for event in events.list_all(
+                run_id=collected,
+                revision=opened.number
+            )
+            for role in event.roles
+        ] == ['905196']
+
+
+class TestWhatCannotBeRevertedTo:
+    def test_a_revision_the_run_has_never_had_is_refused(
+        self,
+        collected: str,
+        reverting: Callable[..., Any]
+    ) -> None:
+        with pytest.raises(ValidationError) as error:
+            reverting(collected, 4)
+
+        assert 'no revision 4' in str(error.value)
+
+    def test_a_refused_run_gains_no_revision(
+        self,
+        collected: str,
+        numbers: Callable[[str], Any],
+        reverting: Callable[..., Any]
+    ) -> None:
+        with pytest.raises(ValidationError):
+            reverting(collected, 4)
+
+        assert numbers(collected) == [1]
+
+    def test_a_run_that_has_collected_nothing_has_nowhere_to_go_back_to(
+        self,
+        reverting: Callable[..., Any],
+        run_id: str
+    ) -> None:
+        with pytest.raises(ValidationError) as error:
+            reverting(run_id, 1)
+
+        assert 'no revision 1' in str(error.value)
+
+    def test_an_unknown_run_is_reported_as_nothing(
+        self,
+        reverting: Callable[..., Any]
+    ) -> None:
+        # For the reason sealing reports one that way: what a missing
+        # run means depends on how it was asked for.
+        assert reverting('no-such-run', 1) is None
+
+
+class TestWhatARevertLogs:
+    def test_the_revision_it_went_back_to_reaches_the_log(
+        self,
+        caplog: pytest.LogCaptureFixture,
+        collected: str,
+        reverting: Callable[..., Any],
+        sealing: Callable[..., Any]
+    ) -> None:
+        sealing(collected)
+
+        reverting(collected, 1)
+
+        assert 'to revision 1' in caplog.text
+
+    def test_a_refusal_reaches_the_log(
+        self,
+        caplog: pytest.LogCaptureFixture,
+        collected: str,
+        reverting: Callable[..., Any]
+    ) -> None:
+        with pytest.raises(ValidationError):
+            reverting(collected, 4)
+
+        assert 'no revision 4' in caplog.text

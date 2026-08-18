@@ -395,6 +395,41 @@ class Operations:
             job_id=job_id
         )
 
+    def revert_revision(
+            self,
+            run_id: str,
+            number: int,
+            idempotency_key: str
+    ) -> Any:
+        """ Take the run back to what an earlier revision held.
+
+            Args:
+                run_id (str):
+                    Value for the path.
+
+                number (int):
+                    Value for the path.
+
+                idempotency_key (str):
+                    Value for the Idempotency-Key header.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='POST',
+            path='/v1/runs/{run_id}/revisions/{number}/revert',
+            headers={'Idempotency-Key': idempotency_key},
+            run_id=run_id,
+            number=number
+        )
+
     def seal_revision(
             self,
             run_id: str,

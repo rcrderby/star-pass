@@ -117,14 +117,25 @@ through the Amplify API. It is run once per month.
   the run gains it, and that is the one upstream request the operation
   makes.
 - `app/star_pass/_revising.py` — sealing the revision a run is working
-  in (`seal`). An edit changes a revision in place, so sealing is what
-  fixes a point in that work as something to come back to: it opens a
-  revision holding a copy and leaves the sealed one's rows where they
-  are. **No `change_log` entry**, because the change count on a revision
-  is what was done *while it was current*, and one written as a
-  revision opens would have every sealed revision starting at a change
-  nobody made; who sealed it is recorded against the idempotency key
-  instead (D13). A run that has collected nothing is refused: the
+  in (`seal`) and going back to an earlier one (`revert`). An edit
+  changes a revision in place, so sealing is what fixes a point in
+  that work as something to come back to, and reverting is coming
+  back to it. Each opens a revision holding a copy — of the current
+  one, or of the one being gone back to — and leaves every other
+  revision's rows where they are. **One revision per revert**: what
+  it leaves is already readable at its own number, so there is
+  nothing to fix in place first and sealing before reverting would
+  add a revision holding an identical copy of the one before it.
+  Reverting to revision 1 also drops the events added by hand,
+  because that revision is the run as the calendar gave it, and the
+  row saying the collection left one out was never deleted — so the
+  current revision no longer holding it is what offers it again.
+  **No `change_log` entry** from either, because the change count on a
+  revision is what was done *while it was current*, and one written as
+  a revision opens would have every sealed revision starting at a
+  change nobody made; who sealed or reverted is recorded against the
+  idempotency key instead (D13). A run that has collected nothing has
+  no revision to seal and none to go back to, and both refuse it: the
   first revision belongs to the collection, which labels it for what
   filled it.
 - `app/star_pass/_shift_timing.py` — what a category asks of an event
@@ -271,11 +282,12 @@ through the Amplify API. It is run once per month.
   Slack summary, troubleshooting, and the monthly workflow, which has
   to work with no server running. Parity with the web interface is not
   a goal (D2), so an operation whose home is the review screen is
-  published by the API and declared unavailable in local mode. Editing
-  a run's events and pulling one in are the two so far; do not add
-  commands for either. Reading what a run left out **is** a command,
-  because asking why an event is not in a run is troubleshooting —
-  the line falls between reading that list and acting on it.
+  published by the API and declared unavailable in local mode. Four
+  are: editing a run's events, pulling one in, sealing a revision and
+  reverting to one. Do not add commands for them. Reading what a run
+  left out **is** a command, because asking why an event is not in a
+  run is troubleshooting — the line falls between reading that list
+  and acting on it.
   `_render.py` shows what a run holds and `_sending.py` shows what
   would become of it — the preview, the restatement a send is
   confirmed with, and the job that does it — with the second importing
@@ -439,9 +451,12 @@ The notes below are the ones that are not obvious from the commands.
   routers are included under it; writing it twice produces a working
   service and a contract describing `/v1/v1/...`.
 - An idempotency key names an **operation**, one of
-  `IDEMPOTENT_OPERATIONS`, which is wider than `JOB_KINDS`: an edit and
-  a seal are answered in the request that asked for them, so not
-  every keyed write starts a job. Where a write claims its key is part
+  `IDEMPOTENT_OPERATIONS`, which is wider than `JOB_KINDS`: an edit, a
+  seal and a revert are answered in the request that asked for them,
+  so not every keyed write starts a job. What a key remembers is the
+  request's own fingerprint, which is why a seal is fingerprinted by
+  the operation — it carries nothing else — and a revert by the
+  revision asked for. Where a write claims its key is part
   of the decision, not an implementation detail — the run is read
   before the key is claimed, the key claimed before the write, and the
   answer recorded after it. Reading the run last spends a reservation

@@ -36,6 +36,7 @@ from ._editing import router as editing_router
 from ._health import router as health_router
 from ._jobs import router as jobs_router
 from ._problems import add_problem_handlers, PROBLEM_MEDIA_TYPE
+from ._revisions import router as revisions_router
 from ._runs import router as runs_router
 from ._sending import router as sending_router
 from ._security import check_configuration
@@ -167,6 +168,7 @@ def create_app() -> FastAPI:
         version_router,
         config_router,
         runs_router,
+        revisions_router,
         editing_router,
         sending_router,
         jobs_router

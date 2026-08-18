@@ -310,6 +310,21 @@ class TestWhatLocalModeCannotDo:
         # which is the difference between a decision and a gap.
         assert 'sealed from the screen' in str(error.value)
 
+    def test_reverting_says_who_decides_to_revert(
+        self,
+        local_client: LocalClient
+    ) -> None:
+        # A revert is a judgement about what the run held before,
+        # which is made by somebody looking at what it holds now (D2).
+        with pytest.raises(LocalOperationUnavailable) as error:
+            local_client.revert_revision(
+                run_id='r-1',
+                number=1,
+                idempotency_key='an-attempt'
+            )
+
+        assert 'looking at what the run holds now' in str(error.value)
+
     def test_the_two_clients_offer_the_same_operations(
         self,
         local_client: LocalClient,

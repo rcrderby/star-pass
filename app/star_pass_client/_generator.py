@@ -38,6 +38,17 @@ FILE_ENCODING = 'utf-8'
 # than at once, so the method yields lines instead of returning a body.
 STREAM_MEDIA_TYPE = 'text/event-stream'
 
+# What a path parameter's published type is called in Python.  A
+# generated method that took every path value as a string would
+# describe a revision number as text, which is not what the contract
+# says one is.
+PATH_TYPES = {
+    'boolean': 'bool',
+    'integer': 'int',
+    'number': 'float',
+    'string': 'str'
+}
+
 # The command that rewrites the committed file, quoted in the failure
 # when it no longer matches.
 REGENERATE_COMMAND = 'python scripts/generate_contract.py'
@@ -101,20 +112,31 @@ def _summary(
 
 def _path_parameters(
         operation: Dict[str, Any]
-) -> List[str]:
+) -> List[Tuple[str, str]]:
     """ Return the path parameters an operation takes, in order.
+
+        Each with the Python type its published schema names, because
+        a path value is not always text: a revision is a number, and a
+        method saying otherwise would be the contract described wrong
+        by the thing generated from it.
 
         Args:
             operation (Dict[str, Any]):
                 The operation from the specification.
 
         Returns:
-            names (List[str]):
-                The names of its path parameters.
+            parameters (List[Tuple[str, str]]):
+                The name and Python type of each path parameter.
     """
 
     return [
-        parameter['name']
+        (
+            parameter['name'],
+            PATH_TYPES.get(
+                parameter.get('schema', {}).get('type'),
+                'str'
+            )
+        )
         for parameter in operation.get('parameters', [])
         if parameter.get('in') == 'path'
     ]
@@ -238,8 +260,8 @@ def _method(
     signature = (
         ',\n            body: Dict[str, Any]' if sends else ''
     ) + ''.join(
-        f',\n            {parameter}: str'
-        for parameter in parameters
+        f',\n            {parameter}: {kind}'
+        for parameter, kind in parameters
     ) + ''.join(
         f',\n            {header_argument(name=header)}: str'
         for header in headers
@@ -254,7 +276,7 @@ def _method(
         f',\n            headers={{{sent}}}' if headers else ''
     ) + ''.join(
         f',\n            {parameter}={parameter}'
-        for parameter in parameters
+        for parameter, _ in parameters
     )
     documented = (
         '\n                body (Dict[str, Any]):'
@@ -263,9 +285,9 @@ def _method(
         if sends
         else ''
     ) + ''.join(
-        f'\n                {parameter} (str):'
+        f'\n                {parameter} ({kind}):'
         f'\n                    Value for the path.\n'
-        for parameter in parameters
+        for parameter, kind in parameters
     ) + ''.join(
         f'\n                {header_argument(name=header)} (str):'
         f'\n                    Value for the {header} header.\n'

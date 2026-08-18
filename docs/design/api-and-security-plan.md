@@ -128,7 +128,7 @@ browser ──httpOnly session cookie──> front-end (BFF, same origin) ──
 | `POST /v1/credentials/test` | Returns ok + last-four only. Rate-limited. |
 | `GET`/`POST /v1/unmatched-titles` | Append-only log for later model updates. |
 | `PATCH /v1/runs/{id}/events` | **Edit the current revision** — opportunity, times, slots, nudge, reset, remove, undo, singly or over a selection. One call per user action, returning the updated events and the log entries it produced. The most used endpoint in the product; missed in the first pass and found by writing `openapi-v1-sketch.yaml` against the real screens. |
-| `POST /v1/runs/{id}/revisions`, `…/revisions/{n}/revert` | Seal a revision; revert to one (sealing first, never destructive). Reverting to revision 1 also drops hand-added events and returns them to Not collected. |
+| `POST /v1/runs/{id}/revisions`, `…/revisions/{n}/revert` | Seal a revision; revert to one. Neither is destructive, so a revert opens **one** revision: the one it leaves stays readable at its own number and has nothing to be saved from. Reverting to revision 1 also drops hand-added events and returns them to Not collected. |
 | `POST /v1/jobs/{id}/resume` | Resume an interrupted job, by explicit request only (D10). |
 
 Four more findings from that sketch, all additive:
