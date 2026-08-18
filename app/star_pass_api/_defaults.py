@@ -87,6 +87,25 @@ JOB_EVENT_HEARTBEAT_SECONDS = float(
     )
 )
 
+# How often one caller may test the credential, and over how long.
+# Rate-limited because an endpoint that says something true about a
+# secret is one to ask sparingly, and because every attempt spends a
+# request on Amplify (D8, plan section 8).  Low, because a person
+# clicking a button in Settings needs a handful and nothing needs
+# more.
+CREDENTIAL_TEST_ATTEMPTS = int(
+    getenv(
+        'STAR_PASS_CREDENTIAL_TEST_ATTEMPTS',
+        '5'
+    )
+)
+CREDENTIAL_TEST_WINDOW_SECONDS = float(
+    getenv(
+        'STAR_PASS_CREDENTIAL_TEST_WINDOW_SECONDS',
+        '60'
+    )
+)
+
 # Tags, so the generated documentation groups endpoints by what they
 # are for rather than listing them in definition order.
 API_TAG_SERVICE = 'service'

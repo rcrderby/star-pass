@@ -172,6 +172,19 @@ through the Amplify API. It is run once per month.
   exists is counted as absent; a shift crossing midnight is left out
   silently, because collection refuses to store one and so no run
   could have created it.
+- `app/star_pass/_credentials.py` — asking Amplify whether the
+  credential this process holds still works (`check_credential`). The
+  only thing published about it, and deliberately: no endpoint
+  replaces a credential, because one that could rewrite the service's
+  own production credential is the highest-value target in the system
+  for the least benefit (D8). The answer is whether one small
+  authenticated read was accepted, plus the **last four characters** —
+  enough to tell two credentials apart and no use to whoever reads
+  them. The read names no need, so a deployment whose data model
+  matches nothing is not told its credential is broken, and the row it
+  returns is discarded unread. A credential Amplify refuses is
+  returned as an answer rather than raised: whether it works is what
+  was asked.
 - `app/star_pass/_preview.py` — what sending a revision would create,
   worked out before it does: totals, a row per Amplify opportunity,
   the shifts Amplify already has, and every reason an event cannot be
@@ -228,7 +241,8 @@ through the Amplify API. It is run once per month.
 - `app/star_pass_api/` — the remote surface over the core: the
   application factory (`create_app`), the service's own `_defaults.py`,
   `_problems.py`, `_security.py`,
-  `_storage.py` (how it reaches the database), and a module per group
+  `_storage.py` (how it reaches the database), `_limiting.py` (how
+  often one caller may ask for something), and a module per group
   of endpoints. The shapes that cross the wire are not here: they are
   in `star_pass_contract`, because the command line client sends and
   receives the same ones. A separate
@@ -265,8 +279,8 @@ through the Amplify API. It is run once per month.
   answer differently with nothing saying so.
 - `app/star_pass_cli/` — the commands (`runs list`, `runs show`, `runs
   revisions`, `runs uncollected`, `runs preview`, `runs collect`, `runs
-  recollect`, `jobs show`, `jobs watch`, `jobs resume` and `config
-  show`), which work
+  recollect`, `jobs show`, `jobs watch`, `jobs resume`, `config show`
+  and `config credential`), which work
   against the local
   database by default and a service when `--api-url` or
   `STAR_PASS_API_URL` names one (D2). Each is a row in
@@ -488,6 +502,14 @@ The notes below are the ones that are not obvious from the commands.
   and the endpoint using it can run on different threads. Pass the
   work to `_storage.read` instead, which opens, uses and closes one
   inside a single call.
+- **How often something may be asked for is the service's to decide**,
+  not the core's: `_limiting.py` holds the count, in memory, because
+  what it protects is this process's own upstream requests and a count
+  that survived a restart would describe requests nothing is making.
+  The window slides rather than resetting, since a fixed one lets
+  twice the allowance through across its edge, and a refused attempt
+  is not counted — counting it turns a limit into a lockout. Local
+  mode is not limited: that is the operator asking their own machine.
 - `app/star_pass_api/_security.py` is the only module that reads the
   API token or the `Authorization` header. A route declares the scopes
   it needs with `requires(...)` and receives a `Principal`; it never

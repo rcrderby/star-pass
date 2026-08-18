@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Showing what the service was configured with.
+""" Showing what the service was configured with, and whether it works.
 
     Its own module beside the two that show a run: '_render' shows
     what a run holds and '_sending' what would become of it, and a
@@ -11,6 +11,11 @@
     query string, which is a value and not an absence.  The contract
     publishes it as it is configured, so the wording that says what an
     empty one means is here, where wording belongs.
+
+    The credential is shown beside the settings for the same reason it
+    is read beside them: it is a fact about this deployment rather
+    than about any run, and the four characters published of it are
+    there to answer "which one is it running on".
 """
 
 # Imports - Python Standard Library
@@ -41,6 +46,15 @@ TERM_GAP = ', '
 # two are different kinds of thing and a reader scanning for a
 # calendar should not have to read the settings first.
 CALENDARS_HEADING = 'CALENDARS'
+
+# What a tested credential is said to be.  A whole word each way: the
+# line is read at a glance and a tick and a cross are not one.
+WORKING = 'working'
+NOT_WORKING = 'not working'
+
+# How the four published characters are shown.  Said as an ending
+# rather than printed alone, so nobody reads them as the credential.
+ENDING = 'ending {last_four}'
 
 
 def searched_for(
@@ -140,3 +154,37 @@ def config_text(
             )
         )
     )
+
+
+def credential_text(
+        answer: Dict[str, Any]
+) -> str:
+    """ Return whether the Amplify credential works.
+
+        Args:
+            answer (Dict[str, Any]):
+                What a credential test answered.
+
+        Returns:
+            text (str):
+                Whether it works and which one it is, with the reason
+                below when it does not.
+    """
+
+    lines = labelled(
+        pairs=(
+            (
+                'Amplify credential',
+                WORKING if answer['working'] else NOT_WORKING
+            ),
+            (
+                'Ends with',
+                answer['lastFour'] or NOTHING
+            )
+        )
+    )
+
+    if answer['reason'] is None:
+        return lines
+
+    return f'{lines}\n\n{answer["reason"]}'

@@ -42,6 +42,7 @@ from star_pass._derived import (
     repeated,
     shift_length
 )
+from star_pass._credentials import CredentialCheck
 from star_pass._preview import Preview, preview
 from star_pass._reading import RunDetail
 from star_pass._records import (
@@ -61,6 +62,7 @@ from ._schemas import (
     BlockerView,
     CalendarView,
     ConfigView,
+    CredentialView,
     EditView,
     EventRoleView,
     EventView,
@@ -646,4 +648,30 @@ def to_config_view() -> ConfigView:
             )
             for key in sorted(GCAL_CALENDARS)
         ]
+    )
+
+
+def to_credential_view(
+        checked: CredentialCheck
+) -> CredentialView:
+    """ Return what a credential test answered.
+
+        Here for the reason the rest of this module is: the service
+        answers this over HTTP and the command line client answers it
+        from the same process, and two assemblies of one answer would
+        eventually differ about what "working" means.
+
+        Args:
+            checked (CredentialCheck):
+                What asking Amplify produced.
+
+        Returns:
+            view (CredentialView):
+                The answer a caller is shown, shaped for the contract.
+    """
+
+    return CredentialView(
+        working=checked.working,
+        last_four=checked.last_four,
+        reason=checked.reason
     )

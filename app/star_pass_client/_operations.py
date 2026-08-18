@@ -520,3 +520,25 @@ class Operations:
             path='/v1/jobs/{job_id}/events',
             job_id=job_id
         )
+
+    def test_credential(
+            self
+    ) -> Any:
+        """ Test the Amplify credential this service is running on.
+
+            Args:
+                None.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='POST',
+            path='/v1/credentials/test'
+        )

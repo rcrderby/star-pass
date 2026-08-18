@@ -159,6 +159,23 @@ class TestTheTwoModesAgree:
         assert local['timezone']
         assert local['calendars']
 
+    def test_the_credential_tests_the_same(
+        self,
+        answer_requests: Callable[..., Any],
+        both: Callable[..., Tuple[Any, Any]]
+    ) -> None:
+        # Two answers, so two attempts against the service's limit;
+        # the allowance is larger than that, and local mode is not
+        # limited at all.
+        answer_requests(lambda _request: {'data': []})
+
+        local, remote = both('test_credential')
+
+        assert local == remote
+        # Guard against both answering an empty document identically.
+        assert local['working'] is True
+        assert local['lastFour']
+
     def test_an_empty_database_reads_the_same(
         self,
         both: Callable[..., Tuple[Any, Any]],

@@ -18,7 +18,7 @@
 """
 
 # Imports - Python Standard Library
-from typing import List
+from typing import List, Optional
 
 # Imports - Third-Party
 from pydantic import BaseModel, ConfigDict, Field
@@ -746,6 +746,39 @@ class CalendarView(ApiModel):
             'returned.'
         ),
         examples=[['officials', 'scrimmage']]
+    )
+
+
+class CredentialView(ApiModel):
+    """ What asking Amplify about the service's credential answered. """
+
+    working: bool = Field(
+        description=(
+            'Whether Amplify accepted a request carrying the '
+            'credential this service is running on. False also covers '
+            'a credential that is not configured at all, and the '
+            'reason says which.'
+        ),
+        examples=[True]
+    )
+    last_four: Optional[str] = Field(
+        default=None,
+        description=(
+            'The last four characters of the credential, which is '
+            'enough to tell two apart and no use to whoever reads it. '
+            'The credential itself is never published, and no '
+            'endpoint replaces it: rotation is changing the secret '
+            'and restarting (D8). Absent when none is configured.'
+        ),
+        examples=['4f2a']
+    )
+    reason: Optional[str] = Field(
+        default=None,
+        description=(
+            'Why the credential did not work, written for a person. '
+            'Absent when it did.'
+        ),
+        examples=[None]
     )
 
 
