@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-""" Reading runs, one in full, its history and what it would send.
+""" Reading runs, collecting them, and what one would send.
 
-    The first callers of the repository layer's run and revision side:
-    the list a person opens the tool on, the run itself with
-    everything the review screen reads at once, the numbered versions
-    its events have been through, and what sending it would create.
+    The first callers of the repository layer's run side: the list a
+    person opens the tool on, the run itself with everything the
+    review screen reads at once, what the window held and the run left
+    out, what sending it would create, and the two writes that fill a
+    run from a calendar.  The revisions its events have been through
+    are their own subject and their own module.
 
     No domain logic lives here, and no shaping either.  A route
     decides what to read and what a failure looks like; the
@@ -21,7 +23,6 @@ from typing import List, Optional, Tuple
 # Imports - Third-Party
 from fastapi import (
     APIRouter,
-    Header,
     HTTPException,
     Path,
     Request,
@@ -52,19 +53,15 @@ from star_pass._reporting import Reporter
 from star_pass._repository import JobRepository, RunRepository
 from star_pass_contract import (
     CollectRequest,
-    IDEMPOTENCY_KEY_HEADER,
     JobView,
     no_such_run,
     RecollectRequest,
     PreviewView,
-    RevisionView,
     RunDetailView,
     RunView,
     to_detail_view,
     to_job_view,
     to_preview_view,
-    sealed,
-    to_revision_views,
     to_run_view,
     to_uncollected_views,
     UncollectedGroupView,
@@ -202,144 +199,6 @@ async def get_run(
         raise missing_run(run_id=run_id)
 
     return to_detail_view(detail=detail)
-
-
-@router.get(
-    '/runs/{run_id}/revisions',
-    summary='List a run\'s revisions, oldest first',
-    description=(
-        'Every numbered version of the run\'s events, in the order '
-        'they were made. Everything below the current revision is '
-        'history and is never written to again: editing adds a '
-        'revision holding a copy, and reverting does the same rather '
-        'than deleting anything, so the record of what was done '
-        'survives being undone.\n\n'
-        'Each carries how many changes were made while it was '
-        'current, which is what says whether a revision is worth '
-        'looking at.'
-    ),
-    response_model=List[RevisionView]
-)
-async def list_revisions(
-        run_id: str = Path(
-            description='Identifier the run was created with.'
-        ),
-        principal: Principal = requires(SCOPE_RUNS_READ)
-) -> List[RevisionView]:
-    """ Return a run's revisions.
-
-        Args:
-            run_id (str):
-                Identifier of the run to read the history of.
-
-            principal (Principal):
-                The authenticated caller, which the dependency supplies
-                after checking the scope.
-
-        Raises:
-            HTTPException:
-                404 when there is no such run.  A run that exists and
-                has no revision yet answers with an empty list, which
-                is a different fact and reads differently.
-
-        Returns:
-            revisions (List[RevisionView]):
-                Every revision of the run, oldest first.
-    """
-
-    del principal
-
-    history = await read(
-        lambda connection: read_run_history(
-            connection=connection,
-            run_id=run_id
-        )
-    )
-
-    if history is None:
-        raise missing_run(run_id=run_id)
-
-    run, revisions = history
-
-    return to_revision_views(run=run, revisions=revisions)
-
-
-@router.post(
-    '/runs/{run_id}/revisions',
-    status_code=status.HTTP_201_CREATED,
-    summary='Seal the revision being worked in and open the next',
-    description=(
-        'Fixes what the run holds now as a numbered revision and '
-        'moves the work to a new one holding a copy of it. Editing '
-        'changes the revision a run is working in as it goes, so this '
-        'is what makes a point in that work something to come back '
-        'to.\n\n'
-        'Nothing is deleted and nothing is lost: the revision that '
-        'was current keeps its rows and stays readable at its own '
-        'number, which is what reverting to it later reads.\n\n'
-        'A run that has collected nothing is refused. The first '
-        'revision belongs to the collection, which labels it for what '
-        'filled it.\n\n'
-        'Requires an `Idempotency-Key` header. Sealing is not '
-        'idempotent in itself -- twice is two revisions -- so a retry '
-        'after a lost answer is given the first answer rather than '
-        'opening a second one. The request carries nothing else, so a '
-        'key already used on this run is a replay whatever it is sent '
-        'with.'
-    ),
-    response_model=RevisionView
-)
-async def seal_revision(
-        run_id: str = Path(
-            description='Identifier the run was created with.'
-        ),
-        idempotency_key: str = Header(
-            alias=IDEMPOTENCY_KEY_HEADER,
-            min_length=1,
-            description=(
-                'A value of the caller\'s choosing, unique to this '
-                'action. Repeat it when retrying a request whose '
-                'answer was lost; choose a new one to seal again.'
-            )
-        ),
-        principal: Principal = requires(SCOPE_RUNS_WRITE)
-) -> RevisionView:
-    """ Seal the revision a run is working in and open the next one.
-
-        Args:
-            run_id (str):
-                Identifier of the run to seal.
-
-            idempotency_key (str):
-                What the seal is claimed under, so a retry opens no
-                second revision (D13, D16).
-
-            principal (Principal):
-                Who is sealing it, which the dependency supplies after
-                checking the scope.
-
-        Raises:
-            HTTPException:
-                404 for a run that is not there, 409 for one with
-                nothing collected to seal, and 422 for a key already
-                carrying another request.
-
-        Returns:
-            opened (RevisionView):
-                The revision now being worked in.
-    """
-
-    return RevisionView.model_validate(
-        await read(
-            lambda connection: sealed(
-                connection=connection,
-                run_id=run_id,
-                key=idempotency_key,
-                principal_id=principal.id,
-                refusals=REFUSALS
-            )
-        )
-    )
 
 
 @router.get(

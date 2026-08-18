@@ -2012,6 +2012,78 @@
         ]
       }
     },
+    "/v1/runs/{run_id}/revisions/{number}/revert": {
+      "post": {
+        "description": "Puts the run back to the events one of its earlier revisions holds, by adding a revision holding a copy of that one. The work carries on there.\n\nOne revision per revert, and nothing between the two is touched: every revision the run has been through stays readable at its own number, so a revert can itself be reverted by going back to the revision that was current before it.\n\nReverting to revision 1 also drops the events somebody pulled in by hand, because revision 1 is the run as the calendar gave it. Those events return to the list of what the collection left out, ready to be pulled in again -- the rows describing them were never deleted.\n\nAnswers with the run in full, because every row on the screen that asked has changed.\n\nRequires an `Idempotency-Key` header. Reverting twice is two revisions, so a retry after a lost answer is given the first answer rather than opening a second one. The key remembers which revision was asked for: sent again naming a different one, it is refused rather than answered from the first.",
+        "operationId": "revert_revision",
+        "parameters": [
+          {
+            "description": "Identifier the run was created with.",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the run was created with.",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Revision to go back to the contents of, as the revision list reports it.",
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "description": "Revision to go back to the contents of, as the revision list reports it.",
+              "minimum": 1,
+              "title": "Number",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "A value of the caller's choosing, unique to this action. Repeat it when retrying a request whose answer was lost; choose a new one to revert again.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "A value of the caller's choosing, unique to this action. Repeat it when retrying a request whose answer was lost; choose a new one to revert again.",
+              "minLength": 1,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDetailView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:write"
+            ]
+          }
+        ],
+        "summary": "Take the run back to what an earlier revision held",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
     "/v1/runs/{run_id}/send": {
       "post": {
         "description": "Creates every shift the run's current revision asks for that Amplify does not already have. **This is the one thing star-pass does that cannot be undone**: Amplify has no way to take a shift back.\n\nRequires an `Idempotency-Key` header. The key is stored with what this request answered, so a retry after a lost response is given the first answer rather than sending again. A key carrying a different `expectedShiftCount` is refused rather than answered from the first request, because a key is a promise that the request is the one already made.\n\nDuplicate safety does not rest on that key. Every opportunity is read from Amplify immediately before the request that writes to it, and a shift already there is skipped -- by row identity, never by a count, so nothing depends on knowing which shifts a previous attempt reached. The same read is made here, before the job is queued, and is what `expectedShiftCount` is checked against.\n\nAnswers as soon as the job exists. One request is sent per opportunity, carrying every shift it is missing; a batch is recorded as sent only once its request has succeeded, so a batch whose answer never arrived leaves the run `partly_sent` and the next send reads the opportunity and sends the difference.\n\nRefused while another job is working on the run, while the run is still being collected, and while any event in it cannot become a shift -- a missing shift is invisible until volunteers cannot sign up, so the run stops rather than sending the rest.",

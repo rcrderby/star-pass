@@ -1,19 +1,28 @@
 #!/usr/bin/env python3
-""" Marking where a run has got to, so it can be gone back to.
+""" Marking where a run has got to, and going back to a mark.
 
     An edit changes the revision a run is working in, in place.  That
     is what makes a revision worth sealing: it fixes what the run
     holds now as something numbered and readable, and moves the work
     to a new revision, so a reviewer who is about to try something can
-    come back to what they had.
+    come back to what they had.  Reverting is what coming back means.
 
-    Nothing here deletes anything, and nothing here decides what a
-    caller is told.  Sealing adds a revision holding a copy of the
-    current one; the revision that was current keeps its rows and
-    stays readable at its own number.
+    Both are forward steps and neither destroys anything.  Sealing
+    adds a revision holding a copy of the current one; reverting adds
+    a revision holding a copy of an earlier one, and **one revision
+    per revert**: the revision that was current keeps its rows and
+    stays readable at its own number, so there is nothing to fix in
+    place first and a seal before a revert would only add a revision
+    holding an identical copy of the one before it.
 
-    In the core, not the service: nothing about it is HTTP, and a
-    revision means the same thing to whoever asks for one.
+    The single exception, and the reason reverting is not sealing
+    pointed at a different number: reverting to the revision a
+    collection filled drops the events a person pulled in by hand,
+    because that revision is the run as the calendar gave it.
+
+    Nothing here decides what a caller is told.  In the core, not the
+    service: nothing about it is HTTP, and a revision means the same
+    thing to whoever asks for one.
 """
 
 # Imports - Python Standard Library
@@ -21,16 +30,27 @@ import sqlite3
 from typing import Optional
 
 # Imports - Local
+from ._database import transaction
 from ._exceptions import ValidationError
 from ._logging import get_logger
 from ._records import Revision
-from ._repository import RevisionRepository, RunRepository
+from ._repository import EventRepository, RevisionRepository, RunRepository
 
 # Constants
 # How a revision opened by sealing the one before it is named to a
 # reader.  It says what happened rather than what is in it, because
 # what is in it is a copy of the revision it names.
 CONTINUED_LABEL = 'Continued from revision {number}'
+
+# How a revision opened by reverting to an earlier one is named.  It
+# names the revision that was copied, because that is the question a
+# reader of the history has: which one did the run go back to.
+REVERTED_LABEL = 'Reverted to revision {number}'
+
+# The revision a collection fills.  Reverting to it is asking for the
+# run as the calendar gave it, which is why it is the one revert that
+# drops what a person pulled in by hand.
+COLLECTED_REVISION = 1
 
 # Module logger
 logger = get_logger(__name__)
@@ -98,3 +118,110 @@ def seal(
     logger.info(message)
 
     return opened
+
+
+def revert(
+        connection: sqlite3.Connection,
+        run_id: str,
+        number: int
+) -> Optional[Revision]:
+    """ Take a run back to what an earlier revision holds.
+
+        One revision per revert.  Nothing between the two is deleted,
+        so the revision that was current is still readable at its own
+        number and there is nothing to seal before going back: a seal
+        first would add a revision holding an identical copy of the
+        one it sealed.
+
+        Reverting to the revision the collection filled also drops the
+        events a person pulled in by hand.  That revision is the run
+        as the calendar gave it, and what puts a dropped event back on
+        the list of what was not collected is the current revision no
+        longer holding it -- the row was never deleted.
+
+        Args:
+            connection (sqlite3.Connection):
+                Connection to write on.
+
+            run_id (str):
+                Run to take back.
+
+            number (int):
+                Revision to go back to the contents of.
+
+        Raises:
+            ValidationError:
+                If the run has no such revision.
+
+            UpstreamError:
+                If the revision cannot be written.
+
+        Returns:
+            revision (Revision | None):
+                The revision now being worked in, holding what the
+                one reverted to held, or None when there is no such
+                run.
+    """
+
+    if RunRepository(connection=connection).get(run_id=run_id) is None:
+        return None
+
+    with transaction(connection=connection):
+        opened = RevisionRepository(connection=connection).revert_to(
+            run_id=run_id,
+            number=number,
+            label=REVERTED_LABEL.format(number=number)
+        )
+
+        if number == COLLECTED_REVISION:
+            _drop_hand_added(
+                connection=connection,
+                run_id=run_id,
+                revision=opened.number
+            )
+
+    message = (
+        f'Reverted run {run_id} to revision {number} and opened '
+        f'revision {opened.number}'
+    )
+    logger.info(message)
+
+    return opened
+
+
+def _drop_hand_added(
+        connection: sqlite3.Connection,
+        run_id: str,
+        revision: int
+) -> None:
+    """ Remove from a revision the events a person pulled in.
+
+        Args:
+            connection (sqlite3.Connection):
+                Connection to write on.
+
+            run_id (str):
+                Run the revision belongs to.
+
+            revision (int):
+                Revision to remove them from.
+
+        Raises:
+            UpstreamError:
+                If an event cannot be removed.
+
+        Returns:
+            None.
+    """
+
+    events = EventRepository(connection=connection)
+
+    for event in events.list_all(run_id=run_id, revision=revision):
+        if event.added_by_hand:
+            events.remove(
+                run_id=run_id,
+                revision=revision,
+                event_id=event.id
+            )
+
+    return None
