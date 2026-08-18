@@ -22,10 +22,13 @@
 # Imports - Local
 from ._deciding import (
     edited,
-    EditRefusals,
+    KeyedWrite,
+    keyed_write,
     replayed,
     resumable,
-    sendable
+    sealed,
+    sendable,
+    WriteRefusals
 )
 from ._messages import (
     already_sent,
@@ -141,7 +144,10 @@ __all__ = [
     'previewed',
     'replay',
     'edited',
-    'EditRefusals',
+    'KeyedWrite',
+    'keyed_write',
+    'sealed',
+    'WriteRefusals',
     'replayed',
     'resumable',
     'sendable',

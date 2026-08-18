@@ -19,7 +19,14 @@ import sqlite3
 from typing import List, Optional, Tuple
 
 # Imports - Third-Party
-from fastapi import APIRouter, HTTPException, Path, Request, status
+from fastapi import (
+    APIRouter,
+    Header,
+    HTTPException,
+    Path,
+    Request,
+    status
+)
 from starlette.concurrency import run_in_threadpool
 
 # Imports - Local
@@ -45,6 +52,7 @@ from star_pass._reporting import Reporter
 from star_pass._repository import JobRepository, RunRepository
 from star_pass_contract import (
     CollectRequest,
+    IDEMPOTENCY_KEY_HEADER,
     JobView,
     no_such_run,
     RecollectRequest,
@@ -55,11 +63,13 @@ from star_pass_contract import (
     to_detail_view,
     to_job_view,
     to_preview_view,
+    sealed,
     to_revision_views,
     to_run_view,
     to_uncollected_views,
     UncollectedGroupView,
-    why_not_recollect
+    why_not_recollect,
+    WriteRefusals
 )
 from . import _defaults
 from ._security import (
@@ -89,6 +99,16 @@ def missing_run(
     """
 
     return not_found(detail=no_such_run(run_id=run_id))
+
+
+# How this half says no to a keyed write.  A status code belongs to
+# the transport, so the shared sequence is given these rather than
+# choosing them.
+REFUSALS = WriteRefusals(
+    missing=missing_run,
+    conflict=conflict,
+    refuse=unprocessable
+)
 
 
 @router.get(
@@ -242,6 +262,84 @@ async def list_revisions(
     run, revisions = history
 
     return to_revision_views(run=run, revisions=revisions)
+
+
+@router.post(
+    '/runs/{run_id}/revisions',
+    status_code=status.HTTP_201_CREATED,
+    summary='Seal the revision being worked in and open the next',
+    description=(
+        'Fixes what the run holds now as a numbered revision and '
+        'moves the work to a new one holding a copy of it. Editing '
+        'changes the revision a run is working in as it goes, so this '
+        'is what makes a point in that work something to come back '
+        'to.\n\n'
+        'Nothing is deleted and nothing is lost: the revision that '
+        'was current keeps its rows and stays readable at its own '
+        'number, which is what reverting to it later reads.\n\n'
+        'A run that has collected nothing is refused. The first '
+        'revision belongs to the collection, which labels it for what '
+        'filled it.\n\n'
+        'Requires an `Idempotency-Key` header. Sealing is not '
+        'idempotent in itself -- twice is two revisions -- so a retry '
+        'after a lost answer is given the first answer rather than '
+        'opening a second one. The request carries nothing else, so a '
+        'key already used on this run is a replay whatever it is sent '
+        'with.'
+    ),
+    response_model=RevisionView
+)
+async def seal_revision(
+        run_id: str = Path(
+            description='Identifier the run was created with.'
+        ),
+        idempotency_key: str = Header(
+            alias=IDEMPOTENCY_KEY_HEADER,
+            min_length=1,
+            description=(
+                'A value of the caller\'s choosing, unique to this '
+                'action. Repeat it when retrying a request whose '
+                'answer was lost; choose a new one to seal again.'
+            )
+        ),
+        principal: Principal = requires(SCOPE_RUNS_WRITE)
+) -> RevisionView:
+    """ Seal the revision a run is working in and open the next one.
+
+        Args:
+            run_id (str):
+                Identifier of the run to seal.
+
+            idempotency_key (str):
+                What the seal is claimed under, so a retry opens no
+                second revision (D13, D16).
+
+            principal (Principal):
+                Who is sealing it, which the dependency supplies after
+                checking the scope.
+
+        Raises:
+            HTTPException:
+                404 for a run that is not there, 409 for one with
+                nothing collected to seal, and 422 for a key already
+                carrying another request.
+
+        Returns:
+            opened (RevisionView):
+                The revision now being worked in.
+    """
+
+    return RevisionView.model_validate(
+        await read(
+            lambda connection: sealed(
+                connection=connection,
+                run_id=run_id,
+                key=idempotency_key,
+                principal_id=principal.id,
+                refusals=REFUSALS
+            )
+        )
+    )
 
 
 @router.get(

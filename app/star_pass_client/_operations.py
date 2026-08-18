@@ -395,6 +395,36 @@ class Operations:
             job_id=job_id
         )
 
+    def seal_revision(
+            self,
+            run_id: str,
+            idempotency_key: str
+    ) -> Any:
+        """ Seal the revision being worked in and open the next.
+
+            Args:
+                run_id (str):
+                    Value for the path.
+
+                idempotency_key (str):
+                    Value for the Idempotency-Key header.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='POST',
+            path='/v1/runs/{run_id}/revisions',
+            headers={'Idempotency-Key': idempotency_key},
+            run_id=run_id
+        )
+
     def send_run(
             self,
             body: Dict[str, Any],

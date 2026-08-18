@@ -293,6 +293,23 @@ class TestWhatLocalModeCannotDo:
 
         assert 'web interface' in str(error.value)
 
+    def test_sealing_says_where_a_revision_is_sealed(
+        self,
+        local_client: LocalClient
+    ) -> None:
+        # Reading the revisions a run has been through is
+        # troubleshooting and has a command; sealing one is done from
+        # the screen about to change what it holds (D2).
+        with pytest.raises(LocalOperationUnavailable) as error:
+            local_client.seal_revision(
+                run_id='r-1',
+                idempotency_key='an-attempt'
+            )
+
+        # The reason says where it is done rather than "not yet",
+        # which is the difference between a decision and a gap.
+        assert 'sealed from the screen' in str(error.value)
+
     def test_the_two_clients_offer_the_same_operations(
         self,
         local_client: LocalClient,

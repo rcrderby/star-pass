@@ -103,6 +103,13 @@ UNAVAILABLE = {
         'sends (D2).'
     ),
     (
+        'POST', '/v1/runs/{run_id}/revisions'
+    ): (
+        'A revision is sealed from the screen that is about to change '
+        'what it holds, which is the web interface. The command line '
+        'reads the revisions a run has been through (D2).'
+    ),
+    (
         'POST', '/v1/runs/{run_id}/events'
     ): (
         'Pulling an event in is done in the web interface, beside the '
