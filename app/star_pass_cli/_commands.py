@@ -42,7 +42,7 @@ from uuid import uuid4
 from star_pass._exceptions import StarPassError
 from star_pass_client import ApiProblem, LocalOperationUnavailable
 from ._confirm import confirmed, ConfirmationUnavailable
-from ._configuration import config_text
+from ._configuration import config_text, credential_text
 from ._mode import API_URL_VARIABLE, client_for
 from ._output import write
 from ._render import (
@@ -79,7 +79,10 @@ NOT_SENT = 'Nothing was sent.'
 GROUPS = {
     'runs': 'Collect, read and send runs.',
     'jobs': 'Watch and resume the jobs long operations run as.',
-    'config': 'Read what the deployment was configured with.'
+    'config': (
+        'Read what the deployment was configured with, and test the '
+        'credential it runs on.'
+    )
 }
 
 
@@ -376,6 +379,16 @@ COMMANDS = (
         ),
         operation='get_config',
         render=config_text
+    ),
+    Command(
+        group='config',
+        word='credential',
+        summary=(
+            'Test the Amplify credential and show its last four '
+            'characters.'
+        ),
+        operation='test_credential',
+        render=credential_text
     )
 )
 

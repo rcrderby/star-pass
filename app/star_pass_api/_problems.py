@@ -57,6 +57,10 @@ PROBLEM_TYPE_UNEXPECTED = f'{PROBLEM_TYPE_PREFIX}:unexpected'
 
 # What a caller is told when the reason is not theirs to see.  The
 # reference in the same document is how the reason is found.
+# What a status meaning "not now" says when to come back in.  Whole
+# seconds, as the header is defined.
+RETRY_AFTER_HEADER = 'Retry-After'
+
 INTERNAL_DETAIL = (
     'The service could not complete the request. Quote the reference '
     'when reporting it.'
@@ -128,7 +132,8 @@ logger = get_logger(__name__)
 
 def refusal(
         status_code: int,
-        detail: str
+        detail: str,
+        headers: Optional[Dict[str, str]] = None
 ) -> HTTPException:
     """ Return a failure a route raises rather than answers with.
 
@@ -146,6 +151,11 @@ def refusal(
                 Why, written for the caller.  A 4xx carries its reason,
                 because the caller is the one who can act on it.
 
+            headers (Dict[str, str], optional):
+                Headers the status requires.  Defaults to None.  A
+                status that says "later" has to say when, and the body
+                is not where a client looks for it.
+
         Returns:
             error (HTTPException):
                 The failure, for the handlers to shape into a problem
@@ -154,7 +164,8 @@ def refusal(
 
     return HTTPException(
         status_code=status_code,
-        detail=detail
+        detail=detail,
+        headers=headers
     )
 
 
@@ -219,6 +230,31 @@ def unprocessable(
     return refusal(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail=detail
+    )
+
+
+def too_many(
+        detail: str,
+        retry_after: int
+) -> HTTPException:
+    """ Return the failure for asking for something too often.
+
+        Args:
+            detail (str):
+                What to tell the caller.
+
+            retry_after (int):
+                Whole seconds until asking again would be allowed.
+
+        Returns:
+            error (HTTPException):
+                A 429 carrying that reason and when to come back.
+    """
+
+    return refusal(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail=detail,
+        headers={RETRY_AFTER_HEADER: str(retry_after)}
     )
 
 

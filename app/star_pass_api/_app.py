@@ -32,6 +32,7 @@ from star_pass._logging import get_logger
 from star_pass._repository import JobRepository
 from . import _defaults
 from ._configuration import router as config_router
+from ._credentials import router as credentials_router
 from ._editing import router as editing_router
 from ._health import router as health_router
 from ._jobs import router as jobs_router
@@ -167,6 +168,7 @@ def create_app() -> FastAPI:
         health_router,
         version_router,
         config_router,
+        credentials_router,
         runs_router,
         revisions_router,
         editing_router,

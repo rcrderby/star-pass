@@ -770,6 +770,52 @@ class TestShowingTheConfiguration:
         assert _configuration.excluded_text(terms=[]) == _render.NOTHING
 
 
+class TestTestingTheCredential:
+    def test_a_working_credential_is_said_to_be_working(
+        self,
+        answer_requests: Callable[..., list],
+        capsys: pytest.CaptureFixture,
+        cli: Callable[..., int]
+    ) -> None:
+        answer_requests(lambda _request: {'data': []})
+
+        status = cli('config', 'credential')
+
+        assert status == 0
+        assert _configuration.WORKING in capsys.readouterr().out
+
+    def test_the_four_characters_are_shown_and_no_more(
+        self,
+        answer_requests: Callable[..., list],
+        capsys: pytest.CaptureFixture,
+        cli: Callable[..., int]
+    ) -> None:
+        answer_requests(lambda _request: {'data': []})
+
+        cli('config', 'credential')
+        shown = capsys.readouterr().out
+
+        assert shown.splitlines()[1].endswith('oken')
+        assert 'test-amplify-token' not in shown
+
+    def test_a_credential_that_is_not_there_says_so_with_its_reason(
+        self,
+        capsys: pytest.CaptureFixture,
+        cli: Callable[..., int],
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # An answer rather than a failure, so the command succeeds and
+        # what it printed is the finding.
+        monkeypatch.delenv('AMPLIFY_TOKEN', raising=False)
+
+        status = cli('config', 'credential')
+        shown = capsys.readouterr().out
+
+        assert status == 0
+        assert _configuration.NOT_WORKING in shown
+        assert 'AMPLIFY_TOKEN' in shown
+
+
 class TestWhyAnEventCannotBeSent:
     def test_every_reason_the_core_publishes_is_worded(self) -> None:
         # A reason with no wording shows as its identifier, which is

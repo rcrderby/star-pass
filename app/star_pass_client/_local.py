@@ -31,6 +31,7 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
 # Imports - Local
 from __version__ import __version__
+from star_pass._credentials import check_credential
 from star_pass._database import connect
 from star_pass._opportunities import shifts_in_amplify
 from star_pass._reading import (
@@ -45,6 +46,7 @@ from star_pass_contract import (
     no_such_job,
     no_such_run,
     to_config_view,
+    to_credential_view,
     to_detail_view,
     to_job_view,
     to_preview_view,
@@ -65,6 +67,7 @@ from ._stream import StreamEvent
 HANDLERS = {
     ('GET', '/v1/version'): '_version',
     ('GET', '/v1/config'): '_config',
+    ('POST', '/v1/credentials/test'): '_credential',
     ('POST', '/v1/runs'): '_collect',
     ('POST', '/v1/runs/{run_id}/recollect'): '_recollect',
     ('POST', '/v1/runs/{run_id}/send'): '_send',
@@ -352,6 +355,36 @@ class LocalClient(OperationCaller, LocalWrites, Operations):
         del self
 
         return to_config_view().model_dump(
+            by_alias=True,
+            mode='json'
+        )
+
+    def _credential(self) -> Dict[str, Any]:
+        """ Report whether Amplify accepts the configured credential.
+
+            Answered locally because "is the credential still good" is
+            the first question asked when a send fails, and asking it
+            is troubleshooting (D2).  It opens no database: a
+            credential is not stored.
+
+            Not rate-limited here.  What the limit protects is a
+            public surface being asked repeatedly about a secret; this
+            is the operator asking their own machine, with the
+            credential already on it.
+
+            Args:
+                None.
+
+            Returns:
+                answer (Dict[str, Any]):
+                    Whether it works, and its last four characters.
+        """
+
+        del self
+
+        return to_credential_view(
+            checked=check_credential()
+        ).model_dump(
             by_alias=True,
             mode='json'
         )

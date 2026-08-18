@@ -225,6 +225,23 @@ restarting: no endpoint and no command writes a setting (D8), and the
 same goes for credentials, which are rotated the same way and are
 never displayed.
 
+### Testing the Amplify credential
+
+```bash
+./app/__main__.py config credential
+```
+
+Sends one small read to Amplify and says whether it was accepted, with
+the last four characters of the credential so two can be told apart.
+The credential itself is never shown and nothing replaces it: rotation
+is changing the secret and restarting (D8). A credential Amplify will
+not take is an answer rather than a failure, so the command succeeds
+and prints what it found.
+
+The endpoint behind it is rate-limited per caller, because every call
+spends a request on somebody else's service. Locally there is no
+limit: that is the operator asking their own machine.
+
 ### Collecting a run
 
 ```bash

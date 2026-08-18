@@ -148,6 +148,54 @@
         "title": "ConfigView",
         "type": "object"
       },
+      "CredentialView": {
+        "description": "What asking Amplify about the service's credential answered. ",
+        "properties": {
+          "lastFour": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last four characters of the credential, which is enough to tell two apart and no use to whoever reads it. The credential itself is never published, and no endpoint replaces it: rotation is changing the secret and restarting (D8). Absent when none is configured.",
+            "examples": [
+              "4f2a"
+            ],
+            "title": "Lastfour"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the credential did not work, written for a person. Absent when it did.",
+            "examples": [
+              null
+            ],
+            "title": "Reason"
+          },
+          "working": {
+            "description": "Whether Amplify accepted a request carrying the credential this service is running on. False also covers a credential that is not configured at all, and the reason says which.",
+            "examples": [
+              true
+            ],
+            "title": "Working",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "working"
+        ],
+        "title": "CredentialView",
+        "type": "object"
+      },
       "EditRequest": {
         "description": "One user action, as the operations it is made of. ",
         "properties": {
@@ -1367,6 +1415,41 @@
           }
         ],
         "summary": "Report what the service was configured with",
+        "tags": [
+          "service"
+        ]
+      }
+    },
+    "/v1/credentials/test": {
+      "post": {
+        "description": "Sends one small authenticated read to Amplify and reports whether it was accepted, with the last four characters of the credential so two can be told apart. The credential itself is never published and no endpoint replaces it: rotation is changing the secret and restarting (D8).\n\nA credential Amplify would not take is an answer rather than a failure -- `working` is false and `reason` says what happened -- because whether it works is the question that was asked.\n\nRate-limited per caller. Asking too often is refused with a `429` and a `Retry-After` header, and the refusal sends nothing to Amplify.\n\nA `POST` rather than a `GET` because it is not free: every call reaches somebody else's service, which is not something to cache or repeat on a client's whim. It stores nothing and takes no idempotency key.",
+        "operationId": "test_credential",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "config:read"
+            ]
+          }
+        ],
+        "summary": "Test the Amplify credential this service is running on",
         "tags": [
           "service"
         ]
