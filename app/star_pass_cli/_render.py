@@ -144,18 +144,25 @@ def last_day(
 ) -> str:
     """ Return the last day a window covers, as a reader means it.
 
+        Read from the answer rather than worked out here.  The
+        contract publishes it because every client showing a window
+        has to say it this way, and the subtraction that used to live
+        here was the first of what would have been one per client --
+        two of which can disagree about which days a run covers.
+        'after' is still this module's, because that direction is a
+        request: the command line takes the day it displays and hands
+        the contract the day after.
+
         Args:
             window (Dict[str, Any]):
-                A window from an answer, whose end is exclusive.
+                A window from an answer.
 
         Returns:
             day (str):
                 The last day covered, as an ISO date.
     """
 
-    return str(
-        date.fromisoformat(window['end']) - timedelta(days=1)
-    )
+    return window['lastDay']
 
 
 def after(

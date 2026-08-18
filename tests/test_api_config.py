@@ -18,6 +18,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 # Imports - Local
+from star_pass._models import get_shifts_info
 from star_pass_api import _defaults
 
 # Constants
@@ -47,6 +48,22 @@ def fixture_configured(
         return response.json()
 
     return read
+
+
+def categories_of(
+    calendar: str
+) -> list:
+    """ Return the categories the shipped model offers a calendar. """
+
+    return [
+        {
+            'key': key,
+            'label': category['description'],
+            'needIds': [str(need['id']) for need in category['need_ids']]
+        }
+        for key, category in
+        get_shifts_info()['calendar'][calendar]['categories'].items()
+    ]
 
 
 class TestWhatTheServiceReports:
@@ -90,9 +107,113 @@ class TestWhatTheServiceReports:
         )['calendars'] == [
             {
                 'key': 'practices',
-                'searchTerms': ['officials', 'scrimmage']
+                'searchTerms': ['officials', 'scrimmage'],
+                'categories': categories_of('practices')
             }
         ]
+
+    def test_a_calendar_reports_the_categories_it_offers(
+        self,
+        configured: Callable[..., Dict[str, Any]]
+    ) -> None:
+        # What a reviewer may put an event under. Without it the
+        # review screen's opportunity chooser can only offer the
+        # categories already on the run's events, which is exactly not
+        # the case it exists for: an event that matched nothing needs
+        # one no other event used.
+        published = configured()['calendars']
+        offered = {
+            calendar['key']: [
+                category['key'] for category in calendar['categories']
+            ]
+            for calendar in published
+        }
+
+        assert offered == {
+            calendar: list(body['categories'])
+            for calendar, body in get_shifts_info()['calendar'].items()
+        }
+
+    def test_a_category_carries_the_needs_it_creates_shifts_under(
+        self,
+        configured: Callable[..., Dict[str, Any]]
+    ) -> None:
+        # More than one is ordinary: an event serving skating and
+        # non-skating officials creates two shifts.
+        published = {
+            category['key']: category
+            for calendar in configured()['calendars']
+            for category in calendar['categories']
+        }
+
+        for calendar, body in get_shifts_info()['calendar'].items():
+            for key, category in body['categories'].items():
+                assert published[key]['needIds'] == [
+                    str(need['id']) for need in category['need_ids']
+                ]
+                assert published[key]['label'] == category['description']
+                assert calendar
+
+    def test_the_fallback_category_is_not_offered(
+        self,
+        configured: Callable[..., Dict[str, Any]]
+    ) -> None:
+        # Its need IDs are empty on purpose, so an event put under it
+        # could not become a shift. Offering it would be offering a
+        # choice the write refuses.
+        offered = {
+            category['key']
+            for calendar in configured()['calendars']
+            for category in calendar['categories']
+        }
+
+        assert 'default' not in offered
+
+    def test_a_category_with_no_usable_need_is_not_offered(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        configured: Callable[..., Dict[str, Any]]
+    ) -> None:
+        # The same rule as the fallback, applied to whatever else a
+        # deployment configures that way.
+        monkeypatch.setattr(
+            f'{SETTINGS}.get_shifts_info',
+            lambda: {
+                'calendar': {
+                    'practices': {
+                        'categories': {
+                            'usable': {
+                                'description': 'Usable',
+                                'need_ids': [{'id': 123456}]
+                            },
+                            'blank': {
+                                'description': 'Blank',
+                                'need_ids': [{'id': ''}]
+                            },
+                            'none_at_all': {
+                                'description': 'None',
+                                'need_ids': []
+                            }
+                        }
+                    }
+                }
+            }
+        )
+
+        offered = [
+            category['key']
+            for calendar in configured(
+                GCAL_CALENDARS={
+                    'practices': {
+                        'gcal_id': 'a-calendar-identifier',
+                        'query_strings': ['officials']
+                    }
+                }
+            )['calendars']
+            for category in calendar['categories']
+        ]
+
+        assert offered == ['usable']
 
     def test_an_empty_query_string_is_published_as_it_is_configured(
         self,

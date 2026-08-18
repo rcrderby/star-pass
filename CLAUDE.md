@@ -548,11 +548,17 @@ The notes below are the ones that are not obvious from the commands.
   volunteer's name, or an upstream body holding either. A 4xx does
   carry its reason: the caller is the one who can act on it.
 - The window crosses the wire with an exclusive `end` and is *spoken
-  about* by the last day it covers — displayed as one by `last_day`,
-  and taken as one by `runs collect --last-day`, which `after` turns
-  back. Both conversions are in `star_pass_cli/_render.py` and nowhere
-  else, so the authoritative value stays unconverted everywhere it is
-  stored, sent or compared.
+  about* by the last day it covers. **The answer carries both**: `end`
+  is authoritative and stays unconverted everywhere it is stored, sent
+  or compared, and `lastDay` beside it is the same window said the way
+  a reader means it, worked out once in `star_pass_contract/_views`.
+  Published rather than left to each client because every client that
+  shows a window has to say it that way, and one subtraction per
+  client is a client that can disagree with the server about which
+  days a run covers. The **other** direction stays in
+  `star_pass_cli/_render.py`: `after` takes the day `runs collect
+  --last-day` was given and hands the contract the day after, because
+  that is a request, and no request takes an inclusive day.
 - Endpoints live under `/v1`. Changes within a version are additive;
   a breaking change is served at a new prefix alongside the old one.
   A route's own path is written **without** the prefix, because the
@@ -584,9 +590,19 @@ The notes below are the ones that are not obvious from the commands.
   `end`, the pair the repository stores, plus the zone they are read
   in. The server's zone is authoritative: a client displays those
   dates and never works a window out in the zone of whoever is looking
-  at it (D16). An inclusive `lastDay` on the wire is an additive
-  change to make when a client needs one, not a reason to convert on
-  the way out.
+  at it (D16). It carries an inclusive `lastDay` as well, added when
+  the web interface became a second client having to say it that way;
+  a client displays that field and does not subtract a day of its
+  own.
+- **`GET /v1/config` publishes the categories each calendar offers**,
+  because that is the list a `set_category` edit may name and no
+  reading of a run produces it: a run holds the opportunities its own
+  events reached, and the event that needs the chooser is the one that
+  matched nothing. The fallback the data model falls back to is not
+  among them — its need IDs are empty on purpose, so an event under it
+  could not become a shift, and offering it would be offering a choice
+  the write refuses. A category configured with no usable need ID is
+  left out for the same reason.
 - The job event stream reads the job's status *before* its events.
   The other order loses an event written between the two reads: the
   events read would not hold it, and the status read after it would

@@ -438,7 +438,8 @@ def fixture_asking_to_send(
 
 @pytest.fixture(name='asked_to_send')
 def fixture_asked_to_send(
-    monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
+    window_document: dict
 ) -> List[Dict[str, Any]]:
     """ Answer a send without a service, keeping what it was asked.
 
@@ -458,11 +459,7 @@ def fixture_asked_to_send(
             return {
                 'id': run_id,
                 'calendar': 'events',
-                'window': {
-                    'start': '2026-09-01',
-                    'end': '2026-10-01',
-                    'timezone': 'America/Los_Angeles'
-                }
+                'window': dict(window_document)
             }
 
         @staticmethod

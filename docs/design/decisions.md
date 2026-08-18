@@ -317,6 +317,18 @@ own dates had not been read in. The window is parsed in **`GCAL_TIMEZONE`**,
 that is what a run and `GET /v1/config` both publish, and the server's zone
 being the authoritative one is unchanged.
 
+**Extended (2026-08-18):** the window now crosses the wire as `start`,
+the exclusive `end` **and** an inclusive `lastDay`. The exclusive end is
+still the authoritative value and is what is stored, sent and compared;
+`lastDay` is the same window said the way a reader means it, worked out
+once on the server. `CLAUDE.md` had named a client needing one as the
+trigger, and the web interface is that client — every client that shows
+a window has to say it that inclusive way, and a subtraction written
+once per client is a client that can disagree with the server about
+which days a run covers. The direction that has no published field is
+the request one: `runs collect --last-day` still converts locally,
+because no request takes an inclusive day.
+
 **Revisit if:** never — these are correctness, not preference.
 
 ---

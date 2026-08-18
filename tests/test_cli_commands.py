@@ -414,15 +414,28 @@ class TestShowingAJob:
 class TestWhatACommandShows:
     def test_the_window_is_shown_by_the_last_day_it_covers(self) -> None:
         # The contract carries an exclusive end because that is what
-        # the server stores; a person reading a run means the last day
-        # it covers, so the conversion happens where it is displayed.
+        # the server stores, and the last day beside it because every
+        # client showing a window means that one.  What is pinned here
+        # is that the published day is what reaches a reader; that it
+        # is the right day is pinned where it is worked out.
         assert _render.window_text(
-            window={'start': '2026-09-01', 'end': '2026-10-01'}
+            window={
+                'start': '2026-09-01',
+                'end': '2026-10-01',
+                'lastDay': '2026-09-30'
+            }
         ) == '2026-09-01 to 2026-09-30'
 
-    def test_a_one_day_window_shows_one_day(self) -> None:
+    def test_the_exclusive_end_is_never_what_is_shown(self) -> None:
+        # The failure this catches is a client falling back to 'end'
+        # when 'lastDay' is what it means, which reads as a run
+        # covering a day it does not.
         assert _render.window_text(
-            window={'start': '2026-09-01', 'end': '2026-09-02'}
+            window={
+                'start': '2026-09-01',
+                'end': '2026-09-02',
+                'lastDay': '2026-09-01'
+            }
         ) == '2026-09-01 to 2026-09-01'
 
     def test_columns_are_aligned_under_their_headers(self) -> None:

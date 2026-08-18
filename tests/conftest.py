@@ -612,8 +612,27 @@ def fixture_make_opportunity() -> Callable[..., Opportunity]:
     return build
 
 
+@pytest.fixture(name='window_document')
+def fixture_window_document() -> dict:
+    """ Return a one-month window as an answer carries one.
+
+        Shared by the fixtures standing in for a service, because a
+        window is one fact: two copies of it can disagree about which
+        day a run ends on, which is the disagreement 'lastDay' was
+        published to stop.
+    """
+    return {
+        'start': '2026-09-01',
+        'end': '2026-10-01',
+        'lastDay': '2026-09-30',
+        'timezone': 'America/Los_Angeles'
+    }
+
+
 @pytest.fixture(name='make_run_document')
-def fixture_make_run_document() -> Callable[..., dict]:
+def fixture_make_run_document(
+    window_document: dict
+) -> Callable[..., dict]:
     """ Return a factory building a run as an answer carries one. """
 
     def build(**overrides: Any) -> dict:
@@ -621,11 +640,7 @@ def fixture_make_run_document() -> Callable[..., dict]:
         return {
             'id': 'r-1',
             'calendar': 'practices',
-            'window': {
-                'start': '2026-09-01',
-                'end': '2026-10-01',
-                'timezone': 'America/Los_Angeles'
-            },
+            'window': dict(window_document),
             'status': 'unsent',
             'revisedAt': '2026-09-02T01:00:00+00:00',
             'counts': {
