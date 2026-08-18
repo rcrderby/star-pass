@@ -2,6 +2,11 @@
 fastapi==0.141.1
 uvicorn==0.52.3
 
+# The front end's connection to the API service. Async, and it passes
+# an event stream through as it arrives rather than at the end, which
+# is what watching a job needs.
+httpx2==2.10.0
+
 # .env file support
 python_dotenv==1.2.2
 
