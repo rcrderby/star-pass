@@ -366,6 +366,45 @@ UNCOLLECTED_REASONS = (
 
 
 @dataclass(frozen=True)
+class UnmatchedTitle:
+    """ A title the data model did not match, and how often it has been.
+
+        What is stored is a **sighting**: the same title noticed in two
+        runs is two rows, because how often something turns up is what
+        says whether it is worth an alias.  What is read back is this
+        -- one entry per title in a calendar, with the sightings
+        counted -- because a list showing the same title eleven times
+        is a list nobody works through.
+
+        Attributes:
+            calendar (str):
+                Which configured calendar the title was seen in.  Part
+                of the identity rather than a note beside it: the
+                categories a title is matched against belong to a
+                calendar, so the same title can be matched in one and
+                unmatched in another.
+
+            title (str):
+                The title, as the calendar gave it.
+
+            times_seen (int):
+                How many sightings have been recorded.
+
+            first_seen (str):
+                When the earliest was recorded, ISO-8601 UTC.
+
+            last_seen (str):
+                When the most recent was, ISO-8601 UTC.
+    """
+
+    calendar: str
+    title: str
+    times_seen: int
+    first_seen: str
+    last_seen: str
+
+
+@dataclass(frozen=True)
 class UncollectedEvent:
     """ Something in a run's window that did not become an event.
 

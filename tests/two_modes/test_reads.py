@@ -176,6 +176,23 @@ class TestTheTwoModesAgree:
         assert local['working'] is True
         assert local['lastFour']
 
+    def test_the_unmatched_titles_read_the_same(
+        self,
+        both: Callable[..., Tuple[Any, Any]],
+        unmatched: Any
+    ) -> None:
+        unmatched.record(
+            calendar='events',
+            title='Jet City vs Cherry City',
+            principal_id='static-token'
+        )
+
+        local, remote = both('list_unmatched_titles')
+
+        assert local == remote
+        # Guard against both answering an empty document identically.
+        assert local[0]['timesSeen'] == 1
+
     def test_an_empty_database_reads_the_same(
         self,
         both: Callable[..., Tuple[Any, Any]],
@@ -341,6 +358,20 @@ class TestWhatLocalModeCannotDo:
             )
 
         assert 'looking at what the run holds now' in str(error.value)
+
+    def test_recording_a_title_says_where_it_is_done(
+        self,
+        local_client: LocalClient
+    ) -> None:
+        # Reading the log is what happens before the model file is
+        # edited, so it has a command; recording one is done from the
+        # screen showing the event the title blocked (D2).
+        with pytest.raises(LocalOperationUnavailable) as error:
+            local_client.record_unmatched_title(
+                body={'calendar': 'events', 'title': 'Something'}
+            )
+
+        assert 'screen showing the event' in str(error.value)
 
     def test_the_two_clients_offer_the_same_operations(
         self,

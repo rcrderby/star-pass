@@ -55,7 +55,8 @@ from star_pass._records import (
     ShiftIdentity,
     UncollectedEvent,
     UNCOLLECTED_REASONS,
-    UNCOLLECTED_SEARCH
+    UNCOLLECTED_SEARCH,
+    UnmatchedTitle
 )
 from ._requests import EditRequest
 from ._schemas import (
@@ -80,6 +81,7 @@ from ._schemas import (
     SkippedShiftView,
     UncollectedEventView,
     UncollectedGroupView,
+    UnmatchedTitleView,
     WindowView
 )
 
@@ -675,3 +677,43 @@ def to_credential_view(
         last_four=checked.last_four,
         reason=checked.reason
     )
+
+
+def to_unmatched_view(
+        unmatched: UnmatchedTitle
+) -> UnmatchedTitleView:
+    """ Return one title the data model did not match.
+
+        Args:
+            unmatched (UnmatchedTitle):
+                The title and its sightings, as they are stored.
+
+        Returns:
+            view (UnmatchedTitleView):
+                The entry a caller is shown, shaped for the contract.
+    """
+
+    return UnmatchedTitleView(
+        calendar=unmatched.calendar,
+        title=unmatched.title,
+        times_seen=unmatched.times_seen,
+        first_seen=unmatched.first_seen,
+        last_seen=unmatched.last_seen
+    )
+
+
+def to_unmatched_title_views(
+        unmatched: Sequence[UnmatchedTitle]
+) -> List[UnmatchedTitleView]:
+    """ Return every title the data model has not matched.
+
+        Args:
+            unmatched (Sequence[UnmatchedTitle]):
+                The titles, in the order to publish them.
+
+        Returns:
+            views (List[UnmatchedTitleView]):
+                One entry per title in a calendar.
+    """
+
+    return [to_unmatched_view(unmatched=entry) for entry in unmatched]

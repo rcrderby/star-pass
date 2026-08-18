@@ -77,6 +77,10 @@ from typing import Any, Callable, Dict, Iterator
 from ._stream import StreamEvent
 
 
+# How many methods this class has is how many operations the contract
+# publishes, so the usual cap is measuring the API rather than
+# anything a person wrote here.
+# pylint: disable=too-many-public-methods
 class Operations:
     """ One method per operation the contract publishes.
 

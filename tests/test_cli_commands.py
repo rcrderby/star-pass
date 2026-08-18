@@ -816,6 +816,40 @@ class TestTestingTheCredential:
         assert 'AMPLIFY_TOKEN' in shown
 
 
+class TestListingUnmatchedTitles:
+    def test_each_title_is_shown_with_how_often_it_was_seen(
+        self,
+        capsys: pytest.CaptureFixture,
+        cli: Callable[..., int],
+        unmatched: Any
+    ) -> None:
+        for _sighting in range(2):
+            unmatched.record(
+                calendar='events',
+                title='Jet City vs Cherry City',
+                principal_id='static-token'
+            )
+
+        status = cli('config', 'unmatched')
+        shown = capsys.readouterr().out
+
+        assert status == 0
+        assert 'Jet City vs Cherry City' in shown
+        assert '  2  ' in shown
+
+    def test_an_empty_log_says_so_rather_than_showing_a_heading(
+        self,
+        capsys: pytest.CaptureFixture,
+        cli: Callable[..., int]
+    ) -> None:
+        # A finding rather than an empty screen: every title anybody
+        # recorded matched a category.
+        status = cli('config', 'unmatched')
+
+        assert status == 0
+        assert _configuration.NOTHING_UNMATCHED in capsys.readouterr().out
+
+
 class TestWhyAnEventCannotBeSent:
     def test_every_reason_the_core_publishes_is_worded(self) -> None:
         # A reason with no wording shows as its identifier, which is

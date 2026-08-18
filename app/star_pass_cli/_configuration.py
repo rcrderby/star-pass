@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Showing what the service was configured with, and whether it works.
+""" What the deployment was configured with, and what it is missing.
 
     Its own module beside the two that show a run: '_render' shows
     what a run holds and '_sending' what would become of it, and a
@@ -15,7 +15,9 @@
     The credential is shown beside the settings for the same reason it
     is read beside them: it is a fact about this deployment rather
     than about any run, and the four characters published of it are
-    there to answer "which one is it running on".
+    there to answer "which one is it running on".  The titles the data
+    model has not matched are here on the same argument, and they are
+    read by whoever is about to edit the model.
 """
 
 # Imports - Python Standard Library
@@ -55,6 +57,24 @@ NOT_WORKING = 'not working'
 # How the four published characters are shown.  Said as an ending
 # rather than printed alone, so nobody reads them as the credential.
 ENDING = 'ending {last_four}'
+
+# What an unmatched title's row shows, in order.  The count is the
+# column the reader is scanning: a title seen every month is a
+# category the model is missing, and one seen once is an event that
+# happened once.
+UNMATCHED_HEADERS = (
+    'CALENDAR',
+    'TITLE',
+    'SEEN',
+    'LAST SEEN'
+)
+
+# Said when the log holds nothing, which is a finding rather than an
+# empty screen: every title anybody recorded matched a category.
+NOTHING_UNMATCHED = (
+    'No unmatched titles have been recorded. Every title anybody has '
+    'recorded matched a category.'
+)
 
 
 def searched_for(
@@ -188,3 +208,51 @@ def credential_text(
         return lines
 
     return f'{lines}\n\n{answer["reason"]}'
+
+
+def unmatched_row(
+        unmatched: Dict[str, Any]
+) -> List[str]:
+    """ Return one unmatched title as a row.
+
+        Args:
+            unmatched (Dict[str, Any]):
+                An entry from an answer.
+
+        Returns:
+            row (List[str]):
+                One value per column in 'UNMATCHED_HEADERS'.
+    """
+
+    return [
+        unmatched['calendar'],
+        unmatched['title'],
+        str(unmatched['timesSeen']),
+        unmatched['lastSeen']
+    ]
+
+
+def unmatched_text(
+        answer: Sequence[Dict[str, Any]]
+) -> str:
+    """ Return the titles the data model has not matched.
+
+        Args:
+            answer (Sequence[Dict[str, Any]]):
+                The entries a client answered with.
+
+        Returns:
+            text (str):
+                A table, or a sentence when nothing has been recorded.
+    """
+
+    if not answer:
+        return NOTHING_UNMATCHED
+
+    return table(
+        headers=UNMATCHED_HEADERS,
+        rows=[
+            unmatched_row(unmatched=unmatched)
+            for unmatched in answer
+        ]
+    )

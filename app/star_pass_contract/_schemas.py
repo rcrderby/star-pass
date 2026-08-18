@@ -782,6 +782,36 @@ class CredentialView(ApiModel):
     )
 
 
+class UnmatchedTitleView(ApiModel):
+    """ A title the data model did not match, and how often. """
+
+    calendar: str = Field(
+        description='Which configured calendar it was seen in.',
+        examples=['events']
+    )
+    title: str = Field(
+        description='The title, as the calendar gave it.',
+        examples=['Jet City vs Cherry City']
+    )
+    times_seen: int = Field(
+        description=(
+            'How many sightings have been recorded. What says whether '
+            'a title is worth an alias: one that turns up every month '
+            'is a category the model is missing, and one seen once is '
+            'an event that happened once.'
+        ),
+        examples=[3]
+    )
+    first_seen: str = Field(
+        description='When the earliest sighting was recorded, UTC.',
+        examples=['2026-08-01T17:04:11Z']
+    )
+    last_seen: str = Field(
+        description='When the most recent one was, UTC.',
+        examples=['2026-09-01T16:58:02Z']
+    )
+
+
 class ConfigView(ApiModel):
     """ What the service resolved from its environment. """
 

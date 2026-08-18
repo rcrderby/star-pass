@@ -59,6 +59,7 @@ from ._requests import (
     EventOperationRequest,
     RecollectRequest,
     SendRequest,
+    UnmatchedTitleRequest,
     WindowRequest
 )
 from ._schemas import (
@@ -85,6 +86,7 @@ from ._schemas import (
     SkippedShiftView,
     UncollectedEventView,
     UncollectedGroupView,
+    UnmatchedTitleView,
     WindowView
 )
 from ._views import (
@@ -98,7 +100,9 @@ from ._views import (
     to_preview_view,
     to_revision_views,
     to_run_view,
-    to_uncollected_views
+    to_uncollected_views,
+    to_unmatched_title_views,
+    to_unmatched_view
 )
 
 __all__ = [
@@ -132,9 +136,11 @@ __all__ = [
     'EditView',
     'EventOperationRequest',
     'SendRequest',
+    'UnmatchedTitleRequest',
     'SkippedShiftView',
     'UncollectedEventView',
     'UncollectedGroupView',
+    'UnmatchedTitleView',
     'WindowRequest',
     'WindowView',
     'already_sent',
@@ -169,6 +175,8 @@ __all__ = [
     'to_revision_views',
     'to_run_view',
     'to_uncollected_views',
+    'to_unmatched_title_views',
+    'to_unmatched_view',
     'why_not_recollect',
     'why_not_resume',
     'why_not_send'

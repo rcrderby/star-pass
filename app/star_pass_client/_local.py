@@ -41,7 +41,11 @@ from star_pass._reading import (
     read_run_uncollected
 )
 from star_pass._records import Revision, Run
-from star_pass._repository import JobRepository, RunRepository
+from star_pass._repository import (
+    JobRepository,
+    RunRepository,
+    UnmatchedTitleRepository
+)
 from star_pass_contract import (
     no_such_job,
     no_such_run,
@@ -52,7 +56,8 @@ from star_pass_contract import (
     to_preview_view,
     to_revision_views,
     to_run_view,
-    to_uncollected_views
+    to_uncollected_views,
+    to_unmatched_title_views
 )
 from ._calling import Operation, OperationCaller
 from ._client import ApiProblem
@@ -68,6 +73,7 @@ HANDLERS = {
     ('GET', '/v1/version'): '_version',
     ('GET', '/v1/config'): '_config',
     ('POST', '/v1/credentials/test'): '_credential',
+    ('GET', '/v1/unmatched-titles'): '_unmatched_titles',
     ('POST', '/v1/runs'): '_collect',
     ('POST', '/v1/runs/{run_id}/recollect'): '_recollect',
     ('POST', '/v1/runs/{run_id}/send'): '_send',
@@ -119,6 +125,14 @@ UNAVAILABLE = {
         'at what the run holds now and deciding it was better before. '
         'The command line reads the revisions a run has been through '
         '(D2).'
+    ),
+    (
+        'POST', '/v1/unmatched-titles'
+    ): (
+        'A title is recorded from the screen showing the event it '
+        'blocked, which is where somebody is looking when they decide '
+        'the model is missing one. The command line reads the log, '
+        'because reading it is what happens next to the file (D2).'
     ),
     (
         'POST', '/v1/runs/{run_id}/events'
@@ -388,6 +402,31 @@ class LocalClient(OperationCaller, LocalWrites, Operations):
             by_alias=True,
             mode='json'
         )
+
+    def _unmatched_titles(self) -> List[Dict[str, Any]]:
+        """ Return every title the data model has not matched.
+
+            Answered locally because the list is read by whoever is
+            about to edit the model, and editing it is a file on this
+            machine rather than anything the web interface does (D2).
+
+            Args:
+                None.
+
+            Returns:
+                answer (List[Dict[str, Any]]):
+                    One entry per title in a calendar, newest first.
+        """
+
+        with self._opened() as connection:
+            unmatched = UnmatchedTitleRepository(
+                connection=connection
+            ).list_all()
+
+        return [
+            view.model_dump(by_alias=True, mode='json')
+            for view in to_unmatched_title_views(unmatched=unmatched)
+        ]
 
     def _runs(self) -> List[Dict[str, Any]]:
         """ Return every run, newest first.

@@ -1296,6 +1296,103 @@
         "title": "UncollectedGroupView",
         "type": "object"
       },
+      "UnmatchedTitleRequest": {
+        "description": "A title the data model did not match, to keep for later. ",
+        "properties": {
+          "calendar": {
+            "description": "Which configured calendar the title was seen in. Part of what a title is, rather than a note beside it: the categories a title is matched against belong to a calendar, so the same title can be matched in one and unmatched in another.",
+            "examples": [
+              "events"
+            ],
+            "title": "Calendar",
+            "type": "string"
+          },
+          "runId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The run the title was noticed in, when it was noticed in one. Kept as provenance and nothing more: the log outlives the run, and deleting a run does not take the reason somebody was going to edit the model with it.",
+            "examples": [
+              "3f2b1c..."
+            ],
+            "title": "Runid"
+          },
+          "title": {
+            "description": "The title, as the calendar gave it. Recorded as it was written, because what the model has to match is the thing somebody typed.",
+            "examples": [
+              "Jet City vs Cherry City"
+            ],
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "calendar",
+          "title"
+        ],
+        "title": "UnmatchedTitleRequest",
+        "type": "object"
+      },
+      "UnmatchedTitleView": {
+        "description": "A title the data model did not match, and how often. ",
+        "properties": {
+          "calendar": {
+            "description": "Which configured calendar it was seen in.",
+            "examples": [
+              "events"
+            ],
+            "title": "Calendar",
+            "type": "string"
+          },
+          "firstSeen": {
+            "description": "When the earliest sighting was recorded, UTC.",
+            "examples": [
+              "2026-08-01T17:04:11Z"
+            ],
+            "title": "Firstseen",
+            "type": "string"
+          },
+          "lastSeen": {
+            "description": "When the most recent one was, UTC.",
+            "examples": [
+              "2026-09-01T16:58:02Z"
+            ],
+            "title": "Lastseen",
+            "type": "string"
+          },
+          "timesSeen": {
+            "description": "How many sightings have been recorded. What says whether a title is worth an alias: one that turns up every month is a category the model is missing, and one seen once is an event that happened once.",
+            "examples": [
+              3
+            ],
+            "title": "Timesseen",
+            "type": "integer"
+          },
+          "title": {
+            "description": "The title, as the calendar gave it.",
+            "examples": [
+              "Jet City vs Cherry City"
+            ],
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "calendar",
+          "title",
+          "timesSeen",
+          "firstSeen",
+          "lastSeen"
+        ],
+        "title": "UnmatchedTitleView",
+        "type": "object"
+      },
       "Version": {
         "description": "The running version of the application. ",
         "properties": {
@@ -2286,6 +2383,88 @@
         "summary": "List what the window held and the run did not collect",
         "tags": [
           "runs"
+        ]
+      }
+    },
+    "/v1/unmatched-titles": {
+      "get": {
+        "description": "One entry per title in a calendar, with how many sightings have been recorded and when the first and most recent were. Newest sighting first, so a title that has just started turning up is read before one somebody has already decided about.\n\nWhat it is for: the next edit of the shift data model. A title seen every month is a category the model is missing; one seen once is an event that happened once, and the count is what tells them apart.\n\nBelongs to no run. A run is a window that is eventually superseded, and what the model is missing outlives it.",
+        "operationId": "list_unmatched_titles",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UnmatchedTitleView"
+                  },
+                  "title": "Response List Unmatched Titles",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "config:read"
+            ]
+          }
+        ],
+        "summary": "List titles the data model has not matched",
+        "tags": [
+          "service"
+        ]
+      },
+      "post": {
+        "description": "Adds one sighting. The same title recorded twice is two sightings and one entry: how often a title turns up is what says whether it is worth an alias, and an entry overwritten would answer \"once\" forever.\n\nAnswers with the entry as the log now holds it, this sighting counted.\n\nThe calendar has to be one the deployment configured, because the categories a title is matched against belong to a calendar. The run is optional provenance: the log outlives the run, and deleting one does not take the reason somebody was going to edit the model.\n\nNo `Idempotency-Key`. A sighting is not a state, so a retry after a lost answer records that the title was seen again, which is true.",
+        "operationId": "record_unmatched_title",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnmatchedTitleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnmatchedTitleView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:write"
+            ]
+          }
+        ],
+        "summary": "Record a title the data model did not match",
+        "tags": [
+          "service"
         ]
       }
     },

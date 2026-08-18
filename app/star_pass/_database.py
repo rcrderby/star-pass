@@ -47,7 +47,7 @@ DATABASE_BUSY_TIMEOUT = _defaults.DATABASE_BUSY_TIMEOUT
 # forward.  A later one means the file was written by a newer version
 # of the application, which is a deployment problem rather than
 # something to guess at.
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 # Pragmas applied to every connection.  'foreign_keys' is off by
 # default and is per-connection rather than stored in the file, so
@@ -274,6 +274,32 @@ SCHEMA_STATEMENTS = (
     """
     CREATE INDEX IF NOT EXISTS ix_idempotency_keys_run
         ON idempotency_keys (run_id, created_at)
+    """,
+    # Titles the data model did not match, kept for the next time the
+    # model is edited.  A sighting rather than a title: the same title
+    # seen in two runs is two rows, because how often something turns
+    # up is what says whether it is worth an alias, and one row
+    # overwritten would answer "once" forever.
+    #
+    # Belongs to no run.  A run is a window that was collected and is
+    # eventually superseded; what the model is missing outlives it,
+    # which is the whole reason for storing it somewhere else.  The
+    # run it was noticed in is recorded and does not cascade, for the
+    # same reason: deleting a run must not delete the reason somebody
+    # was going to edit the model.
+    """
+    CREATE TABLE IF NOT EXISTS unmatched_titles (
+        id            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        calendar      TEXT    NOT NULL,
+        title         TEXT    NOT NULL,
+        run_id        TEXT,
+        recorded_at   TEXT    NOT NULL,
+        principal_id  TEXT    NOT NULL
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_unmatched_titles_seen
+        ON unmatched_titles (calendar, title)
     """
 )
 

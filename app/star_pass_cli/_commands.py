@@ -42,7 +42,11 @@ from uuid import uuid4
 from star_pass._exceptions import StarPassError
 from star_pass_client import ApiProblem, LocalOperationUnavailable
 from ._confirm import confirmed, ConfirmationUnavailable
-from ._configuration import config_text, credential_text
+from ._configuration import (
+    config_text,
+    credential_text,
+    unmatched_text
+)
 from ._mode import API_URL_VARIABLE, client_for
 from ._output import write
 from ._render import (
@@ -80,8 +84,9 @@ GROUPS = {
     'runs': 'Collect, read and send runs.',
     'jobs': 'Watch and resume the jobs long operations run as.',
     'config': (
-        'Read what the deployment was configured with, and test the '
-        'credential it runs on.'
+        'Read what the deployment was configured with, test the '
+        'credential it runs on, and see what its data model has not '
+        'matched.'
     )
 }
 
@@ -389,6 +394,15 @@ COMMANDS = (
         ),
         operation='test_credential',
         render=credential_text
+    ),
+    Command(
+        group='config',
+        word='unmatched',
+        summary=(
+            'List the titles the shift data model has not matched.'
+        ),
+        operation='list_unmatched_titles',
+        render=unmatched_text
     )
 )
 
