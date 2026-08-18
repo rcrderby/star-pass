@@ -118,10 +118,12 @@ def fixture_collect_run(
 
     def run(
         items: List[Dict[str, Any]],
+        *,
         categories: Dict[str, Any] = None,
         run_id: str = None,
         titled: bool = True,
-        unsearched: List[Dict[str, Any]] = None
+        unsearched: List[Dict[str, Any]] = None,
+        reporter: Reporter = None
     ):
         """ Collect, with the calendar and Amplify answering to plan. """
         shift_model(
@@ -136,7 +138,7 @@ def fixture_collect_run(
         return collect(
             connection=connection,
             run_id=run_id if run_id is not None else collecting,
-            reporter=Reporter(),
+            reporter=reporter or Reporter(),
             principal_id=COLLECTED_BY
         )
 

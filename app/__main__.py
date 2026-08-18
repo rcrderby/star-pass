@@ -25,6 +25,7 @@ from star_pass_cli import (
     run_command,
     run_maintenance,
     selected,
+    step_text,
     write
 )
 
@@ -97,13 +98,23 @@ class TerminalReporter(Reporter):
 
     def step_started(
             self,
-            label: str
+            step: str,
+            subject: str = ''
     ) -> None:
         """ Open a status line, leaving it for 'step_finished'.
 
+            The core names the step and this decides what to call it,
+            through the same map the job watcher reads: a step is one
+            thing whether it is watched here or read back off a job,
+            so it is worded once.
+
             Args:
-                label (str):
-                    Description of the work.
+                step (str):
+                    Which one, from 'STEPS'.
+
+                subject (str, optional):
+                    What it is working on, where its wording asks for
+                    one.  Defaults to an empty string.
 
             Returns:
                 None.
@@ -111,7 +122,10 @@ class TerminalReporter(Reporter):
 
         prefix = '' if self._started else '\n'
         self._started = True
-        write(f'{prefix}{label}...', end='')
+        write(
+            f'{prefix}{step_text(step=step, subject=subject)}...',
+            end=''
+        )
 
         return None
 
@@ -143,32 +157,25 @@ class TerminalReporter(Reporter):
 
         return None
 
-    def calendar_read_started(self) -> None:
-        """ Announce the calendar read.
+    def sending_started(
+            self,
+            opportunities: int
+    ) -> None:
+        """ Announce the send, and how much of it there is.
 
             Args:
-                None.
+                opportunities (int):
+                    How many opportunities the send will work through.
 
             Returns:
                 None.
         """
 
-        self._started = True
-        write('\nReading data from the Google Calendar service...')
-
-        return None
-
-    def sending_started(self) -> None:
-        """ Announce the send.
-
-            Args:
-                None.
-
-            Returns:
-                None.
-        """
-
-        write('\nSending shift data to Amplify...')
+        noun = 'opportunity' if opportunities == 1 else 'opportunities'
+        write(
+            f'\nSending shift data to Amplify, across '
+            f'{opportunities} {noun}...'
+        )
 
         return None
 
@@ -207,18 +214,25 @@ class TerminalReporter(Reporter):
 
         return None
 
-    def shifts_sent(
+    def opportunity_sent(
             self,
             batch: ShiftBatch
     ) -> None:
-        """ Render one opportunity's batch at the chosen verbosity.
+        """ Render one opportunity's turn at the chosen verbosity.
 
             The need ID is not shown at any verbosity: the title names
             the opportunity in a way an operator recognizes.
 
+            What Amplify already held is shown beside what was
+            created, and only when there was any.  An opportunity that
+            needed nothing is the case this reports that the old one
+            did not, and a line saying it created nothing without
+            saying why would read as a failure.
+
             Args:
                 batch (ShiftBatch):
-                    The opportunity, and the shifts created under it.
+                    The opportunity, what was created under it, and
+                    what it already held.
 
             Returns:
                 None.
@@ -232,18 +246,23 @@ class TerminalReporter(Reporter):
 
         shift_count = len(shifts)
         shift_noun = 'shift' if shift_count == 1 else 'shifts'
+        already = (
+            f', {batch.skipped} already in Amplify'
+            if batch.skipped
+            else ''
+        )
 
         if self.verbosity == VERBOSITY_LEVELS[0]:
             message = (
                 f'{index}. {title} - '
-                f'{shift_count} new {shift_noun}'
+                f'{shift_count} new {shift_noun}{already}'
             )
 
         elif self.verbosity == VERBOSITY_LEVELS[1]:
             message = (
                 f'Opportunity Title: {title}\n'
                 f'URL: {url}\n'
-                f'Shift Count: {shift_count}\n'
+                f'Shift Count: {shift_count}{already}\n'
             )
 
             for shift in shifts:
@@ -261,7 +280,7 @@ class TerminalReporter(Reporter):
             message = (
                 f'URL: {url}\n'
                 f'Opportunity Title: {title}\n'
-                f'Shift Count: {shift_count}\n'
+                f'Shift Count: {shift_count}{already}\n'
                 f'Payload:\n{dumps(payload, indent=2)}'
             )
 

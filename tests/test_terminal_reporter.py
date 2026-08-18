@@ -18,7 +18,15 @@ from pathlib import Path
 import pytest
 
 # Imports - Local
-from star_pass._reporting import ShiftBatch
+from star_pass._reporting import (
+    ShiftBatch,
+    STEP_FILTER_EVENTS,
+    STEP_MATCH_EVENTS,
+    STEP_READ_CALENDAR,
+    STEP_READ_OPPORTUNITY,
+    STEP_STORE_EVENTS
+)
+from star_pass_cli import step_text
 
 _MAIN_PATH = Path(__file__).resolve().parent.parent / 'app' / '__main__.py'
 
@@ -38,6 +46,7 @@ def batch(**overrides) -> ShiftBatch:
         'title': 'Adult Games: Non-Skating Officials',
         'url': 'https://example.test/needs/879609/shifts',
         'shifts': SHIFTS,
+        'skipped': 0,
         'payload': PAYLOAD
     }
     fields.update(overrides)
@@ -62,45 +71,75 @@ class TestSteps:
         # it.  The core cannot add it, because it does not know which
         # step is first.
         reporter = reporter_class()
-        reporter.step_started(label='Removing duplicate shifts')
+        reporter.step_started(step=STEP_STORE_EVENTS)
         reporter.step_finished()
 
         assert capsys.readouterr().out == (
-            '\nRemoving duplicate shifts...done.\n'
+            f'\n{step_text(step=STEP_STORE_EVENTS)}...done.\n'
         )
 
     def test_later_steps_are_not(self, reporter_class, capsys):
         reporter = reporter_class()
-        reporter.step_started(label='First')
+        reporter.step_started(step=STEP_FILTER_EVENTS)
         reporter.step_finished()
-        reporter.step_started(label='Second')
+        reporter.step_started(step=STEP_MATCH_EVENTS)
         reporter.step_finished()
 
         assert capsys.readouterr().out == (
-            '\nFirst...done.\nSecond...done.\n'
+            f'\n{step_text(step=STEP_FILTER_EVENTS)}...done.\n'
+            f'{step_text(step=STEP_MATCH_EVENTS)}...done.\n'
         )
 
     def test_a_failed_step_closes_its_line(self, reporter_class, capsys):
         # The reason is not printed: it reaches the caller as an
         # exception and is already logged.
         reporter = reporter_class()
-        reporter.step_started(label='Reading shift data')
+        reporter.step_started(step=STEP_READ_CALENDAR)
         reporter.step_failed()
 
-        assert capsys.readouterr().out == '\nReading shift data...\n'
+        assert capsys.readouterr().out == (
+            f'\n{step_text(step=STEP_READ_CALENDAR)}...\n'
+        )
+
+    def test_a_step_names_what_it_is_working_on(
+        self, reporter_class, capsys
+    ):
+        # The send reads each opportunity before writing to it, and
+        # which one is the whole content of the line.
+        reporter = reporter_class()
+        reporter.step_started(
+            step=STEP_READ_OPPORTUNITY,
+            subject='879609'
+        )
+        reporter.step_finished()
+
+        assert '879609' in capsys.readouterr().out
+
+    def test_a_step_nobody_worded_names_itself(
+        self, reporter_class, capsys
+    ):
+        # Rather than vanishing, which is what a lookup returning an
+        # empty string would do.
+        reporter = reporter_class()
+        reporter.step_started(step='invented_later')
+        reporter.step_finished()
+
+        assert capsys.readouterr().out == '\ninvented_later...done.\n'
 
 
 class TestCollectionEvents:
-    def test_the_calendar_read_is_announced_on_its_own_line(
+    def test_the_calendar_read_is_a_step_like_the_others(
         self, reporter_class, capsys
     ):
-        # Announced rather than opened as a step: the read reports
-        # nothing until every configured query string has returned.
+        # A step rather than an announcement: it is one of two upstream
+        # reads a collection makes, and an operator whose collection
+        # stopped needs to see which of them stopped it.
         reporter = reporter_class()
-        reporter.calendar_read_started()
+        reporter.step_started(step=STEP_READ_CALENDAR)
+        reporter.step_finished()
 
         assert capsys.readouterr().out == (
-            '\nReading data from the Google Calendar service...\n'
+            '\nReading data from the Google Calendar service...done.\n'
         )
 
     def test_a_step_after_the_read_gets_no_second_blank_line(
@@ -109,13 +148,14 @@ class TestCollectionEvents:
         # The read is the first thing a collection run prints, so it
         # takes the leading blank line and the next step must not.
         reporter = reporter_class()
-        reporter.calendar_read_started()
-        reporter.step_started(label='Processing Google Calendar event data')
+        reporter.step_started(step=STEP_READ_CALENDAR)
+        reporter.step_finished()
+        reporter.step_started(step=STEP_FILTER_EVENTS)
         reporter.step_finished()
 
         assert capsys.readouterr().out == (
-            '\nReading data from the Google Calendar service...\n'
-            'Processing Google Calendar event data...done.\n'
+            '\nReading data from the Google Calendar service...done.\n'
+            f'{step_text(step=STEP_FILTER_EVENTS)}...done.\n'
         )
 
 
@@ -124,7 +164,7 @@ class TestSendReport:
         self, reporter_class, capsys
     ):
         reporter = reporter_class(verbosity='basic')
-        reporter.shifts_sent(batch=batch())
+        reporter.opportunity_sent(batch=batch())
 
         assert capsys.readouterr().out == (
             '1. Adult Games: Non-Skating Officials - 2 new shifts\n'
@@ -134,7 +174,7 @@ class TestSendReport:
         self, reporter_class, capsys
     ):
         reporter = reporter_class(verbosity='basic')
-        reporter.shifts_sent(
+        reporter.opportunity_sent(
             batch=batch(
                 index=2,
                 need_id=879610,
@@ -153,7 +193,7 @@ class TestSendReport:
         self, reporter_class, capsys
     ):
         reporter = reporter_class(verbosity='simple')
-        reporter.shifts_sent(batch=batch())
+        reporter.opportunity_sent(batch=batch())
 
         out = capsys.readouterr().out
         assert out.startswith(
@@ -166,7 +206,7 @@ class TestSendReport:
 
     def test_detailed_includes_the_payload(self, reporter_class, capsys):
         reporter = reporter_class(verbosity='detailed')
-        reporter.shifts_sent(batch=batch())
+        reporter.opportunity_sent(batch=batch())
 
         out = capsys.readouterr().out
         assert out.startswith(
@@ -177,13 +217,60 @@ class TestSendReport:
         )
         assert '"duration": 120' in out
 
+    def test_an_opportunity_that_needed_nothing_says_why(
+        self, reporter_class, capsys
+    ):
+        # Reported like any other, because the send finished with it.
+        # A line saying it created nothing, with no reason beside it,
+        # would read as a failure.
+        reporter = reporter_class(verbosity='basic')
+        reporter.opportunity_sent(
+            batch=batch(shifts=[], skipped=2, payload={'shifts': []})
+        )
+
+        assert capsys.readouterr().out == (
+            '1. Adult Games: Non-Skating Officials - 0 new shifts, '
+            '2 already in Amplify\n'
+        )
+
+    def test_nothing_is_said_about_what_amplify_did_not_hold(
+        self, reporter_class, capsys
+    ):
+        # The usual case, and the clause is left off it entirely.
+        reporter = reporter_class(verbosity='basic')
+        reporter.opportunity_sent(batch=batch())
+
+        assert 'already in Amplify' not in capsys.readouterr().out
+
+    def test_the_send_says_how_much_of_it_there_is(
+        self, reporter_class, capsys
+    ):
+        # The count a reader watches the send against. Nowhere else to
+        # get it: the run does not know what a send would touch.
+        reporter = reporter_class()
+        reporter.sending_started(opportunities=3)
+
+        assert capsys.readouterr().out == (
+            '\nSending shift data to Amplify, across 3 '
+            'opportunities...\n'
+        )
+
+    def test_one_opportunity_is_singular(self, reporter_class, capsys):
+        reporter = reporter_class()
+        reporter.sending_started(opportunities=1)
+
+        assert capsys.readouterr().out == (
+            '\nSending shift data to Amplify, across 1 '
+            'opportunity...\n'
+        )
+
     def test_an_unknown_verbosity_shows_the_least(
         self, reporter_class, capsys
     ):
         # A bad value shows less rather than failing a run that is
         # otherwise fine.
         reporter = reporter_class(verbosity='chatty')
-        reporter.shifts_sent(batch=batch())
+        reporter.opportunity_sent(batch=batch())
 
         assert capsys.readouterr().out == (
             '1. Adult Games: Non-Skating Officials - 2 new shifts\n'

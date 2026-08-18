@@ -58,7 +58,12 @@ from ._records import (
     UncollectedEvent,
     UNCOLLECTED_SEARCH
 )
-from ._reporting import Reporter
+from ._reporting import (
+    Reporter,
+    STEP_MATCH_EVENTS,
+    STEP_READ_OPPORTUNITIES,
+    STEP_STORE_EVENTS
+)
 from ._derived import blocks_the_run
 from ._repository import (
     EventRepository,
@@ -485,7 +490,7 @@ def _collected(
                 The events, and one opportunity per need ID they name.
     """
 
-    reporter.step_started(label='Matching events to opportunities')
+    reporter.step_started(step=STEP_MATCH_EVENTS)
 
     events = []
     timings: Dict[str, RoleTiming] = {}
@@ -519,7 +524,7 @@ def _collected(
             timings.setdefault(need_id, timing)
 
     reporter.step_finished()
-    reporter.step_started(label='Reading the Amplify opportunities')
+    reporter.step_started(step=STEP_READ_OPPORTUNITIES)
 
     opportunities = [
         opportunity_read(
@@ -615,7 +620,7 @@ def collect(
         reporter=reporter
     )
 
-    reporter.step_started(label='Storing the collected events')
+    reporter.step_started(step=STEP_STORE_EVENTS)
 
     with transaction(connection=connection):
         # Replacing, not continuing.  What the calendar says now is

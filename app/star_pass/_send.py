@@ -62,7 +62,11 @@ from ._records import (
     RUN_STATUS_PARTLY_SENT,
     RUN_STATUS_SENT
 )
-from ._reporting import Reporter, ShiftBatch
+from ._reporting import (
+    Reporter,
+    ShiftBatch,
+    STEP_READ_OPPORTUNITY
+)
 from ._repository import (
     IdempotencyRepository,
     JobRepository,
@@ -494,7 +498,8 @@ def _send_to(
     """
 
     reporter.step_started(
-        label=f'Reading what opportunity {need_id} already holds'
+        step=STEP_READ_OPPORTUNITY,
+        subject=need_id
     )
     existing = shifts_in(
         need_id=need_id,
@@ -502,34 +507,37 @@ def _send_to(
     )
     reporter.step_finished()
 
-    creating, _already = split_by_existing(
+    creating, already = split_by_existing(
         shifts=wanted,
         existing=existing
     )
+    # An opportunity Amplify already holds every shift for is one this
+    # send finished with, so nothing is created and nothing recorded,
+    # and the report below is made all the same.
+    payload = payload_for(shifts=())
 
-    if not creating:
-        return ()
+    if creating:
+        payload = _create(
+            helpers=sending.helpers,
+            need_id=need_id,
+            shifts=creating
+        )
+        _record(
+            connection=sending.connection,
+            run_id=sending.run_id,
+            shifts=creating,
+            principal_id=sending.principal_id,
+            idempotency_key=sending.idempotency_key
+        )
 
-    payload = _create(
-        helpers=sending.helpers,
-        need_id=need_id,
-        shifts=creating
-    )
-    _record(
-        connection=sending.connection,
-        run_id=sending.run_id,
-        shifts=creating,
-        principal_id=sending.principal_id,
-        idempotency_key=sending.idempotency_key
-    )
-
-    reporter.shifts_sent(
+    reporter.opportunity_sent(
         batch=ShiftBatch(
             index=index,
             need_id=need_id,
             title=sending.titles.get(need_id, UNKNOWN_TITLE),
             url=shifts_url(need_id=need_id),
             shifts=payload[SHIFTS_DICT_KEY_NAME],
+            skipped=len(already),
             payload=payload
         )
     )
@@ -601,7 +609,7 @@ def send(
     )
     created = 0
 
-    reporter.sending_started()
+    reporter.sending_started(opportunities=len(asked.by_opportunity))
 
     for index, (need_id, wanted) in enumerate(
         iterable=sorted(asked.by_opportunity.items()),

@@ -25,7 +25,11 @@ from star_pass._records import (
     RUN_STATUS_SENT,
     RUN_STATUS_UNSENT
 )
-from star_pass._reporting import Reporter
+from star_pass._reporting import (
+    Reporter,
+    ShiftBatch,
+    STEP_READ_OPPORTUNITY
+)
 from star_pass._repository import RunRepository, SentShiftRepository
 from star_pass._send import send
 
@@ -100,17 +104,64 @@ def fixture_sending(
 ) -> Callable[..., Any]:
     """ Return a way to send one run against the test's database. """
 
-    def run(run_id: str, key: str = SEND_ATTEMPT) -> Any:
-        """ Send the run, reporting nowhere. """
+    def run(
+        run_id: str,
+        key: str = SEND_ATTEMPT,
+        reporter: Reporter = None
+    ) -> Any:
+        """ Send the run, reporting nowhere unless asked. """
         return send(
             connection=connection,
             run_id=run_id,
-            reporter=Reporter(),
+            reporter=reporter or Reporter(),
             principal_id=PRINCIPAL_ID,
             idempotency_key=key
         )
 
     return run
+
+
+class Recording(Reporter):
+    """ A reporter that keeps what it was told, in order.
+
+        What a send reports is read by a screen that draws a row per
+        opportunity and counts them against a total, so these tests
+        ask what was said rather than only what was sent.
+    """
+
+    def __init__(self) -> None:
+        """ Start with nothing recorded. """
+        self.started: List[int] = []
+        self.steps: List[tuple] = []
+        self.opportunities: List[ShiftBatch] = []
+
+    def sending_started(self, opportunities: int) -> None:
+        """ Keep how many opportunities the send announced. """
+        self.started.append(opportunities)
+
+    def step_started(self, step: str, subject: str = '') -> None:
+        """ Keep which step began, and what it is working on. """
+        self.steps.append((step, subject))
+
+    def opportunity_sent(self, batch: ShiftBatch) -> None:
+        """ Keep one opportunity's turn. """
+        self.opportunities.append(batch)
+
+
+@pytest.fixture(name='recording')
+def fixture_recording(
+    amplify_holds: Callable[..., list]
+) -> Recording:
+    """ Return a recorder, with Amplify holding nothing of its own.
+
+        The arrangement every test about what a send reports shares,
+        except the one asking what it says about an opportunity
+        Amplify already holds -- which builds its own recorder beside
+        'already_there'.
+    """
+    amplify_holds()
+
+    return Recording()
 
 
 class TestWhatReachesAmplify:
@@ -231,6 +282,88 @@ class TestWhatReachesAmplify:
         sending(collected)
 
         assert len(creates(sent)[0]['json']['shifts']) == 1
+
+
+class TestWhatASendReports:
+    def test_the_send_announces_how_many_opportunities(
+        self,
+        sending: Callable[..., Any],
+        collected: str,
+        add_second_event: Callable[..., None],
+        recording: Recording
+    ) -> None:
+        # The total a screen counts progress against, and the only
+        # place it can come from once a send is under way: reading the
+        # preview for it would ask Amplify about a run being written
+        # to.
+        add_second_event(
+            date='2026-09-10',
+            roles=(EventRole(need_id=OTHER_NEED_ID, slots=2),)
+        )
+
+        sending(collected, reporter=recording)
+
+        assert recording.started == [2]
+
+    def test_two_events_under_one_opportunity_are_one(
+        self,
+        sending: Callable[..., Any],
+        collected: str,
+        add_second_event: Callable[..., None],
+        recording: Recording
+    ) -> None:
+        # The other half of the figure, and what says it counts
+        # opportunities rather than events: the send makes one request
+        # per opportunity, so two events sharing one is one thing to
+        # work through.
+        add_second_event(date='2026-09-10')
+
+        sending(collected, reporter=recording)
+
+        assert recording.started == [1]
+
+    def test_the_read_before_a_write_names_its_opportunity(
+        self,
+        sending: Callable[..., Any],
+        collected: str,
+        recording: Recording
+    ) -> None:
+        # As a value beside the step rather than words inside it: a
+        # screen addressing a row cannot read English.
+        sending(collected, reporter=recording)
+
+        assert recording.steps == [(STEP_READ_OPPORTUNITY, NEED_ID)]
+
+    def test_an_opportunity_reports_what_it_created(
+        self,
+        sending: Callable[..., Any],
+        collected: str,
+        recording: Recording
+    ) -> None:
+        sending(collected, reporter=recording)
+        batch = recording.opportunities[0]
+
+        assert len(batch.shifts) == 1
+        assert batch.skipped == 0
+
+    def test_an_opportunity_that_needed_nothing_still_reports(
+        self,
+        already_there: list,
+        sending: Callable[..., Any],
+        collected: str
+    ) -> None:
+        # Nothing is created for it, and it is still an opportunity
+        # the send finished with. Reported only when rows were
+        # created, its row on a screen could never leave "sending" and
+        # the count of what is done would stop short of the total.
+        del already_there
+        watching = Recording()
+
+        sending(collected, reporter=watching)
+        batch = watching.opportunities[0]
+
+        assert batch.shifts == []
+        assert batch.skipped == 1
 
 
 class TestWhatIsWrittenDown:

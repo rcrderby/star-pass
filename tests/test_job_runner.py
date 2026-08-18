@@ -15,7 +15,12 @@ import pytest
 from star_pass._exceptions import UpstreamError, ValidationError
 from star_pass._job_runner import JobReporter, JobRunner, UNEXPECTED_DETAIL
 from star_pass._records import JOB_STATUS_FAILED, JOB_STATUS_SUCCEEDED
-from star_pass._reporting import Reporter, ShiftBatch
+from star_pass._reporting import (
+    Reporter,
+    ShiftBatch,
+    STEP_READ_OPPORTUNITY,
+    STEP_STORE_EVENTS
+)
 from star_pass._repository import JobRepository
 
 # Constants
@@ -111,7 +116,7 @@ class TestRunningAJob:
 
         def work(reporter: Reporter) -> None:
             recorded.append('ran')
-            reporter.step_started(label='Working')
+            reporter.step_started(step=STEP_STORE_EVENTS)
 
         run_to_completion(runner=runner, job_id=job_id, work=work)
 
@@ -208,7 +213,7 @@ class TestWhenWorkFails:
         job_id: str
     ) -> None:
         def work(reporter: Reporter) -> None:
-            reporter.step_started(label='Sending shifts')
+            reporter.step_started(step=STEP_READ_OPPORTUNITY)
             reporter.step_failed()
             raise UpstreamError('Amplify answered 503')
 
@@ -238,20 +243,53 @@ class TestTheReporterBridge:
     ) -> None:
         reporter = JobReporter(jobs=jobs, job_id=job_id)
 
-        reporter.calendar_read_started()
-        reporter.sending_started()
+        reporter.sending_started(opportunities=2)
         reporter.summary_skipped()
 
         assert [
             event.kind
             for event in jobs.events(job_id=job_id)
         ] == [
-            'calendar_read_started',
             'sending_started',
             'summary_skipped'
         ]
 
-    def test_a_step_carries_its_label(
+    def test_a_send_records_how_many_opportunities_it_has(
+        self,
+        jobs: JobRepository,
+        job_id: str
+    ) -> None:
+        # The total a screen counts against, which is nowhere else in
+        # the stream: a client that reattaches after a reload replays
+        # this frame and has it again.
+        JobReporter(
+            jobs=jobs,
+            job_id=job_id
+        ).sending_started(opportunities=4)
+
+        assert jobs.events(job_id=job_id)[0].payload == {
+            'opportunities': 4
+        }
+
+    def test_a_step_carries_its_identifier(
+        self,
+        jobs: JobRepository,
+        job_id: str
+    ) -> None:
+        # The identifier and not a sentence: this log is read back
+        # over the API by clients that word what the contract
+        # publishes themselves.
+        JobReporter(
+            jobs=jobs,
+            job_id=job_id
+        ).step_started(step=STEP_STORE_EVENTS)
+
+        assert jobs.events(job_id=job_id)[0].payload == {
+            'step': STEP_STORE_EVENTS,
+            'subject': ''
+        }
+
+    def test_a_step_carries_what_it_is_working_on(
         self,
         jobs: JobRepository,
         job_id: str
@@ -259,10 +297,11 @@ class TestTheReporterBridge:
         JobReporter(
             jobs=jobs,
             job_id=job_id
-        ).step_started(label='Removing duplicate shifts')
+        ).step_started(step=STEP_READ_OPPORTUNITY, subject='905196')
 
         assert jobs.events(job_id=job_id)[0].payload == {
-            'label': 'Removing duplicate shifts'
+            'step': STEP_READ_OPPORTUNITY,
+            'subject': '905196'
         }
 
     def test_sent_shifts_do_not_record_the_request_body(
@@ -272,23 +311,48 @@ class TestTheReporterBridge:
     ) -> None:
         # It is built from the shifts, so storing both keeps two copies
         # of one fact.
-        JobReporter(jobs=jobs, job_id=job_id).shifts_sent(
+        JobReporter(jobs=jobs, job_id=job_id).opportunity_sent(
             batch=ShiftBatch(
                 index=1,
                 need_id=905196,
                 title='Adult Scrimmages: Skating Officials',
                 url='https://example.test/needs/905196/shifts',
                 shifts=[{'start': '2026-09-03 19:15:00', 'duration': 135}],
+                skipped=0,
                 payload={'shifts': [{'start': '2026-09-03 19:15:00'}]}
             )
         )
         payload = jobs.events(job_id=job_id)[0].payload
 
         assert 'payload' not in payload
-        assert payload['need_id'] == '905196'
+        assert payload['needId'] == '905196'
         assert payload['shifts'] == [
             {'start': '2026-09-03 19:15:00', 'duration': 135}
         ]
+
+    def test_an_opportunity_records_what_amplify_already_held(
+        self,
+        jobs: JobRepository,
+        job_id: str
+    ) -> None:
+        # The skip note the sending screen shows, and the only source
+        # for it while a send runs: reading the preview again would
+        # ask Amplify about a run being written to.
+        JobReporter(jobs=jobs, job_id=job_id).opportunity_sent(
+            batch=ShiftBatch(
+                index=2,
+                need_id=905197,
+                title='Adult Scrimmages: Non-Skating Officials',
+                url='https://example.test/needs/905197/shifts',
+                shifts=[],
+                skipped=3,
+                payload={'shifts': []}
+            )
+        )
+        payload = jobs.events(job_id=job_id)[0].payload
+
+        assert payload['skipped'] == 3
+        assert payload['shifts'] == []
 
     def test_a_slack_dry_run_records_how_many_blocks(
         self,

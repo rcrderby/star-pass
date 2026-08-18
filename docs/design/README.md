@@ -14,7 +14,7 @@ comes first. Read in this order:
 
 1. `claude-code-kickoff.md` — the prompt to start with, covering steps 1–3.
 2. `api-and-security-plan.md` — the full plan and security model.
-3. `decisions.md` — D1–D17, each with why, what was rejected, and what would make
+3. `decisions.md` — D1–D22, each with why, what was rejected, and what would make
    us revisit it.
 
 The v1 surface itself is `docs/api/openapi.json` in the repository root, which
@@ -161,6 +161,9 @@ in on open, Tab cycles inside, Escape closes, focus returns to the trigger.
 
 Run id and start time in a strip at the top, then four steps (read, filter,
 match, write) each showing pending / running / done / failed with a detail line.
+**Superseded by D22:** a collection reports five steps, because the Amplify
+opportunity read is a second upstream service that can fail on its own, and
+because "write" was drawn when a run produced a CSV.
 While running: "Leave this running" and "Cancel", with a line explaining that
 leaving does not stop it and the run appears under Runs while it works. On
 failure: a sanitized message, "Try again", "Back to the run", and a copyable

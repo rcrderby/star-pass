@@ -26,6 +26,13 @@ from star_pass._records import (
     JOB_KIND_COLLECT,
     JOB_STATUS_INTERRUPTED
 )
+from star_pass._reporting import (
+    STEP_READ_CALENDAR,
+    STEP_READ_OPPORTUNITIES,
+    STEP_READ_OPPORTUNITY,
+    STEP_STORE_EVENTS,
+    STEPS
+)
 from star_pass._repository import JobRepository, RunRepository
 from star_pass_cli import _sending
 from star_pass_cli._commands import run_command
@@ -120,7 +127,7 @@ def fixture_watching(
 
             yield StreamEvent(
                 kind='step_started',
-                payload={'label': 'Reading the calendar'}
+                payload={'step': STEP_READ_CALENDAR, 'subject': ''}
             )
             yield StreamEvent(
                 kind='job_finished',
@@ -313,7 +320,7 @@ class TestFollowingAJob:
 
         assert status == 0
         assert shown.splitlines() == [
-            'Started: Reading the calendar',
+            f'Started: {_sending.step_text(step=STEP_READ_CALENDAR)}',
             'The job is over: succeeded'
         ]
 
@@ -325,12 +332,52 @@ class TestHowAJobsReportsAreShown:
         line = _sending.event_line(
             answer=StreamEvent(
                 kind='step_started',
-                payload={'label': 'Reading the Amplify opportunities'}
+                payload={
+                    'step': STEP_READ_OPPORTUNITIES,
+                    'subject': ''
+                }
             )
         )
 
         assert line == (
             'Started: Reading the Amplify opportunities'
+        )
+
+    def test_a_step_is_worded_with_what_it_is_working_on(self) -> None:
+        # The send reads each opportunity before writing to it, and
+        # the stream names which one as a value beside the step rather
+        # than as words inside it.
+        line = _sending.event_line(
+            answer=StreamEvent(
+                kind='step_started',
+                payload={
+                    'step': STEP_READ_OPPORTUNITY,
+                    'subject': '905196'
+                }
+            )
+        )
+
+        assert line == (
+            'Started: Reading what opportunity 905196 already holds'
+        )
+
+    def test_a_finished_opportunity_names_itself(self) -> None:
+        # Reported for every opportunity, including one Amplify
+        # already held every shift for.
+        line = _sending.event_line(
+            answer=StreamEvent(
+                kind='opportunity_sent',
+                payload={
+                    'needId': '905196',
+                    'title': 'Adult Scrimmages: Skating Officials',
+                    'shifts': [],
+                    'skipped': 2
+                }
+            )
+        )
+
+        assert line == (
+            'Sent to: Adult Scrimmages: Skating Officials'
         )
 
     def test_a_report_with_no_wording_names_itself(self) -> None:
@@ -341,6 +388,41 @@ class TestHowAJobsReportsAreShown:
         )
 
         assert line == 'something_new'
+
+
+class TestWhatEachStepIsCalled:
+    def test_every_step_the_core_publishes_is_worded(self) -> None:
+        # A step with no wording shows as its identifier, which is
+        # written for a program to branch on rather than to be read.
+        assert set(_sending.STEP_PHRASES) == set(STEPS)
+
+    def test_no_wording_is_for_a_step_that_does_not_exist(self) -> None:
+        # The direction that catches a step being renamed rather than
+        # added: the wording would survive, and nothing would say it
+        # is now unreachable.
+        for step in _sending.STEP_PHRASES:
+            assert step in STEPS
+
+    def test_a_step_with_no_wording_shows_as_itself(self) -> None:
+        assert _sending.step_text(step='invented_later') == (
+            'invented_later'
+        )
+
+    def test_a_step_says_what_it_is_working_on(self) -> None:
+        # The send reads each opportunity before it writes to it, and
+        # a screen drawing a row per opportunity has to know which one
+        # a read is about.
+        assert '106280' in _sending.step_text(
+            step=STEP_READ_OPPORTUNITY,
+            subject='106280'
+        )
+
+    def test_a_step_that_asks_for_nothing_is_left_alone(self) -> None:
+        # A subject nothing asked for is not appended anywhere.
+        assert _sending.step_text(
+            step=STEP_STORE_EVENTS,
+            subject='106280'
+        ) == _sending.STEP_PHRASES[STEP_STORE_EVENTS]
 
 
 class TestWatchingAndResumingAJob:

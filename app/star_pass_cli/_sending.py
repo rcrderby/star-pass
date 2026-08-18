@@ -25,6 +25,14 @@ from star_pass._preview import (
     BLOCKER_NO_OPPORTUNITY,
     BLOCKER_NO_SLOTS
 )
+from star_pass._reporting import (
+    STEP_FILTER_EVENTS,
+    STEP_MATCH_EVENTS,
+    STEP_READ_CALENDAR,
+    STEP_READ_OPPORTUNITIES,
+    STEP_READ_OPPORTUNITY,
+    STEP_STORE_EVENTS
+)
 from ._render import labelled, section, shown, window_text
 
 # Constants
@@ -74,17 +82,34 @@ EVENT_PHRASES = {
     'step_started': 'Started:',
     'step_finished': 'Done.',
     'step_failed': 'Failed.',
-    'calendar_read_started': 'Reading the calendar.',
     'sending_started': 'Sending to Amplify.',
-    'shifts_sent': 'Sent shifts to:',
+    'opportunity_sent': 'Sent to:',
     'job_finished': 'The job is over:'
+}
+
+# How each step the core reports is put to a reader.  The core
+# publishes the step as an identifier, which is right for something a
+# program branches on and wrong for something a person reads, so it is
+# worded here -- and here rather than in each of the two places that
+# show one, because the terminal reporter renders a local run's steps
+# and this renders the same steps read back off a job.  Two copies
+# would eventually call one step two things.  A test holds this to
+# what the core publishes.
+STEP_PHRASES = {
+    STEP_READ_CALENDAR: 'Reading data from the Google Calendar service',
+    STEP_FILTER_EVENTS: 'Filtering event data',
+    STEP_MATCH_EVENTS: 'Matching events to opportunities',
+    STEP_READ_OPPORTUNITIES: 'Reading the Amplify opportunities',
+    STEP_STORE_EVENTS: 'Storing the collected events',
+    STEP_READ_OPPORTUNITY: (
+        'Reading what opportunity {subject} already holds'
+    )
 }
 
 # Where the readable part of an event's payload is, in the order the
 # first one found is used.  An event carrying none of them says only
 # what it is, which is all several of them have to say.
 EVENT_DETAIL_FIELDS = (
-    'label',
     'title',
     'status',
     'path',
@@ -278,6 +303,66 @@ def job_text(
     )
 
 
+def step_text(
+        step: str,
+        subject: str = ''
+) -> str:
+    """ Return what to call one step, in the present participle.
+
+        Read by both things that show a step: the terminal reporter,
+        which watches a run in this process, and 'event_line', which
+        reads the same steps back off a job.  A step with no wording
+        shows as its identifier, which is what a step added to the
+        core and not to this map should do: name itself rather than
+        vanish.
+
+        Args:
+            step (str):
+                The identifier the core reported, from 'STEPS'.
+
+            subject (str, optional):
+                What the step is working on, where its wording asks
+                for one.  Defaults to an empty string.
+
+        Returns:
+            text (str):
+                What to call it.
+    """
+
+    return STEP_PHRASES.get(step, step).replace('{subject}', subject)
+
+
+def event_detail(
+        payload: Dict[str, Any]
+) -> str:
+    """ Return the readable part of one event's payload.
+
+        Args:
+            payload (Dict[str, Any]):
+                What the event carried.
+
+        Returns:
+            detail (str):
+                What it was about, or an empty string when it carried
+                nothing a reader wants.
+    """
+
+    if 'step' in payload:
+        return step_text(
+            step=payload['step'],
+            subject=str(payload.get('subject', ''))
+        )
+
+    return next(
+        (
+            str(payload[field])
+            for field in EVENT_DETAIL_FIELDS
+            if field in payload
+        ),
+        ''
+    )
+
+
 def event_line(
         answer: Any
 ) -> str:
@@ -300,16 +385,8 @@ def event_line(
     """
 
     said = EVENT_PHRASES.get(answer.kind, answer.kind)
-    about = next(
-        (
-            str(answer.payload[field])
-            for field in EVENT_DETAIL_FIELDS
-            if field in answer.payload
-        ),
-        ''
-    )
 
-    return f'{said} {about}'.rstrip()
+    return f'{said} {event_detail(payload=answer.payload)}'.rstrip()
 
 
 def send_restatement(

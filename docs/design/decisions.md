@@ -4,7 +4,7 @@ One entry per decision, with why, what was rejected, and **what would make us
 revisit it**. Append new entries; don't rewrite old ones — supersede them.
 
 Companion to `api-and-security-plan.md` (the plan these decisions produced).
-Last updated: 2026-08-13.
+Last updated: 2026-08-18.
 
 ---
 
@@ -515,6 +515,64 @@ and a send are enough to exercise the system; the rest can ship in 2.1).
 
 **Revisit if:** the interface slips far enough that something else needs the tag
 — a deployment that has to pin a version, for instance.
+
+---
+
+
+## D22 — The job stream publishes data, and a collection is five steps
+
+**Decided:** Nothing the core reports carries rendered English. A step
+crosses the wire as an identifier from `STEPS` plus, where a step works on
+one thing, what it is working on; each client words it. `sending_started`
+carries how many opportunities the send will work through, and one
+`opportunity_sent` is reported per opportunity whether or not it needed
+anything. The collecting screen shows **five** steps, not four.
+
+**Supersedes:** the design handoff's screen 5, which names four steps
+(read, filter, match, write).
+
+**Why:** Three things about the sending screen, found by reading the
+stream against what screen 6 draws. It shows "N of M opportunities" and M
+was nowhere in the stream, so a browser reattaching after a reload had no
+total — and the only other source is the preview, which would mean a live
+Amplify read while the send is writing. Which opportunity a step was about
+existed only inside an interpolated sentence, so a row could be addressed
+only by parsing English. And an opportunity Amplify already held every
+shift for was reported not at all, so its row could never leave "sending"
+and the count of what is done would stop short of the total.
+
+The step identifiers follow from the rule the rest of the contract already
+keeps: values cross the wire and each client words them, which is what
+stops a screen quietly inventing a category. A job's event log is read
+back over the API by the same clients.
+
+Five steps rather than four because the design's four do not survive
+contact with the code twice over: the Amplify read has no home among them,
+and their fourth is "Writing the CSV", which describes an artefact the
+tool stopped producing when the CSV run modes were retired (D12,
+narrowed). Reading the calendar and reading the Amplify opportunities are
+separate upstream services and either can fail on its own, so which of
+them stopped a collection is exactly what the screen exists to say.
+
+**Rejected:** the opportunity count on `JobView` (a stored column null for
+every collect job, filled by the endpoint from its own preview rather than
+by the send, and stale after a resume — D10 re-reads Amplify and may touch
+a different set); re-reading the preview mid-send (a live read of a run
+being written to); folding the Amplify read into the design's "write"
+step (hides the failure the step exists to show); leaving `step_started`
+carrying a label (the one place the contract published rendered text, and
+the send needs the need ID as a value regardless).
+
+**Not changed:** a send still stops at the first opportunity Amplify
+refuses, rather than carrying on. The design's "Retry the N that failed"
+reads as though several rows can fail; in practice one does and the rest
+stay waiting, and a retry resends the run, which per-shift identity makes
+safe. Amplify refusing one opportunity is rarely a fact about that
+opportunity, and continuing would write irreversibly after an unknown
+outcome.
+
+**Revisit if:** a step needs to carry more than one value, which would
+mean the subject should be a mapping rather than a string.
 
 ---
 
