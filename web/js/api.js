@@ -1,0 +1,238 @@
+/* The only way this page talks to anything.
+ *
+ * It reaches `/api` on its own origin and nothing else.  The frontend
+ * attaches the Amplify-holding service's credential on the way past;
+ * this page holds none and must never be given one (D4).
+ *
+ * Three things are this module's alone, so that no screen has to
+ * remember them:
+ *
+ *   - A write carries the `star_pass_csrf` cookie's value in the
+ *     `X-Star-Pass-CSRF` header.  Together with the session cookie
+ *     being SameSite=Strict and the frontend checking the origin, that
+ *     is what says a write came from this page (D18).
+ *   - Four operations require an `Idempotency-Key`, and the key names
+ *     one thing somebody did.  A retry of the same action sends the
+ *     same key and is answered with the original result rather than
+ *     writing twice; a new action mints a new one.
+ *   - A failure arrives as a problem document (RFC 9457).  Below 500 it
+ *     carries a reason the caller can act on, and at 500 and above it
+ *     deliberately does not -- the reason is in the service's log under
+ *     the same reference, because an internal failure can carry a
+ *     credential or a volunteer's name.
+ *
+ * Only headers on the frontend's allowlist reach the API: `accept`,
+ * `content-type` and `idempotency-key`.  Nothing else a page sets is
+ * forwarded, so setting one here would be setting it nowhere.
+ */
+
+/* Where the API is, from this page.  Same origin, which is why there
+ * is no CORS configuration anywhere in the system. */
+const BASE = '/api/v1';
+
+const CSRF_COOKIE = 'star_pass_csrf';
+const CSRF_HEADER = 'X-Star-Pass-CSRF';
+const IDEMPOTENCY_HEADER = 'Idempotency-Key';
+
+const JSON_MEDIA_TYPE = 'application/json';
+const PROBLEM_MEDIA_TYPE = 'application/problem+json';
+
+/* At and above this, a problem document carries no reason on purpose. */
+const OPAQUE_FROM = 500;
+
+/* What to say when the service could not be reached at all, which is a
+ * different thing from the service refusing: nothing answered, so
+ * there is no reference to quote and nothing to look up. */
+const UNREACHABLE = (
+  'The star-pass page could not reach the service. It may be '
+  + 'restarting; try again in a moment.'
+);
+
+/* What to say when something answered but not with a problem document.
+ * Worth its own sentence rather than showing the raw body: what comes
+ * back in that case is a proxy error page, not something to read. */
+const UNREADABLE = 'The service answered in a way this page could not read.';
+
+/**
+ * A request the service refused, or could not answer.
+ *
+ * Carries what the problem document held, so a screen can show the
+ * detail where there is one and the reference either way. The
+ * reference is the whole point of the class: at 500 and above it is
+ * the only thing connecting what somebody saw to what was logged.
+ */
+export class ApiError extends Error {
+  /**
+   * @param {Object} fields What the document held.
+   * @param {number} fields.status HTTP status, or 0 when nothing
+   *     answered.
+   * @param {string} fields.detail What to show. Already safe to
+   *     display: the service replaces the reason with a fixed sentence
+   *     on the statuses where the reason is not the caller's to see.
+   * @param {string} [fields.title] Short summary of the problem type.
+   * @param {string} [fields.reference] What to quote when reporting it.
+   * @param {number} [fields.retryAfter] Seconds to wait, when the
+   *     service said.
+   */
+  constructor({ status, detail, title = '', reference = '', retryAfter = 0 }) {
+    super(detail);
+    this.name = 'ApiError';
+    this.status = status;
+    this.detail = detail;
+    this.title = title;
+    this.reference = reference;
+    this.retryAfter = retryAfter;
+  }
+
+  /** Whether the reason was withheld, and only the reference is real.
+   *
+   * @returns {boolean} Whether this is one of those.
+   */
+  get isOpaque() {
+    return this.status >= OPAQUE_FROM;
+  }
+}
+
+/** Return the value of one cookie this page can read.
+ *
+ * The session cookie is httpOnly and is deliberately not reachable
+ * here; the token derived from it is the readable one, which is the
+ * whole shape of D18.
+ *
+ * @param {string} name Cookie to read.
+ * @returns {string} Its value, or an empty string when there is none.
+ */
+function cookie(name) {
+  const wanted = `${name}=`;
+
+  for (const entry of document.cookie.split(';')) {
+    const trimmed = entry.trim();
+
+    if (trimmed.startsWith(wanted)) {
+      return decodeURIComponent(trimmed.slice(wanted.length));
+    }
+  }
+
+  return '';
+}
+
+/** Return a key naming one thing somebody did.
+ *
+ * Minted per action rather than per request, so that the retry of a
+ * send is the same action and a second send is not.
+ *
+ * @returns {string} A fresh key.
+ */
+export function idempotencyKey() {
+  return crypto.randomUUID();
+}
+
+/** Return what a failed response meant.
+ *
+ * @param {Response} response What came back.
+ * @returns {Promise<ApiError>} The failure, shaped for a screen.
+ */
+async function failure(response) {
+  const retryAfter = Number(response.headers.get('retry-after')) || 0;
+  const type = response.headers.get('content-type') || '';
+
+  if (!type.startsWith(PROBLEM_MEDIA_TYPE)) {
+    return new ApiError({
+      status: response.status,
+      detail: UNREADABLE,
+      retryAfter
+    });
+  }
+
+  let document_ = {};
+
+  try {
+    document_ = await response.json();
+  } catch {
+    return new ApiError({
+      status: response.status,
+      detail: UNREADABLE,
+      retryAfter
+    });
+  }
+
+  return new ApiError({
+    status: response.status,
+    detail: document_.detail || UNREADABLE,
+    title: document_.title || '',
+    reference: document_.reference || '',
+    retryAfter
+  });
+}
+
+/** Ask the API for something, and return what it said.
+ *
+ * @param {string} path Below `/api/v1`, starting with a slash.
+ * @param {Object} [options] How to ask.
+ * @param {string} [options.method] Defaults to a read.
+ * @param {Object} [options.body] Sent as JSON when there is one.
+ * @param {string} [options.key] The `Idempotency-Key` for the four
+ *     operations that require one. Nothing else should pass it.
+ * @param {AbortSignal} [options.signal] For abandoning the request.
+ * @throws {ApiError} When the service refused, could not answer, or
+ *     could not be reached.
+ * @returns {Promise<Object|null>} The answer, or null when it carried
+ *     no body.
+ */
+export async function ask(path, options = {}) {
+  const { method = 'GET', body = null, key = '', signal = null } = options;
+  const headers = { accept: `${JSON_MEDIA_TYPE}, ${PROBLEM_MEDIA_TYPE}` };
+
+  if (body !== null) {
+    headers['content-type'] = JSON_MEDIA_TYPE;
+  }
+
+  if (method !== 'GET' && method !== 'HEAD') {
+    headers[CSRF_HEADER] = cookie(CSRF_COOKIE);
+  }
+
+  if (key) {
+    headers[IDEMPOTENCY_HEADER] = key;
+  }
+
+  let response;
+
+  try {
+    response = await fetch(`${BASE}${path}`, {
+      method,
+      headers,
+      signal,
+      body: body === null ? null : JSON.stringify(body),
+      /* The session cookie rides on this. Same origin, so it would be
+       * sent anyway; said out loud because it is the one thing that
+       * makes the request identifiable. */
+      credentials: 'same-origin'
+    });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw error;
+    }
+
+    throw new ApiError({ status: 0, detail: UNREACHABLE });
+  }
+
+  if (!response.ok) {
+    throw await failure(response);
+  }
+
+  if (response.status === 204 || response.status === 205) {
+    return null;
+  }
+
+  return response.json();
+}
+
+/** Return every run the service holds.
+ *
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Array<Object>>} The runs, as the contract lists
+ *     them.
+ */
+export function listRuns(options = {}) {
+  return ask('/runs', options);
+}

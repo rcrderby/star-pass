@@ -1,0 +1,8 @@
+{
+  "runStatus": {
+    "collecting": "Collecting",
+    "unsent": "Not sent",
+    "partly_sent": "Partly sent",
+    "sent": "Sent"
+  }
+}
