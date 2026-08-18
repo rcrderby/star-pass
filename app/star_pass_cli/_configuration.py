@@ -49,6 +49,26 @@ TERM_GAP = ', '
 # calendar should not have to read the settings first.
 CALENDARS_HEADING = 'CALENDARS'
 
+# What is kept and for how long, under a heading for the same reason.
+RETENTION_HEADING = 'RETENTION'
+
+# How each window is worded.  The contract publishes numbers of days
+# and no rendered text, so saying what each one is measured from is
+# this client's job -- and it is the half that makes the number mean
+# anything, since the three are measured from three different events.
+JOB_LOG_RETENTION = '{days} days after a job finishes'
+REVISION_RETENTION = '{days} days after a run is last changed'
+UNMATCHED_RETENTION = (
+    '{days} days after a title was last seen, or as soon as the '
+    'model matches it'
+)
+
+# Said of the one store with no window, because a settings screen that
+# listed three windows and stopped would read as though everything
+# expires.  Why it is kept is the point: a run that forgot what it had
+# created would offer to create it again.
+SENT_RETENTION = 'kept, so nothing a run created is ever sent twice'
+
 # What a tested credential is said to be.  A whole word each way: the
 # line is read at a glance and a tick and a cross are not one.
 WORKING = 'working'
@@ -171,7 +191,46 @@ def config_text(
                     calendar_row(calendar=calendar)
                     for calendar in answer['calendars']
                 ]
-            )
+            ),
+            RETENTION_HEADING,
+            retention_text(retention=answer['retention'])
+        )
+    )
+
+
+def retention_text(
+        retention: Dict[str, Any]
+) -> str:
+    """ Return how long each thing a run leaves behind is kept.
+
+        Args:
+            retention (Dict[str, Any]):
+                The retention windows a client answered with.
+
+        Returns:
+            text (str):
+                One line each, including the store that has no window.
+    """
+
+    return labelled(
+        pairs=(
+            (
+                'Job logs',
+                JOB_LOG_RETENTION.format(days=retention['jobLogDays'])
+            ),
+            (
+                'Revisions',
+                REVISION_RETENTION.format(
+                    days=retention['revisionDays']
+                )
+            ),
+            (
+                'Unmatched titles',
+                UNMATCHED_RETENTION.format(
+                    days=retention['unmatchedTitleDays']
+                )
+            ),
+            ('Sent shifts', SENT_RETENTION)
         )
     )
 

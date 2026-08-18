@@ -130,6 +130,10 @@
             "title": "Matchthreshold",
             "type": "integer"
           },
+          "retention": {
+            "$ref": "#/components/schemas/RetentionView",
+            "description": "How long what a run leaves behind is kept. The record of what a send put into Amplify is deliberately absent, because it is never removed: duplicate safety reads it to know which rows a run already created, so a window there would eventually have a run offering to create shifts Amplify already holds."
+          },
           "timezone": {
             "description": "IANA zone a calendar window's dates are read in when they carry no UTC offset. The server's zone is the authoritative one: a client displays it rather than working a window out in the zone of whoever is looking at it.",
             "examples": [
@@ -143,7 +147,8 @@
           "timezone",
           "matchThreshold",
           "excludedTitleTerms",
-          "calendars"
+          "calendars",
+          "retention"
         ],
         "title": "ConfigView",
         "type": "object"
@@ -892,6 +897,42 @@
           "expectedChangeCount"
         ],
         "title": "RecollectRequest",
+        "type": "object"
+      },
+      "RetentionView": {
+        "description": "How long what a run leaves behind is kept. ",
+        "properties": {
+          "jobLogDays": {
+            "description": "How long a job's event log is kept after the job finished. The job itself is not removed with it: that a send ran on a date and how it ended outlives the log of what it did, which is the part naming volunteers and the times they were asked to be somewhere.",
+            "examples": [
+              90
+            ],
+            "title": "Joblogdays",
+            "type": "integer"
+          },
+          "revisionDays": {
+            "description": "How long a run may go untouched before the revisions between its first and its current one are removed. Neither of those two is ever removed: the first is the run as the calendar gave it, which reverting to is a published operation, and the current one is what the run holds now.",
+            "examples": [
+              90
+            ],
+            "title": "Revisiondays",
+            "type": "integer"
+          },
+          "unmatchedTitleDays": {
+            "description": "The longest a title the data model did not match is kept without being seen again. A backstop rather than the rule: what usually removes a title is the model coming to match it, since that is what recording one is for. Measured from the most recent sighting, so a title still turning up keeps its whole count.",
+            "examples": [
+              365
+            ],
+            "title": "Unmatchedtitledays",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "jobLogDays",
+          "revisionDays",
+          "unmatchedTitleDays"
+        ],
+        "title": "RetentionView",
         "type": "object"
       },
       "RevisionView": {

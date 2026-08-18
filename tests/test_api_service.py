@@ -3,11 +3,18 @@
 
 # pylint: disable=missing-function-docstring,missing-class-docstring
 
+# Imports - Python Standard Library
+from threading import Event
+from typing import Any, Callable
+
 # Imports - Third-Party
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 # Imports - Local
+from star_pass import _defaults as core_defaults
+from star_pass._repository import JobRepository
 from star_pass_api import _defaults, create_app
 from star_pass_api._health import HEALTH_STATUS_OK
 from star_pass_api._problems import PROBLEM_MEDIA_TYPE
@@ -108,3 +115,82 @@ class TestTheFactory:
 
         assert isinstance(first, FastAPI)
         assert first is not second
+
+
+class TestWhatStartingUpDoes:
+    def test_the_retention_policy_is_applied_before_anything_answers(
+        self,
+        finished_job: str,
+        jobs: JobRepository,
+        monkeypatch: pytest.MonkeyPatch,
+        start_service: Callable[[], Any]
+    ) -> None:
+        # At startup as well as on the interval, because a service
+        # restarted often would otherwise never reach its first sweep
+        # -- and before it answers, so nothing reads what is about to
+        # be removed.
+        monkeypatch.setattr(core_defaults, 'RETENTION_JOB_LOG_DAYS', -1)
+
+        with start_service():
+            pass
+
+        assert jobs.events(job_id=finished_job) == []
+
+    def test_a_failing_sweep_does_not_stop_the_service_starting(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        start_service: Callable[[], Any]
+    ) -> None:
+        # Retention falling behind is a thing to fix. It is not a
+        # reason to refuse to serve, and a deployment that would not
+        # start is harder to diagnose than a logged failure.
+        def refuse(*_args: Any, **_kwargs: Any) -> None:
+            """ Fail the way a locked database does. """
+            raise RuntimeError('the database is locked')
+
+        monkeypatch.setattr('star_pass_api._app.sweep', refuse)
+
+        with start_service() as client:
+            assert client.get(HEALTH_PATH).status_code == 200
+
+    def test_the_interval_actually_comes_round(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        start_service: Callable[[], Any]
+    ) -> None:
+        # A task that exists and is cancelled at the end is not the
+        # same claim as a task that sweeps again: the first is also
+        # true of a task that only sleeps. The interval is shortened
+        # rather than waited out, and the second call is what says the
+        # loop came round -- the first is the one at startup.
+        swept = Event()
+        calls = []
+
+        async def record() -> None:
+            """ Count a sweep, and say when a second one happened. """
+            calls.append(1)
+
+            if len(calls) > 1:
+                swept.set()
+
+        monkeypatch.setattr(
+            'star_pass_api._app.RETENTION_SWEEP_HOURS',
+            0.0001
+        )
+        monkeypatch.setattr('star_pass_api._app._sweep_once', record)
+
+        with start_service():
+            assert swept.wait(timeout=10)
+
+    def test_the_sweep_on_the_interval_ends_with_the_service(
+        self,
+        start_service: Callable[[], Any]
+    ) -> None:
+        # Left running, it would hold the process open after the
+        # service had shut down.
+        with start_service() as client:
+            sweeping = client.app.state.sweeping
+
+            assert not sweeping.done()
+
+        assert sweeping.cancelled()

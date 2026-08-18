@@ -23,8 +23,14 @@
     because a list showing the same title eleven times is a list
     nobody works through.
 
-    Append-only.  Nothing here updates a row or deletes one: the log
-    is the evidence for a decision somebody has not made yet.
+    Nothing here updates a row.  One thing deletes them, and only
+    together: retention forgets a title outright once the decision has
+    been made -- once the model matches it, which is what recording it
+    was for -- or once nothing has seen it for a very long time.  A
+    title is forgotten whole rather than sighting by sighting, because
+    the count means the runs a title turned up in, and a count that
+    lost its early rows would say a recurring title were a new one
+    (D20).
 """
 
 # Imports - Python Standard Library
@@ -252,6 +258,47 @@ class UnmatchedTitleRepository(Repository):
         )
 
         return _to_unmatched(row=row) if row is not None else None
+
+    def forget(
+            self,
+            calendar: str,
+            title: str
+    ) -> int:
+        """ Delete every sighting of one title in one calendar.
+
+            All of them or none: what a caller reads is one entry per
+            title with its sightings counted, so removing some would
+            leave the same title reporting a smaller number rather
+            than leaving nothing.  Whether a title should be forgotten
+            is not decided here -- it needs the data model, which this
+            layer does not read.
+
+            Args:
+                calendar (str):
+                    Calendar the title was seen in.
+
+                title (str):
+                    The title to forget.
+
+            Raises:
+                UpstreamError:
+                    If the sightings cannot be removed.
+
+            Returns:
+                removed (int):
+                    How many sightings were deleted.
+        """
+
+        cursor = execute(
+            connection=self._connection,
+            statement=(
+                'DELETE FROM unmatched_titles '
+                'WHERE calendar = ? AND title = ?'
+            ),
+            parameters=(calendar, title)
+        )
+
+        return cursor.rowcount
 
     def list_all(self) -> List[UnmatchedTitle]:
         """ Return every title the model has not matched, newest first.

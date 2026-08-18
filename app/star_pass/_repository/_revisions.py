@@ -238,6 +238,68 @@ class RevisionRepository(Repository):
 
         return [_to_revision(row=row) for row in rows]
 
+    def forget_superseded(
+            self,
+            cutoff: str
+    ) -> int:
+        """ Delete the middle revisions of runs nobody has touched.
+
+            Two are never removed, whatever the run's age.  The first
+            is the run as the calendar gave it, and reverting to it is
+            a published operation that also returns hand-added events
+            to what the collection left out; the current one is what
+            the run *is*.  What goes is the sealed revisions between
+            them, which are points somebody fixed while working and
+            which stop being worth coming back to once the work is
+            over.
+
+            A run is 'untouched' by the same reading the rest of the
+            service uses -- the last entry in its 'change_log', or its
+            collection when nothing has changed it -- rather than by
+            when a revision was created.  A revision is edited in
+            place, so its own timestamp says when the work started
+            rather than when it stopped.
+
+            Args:
+                cutoff (str):
+                    ISO-8601 UTC timestamp.  Runs last touched before
+                    this have their middle revisions removed.
+
+            Raises:
+                UpstreamError:
+                    If the revisions cannot be removed.
+
+            Returns:
+                removed (int):
+                    How many revisions were deleted.
+        """
+
+        cursor = execute(
+            connection=self._connection,
+            statement=(
+                'DELETE FROM revisions '
+                'WHERE number > 1 '
+                '  AND number < ('
+                '      SELECT MAX(later.number) FROM revisions AS later'
+                '      WHERE later.run_id = revisions.run_id'
+                '  ) '
+                '  AND run_id IN ('
+                '      SELECT runs.id FROM runs '
+                '      WHERE COALESCE('
+                '          ('
+                '              SELECT MAX(change_log.logged_at) '
+                '              FROM change_log '
+                '              WHERE change_log.run_id = runs.id'
+                '          ),'
+                '          runs.collected_at'
+                '      ) < ?'
+                '  )'
+            ),
+            parameters=(cutoff,)
+        )
+
+        return cursor.rowcount
+
     def delete(
             self,
             run_id: str,

@@ -33,7 +33,10 @@ from star_pass._defaults import (
     FUZZY_MATCH_THRESHOLD,
     GCAL_CALENDARS,
     GCAL_PREFIX_FILTERS,
-    GCAL_TIMEZONE
+    GCAL_TIMEZONE,
+    RETENTION_JOB_LOG_DAYS,
+    RETENTION_REVISION_DAYS,
+    RETENTION_UNMATCHED_TITLE_DAYS
 )
 from star_pass._editing import Operation
 from star_pass._derived import (
@@ -74,6 +77,7 @@ from ._schemas import (
     PreviewRowView,
     PreviewTotalsView,
     PreviewView,
+    RetentionView,
     RevisionView,
     RunCountsView,
     RunDetailView,
@@ -649,7 +653,12 @@ def to_config_view() -> ConfigView:
                 search_terms=list(GCAL_CALENDARS[key]['query_strings'])
             )
             for key in sorted(GCAL_CALENDARS)
-        ]
+        ],
+        retention=RetentionView(
+            job_log_days=RETENTION_JOB_LOG_DAYS,
+            revision_days=RETENTION_REVISION_DAYS,
+            unmatched_title_days=RETENTION_UNMATCHED_TITLE_DAYS
+        )
     )
 
 

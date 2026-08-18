@@ -560,6 +560,51 @@ class JobRepository(Repository):
             payload=members
         )
 
+    def forget_events_before(
+            self,
+            cutoff: str
+    ) -> int:
+        """ Delete the event logs of jobs that finished before a time.
+
+            What the retention window is protecting is here rather
+            than on the job row (D12): an event log names volunteers
+            and the times they were asked to be somewhere, while the
+            row says only that a job of some kind ran and how it
+            ended.  So the log goes and the row stays, and a run's
+            history still says a send happened without still saying
+            who it was for.
+
+            A job that has not finished is left alone whatever its
+            age.  One still running is one somebody may be watching,
+            and its log is the thing they are watching.
+
+            Args:
+                cutoff (str):
+                    ISO-8601 UTC timestamp.  Logs of jobs that
+                    finished before this are removed.
+
+            Raises:
+                UpstreamError:
+                    If the events cannot be removed.
+
+            Returns:
+                removed (int):
+                    How many events were deleted.
+        """
+
+        cursor = execute(
+            connection=self._connection,
+            statement=(
+                'DELETE FROM job_events WHERE job_id IN ('
+                '    SELECT id FROM jobs '
+                '    WHERE finished_at IS NOT NULL AND finished_at < ?'
+                ')'
+            ),
+            parameters=(cutoff,)
+        )
+
+        return cursor.rowcount
+
     def events(
             self,
             job_id: str,

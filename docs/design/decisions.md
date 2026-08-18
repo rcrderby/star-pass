@@ -417,6 +417,96 @@ authenticates to the API directly rather than through this service (D4).
 
 ---
 
+## D20 — Retention is applied on three different axes, not one window
+
+**Decided:** Three rules, because "is this still worth keeping" has three
+different answers:
+
+- A **job's event log** expires 90 days after the job finished. The job row
+  survives it.
+- A run's **middle revisions** are removed once the run has gone untouched for
+  90 days. Revision 1 and the current revision are never removed.
+- An **unmatched title** is forgotten as soon as the data model matches it, and
+  otherwise 365 days after its most recent sighting.
+
+The sent record is never purged, unchanged from D12. Every window is a config
+value, and `GET /v1/config` publishes all three.
+
+**Supersedes:** D12's "superseded revisions are deleted immediately", which does
+not survive contact with the code. That line was written before a revision could
+be reverted to. Every revision is reachable now — a caller can list them and go
+back to any — so there is no moment at which one becomes superseded, and
+deleting immediately would break the operation that makes them worth having. The
+PII rationale is unchanged; only the trigger is.
+
+**Why the unmatched titles are not on a window at all.** Their value *is* their
+age: the count means the runs a title turned up in, so a title that turns up
+every month is a category the model is missing and one that turned up once is an
+event that happened once. Any expiry short enough to protect a person's name
+would destroy the thing being measured. That is a sign the axis is wrong rather
+than a trade-off to split down the middle: a sighting exists to prompt an edit to
+`shift_info.yml`, so what should remove it is that edit happening. The check is
+the same one that decided to record it, so nothing new has to be agreed on — a
+title the model matches produces no fresh sighting either. The 365 days is only a
+backstop for the title nobody ever acted on, and it is a year because the
+calendar repeats annually.
+
+A title is forgotten **whole**, never sighting by sighting. Removing some rows
+would leave the same title reporting a smaller count, and a smaller count reads
+as a title that has stopped recurring — the opposite of true.
+
+**Where it runs:** the API service, at startup and then daily, and the command
+line by hand (`retention sweep`). Both, because the service covers a deployment
+and does not cover the arrangement this tool started as — a person with a
+checkout and a database file — where the windows would otherwise never be
+applied at all. A policy nothing applies has been written down rather than
+adopted. The command names no contract operation and takes no `--api-url`,
+because the contract publishes no deletion on purpose (plan section 5): retention
+removes what a run leaves behind, a caller does not.
+
+**Rejected:** one window for everything (does what the unmatched-title count
+exists to prevent); resolution with no backstop (a title nobody ever fixes is
+kept forever, which is the unbounded-PII case D12 rejected); exempting unmatched
+titles entirely (records the tension as accepted rather than resolved); deleting
+whole job rows rather than their logs (that a send ran on a date and how it ended
+is not what the window is protecting, and a run's history would lose it); an
+endpoint to trigger a sweep (a caller that can delete a run's leavings is the
+thing plan section 5 rules out).
+
+**Revisit if:** an investigation needs evidence older than 90 days, PII policy
+tightens, or somebody wants to revert to a revision older than the window — the
+last of which would mean the middle revisions are worth more than this assumes.
+
+---
+
+## D21 — No 2.x release until the web interface can be tested end to end
+
+**Decided:** `__version__` is 2.0.0 and the contract records it, but no tag and
+no GitHub release until there is a working web interface to exercise the whole
+system through. The newest release stays v1.16.4 in the meantime.
+
+**Why:** 2.0.0 is the release that inverts the architecture — the API became the
+contract, state moved into SQLite, the CSV run modes went. Every part of it has
+tests and the deployment now runs, but nothing has yet used it the way a person
+will: collect a window, review it on a screen, preview, send. A version number is
+a claim about what somebody can rely on, and making that claim before anybody has
+run the thing end to end would put the claim ahead of the evidence.
+
+**Consequence:** work-order step 9 is the last back-end step, so what stands
+between here and the release is the interface itself (D19) rather than anything
+in this document.
+
+**Rejected:** tagging now and fixing forward in 2.0.1 (the point of waiting is
+to find what only end-to-end use finds, and a release nobody has used is exactly
+where that goes unnoticed); waiting for a *complete* interface (the review screen
+and a send are enough to exercise the system; the rest can ship in 2.1).
+
+**Revisit if:** the interface slips far enough that something else needs the tag
+— a deployment that has to pin a version, for instance.
+
+---
+
+
 ## Deferred, on purpose
 
 - **An authentication boundary in front of the whole system.** Deferred: single

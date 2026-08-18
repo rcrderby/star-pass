@@ -14,12 +14,14 @@
 
     What happens when the service starts is here too, because it is
     part of what the application is: a job the last process was holding
-    is ended, and the one that runs new work is created and shut down
-    with the service.
+    is ended, the one that runs new work is created and shut down with
+    the service, and the retention policy is applied and goes on being
+    applied.
 """
 
 # Imports - Python Standard Library
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from typing import AsyncIterator
 
 # Imports - Third-Party
@@ -27,9 +29,11 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
 # Imports - Local
+from star_pass._defaults import RETENTION_SWEEP_HOURS
 from star_pass._job_runner import JobRunner
 from star_pass._logging import get_logger
 from star_pass._repository import JobRepository
+from star_pass._retention import sweep
 from . import _defaults
 from ._configuration import router as config_router
 from ._credentials import router as credentials_router
@@ -66,6 +70,14 @@ async def lifespan(
         itself would write to a live volunteer system from state
         rebuilt after a crash.
 
+        Retention is applied here as well, before anything is
+        answered, and then goes on being applied.  Both halves are
+        needed: at startup only would be almost never, because this is
+        a tool somebody uses once a month and the process can stand
+        for a year, and on the interval only would leave a service
+        that is restarted often never reaching its first sweep
+        (D12, D20).
+
         Args:
             api (FastAPI):
                 The application starting up.
@@ -88,15 +100,75 @@ async def lifespan(
         )
         logger.warning(message)
 
+    await _sweep_once()
+
     api.state.runner = JobRunner(connect=open_connection)
+    # Held on the application beside the runner, for the same reason:
+    # both outlive a request and both have to be stopped when the
+    # service is, so whatever shuts them down has to be able to find
+    # them.
+    api.state.sweeping = asyncio.create_task(_sweeping())
 
     try:
         yield
 
     finally:
+        api.state.sweeping.cancel()
+
+        # Awaited rather than left cancelled, so the process does not
+        # exit with a sweep half written.
+        with suppress(asyncio.CancelledError):
+            await api.state.sweeping
+
         # Waits, so a job in hand records how it ended rather than
         # being left for the next start to sweep.
         api.state.runner.shutdown()
+
+
+async def _sweep_once() -> None:
+    """ Apply the retention policy, and carry on whatever it did.
+
+        On a thread, because the sweep opens a connection and works
+        against SQLite: run on the event loop it would hold up every
+        request for as long as it took.
+
+        A sweep that fails is logged and nothing else happens.
+        Retention falling behind is a thing to fix; it is not a reason
+        to refuse to start, and it is not a reason for a service that
+        has been running for months to stop.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+    """
+
+    try:
+        await asyncio.to_thread(lambda: in_database(sweep))
+
+    except Exception:  # pylint: disable=broad-except
+        logger.exception('The retention sweep failed.')
+
+    return None
+
+
+async def _sweeping() -> None:
+    """ Apply the retention policy again, on the interval.
+
+        The first one has already happened by the time this starts, so
+        this waits before sweeping rather than after.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+    """
+
+    while True:
+        await asyncio.sleep(RETENTION_SWEEP_HOURS * 3600)
+        await _sweep_once()
 
 
 def operation_id(

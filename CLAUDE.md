@@ -237,6 +237,17 @@ through the Amplify API. It is run once per month.
   `partly_sent` and the next send reads the opportunity and sends the
   difference; those rows are then in Amplify and not in the run's sent
   record, which says what the run saw itself create.
+- `app/star_pass/_retention.py` — forgetting what a run leaves behind
+  (`sweep`), on three axes rather than one window (D12, D20). A job's
+  event log expires by age and the job row outlives it; a run's middle
+  revisions go once the run is untouched, while revision 1 and the
+  current one never do; an unmatched title goes when the **data model
+  matches it**, with a year as a backstop, because its value is that
+  it accumulates and any expiry short enough to protect a name would
+  destroy the count. A title is forgotten whole. The sent record is
+  never purged and is deliberately absent. Nothing here is reachable
+  over the API and nothing should be: retention removes a run's
+  leavings, a caller does not.
 - `app/star_pass/_job_runner.py` — `JobRunner`, which runs a job's
   work on a thread and records how it ended, and `JobReporter`, a
   `Reporter` that writes the core's progress calls to the job's event
@@ -362,6 +373,14 @@ through the Amplify API. It is run once per month.
   **is** a command, and so is reading the unmatched titles, because
   asking why an event is not in a run is troubleshooting — the line
   falls between reading a list and acting on it.
+  One command is **not** one of those rows: `retention sweep`
+  (`_maintenance.py`) applies the retention policy to the local
+  database. It names no contract operation and takes no `--api-url`,
+  because the contract publishes no deletion on purpose — so it could
+  not be a `COMMANDS` row without weakening the two tests that hold
+  that table to the published surface. It exists because the service's
+  timer covers a deployment and not a checkout with a database file,
+  where the windows would never be applied at all.
   `_render.py` shows what a run holds and `_sending.py` shows what
   would become of it — the preview, the restatement a send is
   confirmed with, and the job that does it — with the second importing
@@ -619,6 +638,12 @@ The notes below are the ones that are not obvious from the commands.
   `get_run` reads as a method and `get_run_v1_runs__run_id__get` does
   not. Two routes may not share a function name; a test fails if they
   do.
+- **Retention's axis is the question, not the clock.** A job log and a
+  revision expire by age; an unmatched title expires when the data
+  model matches it, because the count *is* its value. A single window
+  over all three would delete the thing one of them measures. The
+  service sweeps at startup and on a timer, the command line sweeps by
+  hand, and no endpoint sweeps at all.
 - Prefer failing loudly over dropping data. A row that cannot become a
   correct shift stops the run and is named, rather than being skipped:
   a missing shift is invisible, and the operator only discovers it when

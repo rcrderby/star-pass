@@ -172,6 +172,40 @@ class TestWhoMayRead:
         assert published['security'] == [{'Bearer token': ['config:read']}]
 
 
+class TestWhatIsSaidAboutRetention:
+    def test_each_window_comes_from_its_own_setting(
+        self,
+        configured: Callable[..., Dict[str, Any]]
+    ) -> None:
+        # Three separate numbers because they answer three separate
+        # questions, so one setting reaching two of them would be
+        # invisible in a document assembled from constants.
+        answer = configured(
+            RETENTION_JOB_LOG_DAYS=31,
+            RETENTION_REVISION_DAYS=62,
+            RETENTION_UNMATCHED_TITLE_DAYS=93
+        )
+
+        assert answer['retention'] == {
+            'jobLogDays': 31,
+            'revisionDays': 62,
+            'unmatchedTitleDays': 93
+        }
+
+    def test_nothing_is_published_about_the_sent_record(
+        self,
+        configured: Callable[..., Dict[str, Any]]
+    ) -> None:
+        # It has no window, and a key saying so would be a value that
+        # is never anything else. That it is kept is a fact about the
+        # system, which each client words for itself.
+        published = configured()['retention']
+
+        assert not [
+            key for key in published if 'sent' in key.lower()
+        ]
+
+
 class TestWhatTheEndpointDoesNotDo:
     def test_there_is_no_way_to_write_a_setting(
         self,
