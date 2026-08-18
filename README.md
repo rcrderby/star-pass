@@ -215,7 +215,71 @@ carry a token the frontend put in a readable cookie, in a header,
 which is what an off-site page cannot do.
 
 The frontend needs `STAR_PASS_SESSION_SECRET` as well as
-`STAR_PASS_API_TOKEN`, and refuses to start without either.
+`STAR_PASS_API_TOKEN`, and refuses to start without either. It also
+refuses to start with no page to serve: it exists to give a browser
+one and to carry its session, so a proxy with nothing behind it would
+be reachable and unusable.
+
+### Running both behind Caddy
+
+```bash
+docker compose up
+```
+
+One command, three containers, and the arrangement the plan has
+assumed since D5 and D17. Caddy is the only one with a published port:
+it terminates TLS, redirects plain HTTP to it, and passes the request
+to the frontend. Neither application service is reachable from outside
+the host.
+
+They sit on two networks rather than one. Caddy and the frontend share
+the first; the frontend and the API share the second. Caddy is
+deliberately absent from the second, so the path to the service
+holding the Amplify credential runs through the process that checks a
+write came from its own page -- and through nothing else. The
+credential file and the database volume are attached to the API
+service alone (D9, D17), and the frontend is handed the two values it
+needs by name, neither of which is an Amplify credential.
+
+Out of the box the site is `https://localhost`, served with Caddy's
+internal certificate authority, which is what D14 asks for while
+building. Your browser will not know that authority; either accept the
+warning or trust the root Caddy writes to its `caddy_data` volume.
+Set `STAR_PASS_SITE_ADDRESS` to serve a different name.
+
+Real certificates are a deployment concern and there is no ACME code
+in the application. Setting `STAR_PASS_TLS` to an email address
+switches Caddy to Let's Encrypt, which needs a publicly resolvable
+name -- a deliberate step, since D14 decided against putting an
+unauthenticated-by-design system on the public internet.
+
+**HSTS is deliberately off.** It is a promise a browser will not let
+you take back, so `deploy/caddy/conf.d/hsts.caddy.example` ships as an
+example and is copied to `hsts.caddy` once the domain is settled and
+not before. The Caddyfile imports that directory with a glob, and a
+glob matching nothing is not an error.
+
+Forwarded headers are trusted from exactly one hop: the frontend is
+started with `--forwarded-allow-ips` naming the address Caddy is
+pinned to on the shared network, never `*`. The API is started with
+`--no-proxy-headers`, because nothing proxies to it -- the frontend
+forwards an allowlist of headers that does not include the
+`X-Forwarded-*` pair. Note what that setting does and does not cover:
+uvicorn reads `X-Forwarded-For` and `X-Forwarded-Proto` and rewrites
+the client address and the scheme, and never touches `Host`. `Host` is
+what the frontend compares `Origin` against on a write, and what makes
+that comparison trustworthy is Caddy answering a request whose `Host`
+matches no named site rather than passing it on.
+
+Because nothing but Caddy is published, the documentation addresses
+the API serves are reachable only from inside the deployment. Read
+them with `docker compose exec` or by forwarding a port, not by adding
+a route: a second way in to the credential-holding service is the
+thing this arrangement exists to prevent.
+
+Copy `.env.example` to `.env` before the first `docker compose up`.
+Docker creates a directory where the credential file is mounted if the
+file is not there.
 
 `runs show` gives one run, the events its current revision holds, the
 Amplify opportunities they are created under, and every change made to

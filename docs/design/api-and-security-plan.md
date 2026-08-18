@@ -258,7 +258,7 @@ mechanical once they're right.
 ## 11. Settled and still open
 
 Every decision, with its rationale and a revisit trigger, is recorded in
-`decisions.md` (D1–D17). Settled since this plan was first written:
+`decisions.md` (D1–D19). Settled since this plan was first written:
 
 - Credentials arrive as a **read-only mounted secret file**, path from an env var,
   0400, read once at startup, fail fast (D9). Replacement stays out of the API (D8).
@@ -274,6 +274,11 @@ Every decision, with its rationale and a revisit trigger, is recorded in
   services** (D6).
 - The front-end and API are **separate containers**, with the credential mount
   attached to the API service only; the CLI ships in the API image (D17).
+- The browser's session is an **opaque id with a derived CSRF token**, no session
+  library and no server-side store while a session carries nothing (D18).
+- The web page is served by the **front-end container at its root**, because it
+  is the only origin it can work from; the prototype stays design-side and is not
+  ported (D19).
 
 Still open:
 

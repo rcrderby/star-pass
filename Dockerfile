@@ -28,6 +28,13 @@ COPY /app /app
 # time from a path relative to the package ('<app>/../models').
 COPY /models /models
 
+# Copy the page the front-end service serves at its root, which it
+# reads from the same kind of path ('<app>/../web').  It ships in the
+# image because it can only work from that service's origin: the token
+# a write carries is a cookie the page reads, and a write from another
+# origin is refused (D4, D18).
+COPY /web /web
+
 # Create the directory the SQLite database lives in, so a deployment
 # can mount a volume over it.
 RUN mkdir -p /data

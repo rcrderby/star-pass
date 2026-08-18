@@ -1,0 +1,65 @@
+# The only process in this deployment with a published port.
+#
+# Everything reaches star-pass through here: Caddy terminates TLS and
+# passes plain HTTP to the frontend, on a network the API is not on
+# (D5, D6, D17).  Neither application service publishes a port, so
+# this file is the whole of the front door.
+#
+# There is no ACME code in the application and none belongs there.
+# Certificates are this layer's business (plan section 3).
+
+{$STAR_PASS_SITE_ADDRESS:localhost} {
+	# Caddy's internal certificate authority by default (D14).  A
+	# deployment that is genuinely public sets this to an email
+	# address to use Let's Encrypt instead; the default stays
+	# internal so that pointing this at a real name cannot start
+	# issuing public certificates by accident, which D14 rejected.
+	#
+	# HTTP to HTTPS needs no directive: Caddy serves this name on 443
+	# and redirects 80 to it, and writing the redirect out by hand
+	# would mean turning that off first.
+	tls {$STAR_PASS_TLS:internal}
+
+	encode zstd gzip
+
+	# A site here is matched by name, so a request carrying any other
+	# Host matches no route and Caddy answers it with nothing rather
+	# than passing it on.  That is what makes the frontend's origin
+	# check trustworthy: it decides whether a write came from its own
+	# page by comparing Origin with Host, Caddy passes the browser's
+	# Host through unchanged, and the only Host that reaches the
+	# frontend is one written above.
+	header {
+		# The page loads no third-party script, style, font or
+		# image, and talks to no origin but its own.  No
+		# 'unsafe-inline': the script and the stylesheet are files,
+		# which is what lets this be strict rather than decorative.
+		Content-Security-Policy "default-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		# Caddy names itself in every answer otherwise, which tells a
+		# scanner what to look up.
+		-Server
+	}
+
+	reverse_proxy frontend:8000 {
+		# A job's progress arrives over time and has to be passed on
+		# over time.  Caddy already streams a 'text/event-stream'
+		# answer unbuffered; this says so rather than relying on the
+		# detection, because a buffered stream looks like a job that
+		# hangs and then finishes all at once.
+		flush_interval -1
+	}
+
+	# HSTS lives in a file that is not committed, because it is a
+	# promise a browser will not let you take back: for the length of
+	# its max-age that browser will refuse to reach this name over
+	# plain HTTP, whatever the certificate turns out to be.  Turning
+	# it on before the domain is settled is what the plan warns
+	# against (section 3), so the header ships as an example and the
+	# deployment renames it once the name is final.
+	#
+	# A glob matching nothing is not an error, so this line does
+	# nothing until that happens.
+	import /etc/caddy/conf.d/*.caddy
+}

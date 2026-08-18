@@ -1,0 +1,182 @@
+---
+# The deployment the plan has assumed since D5 and D17: two
+# application services on one host, behind Caddy, with nothing but
+# Caddy publishing a port.
+#
+# 'docker compose up' is the whole of local development. It builds one
+# image and runs it twice, which is what keeps the core and the API
+# from drifting apart (D17), and serves the page over HTTPS with
+# Caddy's internal certificate authority (D14).
+#
+# Copy '.env.example' to '.env' first. Compose reads it for the values
+# interpolated below, and the API service reads it as a file.
+
+services:
+  # The only service with a published port, and the only one holding a
+  # certificate. It reaches the frontend and cannot reach the API:
+  # they are on different networks, so the frontend is the sole path
+  # to the credential-holding process rather than merely the intended
+  # one.
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # The name this is served at. 'localhost' by default, which
+      # Caddy serves with its internal certificate authority.
+      STAR_PASS_SITE_ADDRESS: ${STAR_PASS_SITE_ADDRESS:-localhost}
+      # 'internal' or an email address; see the Caddyfile.
+      STAR_PASS_TLS: ${STAR_PASS_TLS:-internal}
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/caddy/conf.d:/etc/caddy/conf.d:ro
+      # The internal certificate authority's own key lives here. Kept
+      # across restarts, because a new one means every browser that
+      # trusted the old one stops.
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      edge:
+        # Fixed, because the frontend trusts forwarded headers from
+        # this address and nothing else. A range would trust whatever
+        # else is put on this network later.
+        ipv4_address: 172.31.240.2
+    depends_on:
+      frontend:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+
+  # What a browser talks to. Holds the API token and the session
+  # signing value, and no Amplify credential of any kind: the
+  # internet-facing process never has that secret on its filesystem,
+  # which is the whole of D17.
+  frontend:
+    build: .
+    restart: unless-stopped
+    command:
+      - uvicorn
+      - --factory
+      - star_pass_bff:create_app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      # Trusted from exactly one hop, never '*'. Scoped to the address
+      # Caddy is pinned to above, so a second container on this
+      # network cannot claim to be the proxy.
+      #
+      # What this governs is narrower than it looks: uvicorn reads
+      # X-Forwarded-For and X-Forwarded-Proto, and rewrites the client
+      # address and the scheme. It does not touch Host, which is what
+      # the origin check on a write compares against -- that one is
+      # made trustworthy by Caddy matching a request to a named site.
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - 172.31.240.2
+    environment:
+      # Named one at a time rather than handed the whole file. What
+      # this process is given is the two values it needs, and a
+      # deployment can see at a glance that neither is the Amplify
+      # credential.
+      STAR_PASS_API_TOKEN: ${STAR_PASS_API_TOKEN:?set it in .env}
+      STAR_PASS_SESSION_SECRET: ${STAR_PASS_SESSION_SECRET:?set it in .env}
+      STAR_PASS_API_URL: http://api:8000
+      # Caddy terminates TLS, so the browser's scheme is https and the
+      # cookies may say Secure. Over plain HTTP a browser refuses to
+      # store them and the session silently does not work.
+      STAR_PASS_COOKIES_SECURE: ${STAR_PASS_COOKIES_SECURE:-true}
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          from urllib.request import urlopen
+          urlopen('http://localhost:8000/', timeout=3)
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    networks:
+      - edge
+      - backend
+    depends_on:
+      api:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+
+  # Everything the tool actually does, and the only service that holds
+  # the Amplify credential or touches the database. On one network,
+  # which Caddy is not on, so nothing outside this file can reach it.
+  api:
+    build: .
+    restart: unless-stopped
+    command:
+      - uvicorn
+      - --factory
+      - star_pass_api:create_app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      # Nothing proxies to this service. The frontend forwards an
+      # allowlist of headers that does not include the X-Forwarded-*
+      # pair, so there is no hop to trust and uvicorn is told to take
+      # nobody's word rather than its default of 127.0.0.1.
+      - --no-proxy-headers
+    environment:
+      # Where the state that outlives the container is kept.
+      STAR_PASS_DATABASE_PATH: /data/star_pass.db
+    volumes:
+      # The credential mount, on this service and no other (D9, D17).
+      # A file rather than the environment, so the secret stays out of
+      # 'docker inspect' and '/proc/<pid>/environ'.
+      #
+      # Docker creates a DIRECTORY here if '.env' does not exist, so
+      # copy '.env.example' to '.env' before the first 'up'.
+      - ./.env:/app/.env:ro
+      - star_pass_data:/data
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          from urllib.request import urlopen
+          urlopen('http://localhost:8000/v1/health', timeout=3)
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  # Caddy and the frontend. Addressed explicitly so that the one hop
+  # the frontend trusts is an address rather than a range.
+  edge:
+    ipam:
+      config:
+        # 'ip_range' is what reserves the pinned address rather than
+        # merely naming it. Without it, addresses are handed out from
+        # the bottom of the subnet and the frontend takes .2 first --
+        # it starts before Caddy does -- and Caddy then fails to
+        # start, having asked for an address already in use.
+        - subnet: 172.31.240.0/28
+          ip_range: 172.31.240.8/29
+
+  # The frontend and the API. Caddy is deliberately absent: the path
+  # to the credential-holding service runs through the process that
+  # checks a write came from its own page, and through nothing else.
+  backend: {}
+
+volumes:
+  star_pass_data: {}
+  caddy_data: {}
+  caddy_config: {}
