@@ -41,6 +41,15 @@ os.environ.setdefault(
     'STAR_PASS_API_TOKEN',
     'test-star-pass-api-value-not-a-real-one'
 )
+# What the front end signs a session with, long enough to clear its
+# own minimum. Its cookies are marked insecure here because the test
+# client speaks plain HTTP, and a browser drops a Secure cookie from
+# an insecure origin -- which would look like sessions not working.
+os.environ.setdefault(
+    'STAR_PASS_SESSION_SECRET',
+    'test-star-pass-signing-value-not-a-real-one'
+)
+os.environ.setdefault('STAR_PASS_COOKIES_SECURE', 'false')
 
 # Fixtures that stand in for a service outside this process, which
 # are their own subject and their own module.  Registered here because

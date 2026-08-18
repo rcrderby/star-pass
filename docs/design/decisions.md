@@ -344,6 +344,42 @@ itself be a sign the BFF has acquired domain logic it should not have.
 
 ---
 
+## D18 — The browser's session is an opaque id with a derived token
+
+**Decided:** The front end mints a random opaque session id in an httpOnly,
+Secure, SameSite=Strict cookie, and puts an HMAC of it in a second, readable
+cookie. A write must send that token back in a custom header. No session
+library, no server-side store, nothing signed into the cookie but the id.
+
+**Why:** A session carries *nothing* today. There is no login — a single person
+reaches this over a network that controls access (D14), and an authentication
+boundary in front of the whole system is deferred on purpose. A session library
+serialises a dictionary we have no contents for, so it would be a dependency
+holding an empty dict. Deriving the CSRF token instead of storing it means the
+front end can be restarted, or eventually run twice, without logging anybody
+out.
+
+Three things make a write safe rather than one, because any single one can be
+argued around: `SameSite=Strict` (a browser sends the cookie on nothing an
+off-site page initiated), the token in a **header** (which an off-site form
+cannot set), and a check on `Origin`/`Sec-Fetch-Site`.
+
+**Rejected:** Starlette's `SessionMiddleware` with `itsdangerous` (a dependency
+for an empty session; and at OIDC time a server-side store may be the better
+answer anyway, which would make adopting it now waste rather than saving);
+double-submit with no derivation (needs a store, or trusts a cookie the page set
+itself).
+
+**Revisit if:** OIDC lands (D3) and the session starts carrying an identity.
+Then it holds a subject, an expiry and possibly tokens, and the choice is a
+signed payload or a server-side store — the second being likely, because
+revocation and keeping tokens out of the browser are the reasons to have one.
+The migration is contained because everything asks `_sessions.py` two questions
+and nothing else knows what a session is, which is the same arrangement that
+makes D3 cheap.
+
+---
+
 ## Deferred, on purpose
 
 - **An authentication boundary in front of the whole system.** Deferred: single

@@ -199,6 +199,24 @@ needs `STAR_PASS_API_TOKEN`, and the command says so rather than
 failing with a 401. What is displayed is identical either way, because
 both modes answer with the same document.
 
+### Running the services
+
+```bash
+uvicorn --factory star_pass_api:create_app     # the API
+uvicorn --factory star_pass_bff:create_app     # the frontend
+```
+
+Two processes, and in a deployment two containers: only the API holds
+the Amplify credential, and the frontend is the one facing a browser.
+The browser talks to the frontend, which attaches the API credential
+to what it forwards — so no credential is ever in the page, and there
+is nothing for a script injected into it to steal. Writes have to
+carry a token the frontend put in a readable cookie, in a header,
+which is what an off-site page cannot do.
+
+The frontend needs `STAR_PASS_SESSION_SECRET` as well as
+`STAR_PASS_API_TOKEN`, and refuses to start without either.
+
 `runs show` gives one run, the events its current revision holds, the
 Amplify opportunities they are created under, and every change made to
 it. `runs uncollected` gives what the run's window held that did not

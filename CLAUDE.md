@@ -274,6 +274,21 @@ through the Amplify API. It is run once per month.
   package from `star_pass`, because the core knows nothing about HTTP
   and this package holds no domain logic. Run it with
   `uvicorn --factory star_pass_api:create_app`.
+- `app/star_pass_bff/` — the frontend's own service: the browser
+  reaches the API only through it, and holds **no** credential (D4).
+  It keeps the token server-side and attaches it to what it forwards,
+  so cross-site scripting cannot exfiltrate what is not in the page;
+  same origin, so there is no CORS configuration at all. A separate
+  container from the API with no credential mount on it, because the
+  internet-facing process must never have the Amplify secret on its
+  filesystem (D17). It holds **no domain logic and imports nothing of
+  the core** — a test in `tests/test_bff_configuration.py` holds that
+  in a subprocess, because this suite has imported the core already
+  and `sys.modules` would say nothing. `_sessions.py` is the only
+  module that decides what a session is (D18), `_proxy.py` passes
+  requests on and streams what the API streams, and `_configuration.py`
+  refuses to start half-configured. Run it with
+  `uvicorn --factory star_pass_bff:create_app`.
 - `docs/api/openapi.json` — the generated OpenAPI 3.1 contract,
   written by `scripts/generate_contract.py`, which also writes the
   client generated from it.
@@ -536,6 +551,18 @@ The notes below are the ones that are not obvious from the commands.
   twice the allowance through across its edge, and a refused attempt
   is not counted — counting it turns a limit into a lockout. Local
   mode is not limited: that is the operator asking their own machine.
+- **A write reaching the frontend has to prove it came from its own
+  page**, and three things say so rather than one: the cookie is
+  `SameSite=Strict`, the token derived from the session arrives in a
+  header an off-site form cannot set, and `Origin`/`Sec-Fetch-Site`
+  are checked. The origin check compares hosts and not whole origins,
+  because TLS is terminated in front of the service (D6) and the
+  scheme the browser used is not the scheme this process sees.
+- **The frontend forwards an allowlist of headers, never what
+  arrived.** What the API receives is what the frontend decided to
+  send plus the credential, so a page cannot choose what the API is
+  asked with. `Idempotency-Key` is on the list because the contract
+  requires it on the keyed writes.
 - `app/star_pass_api/_security.py` is the only module that reads the
   API token or the `Authorization` header. A route declares the scopes
   it needs with `requires(...)` and receives a `Principal`; it never
