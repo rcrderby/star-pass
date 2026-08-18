@@ -16,8 +16,10 @@ comes first. Read in this order:
 2. `api-and-security-plan.md` — the full plan and security model.
 3. `decisions.md` — D1–D17, each with why, what was rejected, and what would make
    us revisit it.
-4. `openapi-v1-sketch.yaml` — the v1 surface, written from these screens. A
-   checking artifact: FastAPI generates the real spec, and this is deleted then.
+
+The v1 surface itself is `docs/api/openapi.json` in the repository root, which
+FastAPI generates and CI checks for drift. A sketch of it was written from these
+screens while the endpoints were being designed; it did its job and is gone.
 
 ## About the design files
 
@@ -214,7 +216,7 @@ drawer.
 
 ## State
 
-Server-owned (see the OpenAPI sketch): runs, revisions, events, the change log,
+Server-owned (see `docs/api/openapi.json`): runs, revisions, events, the change log,
 job status and steps, the sent record, duplicate-check results, unmatched-title
 notes, config, credential status.
 
@@ -244,7 +246,6 @@ from the repository, with invented events.
   design targets — the HTML is the reference for proportions, the screenshots for
   colour, density and copy. The empty state is not among them: it is behind a
   tweak in the authoring tool rather than a reachable route.
-- `api-and-security-plan.md`, `decisions.md`, `openapi-v1-sketch.yaml`,
-  `claude-code-kickoff.md` — the plan, the decision record, the API surface, and
-  the prompt to start from.
+- `api-and-security-plan.md`, `decisions.md`, `claude-code-kickoff.md` — the
+  plan, the decision record, and the prompt to start from.
 - `source/` — authoring files behind the prototype. Reference only.
