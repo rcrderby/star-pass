@@ -44,9 +44,14 @@ def fixture_collecting(
     """
     collected: List[str] = []
 
-    def record(connection: Any, run_id: str, reporter: Any) -> None:
+    def record(
+        connection: Any,
+        run_id: str,
+        reporter: Any,
+        principal_id: str
+    ) -> None:
         """ Stand in for the collection, recording the run. """
-        del connection, reporter
+        del connection, reporter, principal_id
         collected.append(run_id)
 
     monkeypatch.setattr('star_pass_api._runs.collect', record)

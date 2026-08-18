@@ -482,7 +482,8 @@ class TestWhatStopsTheRun:
             collect(
                 connection=connection,
                 run_id='no-such-run',
-                reporter=Reporter()
+                reporter=Reporter(),
+                principal_id='static-token'
             )
 
         assert 'no-such-run' in str(error.value)

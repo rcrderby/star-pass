@@ -111,7 +111,8 @@ def work_for(
         collect(
             connection=connection,
             run_id=job.run_id,
-            reporter=reporter
+            reporter=reporter,
+            principal_id=principal_id
         )
 
     return collecting

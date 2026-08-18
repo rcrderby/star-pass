@@ -243,7 +243,12 @@ clients fail the same way:
 6. Write endpoints: collect, recollect, send with idempotency keys.
 7. BFF: session cookie, CSRF, proxy. Web UI stops holding anything.
 8. Caddy in front, HSTS, forwarded-header trust scoped to the proxy.
-9. Retention policy job for job logs and superseded revisions.
+9. Retention policy job for job logs and superseded revisions. Decide
+   there what happens to `unmatched_titles`: collections write it, so
+   it grows on its own, and a title is calendar text that can name a
+   person — which is D12's PII rationale rather than a disk one. It is
+   also the one store whose value is its age, so an expiry short
+   enough to matter would defeat the count.
 
 Steps 1–3 are the ones that create or prevent technical debt. The rest is
 mechanical once they're right.

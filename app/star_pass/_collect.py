@@ -59,11 +59,13 @@ from ._records import (
     UNCOLLECTED_SEARCH
 )
 from ._reporting import Reporter
+from ._derived import blocks_the_run
 from ._repository import (
     EventRepository,
     RevisionRepository,
     RunRepository,
-    UncollectedRepository
+    UncollectedRepository,
+    UnmatchedTitleRepository
 )
 
 # Constants
@@ -536,7 +538,8 @@ def _collected(
 def collect(
         connection: sqlite3.Connection,
         run_id: str,
-        reporter: Reporter
+        reporter: Reporter,
+        principal_id: str
 ) -> Run:
     """ Fill in a run from the calendar it names.
 
@@ -555,7 +558,8 @@ def collect(
         would label none of them, and a reader could not tell that
         from a run whose opportunities Amplify had forgotten.  What the
         window held and the run left out is written there too, for the
-        same reason: the two describe one reading of one window.
+        same reason, and so are the titles the data model had no match
+        for: they all describe one reading of one window.
 
         Args:
             connection (sqlite3.Connection):
@@ -566,6 +570,10 @@ def collect(
 
             reporter (Reporter):
                 Where progress is described.
+
+            principal_id (str):
+                Who asked for the collection (D13).  Recorded against
+                the titles it finds the data model has no match for.
 
         Raises:
             ValidationError:
@@ -635,6 +643,12 @@ def collect(
             run_id=run_id,
             uncollected=uncollected
         )
+        _record_unmatched(
+            connection=connection,
+            run=run,
+            events=events,
+            principal_id=principal_id
+        )
         runs.set_status(
             run_id=run_id,
             status=RUN_STATUS_UNSENT
@@ -649,3 +663,61 @@ def collect(
     logger.info(message)
 
     return runs.get(run_id=run_id)
+
+
+def _record_unmatched(
+        connection: sqlite3.Connection,
+        run: Run,
+        events: Sequence[Event],
+        principal_id: str
+) -> None:
+    """ Keep the titles this window held that the model did not match.
+
+        Written here because here is where the fact is discovered: an
+        event the model matched nothing for is collected under the
+        fallback category, whose need IDs are empty, and that is an
+        event with no roles.  It blocks the send, which is what gets
+        this run seen to; the log is what survives the run, for the
+        next edit of the model.
+
+        One sighting per title, however many events carry it and
+        however often the window is collected again -- the repository
+        holds a run to one sighting of a title, so what the count
+        measures is the runs a title turned up in rather than the
+        times somebody read the same window.
+
+        Args:
+            connection (sqlite3.Connection):
+                Connection to write on.
+
+            run (Run):
+                The run being collected, which says which calendar the
+                titles belong to.
+
+            events (Sequence[Event]):
+                What the collection produced.
+
+            principal_id (str):
+                Who asked for the collection (D13).
+
+        Raises:
+            UpstreamError:
+                If a title cannot be recorded.
+
+        Returns:
+            None.
+    """
+
+    unmatched = UnmatchedTitleRepository(connection=connection)
+
+    for title in sorted({
+        event.title for event in events if blocks_the_run(event=event)
+    }):
+        unmatched.record(
+            calendar=run.calendar,
+            title=title,
+            run_id=run.id,
+            principal_id=principal_id
+        )
+
+    return None

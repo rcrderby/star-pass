@@ -29,6 +29,12 @@ from star_pass._collect import collect
 from star_pass._reporting import Reporter
 from star_pass._repository import RunRepository
 
+# Constants
+# Who an arranged collection is recorded as having been asked for by
+# (D13).  The service's principal, because that is what a collection
+# started over the API carries.
+COLLECTED_BY = 'static-token'
+
 
 @pytest.fixture(name='answers')
 def fixture_answers(
@@ -130,7 +136,8 @@ def fixture_collect_run(
         return collect(
             connection=connection,
             run_id=run_id if run_id is not None else collecting,
-            reporter=Reporter()
+            reporter=Reporter(),
+            principal_id=COLLECTED_BY
         )
 
     return run

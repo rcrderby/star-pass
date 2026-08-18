@@ -355,7 +355,8 @@ async def get_preview(
 async def _handed_over(
         request: Request,
         job_id: str,
-        run_id: str
+        run_id: str,
+        principal_id: str
 ) -> JobView:
     """ Give the collecting to the runner and answer with the job.
 
@@ -374,6 +375,9 @@ async def _handed_over(
             run_id (str):
                 Run to collect into.
 
+            principal_id (str):
+                Who asked for it (D13).
+
         Returns:
             job (JobView):
                 The job, as it stands when the answer is sent.
@@ -385,7 +389,8 @@ async def _handed_over(
             lambda connection: collect(
                 connection=connection,
                 run_id=run_id,
-                reporter=reporter
+                reporter=reporter,
+                principal_id=principal_id
             )
         )
 
@@ -596,7 +601,8 @@ async def collect_run(
     return await _handed_over(
         request=request,
         job_id=job_id,
-        run_id=run.id
+        run_id=run.id,
+        principal_id=principal.id
     )
 
 
@@ -722,7 +728,8 @@ async def recollect_run(
     return await _handed_over(
         request=request,
         job_id=job_id,
-        run_id=run_id
+        run_id=run_id,
+        principal_id=principal.id
     )
 
 

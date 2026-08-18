@@ -795,10 +795,13 @@ class UnmatchedTitleView(ApiModel):
     )
     times_seen: int = Field(
         description=(
-            'How many sightings have been recorded. What says whether '
-            'a title is worth an alias: one that turns up every month '
-            'is a category the model is missing, and one seen once is '
-            'an event that happened once.'
+            'How many runs this title turned up in, plus any '
+            'sightings recorded by hand. What says whether a title is '
+            'worth an alias: one that turns up every month is a '
+            'category the model is missing, and one seen once is an '
+            'event that happened once. A run counts once however many '
+            'events carry the title and however often its window is '
+            'collected again.'
         ),
         examples=[3]
     )

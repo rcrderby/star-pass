@@ -369,12 +369,15 @@ UNCOLLECTED_REASONS = (
 class UnmatchedTitle:
     """ A title the data model did not match, and how often it has been.
 
-        What is stored is a **sighting**: the same title noticed in two
-        runs is two rows, because how often something turns up is what
-        says whether it is worth an alias.  What is read back is this
-        -- one entry per title in a calendar, with the sightings
-        counted -- because a list showing the same title eleven times
-        is a list nobody works through.
+        What is stored is a **sighting**, and a run contributes at
+        most one of them per title: a window holding the same
+        unmatched title four times saw one title, and collecting that
+        window again is one window read twice rather than a title that
+        came back.  So the count is the number of **runs** a title
+        turned up in, which is the question being asked of it.  What
+        is read back is one entry per title in a calendar, with the
+        sightings counted, because a list showing the same title
+        eleven times is a list nobody works through.
 
         Attributes:
             calendar (str):
@@ -388,7 +391,8 @@ class UnmatchedTitle:
                 The title, as the calendar gave it.
 
             times_seen (int):
-                How many sightings have been recorded.
+                How many sightings have been recorded: one per run the
+                title turned up in, plus any recorded by hand.
 
             first_seen (str):
                 When the earliest was recorded, ISO-8601 UTC.

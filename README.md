@@ -342,8 +342,14 @@ tells the two cases apart: a title that turns up every month is a
 category the model is missing, and one seen once is an event that
 happened once. Read it before editing `models/shift_info.yml`.
 
-The log is append-only: recording the same title again counts a second
-sighting rather than replacing anything, and nothing deletes an entry.
+Collections fill the log themselves, so nothing depends on anybody
+remembering to record a title. A run counts once per title however
+many events carry it and however often you collect its window again —
+so fixing the model and recollecting does not read as the title coming
+back.
+
+The log is append-only: nothing updates an entry and nothing deletes
+one, and it outlives the runs the titles were seen in.
 
 ## Development
 

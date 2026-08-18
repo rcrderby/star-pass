@@ -243,7 +243,8 @@ class LocalWrites:
             collect(
                 connection=connection,
                 run_id=run_id,
-                reporter=reporter
+                reporter=reporter,
+                principal_id=LOCAL_PRINCIPAL_ID
             )
 
         return None

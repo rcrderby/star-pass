@@ -80,13 +80,28 @@ through the Amplify API. It is run once per month.
   run, so a list of runs costs one query rather than one per run.
 - The one table belonging to no run is `unmatched_titles`
   (`_repository/_unmatched.py`). A row is one **sighting** of a title
-  no category matched: the same title seen twice is two rows, because
-  how often one turns up is what says whether it is worth an alias,
-  and read back they are counted into one entry per title in a
-  calendar. Append-only — nothing updates a row or deletes one — and
-  its reference to the run it was noticed in does not cascade, because
-  a run is a window that is eventually superseded and what the model
-  is missing outlives it.
+  no category matched, and **a run contributes at most one per
+  title**: a window holding the same unmatched title four times saw
+  one title, and collecting that window again is one window read
+  twice. That rule is in the repository rather than in its callers,
+  because the caller that most needs it is the collection —
+  recollecting is how a corrected model is picked up, so a count that
+  grew with each one would report the operator's own fixing as the
+  title coming back. What the count therefore measures is the runs a
+  title turned up in, plus any sighting recorded by hand, which is the
+  question being asked of it. Read back they are counted into one
+  entry per title in a calendar. Append-only — nothing updates a row
+  or deletes one — and its reference to the run it was noticed in does
+  not cascade, because a run is a window that is eventually superseded
+  and what the model is missing outlives it.
+- **A collection records the titles it could not match** (`_collect`'s
+  `_record_unmatched`), in the transaction that stores everything else
+  one reading of a window produced. An event the model matched nothing
+  for has no roles, which is the same fact that blocks the send, so
+  nothing new has to be detected. Written by the collection rather
+  than left to whoever notices: a log that depended on somebody
+  remembering would hold what people remembered rather than what
+  happened, and the count would measure diligence.
 - `app/star_pass/_derived.py` — the four things the `Event` record
   deliberately leaves out, worked out from what it does hold: how long
   the shift is, whether an opportunity's maximum shortened it, whether

@@ -1367,7 +1367,7 @@
             "type": "string"
           },
           "timesSeen": {
-            "description": "How many sightings have been recorded. What says whether a title is worth an alias: one that turns up every month is a category the model is missing, and one seen once is an event that happened once.",
+            "description": "How many runs this title turned up in, plus any sightings recorded by hand. What says whether a title is worth an alias: one that turns up every month is a category the model is missing, and one seen once is an event that happened once. A run counts once however many events carry the title and however often its window is collected again.",
             "examples": [
               3
             ],
@@ -2388,7 +2388,7 @@
     },
     "/v1/unmatched-titles": {
       "get": {
-        "description": "One entry per title in a calendar, with how many sightings have been recorded and when the first and most recent were. Newest sighting first, so a title that has just started turning up is read before one somebody has already decided about.\n\nWhat it is for: the next edit of the shift data model. A title seen every month is a category the model is missing; one seen once is an event that happened once, and the count is what tells them apart.\n\nBelongs to no run. A run is a window that is eventually superseded, and what the model is missing outlives it.",
+        "description": "One entry per title in a calendar, with how many sightings have been recorded -- one per run it turned up in, plus any recorded by hand -- and when the first and most recent were. Newest sighting first, so a title that has just started turning up is read before one somebody has already decided about.\n\nWhat it is for: the next edit of the shift data model. A title seen every month is a category the model is missing; one seen once is an event that happened once, and the count is what tells them apart.\n\nBelongs to no run. A run is a window that is eventually superseded, and what the model is missing outlives it.",
         "operationId": "list_unmatched_titles",
         "responses": {
           "200": {
@@ -2425,7 +2425,7 @@
         ]
       },
       "post": {
-        "description": "Adds one sighting. The same title recorded twice is two sightings and one entry: how often a title turns up is what says whether it is worth an alias, and an entry overwritten would answer \"once\" forever.\n\nAnswers with the entry as the log now holds it, this sighting counted.\n\nThe calendar has to be one the deployment configured, because the categories a title is matched against belong to a calendar. The run is optional provenance: the log outlives the run, and deleting one does not take the reason somebody was going to edit the model.\n\nNo `Idempotency-Key`. A sighting is not a state, so a retry after a lost answer records that the title was seen again, which is true.",
+        "description": "Adds one sighting, for a title noticed outside a collection: collections record what they find themselves.\n\nA title recorded twice against no run is two sightings and one entry, because how often a title turns up is what says whether it is worth an alias and an entry overwritten would answer \"once\" forever. A run counts once however often it is named, so a retry adds nothing.\n\nAnswers with the entry as the log now holds it, this sighting counted.\n\nThe calendar has to be one the deployment configured, because the categories a title is matched against belong to a calendar. The run is optional provenance: the log outlives the run, and deleting one does not take the reason somebody was going to edit the model.\n\nNo `Idempotency-Key`. A request naming a run is already answered the same way twice, and one naming none records that the title was seen again, which is true.",
         "operationId": "record_unmatched_title",
         "requestBody": {
           "content": {
