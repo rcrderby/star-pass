@@ -236,3 +236,41 @@ export async function ask(path, options = {}) {
 export function listRuns(options = {}) {
   return ask('/runs', options);
 }
+
+/** Return one run, with its events, opportunities and change log.
+ *
+ * One request rather than several: the review screen is a reading of
+ * this answer, and a screen assembled from three would show a run
+ * whose parts were read at three different moments.
+ *
+ * @param {string} runId Which run.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The run in full.
+ */
+export function getRun(runId, options = {}) {
+  return ask(`/runs/${encodeURIComponent(runId)}`, options);
+}
+
+/** Return the run's revisions, newest last.
+ *
+ * @param {string} runId Which run.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Array<Object>>} The revisions.
+ */
+export function listRevisions(runId, options = {}) {
+  return ask(`/runs/${encodeURIComponent(runId)}/revisions`, options);
+}
+
+/** Return what this deployment was configured with.
+ *
+ * Read for the categories each calendar offers, which is what an
+ * event may be put under and is not derivable from a run: a run holds
+ * the opportunities its own events reached, and the event that needs
+ * the list is the one that matched nothing.
+ *
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The configuration.
+ */
+export function getConfig(options = {}) {
+  return ask('/config', options);
+}

@@ -51,3 +51,23 @@ export async function loadPhrases() {
 export function phrase(group, key) {
   return loaded?.[group]?.[key] ?? key;
 }
+
+/** Return a wording with its placeholders filled in.
+ *
+ * The notes beside a row are sentences with values in them, so the
+ * wording carries `{name}` where a value goes. Kept in the same file
+ * as the plain ones, because the reason they live outside the code is
+ * the same: a client words what the contract publishes, and a test
+ * holds the wordings to it.
+ *
+ * @param {string} group Which map to read.
+ * @param {string} key The identifier the contract published.
+ * @param {Object} values What to put in the gaps.
+ * @returns {string} The sentence.
+ */
+export function filled(group, key, values) {
+  return phrase(group, key).replace(
+    /\{(\w+)\}/g,
+    (whole, name) => (name in values ? String(values[name]) : whole)
+  );
+}

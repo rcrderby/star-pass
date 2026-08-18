@@ -74,6 +74,47 @@
   font-size: 15px;
 }
 
+/* — fields — */
+
+.input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  caret-color: var(--color-accent);
+}
+
+.input:focus-visible {
+  border-color: var(--color-accent);
+  outline-offset: 0;
+}
+
+.input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.input::placeholder {
+  color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+
+/* After the two above, because it is the more specific of the three
+ * and a rule that outranks one it precedes is a rule whose order
+ * nobody can reason about. */
+.input:hover:not(:disabled, [readonly]) {
+  border-color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+
+select.input {
+  padding-right: 26px;
+  appearance: none;
+}
+
 /* — segmented control — */
 
 .seg {

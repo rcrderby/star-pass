@@ -312,7 +312,13 @@ through the Amplify API. It is run once per month.
   and what a browser is given, and the image copies the directory as
   it is. The state a framework would reconcile is mostly the server's
   — an edit returns the whole revision — so what stands in for one is
-  a `render(state)` per region and `dom.js`. `api.js` is the only
+  a `render(state)` per region and `dom.js`. The review screen is
+  `js/review/`, split by what a reader looks at rather than by
+  component kind: the header, the banners, the table and the change
+  log, composed by `screen.js`, which owns the client-only state the
+  design lists and redraws the body while leaving the header alone —
+  which is what keeps an open popover open while a filter is applied.
+  `api.js` is the only
   thing that talks to the service, and holds the three rules no screen
   should repeat: the CSRF header on a write, an `Idempotency-Key`
   naming one action on the four operations that need one, and a

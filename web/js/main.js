@@ -7,10 +7,12 @@
  * somebody they have no runs while it finds out.
  */
 
-import { ApiError, listRuns } from './api.js';
+import { ApiError, getConfig, getRun, listRevisions, listRuns }
+  from './api.js';
 import { fill } from './dom.js';
 import { loadPhrases } from './phrases.js';
-import { emptyState, failureState, runList } from './screens.js';
+import { emptyState, failureState } from './screens.js';
+import { ReviewScreen } from './review/screen.js';
 import { shell } from './shell.js';
 import { Appearance } from './theme.js';
 
@@ -31,18 +33,34 @@ async function start() {
   main.className = 'main';
   fill(root, shell(appearance, () => alert(NOT_YET)), main);
 
-  try {
-    await loadPhrases();
+  /** Draw one run, reading everything the screen needs.
+   *
+   * @param {Array<Object>} runs Every run the service holds.
+   * @param {string} runId Which one to open.
+   * @returns {Promise<void>} When it is on screen.
+   */
+  async function openRun(runs, runId) {
+    /* Asked for together rather than one after another: three
+     * sequential reads would draw a screen assembled from three
+     * different moments, and the run is the slowest of them. */
+    const [run, revisions, config] = await Promise.all([
+      getRun(runId),
+      listRevisions(runId),
+      getConfig()
+    ]);
 
-    const runs = await listRuns();
+    fill(main, new ReviewScreen(
+      { runs, run, revisions, config },
+      { onOpenRun: (chosen) => openRun(runs, chosen).catch(failed) }
+    ).element);
+  }
 
-    fill(
-      main,
-      runs.length === 0 ? emptyState(() => alert(NOT_YET)) : runList(runs)
-    );
-  } catch (error) {
-    /* Anything that is not the service refusing is this page being
-     * broken, and is worth the log as well as the screen. */
+  /** Put a failure on screen in place of whatever was being drawn.
+   *
+   * @param {Error} error What went wrong.
+   * @returns {void}
+   */
+  function failed(error) {
     if (!(error instanceof ApiError)) {
       console.error(error);
     }
@@ -52,6 +70,22 @@ async function start() {
         ? error
         : new ApiError({ status: 0, detail: String(error.message || error) })
     ));
+  }
+
+  try {
+    await loadPhrases();
+
+    const runs = await listRuns();
+
+    if (runs.length === 0) {
+      fill(main, emptyState(() => alert(NOT_YET)));
+
+      return;
+    }
+
+    await openRun(runs, runs[0].id);
+  } catch (error) {
+    failed(error);
   }
 }
 
