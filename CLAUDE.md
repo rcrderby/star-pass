@@ -60,6 +60,7 @@ through the Amplify API. It is run once per month.
   `EventRole`, `UncollectedEvent`, `LogEntry`).
 - `app/star_pass/_repository/` — runs, their revisions, the events in
   each revision, what each run's window held and the run left out, the
+  titles the data model did not match, the
   `change_log` of edits made to them, the jobs
   that long operations are watched through, the shifts a send put into
   Amplify, and the reservations made against idempotency keys. The last
@@ -77,6 +78,15 @@ through the Amplify API. It is run once per month.
   it are derived, and so are shift length and duplicates. The counts
   and the active job are derived in the same statement that reads a
   run, so a list of runs costs one query rather than one per run.
+- The one table belonging to no run is `unmatched_titles`
+  (`_repository/_unmatched.py`). A row is one **sighting** of a title
+  no category matched: the same title seen twice is two rows, because
+  how often one turns up is what says whether it is worth an alias,
+  and read back they are counted into one entry per title in a
+  calendar. Append-only — nothing updates a row or deletes one — and
+  its reference to the run it was noticed in does not cascade, because
+  a run is a window that is eventually superseded and what the model
+  is missing outlives it.
 - `app/star_pass/_derived.py` — the four things the `Event` record
   deliberately leaves out, worked out from what it does hold: how long
   the shift is, whether an opportunity's maximum shortened it, whether
@@ -279,8 +289,8 @@ through the Amplify API. It is run once per month.
   answer differently with nothing saying so.
 - `app/star_pass_cli/` — the commands (`runs list`, `runs show`, `runs
   revisions`, `runs uncollected`, `runs preview`, `runs collect`, `runs
-  recollect`, `jobs show`, `jobs watch`, `jobs resume`, `config show`
-  and `config credential`), which work
+  recollect`, `jobs show`, `jobs watch`, `jobs resume`, `config show`,
+  `config credential` and `config unmatched`), which work
   against the local
   database by default and a service when `--api-url` or
   `STAR_PASS_API_URL` names one (D2). Each is a row in
@@ -296,12 +306,13 @@ through the Amplify API. It is run once per month.
   Slack summary, troubleshooting, and the monthly workflow, which has
   to work with no server running. Parity with the web interface is not
   a goal (D2), so an operation whose home is the review screen is
-  published by the API and declared unavailable in local mode. Four
-  are: editing a run's events, pulling one in, sealing a revision and
-  reverting to one. Do not add commands for them. Reading what a run
-  left out **is** a command, because asking why an event is not in a
-  run is troubleshooting — the line falls between reading that list
-  and acting on it.
+  published by the API and declared unavailable in local mode. Five
+  are: editing a run's events, pulling one in, sealing a revision,
+  reverting to one, and recording a title the data model did not
+  match. Do not add commands for them. Reading what a run left out
+  **is** a command, and so is reading the unmatched titles, because
+  asking why an event is not in a run is troubleshooting — the line
+  falls between reading a list and acting on it.
   `_render.py` shows what a run holds and `_sending.py` shows what
   would become of it — the preview, the restatement a send is
   confirmed with, and the job that does it — with the second importing

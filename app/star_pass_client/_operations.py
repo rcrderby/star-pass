@@ -19,6 +19,10 @@ from typing import Any, Callable, Dict, Iterator
 from ._stream import StreamEvent
 
 
+# How many methods this class has is how many operations the contract
+# publishes, so the usual cap is measuring the API rather than
+# anything a person wrote here.
+# pylint: disable=too-many-public-methods
 class Operations:
     """ One method per operation the contract publishes.
 
@@ -339,6 +343,28 @@ class Operations:
             run_id=run_id
         )
 
+    def list_unmatched_titles(
+            self
+    ) -> Any:
+        """ List titles the data model has not matched.
+
+            Args:
+                None.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='GET',
+            path='/v1/unmatched-titles'
+        )
+
     def recollect_run(
             self,
             body: Dict[str, Any],
@@ -368,6 +394,32 @@ class Operations:
             path='/v1/runs/{run_id}/recollect',
             body=body,
             run_id=run_id
+        )
+
+    def record_unmatched_title(
+            self,
+            body: Dict[str, Any]
+    ) -> Any:
+        """ Record a title the data model did not match.
+
+            Args:
+                body (Dict[str, Any]):
+                    What the operation is sent, shaped as the
+                    contract publishes it.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='POST',
+            path='/v1/unmatched-titles',
+            body=body
         )
 
     def resume_job(

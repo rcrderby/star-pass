@@ -41,6 +41,7 @@ from ._revisions import router as revisions_router
 from ._runs import router as runs_router
 from ._sending import router as sending_router
 from ._security import check_configuration
+from ._unmatched import router as unmatched_router
 from ._storage import in_database, open_connection
 from ._version import router as version_router
 
@@ -169,6 +170,7 @@ def create_app() -> FastAPI:
         version_router,
         config_router,
         credentials_router,
+        unmatched_router,
         runs_router,
         revisions_router,
         editing_router,

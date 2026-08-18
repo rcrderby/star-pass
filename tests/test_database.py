@@ -28,7 +28,8 @@ EXPECTED_TABLES = {
     'revisions',
     'runs',
     'sent_shifts',
-    'uncollected_events'
+    'uncollected_events',
+    'unmatched_titles'
 }
 
 # Every version this application has written, and what the one after
@@ -47,7 +48,8 @@ EARLIER_VERSIONS = (
     (1, ('job_events', 'jobs'), ()),
     (2, ('idempotency_keys', 'sent_shifts'), ()),
     (3, (), (('jobs', 'held_by'),)),
-    (4, ('uncollected_events',), ())
+    (4, ('uncollected_events',), ()),
+    (5, ('unmatched_titles',), ())
 )
 
 

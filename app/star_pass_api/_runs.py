@@ -400,7 +400,7 @@ async def _handed_over(
     return to_job_view(job=job)
 
 
-def _checked_calendar(
+def checked_calendar(
         calendar: str
 ) -> str:
     """ Return a calendar name the deployment configured.
@@ -410,6 +410,10 @@ def _checked_calendar(
         deliberately carries no reason.  The caller chose this value
         and is the one who can correct it, so it is a 422 naming the
         alternatives.
+
+        Public because more than one group of endpoints takes a
+        calendar name from a caller, and two copies of an allowlist
+        are two chances for one of them to fall behind the settings.
 
         Args:
             calendar (str):
@@ -577,7 +581,7 @@ async def collect_run(
                 The job collecting the run, queued.
     """
 
-    calendar = _checked_calendar(calendar=collection.calendar)
+    calendar = checked_calendar(calendar=collection.calendar)
     window = _checked_window(window=collection)
 
     run, job_id = await read(

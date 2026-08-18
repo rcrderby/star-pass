@@ -328,6 +328,23 @@ which `runs preview` names with every reason. To resolve it:
 Adding the alias is preferable to any one-off correction: it fixes
 every future run as well.
 
+A title that blocked a run is only visible while that run is. So the
+titles worth an alias are kept in a log of their own, which belongs to
+no run and outlives every one of them:
+
+```bash
+./app/__main__.py config unmatched
+```
+
+One line per title in a calendar, with how many sightings have been
+recorded and when the most recent was, newest first. The count is what
+tells the two cases apart: a title that turns up every month is a
+category the model is missing, and one seen once is an event that
+happened once. Read it before editing `models/shift_info.yml`.
+
+The log is append-only: recording the same title again counts a second
+sighting rather than replacing anything, and nothing deletes an entry.
+
 ## Development
 
 ```bash

@@ -86,7 +86,8 @@ from star_pass._repository import (  # noqa: E402
     RevisionRepository,
     RunRepository,
     SentShiftRepository,
-    UncollectedRepository
+    UncollectedRepository,
+    UnmatchedTitleRepository
 )
 from star_pass_api import create_app  # noqa: E402
 from star_pass_api._defaults import API_PRINCIPAL_ID  # noqa: E402
@@ -195,6 +196,14 @@ def fixture_uncollected(
 ) -> UncollectedRepository:
     """ Return an uncollected event repository on the database. """
     return UncollectedRepository(connection=connection)
+
+
+@pytest.fixture(name='unmatched')
+def fixture_unmatched(
+    connection: sqlite3.Connection
+) -> UnmatchedTitleRepository:
+    """ Return an unmatched title repository on the database. """
+    return UnmatchedTitleRepository(connection=connection)
 
 
 @pytest.fixture(name='idempotency')

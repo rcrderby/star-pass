@@ -39,6 +39,7 @@ from ._revisions import RevisionRepository
 from ._runs import RunRepository
 from ._sent import SentShiftRepository
 from ._uncollected import UncollectedRepository
+from ._unmatched import UnmatchedTitleRepository
 
 __all__ = [
     'ChangeLogRepository',
@@ -48,5 +49,6 @@ __all__ = [
     'RevisionRepository',
     'RunRepository',
     'SentShiftRepository',
-    'UncollectedRepository'
+    'UncollectedRepository',
+    'UnmatchedTitleRepository'
 ]

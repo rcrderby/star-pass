@@ -88,6 +88,40 @@ class RecollectRequest(ApiModel):
     )
 
 
+class UnmatchedTitleRequest(ApiModel):
+    """ A title the data model did not match, to keep for later. """
+
+    calendar: str = Field(
+        description=(
+            'Which configured calendar the title was seen in. Part of '
+            'what a title is, rather than a note beside it: the '
+            'categories a title is matched against belong to a '
+            'calendar, so the same title can be matched in one and '
+            'unmatched in another.'
+        ),
+        examples=['events']
+    )
+    title: str = Field(
+        min_length=1,
+        description=(
+            'The title, as the calendar gave it. Recorded as it was '
+            'written, because what the model has to match is the '
+            'thing somebody typed.'
+        ),
+        examples=['Jet City vs Cherry City']
+    )
+    run_id: Optional[str] = Field(
+        default=None,
+        description=(
+            'The run the title was noticed in, when it was noticed in '
+            'one. Kept as provenance and nothing more: the log '
+            'outlives the run, and deleting a run does not take the '
+            'reason somebody was going to edit the model with it.'
+        ),
+        examples=['3f2b1c...']
+    )
+
+
 class SendRequest(ApiModel):
     """ What the operator was shown before asking to send. """
 
