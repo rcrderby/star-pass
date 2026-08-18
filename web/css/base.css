@@ -1,0 +1,248 @@
+/* The ground every screen is drawn on: reset, type scale, focus, motion.
+ *
+ * The type sizes are the handoff's interface scale rather than
+ * Nocturne's deck scale -- 15px down to 10px, weights 400 to 600 and
+ * never heavier.  A screen reading thirty events wants density, and
+ * the sizes are what produce it.
+ *
+ * Nothing here is inline.  The Content Security Policy carries no
+ * `unsafe-inline`, so a `style` attribute written into the markup is
+ * refused by the browser; what a screen varies at runtime it varies
+ * through a custom property, which the policy does not govern.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+
+h1 {
+  font-size: 25px;
+}
+
+h2 {
+  font-size: 20px;
+}
+
+h3 {
+  font-size: 17px;
+}
+
+p {
+  margin: 0 0 var(--space-3);
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--color-accent-300);
+  text-decoration: underline;
+}
+
+/* Numbers, times, identifiers, paths and environment variables.
+ * `tabular-nums` is the point of it: a column of counts that shifts
+ * sideways as the digits change is a column nobody can scan. */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+
+.micro {
+  font-size: 10.5px;
+}
+
+.note {
+  font-size: 11px;
+}
+
+.meta {
+  font-size: 12px;
+}
+
+/* Read by a screen reader and by nothing else.  Used where a control
+ * is understood from its icon and its label would be noise on screen. */
+.sr-only {
+  position: absolute;
+  overflow: hidden;
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  white-space: nowrap;
+}
+
+/* Focus is never the browser default.  The handoff is explicit, and
+ * the reason is that a dense table is unusable from a keyboard when
+ * the ring is a hairline the theme swallows. */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+/* An icon takes its colour from the text it sits in, which is what
+ * makes one sprite correct in both themes. */
+.icon {
+  display: block;
+  flex: none;
+  width: 1em;
+  height: 1em;
+  fill: currentcolor;
+}
+
+/* A rule fades to transparent at both ends over one 48px deck unit --
+ * a Nocturne signature.  Box outlines and short accent marks stay
+ * solid; only a freestanding rule fades. */
+.rule {
+  height: 1px;
+  margin: var(--space-4) 0;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--color-divider) 48px,
+    var(--color-divider) calc(100% - 48px),
+    transparent
+  );
+}
+
+@keyframes om-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes om-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes om-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes om-drawer {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: none;
+  }
+}
+
+@keyframes om-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Three levels, and the middle one is the default.  Controls settle
+ * over 160ms; `smooth` slows everything by the same proportion rather
+ * than restating each duration. */
+[data-motion] .btn,
+[data-motion] .seg-opt,
+[data-motion] .input,
+[data-motion] .card,
+[data-motion] .tag,
+[data-motion] button {
+  transition:
+    background-color 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    opacity 0.16s ease;
+}
+
+[data-motion="smooth"] * {
+  animation-duration: 0.34s !important;
+  transition-duration: 0.28s !important;
+}
+
+[data-motion="off"] * {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Set while a theme is changing and cleared afterwards, so the
+ * crossfade costs one transition rather than being paid on every
+ * hover for the life of the page. */
+[data-theming="1"] * {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease !important;
+}
+
+/* The setting wins over every level, including `smooth`. */
+@media (prefers-reduced-motion: reduce) {
+  [data-motion] *,
+  [data-theming="1"] * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

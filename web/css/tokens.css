@@ -1,0 +1,132 @@
+/* The Nocturne design system's tokens, and the typeface they name.
+ *
+ * Values rather than choices: these are the design handoff's, and
+ * `docs/design/README.md` is where a change to one is argued.  Night is
+ * the default and Day overrides it, which is the way round the handoff
+ * states and the reason every surface reads correctly before a theme
+ * has been resolved.
+ *
+ * Inter is served from this origin.  The Content Security Policy is
+ * `default-src 'self'` with no `unsafe-inline`, so a font from
+ * fonts.gstatic.com is refused by the browser rather than merely
+ * discouraged; and the deployment is meant to run on a tailnet with no
+ * route out (D14), where a font from anywhere else never arrives.
+ * Monospace is the system stack: nothing is downloaded for it and the
+ * handoff asks only that numbers, times, identifiers and paths are set
+ * in one.
+ */
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/assets/Inter-latin.woff2") format("woff2");
+  unicode-range: u+0000-00ff, u+0131, u+0152-0153, u+02bb-02bc, u+02c6,
+    u+02da, u+02dc, u+0304, u+0308, u+0329, u+2000-206f, u+20ac, u+2122,
+    u+2191, u+2193, u+2212, u+2215, u+feff, u+fffd;
+}
+
+/* Fetched only when a glyph needs it, which is what `unicode-range`
+ * buys: an English screen never asks for this file, and a volunteer or
+ * an opportunity whose name is outside Latin-1 is still set in Inter
+ * rather than falling back mid-word. */
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/assets/Inter-latin-ext.woff2") format("woff2");
+  unicode-range: u+0100-02ba, u+02bd-02c5, u+02c7-02cc, u+02ce-02d7,
+    u+02dd-02ff, u+0304, u+0308, u+0329, u+1d00-1dbf, u+1e00-1e9f,
+    u+1ef2-1eff, u+2020, u+20a0-20ab, u+20ad-20c0, u+2113, u+2c60-2c7f,
+    u+a720-a7ff;
+}
+
+:root {
+  --color-bg: #161826;
+  --color-surface: #232532;
+  --color-text: #e9e9ed;
+  --color-accent: #9184d9;
+  --color-accent-2: #a7a1db;
+  --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
+
+  /* Tonal ramps, generated in OKLCH on one shared lightness scale, so
+   * the same step of any role matches the others in visual value. */
+  --color-neutral-100: #f3f5fe;
+  --color-neutral-200: #e4e7f5;
+  --color-neutral-300: #cfd3e5;
+  --color-neutral-400: #b2b6ca;
+  --color-neutral-500: #9397ab;
+  --color-neutral-600: #75798c;
+  --color-neutral-700: #595d6c;
+  --color-neutral-800: #3f424d;
+  --color-neutral-900: #292b31;
+  --color-accent-100: #f5f4ff;
+  --color-accent-200: #e7e5fe;
+  --color-accent-300: #d2cefd;
+  --color-accent-400: #b5abfc;
+  --color-accent-500: #968ae0;
+  --color-accent-600: #796cbf;
+  --color-accent-700: #5d5294;
+  --color-accent-800: #423a6a;
+  --color-accent-900: #2b2741;
+
+  /* Deep indigo, and the handoff is strict about where it may appear:
+   * the navigation and the header gradient, nothing else. */
+  --color-section: #262a60;
+
+  /* What an event that blocks the run is drawn in. */
+  --color-alert: #e0848c;
+  --color-alert-fill: #4d2e35;
+  --color-alert-text: #ffe6e8;
+
+  /* Inter throughout, at 400 to 600 and never heavier. */
+  --font-heading: "Inter", system-ui, sans-serif;
+  --font-heading-weight: 500;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: ui-monospace, sfmono-regular, menlo, monospace;
+
+  /* Nocturne's 0.7x density scale.  The screen is dense on purpose:
+   * a month is thirty events and the reviewer reads all of them. */
+  --space-1: 2.8px;
+  --space-2: 5.6px;
+  --space-3: 8.4px;
+  --space-4: 11.2px;
+  --space-6: 16.8px;
+  --space-8: 22.4px;
+
+  /* Corners: controls, surfaces, and the things that float. */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+
+  /* Elevation, derived from the ground: a hairline edge and ambient
+   * darkness on a dark theme, ink-tinted shadows on a light one. */
+  --shadow-sm: 0 0 0 1px #3f424d;
+  --shadow-md: 0 0 0 1px #595d6c, 0 6px 18px rgb(0 0 0 / 55%);
+  --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgb(0 0 0 / 65%);
+}
+
+/* Only what changes.  A token absent here is Night's, which is what
+ * keeps the two themes one system rather than two stylesheets. */
+[data-theme="day"] {
+  --color-bg: #f3f5fe;
+  --color-surface: #fbfbfe;
+  --color-text: #292b31;
+  --color-accent: #5d5294;
+  --color-section: #e2e1f6;
+  --color-accent-200: #3a3268;
+  --color-accent-300: #4d4380;
+  --color-accent-600: #5d5294;
+  --color-accent-800: #cdc9ea;
+  --color-accent-900: #e9e6f9;
+  --color-neutral-600: #b3b7cc;
+  --color-alert: #a3384a;
+  --color-alert-fill: #f7dfe2;
+  --color-alert-text: #6e2130;
+  --color-divider: color-mix(in srgb, #292b31 14%, transparent);
+  --shadow-sm: 0 0 0 1px #cfd3e5;
+  --shadow-md: 0 0 0 1px #e4e7f5, 0 6px 18px rgb(41 43 49 / 10%);
+  --shadow-lg: 0 0 0 1px #cfd3e5, 0 16px 40px rgb(41 43 49 / 16%);
+}

@@ -215,10 +215,27 @@ carry a token the frontend put in a readable cookie, in a header,
 which is what an off-site page cannot do.
 
 The frontend needs `STAR_PASS_SESSION_SECRET` as well as
-`STAR_PASS_API_TOKEN`, and refuses to start without either. It also
-refuses to start with no page to serve: it exists to give a browser
-one and to carry its session, so a proxy with nothing behind it would
-be reachable and unusable.
+`STAR_PASS_API_TOKEN`, and refuses to start without either. Both are
+commented out in `.env.example`, so a checkout that predates them has
+them commented out too; `docker compose` stops with the name of
+whichever is missing. It also refuses to start with no page to serve:
+it exists to give a browser one and to carry its session, so a proxy
+with nothing behind it would be reachable and unusable.
+
+### The page it serves
+
+`web/` is the interface, and there is **no build step**: the ES
+modules and the CSS committed there are what a browser is given,
+and the image copies the directory as it is. Nothing needs installing
+to work on it, and `STAR_PASS_WEB_ROOT` points the service somewhere
+else when a checkout wants to serve a working copy instead.
+
+Inter and the Phosphor icons are served from `web/assets/` rather than
+from a content delivery network. The Content Security Policy is
+`default-src 'self'`, so a font or an icon set from another origin is
+refused by the browser, and the deployment is meant to work on a
+tailnet with no route out — where it would never arrive at all. Both
+are redistributable and their licences are beside them.
 
 ### Running both behind Caddy
 

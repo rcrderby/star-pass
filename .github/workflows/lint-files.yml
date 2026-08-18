@@ -61,6 +61,13 @@ jobs:
           VALIDATE_GITHUB_ACTIONS: true
           VALIDATE_GITLEAKS: true
           VALIDATE_JSCPD: true
+          # Turned on with the web interface's first change.  The
+          # frontend is hand-written ES modules and plain CSS with no
+          # build step, so nothing else reads them before a browser
+          # does: without these two, the first thing to find a mistake
+          # would be somebody loading the page.
+          VALIDATE_CSS: true
+          VALIDATE_JAVASCRIPT_ES: true
           VALIDATE_JSON: true
           VALIDATE_MARKDOWN: true
           VALIDATE_NATURAL_LANGUAGE: true

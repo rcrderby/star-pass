@@ -307,10 +307,25 @@ through the Amplify API. It is run once per month.
   is `SameSite=Strict`, and a write whose `Origin` names another host
   is refused. A page served elsewhere would fail all three, and
   answering that with CORS would be the boundary leaking rather than
-  moving (D4, D18). What is there now is a placeholder that checks
-  those three things from a browser; the screens themselves are not
-  built. `docs/design` holds a prototype of them, which is a reference
-  and is not ported.
+  moving (D4, D18). **No framework and no build step**: the modules
+  under `js/` and the CSS under `css/` are what is committed
+  and what a browser is given, and the image copies the directory as
+  it is. The state a framework would reconcile is mostly the server's
+  — an edit returns the whole revision — so what stands in for one is
+  a `render(state)` per region and `dom.js`. `api.js` is the only
+  thing that talks to the service, and holds the three rules no screen
+  should repeat: the CSRF header on a write, an `Idempotency-Key`
+  naming one action on the four operations that need one, and a
+  problem document whose reason is withheld at 500 and above.
+  Inter and the Phosphor icons are under `assets/` because the
+  Content Security Policy is `default-src 'self'` and the deployment
+  is meant to work on a tailnet with no route out (D14); the policy
+  was not relaxed to load them, and must not be. `phrases.json` holds
+  the words the page puts on the identifiers the contract publishes,
+  bound to what the core publishes by `tests/test_web_phrases.py` —
+  a Python test for a file the browser reads, because there is no
+  build step and no JavaScript test runner. `docs/design` holds a
+  prototype of the screens, which is a reference and is not ported.
 - `compose.yaml` and `deploy/caddy/` — the deployment (D5, D14, D17).
   Caddy is the only container with a published port; the frontend and
   the API share a network Caddy is not on, so the path to the

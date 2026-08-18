@@ -1,35 +1,48 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="night" data-motion="subtle">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>star-pass</title>
-  <link rel="stylesheet" href="/style.css">
-  <script src="/checks.js" defer></script>
+  <title>Star Pass</title>
+
+  <!--
+    Everything this page loads comes from this origin. The Content
+    Security Policy in 'deploy/caddy/Caddyfile' is "default-src 'self'"
+    with no 'unsafe-inline', so a font, an icon set or a script from
+    anywhere else is refused by the browser rather than merely
+    discouraged - and the deployment is meant to work on a tailnet with
+    no route out (D14), where it would never arrive in the first place.
+    Inter and the Phosphor icons are under '/assets' for that reason.
+
+    There is no build step. The stylesheets and the modules below are
+    what is committed and what is served; 'web/' is copied into the
+    image as it is.
+  -->
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/app.css">
+
+  <link rel="preload" href="/assets/Inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+
+  <script type="module" src="/js/main.js"></script>
 </head>
 
 <body>
-  <main>
-    <h1>star-pass</h1>
-    <p>
-      This is the root of the frontend container. The review, preview and
-      send screens described in <code>docs/design</code> are not built
-      yet &mdash; this page exists so that the origin they will be served
-      from can be checked from a browser.
-    </p>
+  <!--
+    Filled by 'js/main.js'. Empty here rather than holding a copy of
+    the shell, because a shell in the markup and a shell in the module
+    are two things to keep in step.
+  -->
+  <div id="app"></div>
 
-    <h2>What this origin is doing</h2>
-    <ul id="checks"></ul>
-
-    <p>
-      The API is reached only through <code>/api</code> on this origin,
-      and holds the Amplify credential on a network this container is
-      not on. The browser holds no credential of any kind: this service
-      attaches its own to everything it forwards, which is why the
-      version check succeeds without the page ever having seen one.
+  <noscript>
+    <p class="failure">
+      Star Pass needs JavaScript. Every screen it has is a reading of
+      the star-pass API, and the page is what does the reading.
     </p>
-  </main>
+  </noscript>
 </body>
 
 </html>
