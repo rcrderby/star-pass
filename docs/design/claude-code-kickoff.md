@@ -5,10 +5,8 @@ repository. It covers only the first three steps of the work order in
 `api-and-security-plan.md`, because those are the ones that create or prevent
 technical debt; stop and review before going further.
 
-Bring these four files with you: `api-and-security-plan.md` (the plan),
-`decisions.md` (D1–D17, with revisit triggers), `openapi-v1-sketch.yaml` (the
-design-side surface sketch — a checking artifact, not the spec: FastAPI generates
-the real one and the sketch is deleted then), and this file.
+Bring these three files with you: `api-and-security-plan.md` (the plan),
+`decisions.md` (D1–D17, with revisit triggers), and this file.
 
 ---
 
@@ -91,8 +89,7 @@ the real one and the sketch is deleted then), and this file.
 ## Where the design lives
 
 `Create Shifts v2.dc.html` in the design project is the web UI these endpoints
-have to serve, and `openapi-v1-sketch.yaml` is that UI's needs written as a
-surface. It already assumes: server-minted run ids, a reattachable collection
+have to serve. What it needs of them assumes: server-minted run ids, a reattachable collection
 with an id, per-shift duplicate identity (need id + date + start + end, never a
 count), continuous editing through `PATCH /runs/{id}/events` with a server-side
 change log, opportunity titles stored on the run, a two-step confirmation before
