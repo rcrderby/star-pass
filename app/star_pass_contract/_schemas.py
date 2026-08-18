@@ -815,6 +815,43 @@ class UnmatchedTitleView(ApiModel):
     )
 
 
+class RetentionView(ApiModel):
+    """ How long what a run leaves behind is kept. """
+
+    job_log_days: int = Field(
+        description=(
+            'How long a job\'s event log is kept after the job '
+            'finished. The job itself is not removed with it: that a '
+            'send ran on a date and how it ended outlives the log of '
+            'what it did, which is the part naming volunteers and the '
+            'times they were asked to be somewhere.'
+        ),
+        examples=[90]
+    )
+    revision_days: int = Field(
+        description=(
+            'How long a run may go untouched before the revisions '
+            'between its first and its current one are removed. '
+            'Neither of those two is ever removed: the first is the '
+            'run as the calendar gave it, which reverting to is a '
+            'published operation, and the current one is what the run '
+            'holds now.'
+        ),
+        examples=[90]
+    )
+    unmatched_title_days: int = Field(
+        description=(
+            'The longest a title the data model did not match is kept '
+            'without being seen again. A backstop rather than the '
+            'rule: what usually removes a title is the model coming '
+            'to match it, since that is what recording one is for. '
+            'Measured from the most recent sighting, so a title still '
+            'turning up keeps its whole count.'
+        ),
+        examples=[365]
+    )
+
+
 class ConfigView(ApiModel):
     """ What the service resolved from its environment. """
 
@@ -854,5 +891,15 @@ class ConfigView(ApiModel):
             'than to this contract. The calendar identifiers '
             'themselves are not published: nothing a caller does '
             'names one.'
+        )
+    )
+    retention: RetentionView = Field(
+        description=(
+            'How long what a run leaves behind is kept. The record of '
+            'what a send put into Amplify is deliberately absent, '
+            'because it is never removed: duplicate safety reads it '
+            'to know which rows a run already created, so a window '
+            'there would eventually have a run offering to create '
+            'shifts Amplify already holds.'
         )
     )

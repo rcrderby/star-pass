@@ -405,3 +405,70 @@ SHIFTS_INFO_FILE = Path.joinpath(
     MODELS_DIR_PATH,
     SHIFTS_INFO_FILE_NAME
 )
+
+# How long what a run leaves behind is kept (D12).  The driver is the
+# volunteer names and schedules this data holds, not disk: a job's
+# event log names people and the times they were asked to be
+# somewhere, and a superseded revision holds the events that were in
+# it.  What is never purged is the sent record, because duplicate
+# safety reads it -- an expiry there would mean a run eventually
+# offering to create shifts Amplify already has.
+#
+# Every window is a config value, so a deployment whose policy differs
+# changes a setting rather than the code.
+
+# A job's event log.  Ninety days rather than thirty: the feedback
+# loop here is monthly, so a problem found at the next collection
+# would have no evidence left under a shorter window.  The job row
+# itself stays -- that a send ran on a date and how it ended is not
+# what the window is protecting.
+RETENTION_JOB_LOG_DAYS = int(
+    getenv(
+        'STAR_PASS_RETENTION_JOB_LOG_DAYS',
+        '90'
+    )
+)
+
+# Revisions a run no longer needs.  The first revision and the current
+# one are never removed: the first is the run as the calendar gave it,
+# which reverting to is a published operation, and the current one is
+# what the run *is*.  What goes is the sealed ones in between, once
+# the run itself has gone untouched for this long.
+#
+# D12 said superseded revisions were deleted immediately, which was
+# written before revisions could be reverted to.  Every revision is
+# reachable now -- a caller can list them and go back to any -- so
+# there is no moment at which one is superseded, and a window is what
+# replaces that (D20).
+RETENTION_REVISION_DAYS = int(
+    getenv(
+        'STAR_PASS_RETENTION_REVISION_DAYS',
+        '90'
+    )
+)
+
+# Titles the data model did not match.  Much longer than the rest, and
+# a backstop rather than the rule: what usually removes a title is the
+# model coming to match it, because that is the whole purpose of
+# recording one.  This window is for the title nobody ever acted on
+# and nothing has seen since, and it is a year because the calendar
+# repeats annually -- anything shorter would forget a title between
+# one season and the next, which is exactly when the count is worth
+# reading.
+RETENTION_UNMATCHED_TITLE_DAYS = int(
+    getenv(
+        'STAR_PASS_RETENTION_UNMATCHED_TITLE_DAYS',
+        '365'
+    )
+)
+
+# How often the service sweeps.  Once a day: every window above is
+# measured in months, so nothing is gained by looking more often, and
+# a sweep is a write against the database the service is answering
+# from.
+RETENTION_SWEEP_HOURS = float(
+    getenv(
+        'STAR_PASS_RETENTION_SWEEP_HOURS',
+        '24'
+    )
+)

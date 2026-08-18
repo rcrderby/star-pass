@@ -512,19 +512,26 @@ def _add_option(
 
 def add_commands(
         parser: argparse.ArgumentParser
-) -> None:
+) -> Any:
     """ Add the reading commands to a parser.
 
         Built from 'COMMANDS' rather than written out, so that what the
         command line offers and what the dispatcher answers are the
         same list read twice.
 
+        Returns what it added them to, because argparse allows a parser
+        only one set of subparsers and the maintenance command is not
+        one of these -- it names no contract operation and takes no
+        '--api-url' (see '_maintenance').
+
         Args:
             parser (argparse.ArgumentParser):
                 The parser to add them to.
 
         Returns:
-            None.
+            commands (Any):
+                The subparsers action, for anything else adding a group
+                of its own.
     """
 
     shared = remote_options()
@@ -557,7 +564,7 @@ def add_commands(
         for option in command.options:
             _add_option(parser=added, option=option)
 
-    return None
+    return commands
 
 
 def _send(

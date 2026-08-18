@@ -18,7 +18,15 @@ from star_pass._helpers import Helpers, require_env_vars
 from star_pass._logging import get_logger
 from star_pass._reporting import Reporter, ShiftBatch
 from star_pass import _defaults
-from star_pass_cli import add_commands, run_command, selected, write
+from star_pass_cli import (
+    add_commands,
+    add_maintenance,
+    maintenance_selected,
+    run_command,
+    run_maintenance,
+    selected,
+    write
+)
 
 # Constants
 VERBOSITY_LEVELS = _defaults.VERBOSITY_LEVELS
@@ -38,6 +46,7 @@ USAGE = (
     '--start DATE --last-day DATE\n'
     '       star-pass runs recollect RUN --expected-changes N\n'
     '       star-pass jobs {show,watch,resume} JOB [--api-url URL]\n'
+    '       star-pass retention sweep\n'
     '       star-pass -s [-N NEED_ID ...] [-C {true,false}] '
     '[-d DAYS] [-D START_IN_DAYS] [-t TITLE] [-k CHANNEL_ID]'
 )
@@ -449,7 +458,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     # The run-based commands, which work against the local database or
     # a service (D2).  Added last so they appear below the run modes.
-    add_commands(parser=parser)
+    #
+    # The maintenance command joins the same set of subparsers, because
+    # argparse allows a parser only one: it is not one of those
+    # commands and deliberately takes no '--api-url', since the
+    # contract publishes no deletion for it to ask for.
+    add_maintenance(commands=add_commands(parser=parser))
 
     return parser
 
@@ -461,13 +475,15 @@ def _command_answered(
     """ Run a command word, if one selected this run.
 
         Holds the whole question of how a run was selected: a command
-        answers it, a run mode answers it, and nothing answering it is
-        the error.  Kept together because reading one without the
-        others would not say what a run without either of them does.
+        answers it, the maintenance command answers it, a run mode
+        answers it, and nothing answering it is the error.  Kept
+        together because reading one without the others would not say
+        what a run without any of them does.
 
         Args:
             parser (argparse.ArgumentParser):
-                The parser, for reporting a selection that is neither.
+                The parser, for reporting a selection that is none of
+                them.
 
             args (argparse.Namespace):
                 The parsed command line.
@@ -479,9 +495,16 @@ def _command_answered(
 
         Returns:
             answered (bool):
-                Whether a command answered, so the run modes are not
+                Whether something answered, so the run modes are not
                 involved.
     """
+
+    # Checked before the commands, because it is not one of them: it
+    # names no contract operation, so 'selected' does not see it.
+    if maintenance_selected(args=args):
+        run_maintenance()
+
+        return True
 
     if selected(args=args) is None:
         if not args.post_slack_summary:

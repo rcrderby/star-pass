@@ -76,6 +76,7 @@ from star_pass._records import (  # noqa: E402
     EventRole,
     JOB_KIND_COLLECT,
     JOB_KIND_SEND,
+    JOB_STATUS_SUCCEEDED,
     Match,
     MATCH_KIND_FUZZY,
     Opportunity,
@@ -476,6 +477,32 @@ def fixture_job_id(
         kind=JOB_KIND_COLLECT,
         principal_id=job_principal
     ).id
+
+
+@pytest.fixture(name='finished_job')
+def fixture_finished_job(
+    jobs: JobRepository,
+    job_principal: str,
+    run_id: str
+) -> str:
+    """ Return a job that has ended, with an entry in its log.
+
+        Here rather than in any of the three modules that want one:
+        the retention policy, the service that applies it at startup
+        and the command that applies it by hand all need the same
+        arrangement, and three copies would let them drift into
+        arranging different things while claiming to test one policy.
+    """
+    job = jobs.create(
+        run_id=run_id,
+        kind=JOB_KIND_SEND,
+        principal_id=job_principal
+    )
+    jobs.start(job_id=job.id)
+    jobs.add_event(job_id=job.id, kind='step')
+    jobs.finish(job_id=job.id, status=JOB_STATUS_SUCCEEDED)
+
+    return job.id
 
 
 @pytest.fixture(name='build_parser')

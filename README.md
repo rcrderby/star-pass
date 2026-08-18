@@ -302,10 +302,50 @@ calendar shown as searched for everything in the window is one
 configured with an empty query string, so nothing in it can be left
 out for want of a term.
 
+It also reports how long what a run leaves behind is kept, which is
+where to look before wondering whether something has been removed.
+
 Read only. Changing any of these means changing the environment and
 restarting: no endpoint and no command writes a setting (D8), and the
 same goes for credentials, which are rotated the same way and are
 never displayed.
+
+### Retention
+
+Three windows, because the question "is this still worth keeping" has
+three different answers (D12, D20). The driver throughout is the
+volunteer names and schedules this data holds, not disk:
+
+- A **job's event log** expires 90 days after the job finished. The job
+  survives it, so a run's history still says a send happened without
+  still saying who it was for.
+- A run's **middle revisions** go once the run has gone untouched for
+  90 days. The first revision and the current one are never removed:
+  reverting to the first is a published operation, and the current one
+  is what the run holds now.
+- An **unmatched title** is forgotten as soon as the data model matches
+  it, which is what recording one is for. Age is only a backstop, at a
+  year, for a title nobody ever acted on. A title goes whole rather
+  than sighting by sighting, because the count means the runs a title
+  turned up in and a smaller count would read as a title that had
+  stopped recurring.
+
+**The record of what a send created is never removed.** Duplicate
+safety reads it, so a window there would eventually have a run offering
+to create shifts Amplify already holds.
+
+The API service applies the policy once at startup and then daily. To
+apply it to a local database by hand:
+
+```bash
+./app/__main__.py retention sweep
+```
+
+That covers the arrangement the service does not: a checkout and a
+database file, where the windows would otherwise never be applied at
+all. It takes no `--api-url`, because there is nothing remote to ask —
+the contract publishes no deletion on purpose, since retention removes
+what a run leaves behind and a caller does not.
 
 ### Testing the Amplify credential
 

@@ -243,12 +243,12 @@ clients fail the same way:
 6. Write endpoints: collect, recollect, send with idempotency keys.
 7. BFF: session cookie, CSRF, proxy. Web UI stops holding anything.
 8. Caddy in front, HSTS, forwarded-header trust scoped to the proxy.
-9. Retention policy job for job logs and superseded revisions. Decide
-   there what happens to `unmatched_titles`: collections write it, so
-   it grows on its own, and a title is calendar text that can name a
-   person — which is D12's PII rationale rather than a disk one. It is
-   also the one store whose value is its age, so an expiry short
-   enough to matter would defeat the count.
+9. Retention policy job for job logs and revisions, and the command
+   that applies the same policy to a local database. `unmatched_titles`
+   is answered by the data model rather than by a window: a sighting is
+   forgotten once the model matches its title, with a year as a
+   backstop for one nobody ever acted on. Three axes, because the
+   question has three different answers (D20).
 
 Steps 1–3 are the ones that create or prevent technical debt. The rest is
 mechanical once they're right.
@@ -258,7 +258,7 @@ mechanical once they're right.
 ## 11. Settled and still open
 
 Every decision, with its rationale and a revisit trigger, is recorded in
-`decisions.md` (D1–D19). Settled since this plan was first written:
+`decisions.md` (D1–D21). Settled since this plan was first written:
 
 - Credentials arrive as a **read-only mounted secret file**, path from an env var,
   0400, read once at startup, fail fast (D9). Replacement stays out of the API (D8).
@@ -279,6 +279,12 @@ Every decision, with its rationale and a revisit trigger, is recorded in
 - The web page is served by the **front-end container at its root**, because it
   is the only origin it can work from; the prototype stays design-side and is not
   ported (D19).
+- Retention runs on **three axes rather than one window**, and the unmatched
+  titles are removed by the model coming to match them rather than by age
+  (D20). This supersedes D12's "superseded revisions deleted immediately",
+  which predates revisions being revertible.
+- **No 2.x release** until the web interface can be exercised end to end
+  (D21).
 
 Still open:
 
