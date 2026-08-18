@@ -6,15 +6,18 @@
  * outright, so what a screen reader is told matches what is drawn:
  * `table`, `rowgroup` per day, `row`, `columnheader`, `cell`.
  *
- * Nothing here writes.  The controls a reviewer will use are drawn in
- * their places and are not yet live, so the layout that editing lands
- * into is the layout being reviewed now, and a reader can see what
- * the run holds today.
+ * Every control sends **one** operation, through 'context.onEdit',
+ * and the answer to it is the whole revision -- so a row redraws from
+ * what the server said rather than from what this page hoped.  While
+ * one is in flight the controls are disabled: two edits in the air at
+ * once would each be applied to a revision the other had already
+ * changed.
  */
 
 import { el, icon } from '../dom.js';
 import { lengthText, dayHeading } from '../format.js';
 import { filled, phrase } from '../phrases.js';
+import { timeField } from './timepicker.js';
 
 /* How many columns the grid has. Stated for assistive technology,
  * which cannot count them from a grid the way it can from a table. */
@@ -108,45 +111,47 @@ function offsetNote(which, minutes) {
 
 /** Return the opportunity chooser for one event.
  *
- * Drawn with its options and its current value, and not yet live.
  * The options are the calendar's categories: a run holds only the
  * opportunities its own events reached, and the event that needs this
  * chooser is the one that matched nothing.
  *
  * @param {Object} event The event.
- * @param {Array<Object>} categories The calendar's categories.
+ * @param {Object} context What the rows are drawn against.
  * @returns {HTMLElement} The chooser.
  */
-function opportunityChooser(event, categories) {
-  const chooser = el('select', {
+function opportunityChooser(event, context) {
+  return el('select', {
     class: 'input',
-    disabled: true,
-    'aria-label': `Opportunity for ${event.title}`
+    disabled: context.busy,
+    'aria-label': `Opportunity for ${event.title}`,
+    onchange: (changed) => context.onEdit({
+      op: 'set_category',
+      eventIds: [event.id],
+      category: changed.target.value
+    })
   }, [
     el('option', {
       value: '',
       text: 'Select an opportunity',
       selected: event.category === null
     }),
-    categories.map((category) => el('option', {
+    context.categories.map((category) => el('option', {
       value: category.key,
       text: category.label,
       selected: category.key === event.category
     }))
   ]);
-
-  return chooser;
 }
 
 /** Return one role sub-row: an opportunity this event creates under.
  *
  * @param {Object} event The event it belongs to.
  * @param {Object} role One of the event's roles.
- * @param {Map} opportunities The run's opportunities, by need ID.
+ * @param {Object} context What the rows are drawn against.
  * @returns {HTMLElement} The sub-row.
  */
-function roleRow(event, role, opportunities) {
-  const opportunity = opportunities.get(role.needId);
+function roleRow(event, role, context) {
+  const opportunity = context.opportunities.get(role.needId);
 
   return el(
     'div',
@@ -188,11 +193,33 @@ function roleRow(event, role, opportunities) {
       el('input', {
         class: 'input mono',
         type: 'text',
+        inputMode: 'numeric',
         value: String(role.slots),
-        readOnly: true,
+        disabled: context.busy,
         'aria-label': `Volunteers wanted for ${
           opportunity ? opportunity.title : role.needId
-        }`
+        }`,
+        onchange: (changed) => {
+          const wanted = Number(changed.target.value);
+
+          /* Put back what it was rather than sending something the
+           * service would refuse: slots is a count, and a count is a
+           * whole number above nothing. */
+          if (!Number.isInteger(wanted) || wanted < 1) {
+            changed.target.value = String(role.slots);
+
+            return;
+          }
+
+          if (wanted !== role.slots) {
+            context.onEdit({
+              op: 'set_slots',
+              eventIds: [event.id],
+              needId: role.needId,
+              slots: wanted
+            });
+          }
+        }
       }),
       el('span', { class: 'muted micro', text: 'slots' })
     ),
@@ -200,7 +227,23 @@ function roleRow(event, role, opportunities) {
       'span',
       { class: 'role-edited', role: 'cell' },
       role.edited
-        ? el('span', { class: 'muted micro', text: 'edited' })
+        ? [
+          el('span', { class: 'muted micro', text: 'edited,' }),
+          el(
+            'button',
+            {
+              type: 'button',
+              class: 'btn btn-ghost micro',
+              disabled: context.busy,
+              title: 'Put this back to what the opportunity asks for',
+              onclick: () => context.onEdit({
+                op: 'reset_slots',
+                eventIds: [event.id]
+              })
+            },
+            'undo'
+          )
+        ]
         : null
     )
   );
@@ -213,7 +256,7 @@ function roleRow(event, role, opportunities) {
  * @returns {Array<HTMLElement>} The main row and its details row.
  */
 function eventRows(event, context) {
-  const { categories, categoriesByKey, opportunities, byId } = context;
+  const { categoriesByKey, byId } = context;
   const capped = event.cappedAt !== null;
   const endsFirst = event.lengthMinutes <= 0;
 
@@ -226,12 +269,15 @@ function eventRows(event, context) {
     el(
       'span',
       { class: 'cell-check', role: 'cell' },
-      el('span', {
-        class: 'checkbox',
+      el('button', {
+        type: 'button',
+        class: context.selection.has(event.id)
+          ? 'checkbox checkbox-on'
+          : 'checkbox',
         role: 'checkbox',
-        'aria-checked': 'false',
-        'aria-disabled': 'true',
-        'aria-label': `Select ${event.title}`
+        'aria-checked': String(context.selection.has(event.id)),
+        'aria-label': `Select ${event.title}`,
+        onclick: () => context.onToggleSelected(event.id)
       })
     ),
     el(
@@ -259,29 +305,35 @@ function eventRows(event, context) {
     el(
       'span',
       { class: 'cell-opportunity', role: 'cell' },
-      opportunityChooser(event, categories)
+      opportunityChooser(event, context)
     ),
     el(
       'span',
       { class: 'cell-time', role: 'cell' },
-      el('input', {
-        class: 'input mono',
-        type: 'text',
+      timeField({
         value: event.shiftStart,
-        readOnly: true,
-        'aria-label': `Shift start for ${event.title}`
+        label: `Shift start for ${event.title}`,
+        busy: context.busy,
+        onChoose: (time) => context.onEdit({
+          op: 'set_start',
+          eventIds: [event.id],
+          time
+        })
       }),
       offsetNote('offsetStart', context.offsetOf(event).start)
     ),
     el(
       'span',
       { class: 'cell-time', role: 'cell' },
-      el('input', {
-        class: 'input mono',
-        type: 'text',
+      timeField({
         value: event.shiftEnd,
-        readOnly: true,
-        'aria-label': `Shift end for ${event.title}`
+        label: `Shift end for ${event.title}`,
+        busy: context.busy,
+        onChoose: (time) => context.onEdit({
+          op: 'set_end',
+          eventIds: [event.id],
+          time
+        })
       }),
       offsetNote('offsetEnd', context.offsetOf(event).end)
     ),
@@ -305,8 +357,50 @@ function eventRows(event, context) {
         })
         : null
     ),
-    el('span', { class: 'cell-remove', role: 'cell' }),
-    el('span', { class: 'cell-undo', role: 'cell' })
+    el(
+      'span',
+      { class: 'cell-remove', role: 'cell' },
+      el(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-ghost btn-icon row-remove',
+          disabled: context.busy,
+          'aria-label': `Remove ${event.title} from this run`,
+          title: 'Remove from this run',
+          onclick: () => context.onEdit({
+            op: 'remove',
+            eventIds: [event.id]
+          })
+        },
+        icon('trash')
+      )
+    ),
+    el(
+      'span',
+      { class: 'cell-undo', role: 'cell' },
+      el(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-ghost micro',
+          disabled: context.busy,
+          /* Offered whatever state the row is in, and worded for what
+           * it does rather than for a change having been made: the
+           * contract publishes no "edited" flag on an event, and
+           * working one out here would mean a second copy of the
+           * arithmetic that produced the times. */
+          title: 'Put the shift times back to the calendar times and '
+            + 'the offsets this opportunity asks for',
+          onclick: () => context.onEdit({
+            op: 'undo',
+            eventIds: [event.id]
+          })
+        },
+        icon('arrow-counter-clockwise'),
+        'Undo'
+      )
+    )
   );
 
   const details = el(
@@ -315,7 +409,7 @@ function eventRows(event, context) {
     el(
       'span',
       { class: 'event-details-cell', role: 'cell' },
-      event.roles.map((role) => roleRow(event, role, opportunities))
+      event.roles.map((role) => roleRow(event, role, context))
     )
   );
 

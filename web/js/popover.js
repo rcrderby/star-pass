@@ -16,6 +16,18 @@ import { el } from './dom.js';
 /* The popover showing now, so that opening another closes it. */
 let open = null;
 
+/** Return whether anything is open.
+ *
+ * Read by whoever else handles Escape: the design gives it an order,
+ * and the selection is only cleared when there was no popover in
+ * front of it.
+ *
+ * @returns {boolean} Whether a popover is showing.
+ */
+export function anyPopoverOpen() {
+  return open !== null;
+}
+
 /** Close whatever is open, if anything.
  *
  * @returns {void}
@@ -61,8 +73,11 @@ export class Popover {
    *     shows what is true now.
    * @param {number} options.width How wide the panel is, in pixels.
    * @param {number} [options.top] How far below the trigger it sits.
+   * @param {boolean} [options.bindClick] Whether clicking the trigger
+   *     opens it. False for a field that opens on focus, where the
+   *     click that follows the focus would toggle it straight shut.
    */
-  constructor({ trigger, contents, width, top = 38 }) {
+  constructor({ trigger, contents, width, top = 38, bindClick = true }) {
     this.trigger = trigger;
     this.contents = contents;
     this.width = width;
@@ -71,7 +86,10 @@ export class Popover {
 
     this.element = el('div', { class: 'popover-anchor' }, trigger);
     this.trigger.setAttribute('aria-expanded', 'false');
-    this.trigger.addEventListener('click', () => this.toggle());
+
+    if (bindClick) {
+      this.trigger.addEventListener('click', () => this.toggle());
+    }
   }
 
   /** Open it if closed, close it if open.

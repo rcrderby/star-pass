@@ -3,19 +3,30 @@
  *
  * The state here is the client-only half the design lists -- which
  * view, the search text, the two filters, which day groups are
- * collapsed, whether the change log is showing.  Everything else
- * belongs to the server and arrives with the run.
+ * collapsed, the selection, whether the change log is showing.
+ * Everything else belongs to the server and arrives with the run.
  *
  * A change to any of it redraws the body and leaves the header alone,
  * which is what keeps an open popover open while a filter is applied.
+ *
+ * **An edit is one call, and its answer is what the screen redraws
+ * from.**  The service applies an action whole or not at all and
+ * hands back the revision it produced, so nothing here has to work
+ * out what an edit did -- which is what keeps the row a reader is
+ * looking at the row the service is holding.  One at a time: while a
+ * call is in flight every control is disabled, because two edits in
+ * the air would each be applied to a revision the other had already
+ * changed.
  */
 
+import { ApiError, editEvents, idempotencyKey } from '../api.js';
 import { el, icon } from '../dom.js';
-import { closeAnyPopover } from '../popover.js';
+import { anyPopoverOpen, closeAnyPopover } from '../popover.js';
 import { changeLogPanel } from './changelog.js';
 import { reviewBanners } from './banners.js';
 import { reviewHeader } from './header.js';
 import { reviewTable } from './table.js';
+import { selectionToolbar } from './selection.js';
 
 /* What the hint above the table says. Which one depends on whether
  * any opportunity moves its shift off the calendar times: with no
@@ -46,6 +57,37 @@ const NOTHING_MATCHES = (
 
 /* What stands in for the screens this one leads to, until they land. */
 const NOT_YET = 'That screen is not built yet.';
+
+/** Return what a refused edit says.
+ *
+ * A notice above the table rather than the screen-wide failure, which
+ * would throw away a run that is still perfectly readable. The service
+ * applies an action whole or not at all, so nothing was half done and
+ * the rows below are what they were.
+ *
+ * @param {ApiError} failure What went wrong.
+ * @returns {HTMLElement} The notice.
+ */
+function editFailure(failure) {
+  return el(
+    'div',
+    { class: 'banner banner-alert', role: 'alert' },
+    icon('warning-circle'),
+    el(
+      'span',
+      { class: 'banner-words meta' },
+      el('span', { text: `That change was not made. ${failure.detail}` }),
+      failure.reference
+        ? el(
+          'span',
+          { class: 'muted micro failure-reference' },
+          'Reference ',
+          el('span', { class: 'mono', text: failure.reference })
+        )
+        : null
+    )
+  );
+}
 
 /** Return the events a filter and a search leave showing.
  *
@@ -81,8 +123,13 @@ function showing(events, state) {
  */
 function toolbar(state, shown, handlers) {
   const total = state.events.length;
-  const revision = state.revisions.find((each) => each.current);
-  const changes = revision ? revision.changes : 0;
+  /* Counted from the log rather than read off the revision, which
+   * is the same number -- a revision's count is what was logged while
+   * it was current -- and stays right after an edit without asking
+   * the service for the revisions again. */
+  const changes = state.run.log.filter(
+    (entry) => entry.revision === state.run.currentRevision
+  ).length;
   const search = el('input', {
     class: 'input search-field',
     type: 'search',
@@ -95,12 +142,13 @@ function toolbar(state, shown, handlers) {
   return el(
     'div',
     { class: 'toolbar card elev-sm' },
-    el('span', {
-      class: 'checkbox',
+    el('button', {
+      type: 'button',
+      class: handlers.allShown ? 'checkbox checkbox-on' : 'checkbox',
       role: 'checkbox',
-      'aria-checked': 'false',
-      'aria-disabled': 'true',
-      'aria-label': 'Select every event'
+      'aria-checked': String(handlers.allShown),
+      'aria-label': 'Select every event shown',
+      onclick: handlers.onToggleAll
     }),
     el(
       'span',
@@ -162,7 +210,10 @@ export class ReviewScreen {
       search: '',
       filters: { blocking: false, fuzzy: false },
       collapsed: new Set(),
-      showLog: false
+      selection: new Set(),
+      showLog: false,
+      busy: false,
+      failure: null
     };
 
     this.handlers = handlers;
@@ -197,7 +248,11 @@ export class ReviewScreen {
       opportunities,
       byId: new Map(run.events.map((each) => [each.id, each])),
       collapsed: this.state.collapsed,
+      selection: this.state.selection,
+      busy: this.state.busy,
       onToggleDay: (day) => this.toggleDay(day),
+      onToggleSelected: (eventId) => this.toggleSelected(eventId),
+      onEdit: (operation) => this.edit([operation]),
 
       /* An event's roles share their offsets: a category whose need
        * IDs disagree about them is refused when the run is collected,
@@ -227,7 +282,12 @@ export class ReviewScreen {
       (each) => each.offsetStart || each.offsetEnd
     );
 
+    const chosen = [...this.state.selection];
+    const allShown = shown.length > 0
+      && shown.every((event) => this.state.selection.has(event.id));
+
     const handlers = {
+      allShown,
       onSearch: (text) => {
         this.state.search = text;
         this.redraw();
@@ -243,12 +303,44 @@ export class ReviewScreen {
       onToggleFuzzy: () => {
         this.state.filters.fuzzy = !this.state.filters.fuzzy;
         this.redraw();
+      },
+      onToggleAll: () => {
+        /* What is shown rather than what the run holds: a select-all
+         * that reached past a filter would act on rows nobody could
+         * see. */
+        this.state.selection = allShown
+          ? new Set()
+          : new Set(shown.map((event) => event.id));
+
+        this.redraw();
       }
+    };
+
+    /* Each of these is one operation naming every selected event, not
+     * one call per row: the service applies it whole or not at all,
+     * and the change log gets one entry. */
+    const bulk = {
+      onSetCategory: (category) => this.edit([
+        { op: 'set_category', eventIds: chosen, category }
+      ]),
+      onNudge: (minutes) => this.edit([
+        { op: 'nudge', eventIds: chosen, minutes }
+      ]),
+      onResetSlots: () => this.edit([
+        { op: 'reset_slots', eventIds: chosen }
+      ]),
+      onRemove: () => this.edit([
+        { op: 'remove', eventIds: chosen }
+      ]),
+      onClear: () => this.clearSelection()
     };
 
     this.body.replaceChildren(
       ...reviewBanners(this.state, handlers),
-      toolbar(this.state, shown.length, handlers),
+      this.state.failure === null ? '' : editFailure(this.state.failure),
+      this.state.selection.size > 0
+        ? selectionToolbar(this.state, context.categories, bulk)
+        : toolbar(this.state, shown.length, handlers),
       el('p', {
         class: 'table-hint muted note',
         text: anyOffset ? TIMES_OFFSET : TIMES_MATCH
@@ -313,7 +405,98 @@ export class ReviewScreen {
       el('div', { class: 'review-with-panel' }, this.body, this.panel)
     );
 
+    /* The design gives Escape an order: what is in front closes first.
+     * A popover handles its own, so the selection is cleared only when
+     * there was nothing over it. */
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !anyPopoverOpen()) {
+        this.clearSelection();
+      }
+    });
+
     this.redraw();
+  }
+
+  /** Send one action, and redraw from what it answered.
+   *
+   * The key names this action and is minted here, once. It is not
+   * reused for the next one: two nudges are two actions and have to
+   * move the shift twice. A key is what makes a *resend* of this same
+   * action safe, not what makes a second action idempotent.
+   *
+   * @param {Array<Object>} operations What to do, in order.
+   * @returns {Promise<void>} When the screen has redrawn.
+   */
+  async edit(operations) {
+    if (this.state.busy) {
+      return;
+    }
+
+    this.state.busy = true;
+    this.state.failure = null;
+    this.redraw();
+
+    try {
+      const answer = await editEvents(
+        this.state.run.id,
+        operations,
+        idempotencyKey()
+      );
+
+      /* The whole revision, and the entries the edit added. Replaced
+       * rather than merged: what the service holds is the answer to
+       * what the rows now are. */
+      this.state.run.events = answer.events;
+      this.state.events = answer.events;
+      this.state.run.log = [...this.state.run.log, ...answer.log];
+
+      /* An event the edit removed cannot stay selected. */
+      const alive = new Set(answer.events.map((each) => each.id));
+
+      this.state.selection = new Set(
+        [...this.state.selection].filter((id) => alive.has(id))
+      );
+    } catch (error) {
+      if (!(error instanceof ApiError)) {
+        console.error(error);
+      }
+
+      this.state.failure = error instanceof ApiError
+        ? error
+        : new ApiError({
+          status: 0,
+          detail: String(error.message || error)
+        });
+    } finally {
+      this.state.busy = false;
+      this.redraw();
+    }
+  }
+
+  /** Put an event in the selection, or take it out.
+   *
+   * @param {string} eventId Which event.
+   * @returns {void}
+   */
+  toggleSelected(eventId) {
+    if (this.state.selection.has(eventId)) {
+      this.state.selection.delete(eventId);
+    } else {
+      this.state.selection.add(eventId);
+    }
+
+    this.redraw();
+  }
+
+  /** Empty the selection.
+   *
+   * @returns {void}
+   */
+  clearSelection() {
+    if (this.state.selection.size > 0) {
+      this.state.selection = new Set();
+      this.redraw();
+    }
   }
 
   /** Collapse a day's group, or open it again.
