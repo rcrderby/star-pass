@@ -4,5 +4,19 @@
     "unsent": "Not sent",
     "partly_sent": "Partly sent",
     "sent": "Sent"
+  },
+  "matchKind": {
+    "keyword": "Matched by the keyword \"{keyword}\"",
+    "fuzzy": "Matched to {category} by wording alone, scoring {score} of 100. Worth a look."
+  },
+  "row": {
+    "calendarTimes": "RCR Calendar times: {start} to {end}",
+    "noOpportunity": "Unable to match to an opportunity",
+    "duplicate": "Identical to \"{title}\" earlier in this run. Repeated rows are dropped, so this one creates nothing.",
+    "offsetStart": "Set {minutes} min {direction} calendar start",
+    "offsetEnd": "Set {minutes} min {direction} calendar end",
+    "capped": "Created as {minutes} min, the longest this opportunity allows",
+    "endsFirst": "End is before start",
+    "shiftTime": "Shift {start} to {end} ({minutes} min)"
   }
 }

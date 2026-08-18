@@ -55,6 +55,13 @@ RUN_STATUSES = (
 # whose words all appear in the title, or the fuzzy fallback.
 MATCH_KIND_KEYWORD = 'keyword'
 MATCH_KIND_FUZZY = 'fuzzy'
+# Named as a set for the reason the other enumerations are: a client
+# words each of these for a reader, and a kind nobody worded should be
+# a failing test rather than an identifier on a screen.
+MATCH_KINDS = (
+    MATCH_KIND_KEYWORD,
+    MATCH_KIND_FUZZY
+)
 
 
 @dataclass(frozen=True)
