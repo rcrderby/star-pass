@@ -11,6 +11,7 @@
 
 # Imports - Python Standard Library
 from os import getenv
+from pathlib import Path
 
 # Where the API service is.  A configuration value rather than a
 # constant, because encryption between the two is a deployment
@@ -74,3 +75,29 @@ REQUEST_TIMEOUT_SECONDS = float(
         '120'
     )
 )
+
+# Where the page this service holds the session for is read from.
+# The page is served here rather than from anywhere else because it
+# cannot work from anywhere else: the token a write carries is a
+# cookie the page has to read, the session cookie is 'SameSite=Strict'
+# so a browser sends it on nothing another site initiated, and a write
+# whose origin is not this host is refused (D4, D18).  A page on a
+# second origin would fail all three, and answering that with CORS
+# would be the boundary leaking rather than moving.
+#
+# A configuration value rather than a constant, so a deployment can
+# serve a built interface from a mounted directory without rebuilding
+# the image.
+WEB_ROOT = Path(
+    getenv(
+        'STAR_PASS_WEB_ROOT',
+        str(
+            Path(__file__).parent.parent.parent / 'web'
+        )
+    )
+)
+
+# What a request for the root is answered with.  Named, because the
+# check that refuses to start without a page looks for this file and
+# the mount serves it.
+WEB_INDEX = 'index.html'

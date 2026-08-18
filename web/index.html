@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>star-pass</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/checks.js" defer></script>
+</head>
+
+<body>
+  <main>
+    <h1>star-pass</h1>
+    <p>
+      This is the root of the frontend container. The review, preview and
+      send screens described in <code>docs/design</code> are not built
+      yet &mdash; this page exists so that the origin they will be served
+      from can be checked from a browser.
+    </p>
+
+    <h2>What this origin is doing</h2>
+    <ul id="checks"></ul>
+
+    <p>
+      The API is reached only through <code>/api</code> on this origin,
+      and holds the Amplify credential on a network this container is
+      not on. The browser holds no credential of any kind: this service
+      attaches its own to everything it forwards, which is why the
+      version check succeeds without the page ever having seen one.
+    </p>
+  </main>
+</body>
+
+</html>

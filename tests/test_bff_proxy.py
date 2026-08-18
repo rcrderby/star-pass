@@ -486,6 +486,67 @@ async def _arriving(
         yield piece
 
 
+class TestWhatIsServedAtTheRoot:
+    def test_the_page_the_session_belongs_to(
+        self,
+        browser: Callable[..., Any]
+    ) -> None:
+        # It is served from here because it can be served nowhere
+        # else: the token a write carries is a cookie the page has to
+        # read, and a write from a second origin is refused (D4, D18).
+        client, _api = browser()
+
+        answer = client.get('/')
+
+        assert answer.status_code == 200
+        assert answer.headers['content-type'].startswith('text/html')
+
+    def test_loading_it_is_what_gives_the_session(
+        self,
+        browser: Callable[..., Any]
+    ) -> None:
+        # Which is the point of serving it here rather than mounting a
+        # directory somewhere: opening the page is the round trip that
+        # sets the cookies, so the first write needs no other.
+        client, _api = browser()
+
+        client.get('/')
+
+        assert client.cookies[_defaults.SESSION_COOKIE]
+        assert client.cookies[_defaults.CSRF_COOKIE]
+
+    def test_the_proxy_is_reached_before_the_page_is(
+        self,
+        asked: List[httpx2.Request],
+        browser: Callable[..., Any]
+    ) -> None:
+        # The page answers everything under the root, so the order the
+        # two are added in is the whole of what keeps an API call from
+        # being answered with a file -- or with the refusal a missing
+        # one produces.
+        client, _api = browser()
+
+        client.get(f'{RUNS_PATH}/r-1')
+
+        assert asked[-1].url.path == '/v1/runs/r-1'
+
+    def test_anything_else_is_refused_as_a_document(
+        self,
+        browser: Callable[..., Any]
+    ) -> None:
+        # A caller of this service sees problem documents whichever
+        # side refused, and a path that is neither the page nor the
+        # API is still this service refusing.
+        client, _api = browser()
+
+        answer = client.get('/not-a-page')
+
+        assert answer.status_code == 404
+        assert answer.headers['content-type'].startswith(
+            'application/problem+json'
+        )
+
+
 def _refuse(request: httpx2.Request) -> httpx2.Response:
     """ Fail the way an unreachable service does. """
     raise httpx2.ConnectError('nothing listening', request=request)

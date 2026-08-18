@@ -6,12 +6,19 @@
     for it, not when a module is imported, so a test can build one
     against its own settings.
 
-    Two things happen here that happen nowhere else: the connection to
-    the API is opened once and closed once, because a client made per
-    request would open a connection per request and lose the pooling
-    that makes a proxy cheap; and a browser without a session is given
-    one on the way out, so that the page a person loads can make a
-    write without a round trip to fetch a token first.
+    Three things happen here that happen nowhere else: the connection
+    to the API is opened once and closed once, because a client made
+    per request would open a connection per request and lose the
+    pooling that makes a proxy cheap; a browser without a session is
+    given one on the way out, so that the page a person loads can make
+    a write without a round trip to fetch a token first; and the page
+    itself is served from this origin, because it is the only origin
+    it can work from (D4, D18).
+
+    Order matters where the page is mounted.  It answers everything
+    under the root, so the proxy is included first and the mount takes
+    what is left; the other order would serve a file, or a refusal,
+    where an API call was meant to go.
 """
 
 # Imports - Python Standard Library
@@ -21,6 +28,7 @@ from typing import AsyncIterator, Awaitable, Callable
 # Imports - Third-Party
 import httpx2
 from fastapi import FastAPI, Request, Response
+from fastapi.staticfiles import StaticFiles
 
 # Imports - Local
 from . import _defaults
@@ -83,6 +91,14 @@ def create_app() -> FastAPI:
 
     add_problem_handlers(api=api)
     api.include_router(proxy_router)
+    api.mount(
+        '/',
+        StaticFiles(
+            directory=_defaults.WEB_ROOT,
+            html=True
+        ),
+        name='web'
+    )
 
     @api.middleware('http')
     async def _give_a_session(

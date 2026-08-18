@@ -65,14 +65,40 @@ class TestWhatItRefusesToStartWithout:
             error.value
         )
 
+    def test_a_page_to_give_a_browser(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: pytest.TempPathFactory
+    ) -> None:
+        # Read the other way round from the two above: this service
+        # exists to serve a page and to carry its session, so a
+        # process with nothing behind the proxy is reachable and
+        # unusable, and says so only to whoever opens it.
+        monkeypatch.setattr(_defaults, 'WEB_ROOT', tmp_path)
+
+        with pytest.raises(ConfigurationError) as error:
+            check_configuration()
+
+        assert _defaults.WEB_INDEX in str(error.value)
+        assert str(tmp_path) in str(error.value)
+
 
 class TestWhatItStartsWith:
-    def test_a_credential_and_a_long_enough_signing_value(
+    def test_a_credential_a_signing_value_and_a_page(
         self,
-        monkeypatch: pytest.MonkeyPatch
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: pytest.TempPathFactory
     ) -> None:
         monkeypatch.setattr(_defaults, 'API_TOKEN', 'an-api-value')
         monkeypatch.setattr(_defaults, 'SESSION_SECRET', LONG_ENOUGH)
+        # Written here rather than left to the checkout's own 'web'
+        # directory, so the test says what it needs instead of passing
+        # on something it did not arrange.
+        (tmp_path / _defaults.WEB_INDEX).write_text(
+            '<!DOCTYPE html>',
+            encoding='utf-8'
+        )
+        monkeypatch.setattr(_defaults, 'WEB_ROOT', tmp_path)
 
         assert check_configuration() is None
 

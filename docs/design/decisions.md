@@ -380,6 +380,43 @@ makes D3 cheap.
 
 ---
 
+## D19 — The page is served by the front-end container, at its root
+
+**Decided:** The web interface is served at `/` by the front-end service, from
+`web/` in this repository. The prototype in `docs/design` stays where it is and
+is not ported.
+
+**Why:** It is the only origin the page can work from, and that follows from
+decisions already made rather than from taste. The CSRF token is a cookie the
+page has to *read* (D18); the session cookie is `SameSite=Strict`, so a browser
+sends it on nothing another site initiated (D4); and a write whose `Origin` host
+is not this host is refused. A page on a second origin fails all three, and the
+only way to make it work would be CORS on the boundary — which the plan names as
+the signal that the boundary has leaked rather than moved (section 2).
+
+So the repository stops being purely a back end. That cost was already paid when
+`star_pass_bff` landed in it; what changes is that the page ships with the
+service that holds its session, which is also what makes a session usable without
+a round trip to fetch a token first.
+
+**Rejected:** serving the page from the design project or any second origin (no
+write could succeed without CORS); serving it from Caddy as static files beside
+the proxy (same origin, so it would work, but the page and the session would then
+be configured in two places and a deployment could update one without the other);
+porting the prototype (its own README says it is a reference with mock data and
+must not be ported).
+
+**Consequence:** `web/` currently holds a placeholder that checks those three
+things from a browser and says the interface is not built. Building the screens
+is its own work, against `docs/api/openapi.json` and the design handoff.
+
+**Revisit if:** the interface acquires a build step whose output belongs
+somewhere else — the service reads `STAR_PASS_WEB_ROOT`, so that is a mount
+rather than a code change — or a native or third-party client appears, which
+authenticates to the API directly rather than through this service (D4).
+
+---
+
 ## Deferred, on purpose
 
 - **An authentication boundary in front of the whole system.** Deferred: single

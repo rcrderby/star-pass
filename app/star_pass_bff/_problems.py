@@ -10,11 +10,19 @@
     Written here rather than imported from the API package, which
     would pull the core in with it.  Nothing in this process holds
     domain logic, and the import graph is where that stays true (D17).
+
+    The refusal handled is the framework's base one rather than the
+    web framework's subclass of it, because not every refusal here is
+    raised by code in this package: the page mounted at the root
+    answers a path it does not hold by raising the base, and a handler
+    registered on the subclass alone would let that one out in a
+    different shape.
 """
 
 # Imports - Third-Party
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException
 
 # What a problem document is sent as.
 PROBLEM_MEDIA_TYPE = 'application/problem+json'

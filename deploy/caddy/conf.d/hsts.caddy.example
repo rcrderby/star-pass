@@ -1,0 +1,15 @@
+# HTTP Strict Transport Security.
+#
+# Copy this file to 'hsts.caddy' in the same directory, and restart
+# Caddy, ONCE THE DOMAIN IS SETTLED AND NOT BEFORE (plan section 3).
+#
+# What "settled" means: the name will not change, every service on it
+# will be reachable over HTTPS for at least the max-age below, and the
+# certificate will keep being one the browser accepts.  A browser that
+# has seen this header refuses plain HTTP to this name until the
+# max-age expires, and there is no way to tell it to stop sooner.
+#
+# Two years, which is what a preload list asks for.  'includeSubDomains'
+# covers names that do not exist yet, so leave it off until every
+# subdomain of this name is served over HTTPS as well.
+header Strict-Transport-Security "max-age=63072000"

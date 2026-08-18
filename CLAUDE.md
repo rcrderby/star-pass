@@ -288,7 +288,26 @@ through the Amplify API. It is run once per month.
   module that decides what a session is (D18), `_proxy.py` passes
   requests on and streams what the API streams, and `_configuration.py`
   refuses to start half-configured. Run it with
-  `uvicorn --factory star_pass_bff:create_app`.
+  `uvicorn --factory star_pass_bff:create_app`. It serves `web/` at
+  its root, and refuses to start when there is no page there.
+- `web/` — what the frontend serves at `/`. It lives here and not in
+  the design project because it can work from no other origin: the
+  token a write carries is a cookie the page reads, the session cookie
+  is `SameSite=Strict`, and a write whose `Origin` names another host
+  is refused. A page served elsewhere would fail all three, and
+  answering that with CORS would be the boundary leaking rather than
+  moving (D4, D18). What is there now is a placeholder that checks
+  those three things from a browser; the screens themselves are not
+  built. `docs/design` holds a prototype of them, which is a reference
+  and is not ported.
+- `compose.yaml` and `deploy/caddy/` — the deployment (D5, D14, D17).
+  Caddy is the only container with a published port; the frontend and
+  the API share a network Caddy is not on, so the path to the
+  credential-holding service runs through the process that checks a
+  write came from its own page. The credential file and the database
+  volume are attached to the API service alone. HSTS is not enabled:
+  it ships as an example file imported by a glob, to be turned on once
+  the domain is settled and not before.
 - `docs/api/openapi.json` — the generated OpenAPI 3.1 contract,
   written by `scripts/generate_contract.py`, which also writes the
   client generated from it.
@@ -558,6 +577,15 @@ The notes below are the ones that are not obvious from the commands.
   are checked. The origin check compares hosts and not whole origins,
   because TLS is terminated in front of the service (D6) and the
   scheme the browser used is not the scheme this process sees.
+- **What makes that host comparison trustworthy is Caddy, not
+  `FORWARDED_ALLOW_IPS`.** The two are easily confused. uvicorn's
+  proxy-header handling reads `X-Forwarded-For` and
+  `X-Forwarded-Proto` and rewrites the client address and the scheme;
+  it never touches `Host`. `Host` is trustworthy because a Caddy site
+  is matched by name, so a request naming any other one is answered
+  with nothing rather than passed on. Scope the setting to the
+  proxy's address anyway and never to `*` — it is what the first
+  thing to read a client address will depend on.
 - **The frontend forwards an allowlist of headers, never what
   arrived.** What the API receives is what the frontend decided to
   send plus the credential, so a page cannot choose what the API is
