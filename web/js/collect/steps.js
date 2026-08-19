@@ -42,13 +42,20 @@ export const RUNNING = 'running';
 export const DONE = 'done';
 export const FAILED = 'failed';
 
+/* And the state a step is left in when the service stopped while it
+ * was working. Not `failed`: nothing refused anything, and the step
+ * neither finished nor failed -- it was in hand when the process
+ * holding it went away (D10). */
+export const STOPPED = 'stopped';
+
 /* What each state is drawn as, and what it says beside the step. The
  * running one spins, which is the design's `omSpin`. */
 const STATES = {
   [PENDING]: { words: '', glyph: 'circle-dashed' },
   [RUNNING]: { words: 'Working', glyph: 'circle-notch' },
   [DONE]: { words: 'Done', glyph: 'check-circle' },
-  [FAILED]: { words: 'Failed', glyph: 'warning-circle' }
+  [FAILED]: { words: 'Failed', glyph: 'warning-circle' },
+  [STOPPED]: { words: 'Stopped', glyph: 'info' }
 };
 
 /** Return every step as pending.

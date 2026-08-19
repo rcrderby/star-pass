@@ -36,6 +36,7 @@ import {
   DONE,
   FAILED,
   RUNNING,
+  STOPPED,
   freshSteps,
   stepList
 } from './steps.js';
@@ -46,8 +47,10 @@ export const COLLECT_JOB = 'collect';
 export const RECOLLECT_JOB = 'recollect';
 export const COLLECT_JOBS = [COLLECT_JOB, RECOLLECT_JOB];
 
-/* What the job says when it ended well. */
+/* What the job says when it ended well, and what it says when the
+ * service stopped while it was in hand (D10). */
 const SUCCEEDED = 'succeeded';
+const INTERRUPTED = 'interrupted';
 
 /* Under the heading, while it works and afterwards. Says the two
  * things somebody watching needs: that nothing is being sent, and
@@ -74,6 +77,21 @@ const LEAVING_IS_SAFE = (
 const NOTHING_STORED = (
   'Nothing was stored, so no run of yours has changed. Trying again '
   + 'reads the calendar into this same run.'
+);
+
+/* And what a collection the service stopped in the middle of says
+ * instead of a reason, because there is none: nothing refused
+ * anything and the job carries no detail. It is the same sentence
+ * about consequences either way -- one transaction at the end means
+ * an interrupted collection stored nothing, which is why this screen
+ * offers the ordinary "Try again" rather than a resume. A resumed
+ * collection would read the same calendar into the same run, which is
+ * what trying again does, and it would do it under the identifier of
+ * the attempt that stopped. */
+const INTERRUPTED_STOPPED = (
+  'The service stopped while this collection was running. Nothing '
+  + 'reaches Amplify from a collection, so nothing was left half-done '
+  + 'anywhere but here.'
 );
 
 /* When the connection dropped. Not a failure of the collection: the
@@ -111,8 +129,12 @@ function heading(state) {
     return `Collecting from the ${state.calendar} calendar`;
   }
 
-  return state.failure === null
-    ? `Collected from the ${state.calendar} calendar`
+  if (state.failure === null) {
+    return `Collected from the ${state.calendar} calendar`;
+  }
+
+  return state.interrupted
+    ? 'The collection was interrupted'
     : 'The collection stopped';
 }
 
@@ -142,6 +164,7 @@ export class CollectingScreen {
       calendar,
       steps: freshSteps(),
       running: true,
+      interrupted: false,
       failure: null,
       busy: false,
       lost: false,
@@ -262,6 +285,7 @@ export class CollectingScreen {
   finished(ending) {
     this.state.running = false;
     this.state.lost = false;
+    this.state.interrupted = ending.status === INTERRUPTED;
 
     if (ending.status === SUCCEEDED) {
       this.handlers.onOpenRun(this.state.job.runId);
@@ -274,7 +298,7 @@ export class CollectingScreen {
     );
 
     if (reached !== undefined) {
-      reached.state = FAILED;
+      reached.state = this.state.interrupted ? STOPPED : FAILED;
     }
 
     this.state.failure = ending;
@@ -299,6 +323,7 @@ export class CollectingScreen {
 
       this.state.steps = freshSteps();
       this.state.failure = null;
+      this.state.interrupted = false;
       this.state.busy = false;
       this.follow(job);
     } catch (error) {
@@ -371,7 +396,12 @@ export class CollectingScreen {
         'span',
         { class: 'collect-failure-words' },
         icon('warning-circle'),
-        el('span', { text: failure.detail || 'The collection failed.' })
+        el('span', {
+          text: failure.detail
+            || (this.state.interrupted
+              ? INTERRUPTED_STOPPED
+              : 'The collection failed.')
+        })
       ),
       el(
         'div',
@@ -452,7 +482,7 @@ export class CollectingScreen {
         ? el(
           'div',
           { class: 'collect-lost' },
-          icon('wifi-slash'),
+          icon('warning-circle'),
           el('span', { text: RECONNECTING })
         )
         : null,

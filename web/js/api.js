@@ -625,6 +625,43 @@ export function getJob(jobId, options = {}) {
   return ask(`/jobs/${encodeURIComponent(jobId)}`, options);
 }
 
+/** Ask for an interrupted job to be run again.
+ *
+ * **The third way a write to Amplify starts**, and the only one whose
+ * request restates nothing: a job left queued or running when the
+ * service stopped is marked interrupted at startup and never resumed
+ * on its own (D10), because a send that resumed itself would write to
+ * a live volunteer system from state rebuilt after a crash. So a
+ * person asks, and the screen puts the send confirmation in front of
+ * the asking (D11) the way a retry does.
+ *
+ * What runs is the ordinary work pointed at a job that already
+ * exists. A resumed send reads every opportunity immediately before
+ * writing to it and creates exactly the rows the interrupted attempt
+ * did not, so nothing has to remember how far that attempt got --
+ * Amplify answers it.
+ *
+ * The job keeps its identifier, so the screen that asked goes on
+ * following the same job. Its event log keeps the interrupted
+ * attempt's frames as well, which is why a stream can carry two
+ * `sending_started` frames and why the second one begins an attempt
+ * rather than continuing the first.
+ *
+ * **No `Idempotency-Key`**, and none would help: a job may only be
+ * resumed while it is interrupted, so the second arrival of this
+ * request is refused by the state of the job rather than by a key.
+ *
+ * @param {string} jobId Which job to run again.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The job, queued again.
+ */
+export function resumeJob(jobId, options = {}) {
+  return ask(`/jobs/${encodeURIComponent(jobId)}/resume`, {
+    ...options,
+    method: 'POST'
+  });
+}
+
 /** Follow what a job reports, until it is over.
  *
  * An `EventSource` rather than polling: the service holds the

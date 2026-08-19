@@ -95,6 +95,14 @@ async function start() {
 
   /** Return the job working on a run, when one is.
    *
+   * **Only a job still in hand.** A run whose last job the service
+   * stopped in the middle of names it too, and that one is a banner
+   * on the review screen rather than a screen to open on: an
+   * interrupted job stays interrupted until somebody acts on it, so a
+   * run that opened on one would be a run whose way back came
+   * straight here again. A job still running finishes and stops being
+   * the run's, which is what makes opening on it safe.
+   *
    * @param {Object} run The run, which names its active job.
    * @returns {Promise<Object|null>} The job, or null.
    */
@@ -104,6 +112,36 @@ async function start() {
     }
 
     return getJob(run.activeJobId);
+  }
+
+  /** Show the job the service stopped in the middle of (D10).
+   *
+   * Whichever screen that job's kind belongs to, which is the same
+   * screen it would have been watched on: how far a send got is a
+   * reading of what it reported, and so is how far a collection got.
+   * The resume lives there, behind the send confirmation.
+   *
+   * @param {Object} run The run, which names the job.
+   * @param {Object} config What the deployment was configured with.
+   * @returns {Promise<void>} When it is on screen.
+   */
+  async function seeInterrupted(run, config) {
+    try {
+      const job = await getJob(run.interruptedJobId);
+
+      if (job.kind === SEND_JOB) {
+        show(new SendingScreen(
+          { run, job },
+          { onBack: () => reopen(run.id) }
+        ));
+
+        return;
+      }
+
+      watchCollection(job, config, run.calendar);
+    } catch (error) {
+      failed(error);
+    }
   }
 
   /** Show a collection, and open the run when it finishes.
@@ -184,6 +222,7 @@ async function start() {
       { runs, run, revisions, config },
       {
         onOpenRun: (chosen) => openRun(runs, chosen).catch(failed),
+        onSeeInterrupted: () => seeInterrupted(run, config),
         onCollectNew: () => collect(config),
         onCollectAgain: () => collect(config, run),
         onPreview: () => show(new SendingScreen(

@@ -251,6 +251,17 @@
   border-left-color: var(--color-alert);
 }
 
+/* The step the service stopped in the middle of. Marked, and not in
+ * the alert colour: nothing refused anything, so it is a step that
+ * did not finish rather than one that went wrong. */
+.collect-step-stopped {
+  border-left-color: var(--color-accent-600);
+}
+
+.collect-step-stopped > .icon {
+  color: var(--color-accent-300);
+}
+
 .collect-step-failed > .icon {
   color: var(--color-alert);
 }

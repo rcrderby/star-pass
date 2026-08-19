@@ -201,6 +201,36 @@ until you log in).
 per-shift idempotency proves reliable enough that automatic resume is provably
 safe.
 
+**Found in the interface (2026-08-19):** three things, none of which change
+the decision.
+
+- **Nothing published the identifier.** `POST /jobs/{id}/resume` takes one,
+  and `activeJobId` is derived from the two statuses a job is *in hand* under
+  — an interrupted job is finished, so a run said nothing about it, and there
+  is no listing of jobs. The command line worked because a person pastes an
+  identifier out of the service log; a screen had nowhere to get one, and the
+  browser cannot remember it, because the case this decision exists for is a
+  job interrupted by a restart the browser may never have witnessed. Runs now
+  publish `interruptedJobId` beside `activeJobId`.
+- **It is a banner, not a screen the run opens on.** A job still running
+  finishes and stops being the run's, so opening on it is safe. An interrupted
+  one stays interrupted until somebody acts, so a run that opened on it was a
+  run whose "Back to the run" came straight back — found by pressing it. The
+  review screen carries the banner and the banner opens the job.
+- **The resume request carries no `expectedShiftCount`.** The confirmation in
+  front of it (D11) therefore buys attention rather than a staleness check: a
+  run edited in another tab between the preview and the click would create
+  rows nobody previewed. Not duplicates — the live read per opportunity
+  prevents those whatever happens. Worth a field on the request if it ever
+  matters.
+
+The mechanism this decision chose survives; its stated *reason* has been
+overtaken. "A large partial send gives the user no help finding its place" is
+no longer why: a resumed send reads every opportunity immediately before
+writing to it, so where the interrupted attempt got to is answered by Amplify
+rather than by the job. What resuming buys now is that the run's history shows
+one send that was interrupted and then finished, rather than two sends.
+
 ---
 
 ## D11 — Send is gated by a two-step confirmation

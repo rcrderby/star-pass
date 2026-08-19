@@ -356,6 +356,19 @@
   color: var(--color-alert);
 }
 
+/* The opportunity an interrupted send was working on. Marked, because
+ * it is the one thing on the screen nobody knows the answer to, and
+ * not in the alert colour, because nothing refused anything -- what
+ * happened to it is a question rather than a fault. */
+.send-row-unknown {
+  border-left-color: var(--color-accent-600);
+}
+
+.send-row-unknown > .icon,
+.send-row-unknown .send-row-status {
+  color: var(--color-accent-300);
+}
+
 .sending-checking,
 .sending-failed,
 .sending-notice {

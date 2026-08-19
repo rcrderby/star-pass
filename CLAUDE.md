@@ -417,6 +417,24 @@ through the Amplify API. It is run once per month.
   no preview, and reading one mid-send would ask Amplify about the
   opportunities being written to. A run carrying an `activeJobId` for
   a send opens on that screen rather than on the review screen.
+  **A run carrying an `interruptedJobId` does not** (D10): an
+  interrupted job stays interrupted until somebody acts on it, so a
+  run that opened on one would be a run whose way back came straight
+  there again — unlike a job still running, which finishes and stops
+  being the run's. It is a banner on the review screen instead, and
+  the banner opens the screen for that job's kind. Resuming a send is
+  the third way a write to Amplify starts and goes through the same
+  confirmation as a retry (D11), reading the preview first: the
+  request carries no count, so what the confirmation buys there is
+  that somebody read what is about to happen. **A resumed job keeps
+  its event log**, so one stream can carry the attempt that was
+  interrupted and the one that replaced it — a second
+  `sending_started` begins an attempt, and the rows let go of what
+  the earlier one reported, because an opportunity the first attempt
+  created is one the second is told Amplify already holds. The
+  opportunity an interrupted send was working on is drawn as
+  `unknown` rather than failed: nothing refused anything, and what
+  became of that request is a question for Amplify.
   `js/settings/` is what the deployment was configured with, read
   from `GET /v1/config` and `GET /v1/version`, and it is read only
   because the surface is: **no endpoint writes a credential** (D8),
