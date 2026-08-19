@@ -211,6 +211,13 @@ One Dockerfile builds both images, so they cannot drift apart on the
 base image or the Python version. A build naming no target gets the
 full one, which is what the deployment runs.
 
+The scheduled post does not build anything. It pulls
+`ghcr.io/rcrderby/star-pass:slack`, which the build workflow publishes
+from `main` alongside a second tag naming the commit it came from, so
+a post can be traced to what produced it. The package is private, so
+pulling it outside a workflow needs a login with `read:packages`;
+building the target locally, as above, needs nothing.
+
 ### Collected runs
 
 The commands that work with collected runs. They are selected by a word
