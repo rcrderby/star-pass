@@ -417,6 +417,20 @@ through the Amplify API. It is run once per month.
   no preview, and reading one mid-send would ask Amplify about the
   opportunities being written to. A run carrying an `activeJobId` for
   a send opens on that screen rather than on the review screen.
+  `js/settings/` is what the deployment was configured with, read
+  from `GET /v1/config` and `GET /v1/version`, and it is read only
+  because the surface is: **no endpoint writes a credential** (D8),
+  so the screen says that rotation happens in the environment rather
+  than offering a control that fails. The credential is **not** read
+  when the screen opens — the only thing published about it is what
+  `POST /v1/credentials/test` answered, which is a real request to
+  Amplify and rate-limited for that reason, so the card says it has
+  not been checked until somebody asks. The design's Configuration
+  table has a source column and this one does not: `_defaults` does
+  not record where a value came from, so the column would be this
+  page inventing an answer about somebody else's process. The motion
+  setting lives here, beside the theme control in the bar, because
+  both are kept in this browser and nowhere else.
   `api.js` is the only
   thing that talks to the service, and holds the three rules no screen
   should repeat: the CSRF header on a write, an `Idempotency-Key`

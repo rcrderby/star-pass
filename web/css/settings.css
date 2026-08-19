@@ -1,0 +1,196 @@
+/* Settings: the credential card, the two read-only tables, what is
+ * kept and for how long, and the motion control.
+ *
+ * A single column at the handoff's 940px, because every section is
+ * something to read rather than something to work in -- the review
+ * screen is the dense one and this is the one that explains it.
+ *
+ * The tables are the preview's `.table`; only the column widths are
+ * here, since a name and a value are not the preview's five columns.
+ */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+  max-width: 940px;
+}
+
+.settings-top {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-top: 18px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.settings-head {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.settings-head h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.settings-note {
+  max-width: 720px;
+  margin: 0;
+  text-wrap: pretty;
+}
+
+/* The failure that replaces the sections when the read behind them
+ * did not answer.  Left where the sections would have been rather
+ * than centred as it is on the page that could not start: there is a
+ * heading above it here, and a box floating in the middle of the
+ * screen under one reads as belonging to neither. */
+.settings .failure {
+  margin: 0;
+}
+
+.settings-subheading {
+  margin: var(--space-4) 0 0;
+  font-size: 14px;
+}
+
+/* — the credential — */
+
+.settings-credential {
+  gap: var(--space-2);
+  padding: 14px 16px;
+}
+
+.settings-credential-line {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.settings-credential-label {
+  white-space: nowrap;
+}
+
+.settings-masked {
+  white-space: nowrap;
+}
+
+.settings-status {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+  color: var(--color-accent);
+}
+
+.settings-status-alert {
+  color: var(--color-alert);
+}
+
+/* Only while the check is in the air, which is the one thing on this
+ * screen that takes long enough to be worth saying is happening. */
+.settings-checking .icon {
+  animation: om-spin 1s linear infinite;
+}
+
+.settings-test {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+/* Why Amplify would not take it, or why nothing reached Amplify at
+ * all. Both are worth the alert colour: the card above says the
+ * credential is not working, and this is the half that says what to
+ * do about it. */
+.settings-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: var(--space-2) 0 0;
+  padding: 9px 12px;
+  border-left: 3px solid var(--color-alert);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-alert) 12%, transparent);
+  text-wrap: pretty;
+}
+
+/* — what was resolved — */
+
+.settings-table {
+  max-width: 720px;
+}
+
+.settings-table th:first-child,
+.settings-table td:first-child {
+  width: 250px;
+}
+
+.settings-value {
+  font-size: 12px;
+  text-wrap: pretty;
+}
+
+.settings-table-note {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  max-width: 720px;
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.settings-table-note .icon {
+  margin-top: 2px;
+}
+
+/* — where state lives — */
+
+.settings-stores {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-store {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 16px;
+  align-items: start;
+  padding: 13px 16px;
+}
+
+.settings-store-name {
+  font-size: 13px;
+}
+
+.settings-store-note {
+  text-wrap: pretty;
+}
+
+/* — appearance — */
+
+.settings-motion {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.settings-motion-label {
+  width: 250px;
+  font-size: 13px;
+}
+
+/* — what is running — */
+
+.settings-version {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+}
