@@ -40,6 +40,10 @@ RUNS_PATH = f'{_defaults.API_VERSION_PREFIX}/runs'
 MISSED_ID = 'gcal-missed'
 MISSED_TITLE = 'Adult Scrimmages'
 
+# A title the stand-in model matches by keyword, for the test that
+# replaces the model to say what an event's shift times should be.
+MATCHED_TITLE = 'Wheels of Justice vs Rose City'
+
 
 def events_path(run_id: str) -> str:
     """ Return the address a run's events are added to. """
@@ -159,6 +163,22 @@ class TestWhatPullingOneInAnswers:
 
         assert added['addedByHand'] is True
         assert added['title'] == MISSED_TITLE
+
+    def test_the_revision_says_which_rows_have_been_edited(
+        self,
+        add: Callable[..., Any],
+        missed: Callable[..., str],
+        moved_event: str
+    ) -> None:
+        # Read under this run's own calendar, which is the only thing
+        # that says what its shift times should have been.  The event
+        # that has just arrived was built by those same rules a moment
+        # ago, so there is nothing to undo on it.
+        missed(run_id=moved_event, title=MATCHED_TITLE)
+
+        returned = add(run_id=moved_event).json()['events']
+
+        assert [event['edited'] for event in returned] == [True, False]
 
     def test_the_change_log_entry_it_wrote_comes_back(
         self,

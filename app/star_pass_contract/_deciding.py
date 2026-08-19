@@ -432,6 +432,8 @@ def edited(
             open_connection: sqlite3.Connection
     ) -> Optional[Dict[str, Any]]:
         """ Edit the run and return the revision it left. """
+        runs = RunRepository(connection=open_connection)
+        run = runs.get(run_id=run_id)
         result = edit(
             connection=open_connection,
             run_id=run_id,
@@ -439,17 +441,16 @@ def edited(
             principal_id=principal_id
         )
 
-        if result is None:
+        if run is None or result is None:
             return None
 
         events, entries = result
 
         return to_edit_view(
             events=events,
-            opportunities=RunRepository(
-                connection=open_connection
-            ).get_opportunities(run_id=run_id),
-            entries=entries
+            opportunities=runs.get_opportunities(run_id=run_id),
+            entries=entries,
+            calendar=run.calendar
         ).model_dump(by_alias=True, mode='json')
 
     return keyed_write(

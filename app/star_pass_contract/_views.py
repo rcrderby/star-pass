@@ -40,6 +40,8 @@ from star_pass._defaults import (
     RETENTION_UNMATCHED_TITLE_DAYS
 )
 from star_pass._editing import Operation
+from star_pass._event_edits import was_edited
+from star_pass._helpers import Helpers
 from star_pass._models import get_shifts_info
 from star_pass._derived import (
     blocks_the_run,
@@ -270,7 +272,9 @@ def to_run_view(
 def _to_event_view(
         event: Event,
         opportunities: Dict[str, Opportunity],
-        repeats: Dict[str, str]
+        repeats: Dict[str, str],
+        calendar: str,
+        helpers: Helpers
 ) -> EventView:
     """ Return an event as a caller sees it.
 
@@ -285,6 +289,16 @@ def _to_event_view(
             repeats (Dict[str, str]):
                 Which events repeat which, worked out once for the
                 whole revision rather than per event.
+
+            calendar (str):
+                Calendar the run was collected from, which the data
+                model is read under to say whether the event has been
+                edited.
+
+            helpers (Helpers):
+                Where that model is read through.  Built once per
+                answer rather than per event: every row is asked the
+                same question of the same model.
 
         Returns:
             view (EventView):
@@ -317,6 +331,11 @@ def _to_event_view(
             else None
         ),
         added_by_hand=event.added_by_hand,
+        edited=was_edited(
+            event=event,
+            calendar=calendar,
+            helpers=helpers
+        ),
         roles=[
             EventRoleView(
                 need_id=role.need_id,
@@ -377,6 +396,7 @@ def to_detail_view(
 
     keyed = _by_need_id(opportunities=detail.opportunities)
     repeats = repeated(events=detail.events)
+    helpers = Helpers()
 
     return RunDetailView(
         **to_run_view(run=detail.run).model_dump(),
@@ -384,7 +404,9 @@ def to_detail_view(
             _to_event_view(
                 event=event,
                 opportunities=keyed,
-                repeats=repeats
+                repeats=repeats,
+                calendar=detail.run.calendar,
+                helpers=helpers
             )
             for event in detail.events
         ],
@@ -627,7 +649,8 @@ def to_preview_view(
 def to_edit_view(
         events: Sequence[Event],
         opportunities: Sequence[Opportunity],
-        entries: Sequence[LogEntry]
+        entries: Sequence[LogEntry],
+        calendar: str
 ) -> EditView:
     """ Return a revision after an edit, and what the edit logged.
 
@@ -647,6 +670,13 @@ def to_edit_view(
             entries (Sequence[LogEntry]):
                 What the edit added to the change log.
 
+            calendar (str):
+                Calendar the run was collected from.  A parameter
+                rather than something read here, because this function
+                is given a revision's events and not the run they
+                belong to, and the answer says of every row whether
+                undoing it would change it.
+
         Returns:
             view (EditView):
                 The revision and the entries, shaped for the contract.
@@ -654,13 +684,16 @@ def to_edit_view(
 
     keyed = _by_need_id(opportunities=opportunities)
     repeats = repeated(events=events)
+    helpers = Helpers()
 
     return EditView(
         events=[
             _to_event_view(
                 event=event,
                 opportunities=keyed,
-                repeats=repeats
+                repeats=repeats,
+                calendar=calendar,
+                helpers=helpers
             )
             for event in events
         ],

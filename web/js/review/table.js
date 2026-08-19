@@ -381,27 +381,29 @@ function eventRows(event, context) {
     el(
       'span',
       { class: 'cell-undo', role: 'cell' },
-      el(
-        'button',
-        {
-          type: 'button',
-          class: 'btn btn-ghost micro',
-          disabled: context.busy,
-          /* Offered whatever state the row is in, and worded for what
-           * it does rather than for a change having been made: the
-           * contract publishes no "edited" flag on an event, and
-           * working one out here would mean a second copy of the
-           * arithmetic that produced the times. */
-          title: 'Put the shift times back to the calendar times and '
-            + 'the offsets this opportunity asks for',
-          onclick: () => context.onEdit({
-            op: 'undo',
-            eventIds: [event.id]
-          })
-        },
-        icon('arrow-counter-clockwise'),
-        'Undo'
-      )
+      /* Only where there is something to undo, which the server says:
+       * it runs the same arithmetic the operation would and answers
+       * whether it would change the row. The cell is drawn either way,
+       * because the row is a grid and a missing cell would shift every
+       * column after it. */
+      event.edited
+        ? el(
+          'button',
+          {
+            type: 'button',
+            class: 'btn btn-ghost micro',
+            disabled: context.busy,
+            title: 'Put the shift times back to the calendar times '
+              + 'and the offsets this opportunity asks for',
+            onclick: () => context.onEdit({
+              op: 'undo',
+              eventIds: [event.id]
+            })
+          },
+          icon('arrow-counter-clockwise'),
+          'Undo'
+        )
+        : null
     )
   );
 

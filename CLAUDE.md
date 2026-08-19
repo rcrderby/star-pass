@@ -187,6 +187,14 @@ through the Amplify API. It is run once per month.
   category's offsets rather than storing a copy of it. A maximum does
   not pull a hand-set end time back in — a maximum shortens what the
   offsets produced, and a person setting a time has overridden that.
+  The same arithmetic answers whether an event *has* been edited
+  (`was_edited`), which is the `edited` an event is published with and
+  what the review screen offers an undo on: nothing stored says so, and
+  a client working it out would be a second copy of `_shift_timing`. It
+  is false where the undo could not be carried out at all — a category
+  the data model no longer holds — because that is the refusal the
+  operation itself would raise, and a row said to be editable is a row
+  offered a control that fails.
 - `app/star_pass/_opportunities.py` — reading an Amplify opportunity:
   its title, the shifts it already holds, and the public address it is
   published at. Below every caller, because collection stores the
