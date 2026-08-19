@@ -547,6 +547,12 @@ def run_summary(
         somewhere else is entitled to know which zone the dates they
         are looking at were read in.
 
+        The interrupted job is here because this is where somebody
+        finds the identifier 'jobs resume' takes.  Resuming is a
+        deliberate act (D10), so nothing hands the identifier over on
+        its own, and before it was published the only place to read
+        one was the service's log.
+
         Args:
             run (Dict[str, Any]):
                 A run from an answer.
@@ -573,7 +579,8 @@ def run_summary(
             ('Shifts', str(counts['shifts'])),
             ('Unmatched', str(counts['unmatched'])),
             ('Not collected', str(counts['uncollected'])),
-            ('Active job', shown(run['activeJobId']))
+            ('Active job', shown(run['activeJobId'])),
+            ('Interrupted job', shown(run['interruptedJobId']))
         )
     )
 

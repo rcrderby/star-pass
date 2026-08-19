@@ -1129,6 +1129,18 @@
             "title": "Id",
             "type": "string"
           },
+          "interruptedJobId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of the job this run last ran, when the service stopped while it was in hand, and null otherwise. Resuming one is a deliberate act and never automatic (D10), which means a caller has to be able to name it -- and an interrupted job is finished, so it is never the \"activeJobId\". Only the run's most recent job is reported here: a send that a later one has since carried out is not something to offer to resume.",
+            "title": "Interruptedjobid"
+          },
           "log": {
             "description": "Every change made to the run, oldest first. Written where the change is made rather than assembled by whatever displays it, so it survives a reload and reads the same in a browser and a terminal.",
             "items": {
@@ -1226,6 +1238,18 @@
             "description": "Identifier the run is addressed by. Minted by the server, and never the path of a file the run produced.",
             "title": "Id",
             "type": "string"
+          },
+          "interruptedJobId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifier of the job this run last ran, when the service stopped while it was in hand, and null otherwise. Resuming one is a deliberate act and never automatic (D10), which means a caller has to be able to name it -- and an interrupted job is finished, so it is never the \"activeJobId\". Only the run's most recent job is reported here: a send that a later one has since carried out is not something to offer to resume.",
+            "title": "Interruptedjobid"
           },
           "revisedAt": {
             "description": "When it last changed, as an ISO-8601 UTC time. The time it was collected, for a run nothing has changed yet.",

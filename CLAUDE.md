@@ -466,7 +466,10 @@ through the Amplify API. It is run once per month.
   written by `scripts/generate_contract.py`, which also writes the
   client generated from it.
 - `app/star_pass_contract/` — the shapes the contract answers with
-  (`_schemas.py`) and the shapes a caller sends (`_requests.py`, which
+  (`_schemas.py`, with the preview's five in `_preview_schemas.py`
+  beside it, because the preview is one answer with a boundary of its
+  own and the file had reached the thousand-line cap) and the shapes a
+  caller sends (`_requests.py`, which
   reads the first for the base they share and is read by nothing in
   it: a request is checked on the way in and a view is built on the
   way out), how stored records become them (`_views.py`), what a
@@ -665,7 +668,15 @@ The notes below are the ones that are not obvious from the commands.
 - A job left `queued` or `running` when the service stops is marked
   `interrupted` at startup, never resumed automatically. Resuming is a
   human action, because a send that resumed itself would write to a
-  live volunteer system from state rebuilt after a crash.
+  live volunteer system from state rebuilt after a crash. **A run
+  names the one it was left with**, as `interruptedJobId` beside
+  `activeJobId`: a human action is one somebody has to be able to
+  ask for, and an interrupted job is *finished*, so it is never the
+  active one and nothing else published it. Only the run's most
+  recent job is reported, because a send a later one has since
+  carried out is not something to go on offering to resume — so the
+  newest job is read whatever state it is in and answered only when
+  that state is `interrupted`.
 - Times the repository layer records are ISO-8601 UTC, and window
   bounds are plain local dates. Convert for display; never use the
   host clock to decide a calendar day.

@@ -134,6 +134,15 @@ class Run:
                 None when nothing is.  Derived, and what makes a run
                 somebody walked away from reattachable: the run is
                 enough to find what is running on it.
+
+            interrupted_job_id (str, optional):
+                Identifier of the job the run's last one was, when it
+                was left interrupted, and None otherwise.  Derived,
+                and the other half of the same idea: resuming one is a
+                deliberate act (D10), and a caller cannot ask for what
+                it has no way to name.  Only the run's *last* job is
+                reported, because a send a later one has since
+                finished is not something to offer to resume.
     """
 
     id: str
@@ -150,6 +159,7 @@ class Run:
     unmatched_count: int
     uncollected_count: int
     active_job_id: Optional[str]
+    interrupted_job_id: Optional[str]
 
 
 @dataclass(frozen=True)

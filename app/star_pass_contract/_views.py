@@ -66,8 +66,14 @@ from star_pass._records import (
     UnmatchedTitle
 )
 from ._requests import EditRequest
-from ._schemas import (
+from ._preview_schemas import (
     BlockerView,
+    PreviewRowView,
+    PreviewTotalsView,
+    PreviewView,
+    SkippedShiftView
+)
+from ._schemas import (
     CalendarView,
     CategoryView,
     ConfigView,
@@ -79,15 +85,11 @@ from ._schemas import (
     LogEntryView,
     MatchView,
     OpportunityView,
-    PreviewRowView,
-    PreviewTotalsView,
-    PreviewView,
     RetentionView,
     RevisionView,
     RunCountsView,
     RunDetailView,
     RunView,
-    SkippedShiftView,
     UncollectedEventView,
     UncollectedGroupView,
     UnmatchedTitleView,
@@ -265,7 +267,8 @@ def to_run_view(
             unmatched=run.unmatched_count,
             uncollected=run.uncollected_count
         ),
-        active_job_id=run.active_job_id
+        active_job_id=run.active_job_id,
+        interrupted_job_id=run.interrupted_job_id
     )
 
 
