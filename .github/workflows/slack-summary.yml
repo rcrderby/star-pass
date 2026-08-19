@@ -63,22 +63,41 @@ jobs:
     timeout-minutes: 15
 
     # Job permissions
+    #
+    # 'packages: read' is what the pull below needs.  The package is
+    # this repository's own, so the token the runner already has is
+    # the whole of the credential.
     permissions:
       contents: read
+      packages: read
 
+    # Named once, because the step that pulls it and the step that
+    # runs it must name the same image.
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}:slack
+
+    # Nothing here reads the repository: the image carries the
+    # application, and the window comes from the event.  So there is
+    # no checkout, and a post costs a pull rather than an 'apt-get
+    # upgrade' and a pip install of every runtime dependency.
     steps:
-      # checkout action documentation
-      # https://github.com/marketplace/actions/checkout
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-
-      # The post runs the image 'build.yml' verifies rather than a
-      # separate dependency install.  The Slack target carries what
-      # the '-s' path imports and nothing else: no API service, no
-      # frontend, no database and no page to serve, none of which a
-      # summary touches.
-      - name: Build the container image
-        run: docker build --target slack -t star-pass:run .
+      # What 'build.yml' published from 'main', which is the Slack
+      # target: what the '-s' path imports and nothing else, with no
+      # API service, no frontend, no database and no page to serve.
+      #
+      # A pull that fails stops the run, and no build takes its place.
+      # A quiet fall back to building would mean a publish could be
+      # broken for weeks with nothing saying so, and the post that
+      # discovered it would be the one that had already gone out
+      # wrong.
+      - name: Pull the summary image
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+        run: |
+          echo "${REGISTRY_TOKEN}" |
+            docker login ghcr.io -u "${REGISTRY_USER}" --password-stdin
+          docker pull "${IMAGE}"
 
       # Each schedule covers a different window, and 'github.event.schedule'
       # names the cron that fired.  A manual run takes its window from the
@@ -160,7 +179,7 @@ jobs:
             -e SLACK_BOT_TOKEN \
             -e SLACK_CHANNEL_ID \
             -e SLACK_SUMMARY_NEED_IDS \
-            star-pass:run \
+            "${IMAGE}" \
             python /app/__main__.py \
               -s \
               -C "${CHECK_MODE}" \
