@@ -19,6 +19,15 @@
  * here: the query strings belong to a calendar and the excluded terms
  * to the deployment, and both are published for exactly this.
  *
+ * **Collecting again offers no window and no calendar.**  A run is one
+ * calendar over one set of days, and `POST /runs/{id}/recollect`
+ * carries neither: it reads the same calendar over the same days and
+ * the run keeps its own window.  So the controls are shown holding
+ * what the run already has and refused, the way the calendar control
+ * already was -- a field a person can type into and a summary
+ * restating what it says would both be describing a request that does
+ * not exist.
+ *
  * **A double-clicked button is this screen's problem.**  Collect and
  * recollect take no `Idempotency-Key`, so nothing behind this makes a
  * second arrival of the same request safe -- two would be two runs,
@@ -67,6 +76,18 @@ const HOW_THE_WINDOW_IS_READ = (
   + 'event lands on the day you expect. The day after your last day is '
   + 'what gets sent, which is how the last day is included.'
 );
+
+/* Said instead, when the window is the run's rather than one being
+ * asked for. Nothing is converted and nothing is sent, so the
+ * sentence above would be explaining a request nobody is making. */
+const THE_RUNS_OWN_WINDOW = (
+  'Collecting again reads the same calendar over the same days, and '
+  + 'the run keeps this window. A different window is a different '
+  + 'run.'
+);
+
+/* Under the window control, where the calendar control has its own. */
+const WINDOW_IS_FIXED = 'Set when the run was collected.';
 
 /** Return what to call the zone note.
  *
@@ -121,13 +142,26 @@ function windowNotes(calendar, excluded) {
   ];
 }
 
-/** Return the warning shown when collecting again would lose work.
+/** Return the warning shown when collecting again replaces a run.
+ *
+ * Shown for every recollection and not only for one with edits to
+ * lose. A run with nothing edited is still replaced, and its earlier
+ * revisions still go; a warning that appeared only once somebody had
+ * changed something would be silent on exactly the press that reads
+ * most like collecting something new.
  *
  * @param {number} changes How many changes the current revision
  *     holds.
  * @returns {string} What it says.
  */
 function replaceWarning(changes) {
+  if (changes === 0) {
+    return (
+      'Collecting again replaces this run with what the calendar has '
+      + 'now. The revisions before it are deleted.'
+    );
+  }
+
   return (
     'Collecting again replaces this run. '
     + `${changes} change${changes === 1 ? '' : 's'} you have made will `
@@ -156,13 +190,23 @@ export class CollectDrawer {
     this.run = run;
     this.handlers = handlers;
 
-    const start = monthWindow(config.timezone, 0);
+    /* The window a recollection shows is the run's own, because that
+     * is the one it will read. `lastDay` is taken as published and
+     * never worked out from `end` here: every client that shows a
+     * window has to say it the inclusive way, and a subtraction
+     * written once per client is a client that can disagree with the
+     * server about which days a run covers (D16). */
+    const start = run === null
+      ? monthWindow(config.timezone, 0)
+      : { first: run.window.start, last: run.window.lastDay };
 
     this.state = {
-      /* A recollection replaces one run, and a run is one calendar's,
-       * so there is nothing to choose. */
+      /* A recollection replaces one run, and a run is one calendar's
+       * over one set of days, so there is nothing to choose and no
+       * preset is lit -- this window is neither of the months on
+       * offer nor one somebody typed. */
       calendar: run === null ? config.calendars[0].key : run.calendar,
-      preset: THIS_MONTH,
+      preset: run === null ? THIS_MONTH : null,
       first: start.first,
       last: start.last,
       busy: false,
@@ -292,15 +336,24 @@ export class CollectDrawer {
     this.state.failure = null;
     this.draw();
 
+    const asked = {
+      calendar: this.state.calendar,
+      expectedChangeCount: this.changes()
+    };
+
+    /* A recollection carries no window at all, which is why the
+     * fields above are showing the run's rather than offering one.
+     * Assembling one here and leaving the caller to drop it is how a
+     * screen comes to describe a request nobody sends. */
+    if (this.run === null) {
+      asked.window = {
+        start: this.state.first,
+        end: dayAfter(this.state.last)
+      };
+    }
+
     try {
-      const job = await this.handlers.onCollect({
-        calendar: this.state.calendar,
-        window: {
-          start: this.state.first,
-          end: dayAfter(this.state.last)
-        },
-        expectedChangeCount: this.changes()
-      });
+      const job = await this.handlers.onCollect(asked);
 
       this.modal.dismiss();
       this.handlers.onStarted(job, this.state.calendar);
@@ -366,12 +419,21 @@ export class CollectDrawer {
             type: 'button',
             class: 'seg-opt drawer-seg-opt',
             'aria-pressed': String(this.state.preset === preset.key),
-            disabled: this.state.busy,
+            /* Refused for a recollection, like the calendars: the
+             * run keeps its window, and a preset that could be
+             * pressed would move fields the request cannot carry. */
+            disabled: this.state.busy || this.run !== null,
             onclick: () => this.choosePreset(preset)
           },
           preset.words
         ))
-      )
+      ),
+      this.run === null
+        ? null
+        : el('span', {
+          class: 'field-note muted micro',
+          text: WINDOW_IS_FIXED
+        })
     );
   }
 
@@ -391,23 +453,27 @@ export class CollectDrawer {
         class: 'input mono',
         type: 'date',
         value: this.state[which],
-        disabled: this.state.busy,
+        disabled: this.state.busy || this.run !== null,
         onchange: (event) => this.setDay(which, event.target.value)
       })
     );
   }
 
-  /** Return the panel restating the window that will be asked for.
+  /** Return the panel restating the window.
    *
-   * Shows the exclusive end beside the days a reader means, because
-   * that is the pair the request carries and the thing the sentence
-   * below it is explaining.
+   * For a fresh collection that is the window about to be asked for,
+   * and the exclusive end is shown beside the days a reader means
+   * because that is the pair the request carries. **A recollection
+   * carries no window**, so neither the sent pair nor the sentence
+   * explaining the conversion belongs to it: what it shows is the
+   * window the run already has, and why it cannot be changed here.
    *
    * @returns {HTMLElement} The panel.
    */
   summary() {
     const { first, last } = this.state;
     const days = spanDays(first, last);
+    const replacing = this.run !== null;
 
     return el(
       'div',
@@ -431,7 +497,7 @@ export class CollectDrawer {
           })
         )
         : null,
-      this.valid()
+      this.valid() && !replacing
         ? el('span', {
           class: 'mono muted drawer-summary-sent',
           text: `start=${first}  end=${dayAfter(last)}`
@@ -439,7 +505,7 @@ export class CollectDrawer {
         : null,
       el('span', {
         class: 'muted micro drawer-summary-note',
-        text: HOW_THE_WINDOW_IS_READ
+        text: replacing ? THE_RUNS_OWN_WINDOW : HOW_THE_WINDOW_IS_READ
       })
     );
   }
@@ -476,8 +542,6 @@ export class CollectDrawer {
    * @returns {HTMLElement} The actions.
    */
   actions() {
-    const changes = this.changes();
-
     return el(
       'div',
       { class: 'drawer-actions' },
@@ -492,7 +556,7 @@ export class CollectDrawer {
           onclick: () => this.start()
         },
         icon(this.state.busy ? 'circle-notch' : 'download-simple'),
-        changes > 0 ? 'Replace and collect' : 'Collect events'
+        this.run === null ? 'Collect events' : 'Replace and collect'
       ),
       el(
         'button',
@@ -560,14 +624,14 @@ export class CollectDrawer {
       ),
       this.summary(),
       this.notes(),
-      changes > 0
-        ? el(
+      this.run === null
+        ? null
+        : el(
           'div',
           { class: 'drawer-replace' },
           icon('warning-circle'),
           el('span', { text: replaceWarning(changes) })
-        )
-        : null,
+        ),
       failure === null
         ? null
         : el(
