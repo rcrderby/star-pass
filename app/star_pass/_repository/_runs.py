@@ -10,6 +10,7 @@ from uuid import uuid4
 from .._database import execute, execute_many, query, query_one, transaction
 from .._logging import get_logger
 from .._records import (
+    JOB_STATUS_INTERRUPTED,
     JOB_STATUSES_UNFINISHED,
     Opportunity,
     Run,
@@ -57,6 +58,15 @@ UNFINISHED_PLACEHOLDERS = ', '.join('?' * len(JOB_STATUSES_UNFINISHED))
 # identifier sorted higher, and a job identifier is a random value.
 # The rowid ascends in the order rows were written, which is the order
 # the jobs were asked for.
+#
+# The interrupted one is read from the same place and answers a
+# different question: **was the last thing that happened to this run
+# interrupted**.  Not "has one ever been", which would go on offering
+# to resume a send that a later one has since finished, and not the
+# newest interrupted job, which is the same offer worded differently.
+# So the newest job is read whatever state it is in and its identifier
+# is answered only when that state is 'interrupted' -- a run whose last
+# job succeeded, failed or is still in hand says nothing here.
 RUN_SELECT = f"""
     SELECT
         runs.id            AS id,
@@ -112,7 +122,14 @@ RUN_SELECT = f"""
               AND jobs.status IN ({UNFINISHED_PLACEHOLDERS})
             ORDER BY jobs.rowid DESC
             LIMIT 1
-        ) AS active_job_id
+        ) AS active_job_id,
+        (
+            SELECT CASE WHEN jobs.status = ? THEN jobs.id END
+            FROM jobs
+            WHERE jobs.run_id = runs.id
+            ORDER BY jobs.rowid DESC
+            LIMIT 1
+        ) AS interrupted_job_id
     FROM runs
     LEFT JOIN (
         SELECT
@@ -155,7 +172,8 @@ def _to_run(
         shift_count=row['shift_count'],
         unmatched_count=row['unmatched_count'],
         uncollected_count=row['uncollected_count'],
-        active_job_id=row['active_job_id']
+        active_job_id=row['active_job_id'],
+        interrupted_job_id=row['interrupted_job_id']
     )
 
 
@@ -165,10 +183,11 @@ def _run_parameters(
     """ Return what 'RUN_SELECT' binds, followed by a caller's own.
 
         'RUN_SELECT' binds values of its own -- the statuses a job is
-        still in hand under -- and they come first because that is
-        where their placeholders are in the statement.  Built here so
-        that a caller adding a clause supplies only what the clause
-        needs and cannot get the order wrong.
+        still in hand under, and the one a job left by a stopped
+        service is in -- and they come first, in the order their
+        placeholders appear in the statement.  Built here so that a
+        caller adding a clause supplies only what the clause needs and
+        cannot get the order wrong.
 
         Args:
             *rest (Any):
@@ -179,7 +198,7 @@ def _run_parameters(
                 Every value the statement binds, in order.
     """
 
-    return (*JOB_STATUSES_UNFINISHED, *rest)
+    return (*JOB_STATUSES_UNFINISHED, JOB_STATUS_INTERRUPTED, *rest)
 
 
 def _to_opportunity(
@@ -293,7 +312,8 @@ class RunRepository(Repository):
             shift_count=0,
             unmatched_count=0,
             uncollected_count=0,
-            active_job_id=None
+            active_job_id=None,
+            interrupted_job_id=None
         )
 
     def get(

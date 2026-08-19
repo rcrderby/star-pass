@@ -62,10 +62,16 @@ from ._requests import (
     UnmatchedTitleRequest,
     WindowRequest
 )
+from ._preview_schemas import (
+    BlockerView,
+    PreviewRowView,
+    PreviewTotalsView,
+    PreviewView,
+    SkippedShiftView
+)
 from ._schemas import (
     ApiModel,
     IDEMPOTENCY_KEY_HEADER,
-    BlockerView,
     CalendarView,
     ConfigView,
     RetentionView,
@@ -76,15 +82,11 @@ from ._schemas import (
     LogEntryView,
     MatchView,
     OpportunityView,
-    PreviewRowView,
-    PreviewTotalsView,
-    PreviewView,
     RevisionView,
     RunCountsView,
     RunDetailView,
     RunView,
     EditView,
-    SkippedShiftView,
     UncollectedEventView,
     UncollectedGroupView,
     UnmatchedTitleView,

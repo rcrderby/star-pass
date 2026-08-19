@@ -502,6 +502,21 @@ def fixture_finished_job(
     return job.id
 
 
+@pytest.fixture(name='labelled')
+def fixture_labelled(
+    runs: RunRepository,
+    collected: str,
+    make_opportunity: Callable[..., Opportunity]
+) -> str:
+    """ Return the collected run with its opportunity stored. """
+    runs.set_opportunities(
+        run_id=collected,
+        opportunities=[make_opportunity()]
+    )
+
+    return collected
+
+
 @pytest.fixture(name='build_parser')
 def fixture_build_parser(
     entry_point: Any
