@@ -517,6 +517,32 @@ def slots_reset(
     )
 
 
+def _order_free(
+        event: Event
+) -> Event:
+    """ Return an event whose roles are in a settled order.
+
+        Which order an event's roles are stored in follows the data
+        model's, so a model whose need IDs were reordered would have
+        every row in a run collected before it comparing unequal to
+        what collection produces now.  Nobody edited those rows, and
+        the order is not something an event means anything by.
+
+        Args:
+            event (Event):
+                The event to put in order.
+
+        Returns:
+            event (Event):
+                The same event, its roles by need ID.
+    """
+
+    return replace(
+        event,
+        roles=tuple(sorted(event.roles, key=lambda role: role.need_id))
+    )
+
+
 def was_edited(
         event: Event,
         calendar: str,
@@ -562,11 +588,13 @@ def was_edited(
     """
 
     try:
-        return as_collected(
+        collected = as_collected(
             event=event,
             calendar=calendar,
             helpers=helpers
-        ) != event
+        )
 
     except ValidationError:
         return False
+
+    return _order_free(event=collected) != _order_free(event=event)

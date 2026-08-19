@@ -705,6 +705,36 @@ class TestWhetherAnEventHasBeenEdited:
             )
         ) is True
 
+    def test_roles_in_a_different_order_are_not_an_edit(
+        self,
+        ask_if_edited
+    ):
+        # Which order the roles are in follows the data model, so a
+        # model whose need IDs were reordered after a run was
+        # collected would otherwise put an undo on every row in it.
+        both = [a_need(), a_need(identifier=OTHER_NEED_ID)]
+        reversed_roles = (
+            EventRole(need_id=OTHER_NEED_ID, slots=12),
+            EventRole(need_id=NEED_ID, slots=12)
+        )
+
+        assert ask_if_edited(
+            an_event(roles=reversed_roles),
+            categories={'adult_game': a_category(need_ids=both)}
+        ) is False
+
+    def test_a_role_the_model_does_not_ask_for_is_edited(
+        self,
+        ask_if_edited
+    ):
+        # Sorting is how the order is set aside; it must not set aside
+        # which opportunities the event serves.
+        assert ask_if_edited(
+            an_event(
+                roles=(EventRole(need_id=OTHER_NEED_ID, slots=12),)
+            )
+        ) is True
+
     def test_a_category_the_model_no_longer_holds_is_not_edited(
         self,
         ask_if_edited
