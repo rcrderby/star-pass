@@ -178,6 +178,39 @@ was created, not when a *shift* starts, so narrowing the day window
 does not shorten that read.
 
 
+#### Running the summary from a container
+
+The summary has a container image of its own, carrying what the `-s`
+path imports and nothing else: no API service, no frontend, no
+database, and no page to serve. It is what the scheduled post runs
+on, and it is the way to run a summary by hand without bringing a
+deployment up.
+
+```bash
+docker build --target slack -t star-pass:slack .
+
+docker run --rm \
+  -e AMPLIFY_TOKEN -e SLACK_BOT_TOKEN -e SLACK_CHANNEL_ID \
+  -e SLACK_SUMMARY_NEED_IDS \
+  star-pass:slack
+```
+
+Given no command it builds the message and posts nothing, because
+check mode is the default. Name a command to choose the window or to
+post it for real:
+
+```bash
+docker run --rm \
+  -e AMPLIFY_TOKEN -e SLACK_BOT_TOKEN -e SLACK_CHANNEL_ID \
+  -e SLACK_SUMMARY_NEED_IDS \
+  star-pass:slack \
+  python /app/__main__.py -s -D 1 -d 2 -C false
+```
+
+One Dockerfile builds both images, so they cannot drift apart on the
+base image or the Python version. A build naming no target gets the
+full one, which is what the deployment runs.
+
 ### Collected runs
 
 The commands that work with collected runs. They are selected by a word
