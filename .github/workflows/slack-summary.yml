@@ -72,11 +72,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      # The container is the deployment target, so the post runs the
-      # same image 'build.yml' verifies rather than a separate
-      # dependency install.
+      # The post runs the image 'build.yml' verifies rather than a
+      # separate dependency install.  The Slack target carries what
+      # the '-s' path imports and nothing else: no API service, no
+      # frontend, no database and no page to serve, none of which a
+      # summary touches.
       - name: Build the container image
-        run: docker build -t star-pass:run .
+        run: docker build --target slack -t star-pass:run .
 
       # Each schedule covers a different window, and 'github.event.schedule'
       # names the cron that fired.  A manual run takes its window from the

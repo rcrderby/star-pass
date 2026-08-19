@@ -1,0 +1,33 @@
+# What every way in needs, and the whole of what the scheduled Slack
+# sign-up summary needs.
+#
+# 'requirements.txt' reads this file and adds the packages only the API
+# service and the front end import, so a package used by both is
+# pinned here once and cannot come to be pinned twice differently.
+# The Slack image ('docker build --target slack') installs this file
+# alone.
+
+# .env file support
+python_dotenv==1.2.2
+
+# Data formats
+pyyaml==6.0.3
+
+# Date parsing
+dateparser==1.4.2
+
+# Request and response shapes, which the command line reads through
+# the contract.  Pinned here rather than arriving with FastAPI,
+# because the Slack image installs no FastAPI and would otherwise have
+# no Pydantic at all.
+pydantic==2.13.4
+
+# Python fuzzy string matching
+python-Levenshtein==0.27.4
+thefuzz==0.22.1
+
+# Python HTTP requests
+requests==2.34.2
+
+# Slack Web API
+slack_sdk==3.43.0

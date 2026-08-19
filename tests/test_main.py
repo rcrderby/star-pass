@@ -28,7 +28,25 @@ import pytest
 
 # Imports - Local
 from star_pass._helpers import Helpers
-from conftest import load_entry_point
+from conftest import ENTRY_POINT, load_entry_point
+from _importing import imported_modules
+
+# Constants
+# What the image the schedule runs on does not install, and what the
+# '-s' path must therefore not import.  The distribution is 'httpx2'
+# and so is the module it provides, which is not 'httpx'.
+WEB_MODULES = ('fastapi', 'starlette', 'uvicorn', 'httpx2', 'jsonschema')
+
+# Loading the entry point the way 'conftest' does, in a process that
+# has imported nothing else.
+LOAD_THE_ENTRY_POINT = (
+    'import importlib.util\n'
+    'spec = importlib.util.spec_from_file_location(\n'
+    f'    "summary", {str(ENTRY_POINT)!r}\n'
+    ')\n'
+    'module = importlib.util.module_from_spec(spec)\n'
+    'spec.loader.exec_module(module)'
+)
 
 
 @pytest.fixture
@@ -410,3 +428,26 @@ class TestWhatTheScheduledSummaryDependsOn:
 
         app_main.SlackNotifier.return_value.post_summary \
             .assert_called_once()
+
+    def test_the_summary_imports_nothing_its_image_does_not_carry(
+        self
+    ) -> None:
+        # The image the schedule runs on installs the core
+        # requirements alone (the Dockerfile's 'slack' target), so one
+        # of these imported on this path is a missing dependency
+        # discovered by a scheduled post rather than here.  Asked in a
+        # process of its own, because this suite has imported the
+        # service long before it reaches this line.
+        loaded = imported_modules(statement=LOAD_THE_ENTRY_POINT)
+
+        assert not set(loaded) & set(WEB_MODULES)
+
+    def test_the_entry_point_did_load_in_that_process(self) -> None:
+        # What gives the test above its meaning: the packages are
+        # absent because nothing on this path imports them, not
+        # because the entry point failed to load and imported nothing
+        # at all.
+        loaded = imported_modules(statement=LOAD_THE_ENTRY_POINT)
+
+        assert 'star_pass_cli' in loaded
+        assert 'slack_sdk' in loaded

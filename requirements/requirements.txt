@@ -1,3 +1,11 @@
+# Everything the container runs: the API service, the front end and
+# the command line.
+#
+# What both this and the Slack image need is in the core file, which
+# is the only place those packages are pinned.
+
+-r requirements_core.txt
+
 # API service
 fastapi==0.141.1
 uvicorn==0.52.3
@@ -7,26 +15,5 @@ uvicorn==0.52.3
 # is what watching a job needs.
 httpx2==2.10.0
 
-# .env file support
-python_dotenv==1.2.2
-
-# Data formats
-pyyaml==6.0.3
-
-# Date parsing
-dateparser==1.4.2
-
 # JSON Schema validation
 jsonschema==4.26.0
-
-# Pandas data structures
-
-# Python fuzzy string matching
-python-Levenshtein==0.27.4
-thefuzz==0.22.1
-
-# Python HTTP requests
-requests==2.34.2
-
-# Slack Web API
-slack_sdk==3.43.0

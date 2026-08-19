@@ -1,2 +1,7 @@
 # Environment variable files
 .env
+
+# Bytecode compiled on the host, which is half of what 'app/' weighs
+# and is rewritten by the interpreter in the image anyway.
+__pycache__/
+*.py[cod]
