@@ -31,5 +31,17 @@
     "capped": "Created as {minutes} min, the longest this opportunity allows",
     "endsFirst": "End is before start",
     "shiftTime": "Shift {start} to {end} ({minutes} min)"
+  },
+  "uncollected": {
+    "search": "Outside the calendar search",
+    "excluded": "Excluded by title",
+    "allday": "All day",
+    "untitled": "Untitled"
+  },
+  "uncollectedNote": {
+    "search": "No configured search term found these, so nobody looked for them; a second, wider read of the same window did. They are the only events here that can be added to the run by hand.",
+    "excluded": "The title carries a term this deployment never collects, whatever else is true about the event. These cannot be added to a run.",
+    "allday": "All day, so there are no times to build a shift from. These cannot be added to a run.",
+    "untitled": "No title, so there is nothing to match an opportunity on, and nothing to note for the model either. These cannot be added to a run."
   }
 }

@@ -19,14 +19,23 @@
  * changed.
  */
 
-import { ApiError, editEvents, idempotencyKey } from '../api.js';
-import { el, icon } from '../dom.js';
+import {
+  addEvent,
+  ApiError,
+  editEvents,
+  idempotencyKey,
+  listUncollected,
+  listUnmatchedTitles,
+  recordUnmatchedTitle
+} from '../api.js';
+import { el, fill, icon } from '../dom.js';
 import { anyPopoverOpen, closeAnyPopover } from '../popover.js';
 import { changeLogPanel } from './changelog.js';
-import { reviewBanners } from './banners.js';
+import { refusalNotice, reviewBanners } from './banners.js';
 import { reviewHeader } from './header.js';
 import { reviewTable } from './table.js';
 import { selectionToolbar } from './selection.js';
+import { notedKey, uncollectedView } from './uncollected.js';
 
 /* What the hint above the table says. Which one depends on whether
  * any opportunity moves its shift off the calendar times: with no
@@ -55,39 +64,22 @@ const NOTHING_MATCHES = (
   'No event in this run matches what you are looking for.'
 );
 
-/* What stands in for the screens this one leads to, until they land. */
-const NOT_YET = 'That screen is not built yet.';
+/* Which tab is showing. The names the header's control reports. */
+const SHIFTS_VIEW = 'shifts';
+const UNCOLLECTED_VIEW = 'uncollected';
 
-/** Return what a refused edit says.
- *
- * A notice above the table rather than the screen-wide failure, which
- * would throw away a run that is still perfectly readable. The service
- * applies an action whole or not at all, so nothing was half done and
- * the rows below are what they were.
- *
- * @param {ApiError} failure What went wrong.
- * @returns {HTMLElement} The notice.
- */
-function editFailure(failure) {
-  return el(
-    'div',
-    { class: 'banner banner-alert', role: 'alert' },
-    icon('warning-circle'),
-    el(
-      'span',
-      { class: 'banner-words meta' },
-      el('span', { text: `That change was not made. ${failure.detail}` }),
-      failure.reference
-        ? el(
-          'span',
-          { class: 'muted micro failure-reference' },
-          'Reference ',
-          el('span', { class: 'mono', text: failure.reference })
-        )
-        : null
-    )
-  );
-}
+/* What did not happen, said above what is still readable. */
+const NOT_CHANGED = 'That change was not made.';
+const NOT_NOTED = 'That title was not noted.';
+const NOT_READ = 'What this run left out could not be read.';
+
+/* Said while the second tab is being read, and never left up once the
+ * read has failed: a line saying something is happening, above a
+ * notice saying it did not, is the screen contradicting itself. */
+const READING = 'Reading what this run left out';
+
+/* Offered when that read did not arrive. */
+const TRY_AGAIN = 'Try again';
 
 /** Return the events a filter and a search leave showing.
  *
@@ -208,14 +200,23 @@ export class ReviewScreen {
       revisions,
       config,
       events: run.events,
-      view: 'shifts',
+      view: SHIFTS_VIEW,
       search: '',
       filters: { blocking: false, fuzzy: false },
       collapsed: new Set(),
       selection: new Set(),
       showLog: false,
       busy: false,
-      failure: null
+      refusal: null,
+
+      /* The second tab's two answers, read the first time it is
+       * opened rather than with the run: most visits to a run never
+       * open it, and what it holds is stored rather than worked out,
+       * so it is the same answer whenever it is asked for. */
+      uncollected: null,
+      noted: null,
+      notedKeys: new Set(),
+      reading: false
     };
 
     this.handlers = handlers;
@@ -273,11 +274,25 @@ export class ReviewScreen {
     };
   }
 
-  /** Redraw the body, leaving the header where it is.
+  /** Redraw whichever tab is showing, leaving the header alone.
    *
    * @returns {void}
    */
   redraw() {
+    if (this.state.view === UNCOLLECTED_VIEW) {
+      this.drawUncollected();
+
+      return;
+    }
+
+    this.drawShifts();
+  }
+
+  /** Redraw the run's own rows.
+   *
+   * @returns {void}
+   */
+  drawShifts() {
     const context = this.context();
     const shown = showing(this.state.events, this.state);
     const anyOffset = this.state.run.opportunities.some(
@@ -339,7 +354,9 @@ export class ReviewScreen {
 
     this.body.replaceChildren(
       ...reviewBanners(this.state, handlers),
-      this.state.failure === null ? '' : editFailure(this.state.failure),
+      this.state.refusal === null
+        ? ''
+        : refusalNotice(this.state.refusal),
       this.state.selection.size > 0
         ? selectionToolbar(this.state, context.categories, bulk)
         : toolbar(this.state, shown.length, handlers),
@@ -384,6 +401,109 @@ export class ReviewScreen {
     this.focusSearch = true;
   }
 
+  /** Draw the Not collected tab, and read it if it has not been read.
+   *
+   * Three states, and the first two are never on screen together: a
+   * read that failed replaces the line saying one is happening rather
+   * than sitting under it.
+   *
+   * @returns {void}
+   */
+  drawUncollected() {
+    const { refusal, reading, uncollected, noted } = this.state;
+    const readable = uncollected !== null && noted !== null;
+
+    fill(
+      this.body,
+      refusal === null ? null : refusalNotice(refusal),
+      reading
+        ? el(
+          'p',
+          { class: 'reading muted meta' },
+          icon('circle-notch'),
+          el('span', { text: READING })
+        )
+        : null,
+      readable || reading
+        ? null
+        : el(
+          'button',
+          {
+            type: 'button',
+            class: 'btn btn-secondary self-start',
+            onclick: () => this.loadUncollected()
+          },
+          icon('arrows-clockwise'),
+          TRY_AGAIN
+        ),
+      readable
+        ? uncollectedView(this.state, {
+          onAdd: (eventId) => this.addFromWindow(eventId),
+          onNote: (title) => this.noteTitle(title)
+        })
+        : null
+    );
+
+    /* The change log belongs beside the run's own rows. Cleared
+     * rather than left showing, because the toggle that opens it is
+     * on the other tab and there would be no way to close it. */
+    this.panel.replaceChildren();
+  }
+
+  /** Return the header, built against what the screen now shows.
+   *
+   * @returns {HTMLElement} The header.
+   */
+  buildHeader() {
+    return reviewHeader(this.state, {
+      onOpenRun: (runId) => {
+        closeAnyPopover();
+        this.handlers.onOpenRun(runId);
+      },
+      onView: (view) => this.setView(view),
+      onCollectAgain: () => {
+        closeAnyPopover();
+        this.handlers.onCollectAgain();
+      },
+      onPreview: () => this.handlers.onPreview()
+    });
+  }
+
+  /** Show one of the two tabs.
+   *
+   * The header is rebuilt for this and for nothing else: which tab is
+   * pressed is stated in it, and everything else that changes leaves
+   * it alone so that an open popover survives a filter.
+   *
+   * @param {string} view Which tab.
+   * @returns {void}
+   */
+  setView(view) {
+    if (view === this.state.view) {
+      return;
+    }
+
+    this.state.view = view;
+
+    /* A refusal is about the tab it happened on. */
+    this.state.refusal = null;
+
+    /* Nothing to type into on the second tab, and coming back should
+     * leave focus on the tab somebody pressed rather than move it
+     * into the search field. */
+    this.focusSearch = false;
+
+    const header = this.buildHeader();
+
+    this.headerElement.replaceWith(header);
+    this.headerElement = header;
+    this.redraw();
+
+    if (view === UNCOLLECTED_VIEW && this.state.uncollected === null) {
+      this.loadUncollected();
+    }
+  }
+
   /** Draw the whole screen.
    *
    * @returns {void}
@@ -391,22 +511,10 @@ export class ReviewScreen {
   draw() {
     this.panel = el('div', { class: 'review-panel' });
     this.focusSearch = false;
-
-    const header = reviewHeader(this.state, {
-      onOpenRun: (runId) => {
-        closeAnyPopover();
-        this.handlers.onOpenRun(runId);
-      },
-      onView: () => alert(NOT_YET),
-      onCollectAgain: () => {
-        closeAnyPopover();
-        this.handlers.onCollectAgain();
-      },
-      onPreview: () => this.handlers.onPreview()
-    });
+    this.headerElement = this.buildHeader();
 
     this.element.replaceChildren(
-      header,
+      this.headerElement,
       el('div', { class: 'review-with-panel' }, this.body, this.panel)
     );
 
@@ -438,7 +546,7 @@ export class ReviewScreen {
     }
 
     this.state.busy = true;
-    this.state.failure = null;
+    this.state.refusal = null;
     this.redraw();
 
     try {
@@ -462,16 +570,168 @@ export class ReviewScreen {
         [...this.state.selection].filter((id) => alive.has(id))
       );
     } catch (error) {
-      if (!(error instanceof ApiError)) {
-        console.error(error);
-      }
+      this.refused(error, NOT_CHANGED);
+    } finally {
+      this.state.busy = false;
+      this.redraw();
+    }
+  }
 
-      this.state.failure = error instanceof ApiError
+  /** Remember why a call was refused, in the shape the notice reads.
+   *
+   * The reason is the service's where there is one; anything that is
+   * not a problem document is the page's own fault and is logged, so
+   * that what reaches the screen is still a sentence.
+   *
+   * @param {Error} error What came back.
+   * @param {string} said What did not happen, as a sentence.
+   * @returns {void}
+   */
+  refused(error, said) {
+    if (!(error instanceof ApiError)) {
+      console.error(error);
+    }
+
+    this.state.refusal = {
+      said,
+      failure: error instanceof ApiError
         ? error
         : new ApiError({
           status: 0,
           detail: String(error.message || error)
-        });
+        })
+    };
+  }
+
+  /** Hold the log kept for the data model, and what it already holds.
+   *
+   * The Set is what a row asks whether it has been noted, keyed the
+   * way the log keys an entry -- by the calendar as well as the
+   * title, because the categories a title is matched against belong
+   * to a calendar.
+   *
+   * @param {Array<Object>} noted The entries, newest sighting first.
+   * @returns {void}
+   */
+  rememberNoted(noted) {
+    this.state.noted = noted;
+    this.state.notedKeys = new Set(
+      noted.map((entry) => notedKey(entry.calendar, entry.title))
+    );
+  }
+
+  /** Read what the run left out, and what has been noted for the
+   * model.
+   *
+   * Asked for together rather than one after the other: a tab
+   * assembled from two moments is a tab whose rows and whose noted
+   * list can disagree about the same title.
+   *
+   * @returns {Promise<void>} When the tab has redrawn.
+   */
+  async loadUncollected() {
+    if (this.state.reading) {
+      return;
+    }
+
+    this.state.reading = true;
+    this.state.refusal = null;
+    this.redraw();
+
+    try {
+      const [uncollected, noted] = await Promise.all([
+        listUncollected(this.state.run.id),
+        listUnmatchedTitles()
+      ]);
+
+      this.state.uncollected = uncollected;
+      this.rememberNoted(noted);
+    } catch (error) {
+      this.refused(error, NOT_READ);
+    } finally {
+      this.state.reading = false;
+      this.redraw();
+    }
+  }
+
+  /** Pull one event the search missed into the run.
+   *
+   * No key: naming an event the revision already holds is refused, so
+   * a second arrival of this request is a refusal rather than a
+   * second row.
+   *
+   * @param {string} eventId Which uncollected entry to pull in.
+   * @returns {Promise<void>} When the tab has redrawn.
+   */
+  async addFromWindow(eventId) {
+    if (this.state.busy) {
+      return;
+    }
+
+    this.state.busy = true;
+    this.state.refusal = null;
+    this.redraw();
+
+    try {
+      const answer = await addEvent(this.state.run.id, eventId);
+
+      this.state.run.events = answer.events;
+      this.state.events = answer.events;
+      this.state.run.log = [...this.state.run.log, ...answer.log];
+
+      /* Read again rather than struck off here. Whether a row may be
+       * pulled in is `addable`, which is the server's answer, and the
+       * row is *not* removed by being pulled in -- it is what a
+       * revert to the first revision gives back. Working either out
+       * from the answer to the write would be this screen holding a
+       * second opinion about both. */
+      this.state.uncollected = await listUncollected(this.state.run.id);
+    } catch (error) {
+      this.refused(error, NOT_CHANGED);
+    } finally {
+      this.state.busy = false;
+      this.redraw();
+    }
+  }
+
+  /** Record one title the data model did not match.
+   *
+   * No key either: a run is held to one sighting of a title by the
+   * repository, so asking twice from the same run adds nothing.
+   *
+   * @param {string} title The title, as the calendar gave it.
+   * @returns {Promise<void>} When the tab has redrawn.
+   */
+  async noteTitle(title) {
+    if (this.state.busy) {
+      return;
+    }
+
+    this.state.busy = true;
+    this.state.refusal = null;
+    this.redraw();
+
+    try {
+      const entry = await recordUnmatchedTitle(
+        this.state.run.calendar,
+        title,
+        this.state.run.id
+      );
+
+      /* The answer is the entry as the log now holds it, this
+       * sighting counted, so it replaces whatever was there rather
+       * than joining it. Put at the front, which is the order the
+       * list is read in: newest sighting first. */
+      const key = notedKey(entry.calendar, entry.title);
+
+      this.rememberNoted([
+        entry,
+        ...this.state.noted.filter(
+          (each) => notedKey(each.calendar, each.title) !== key
+        )
+      ]);
+    } catch (error) {
+      this.refused(error, NOT_NOTED);
     } finally {
       this.state.busy = false;
       this.redraw();

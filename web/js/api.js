@@ -326,6 +326,84 @@ export function editEvents(runId, operations, key, options = {}) {
   });
 }
 
+/** Return what a run's window held and the run did not collect.
+ *
+ * Grouped by the reason each was left out, and a reason nothing was
+ * left out for is not among them. Answered from what the collection
+ * stored rather than from a calendar read, so it describes the window
+ * as the collection found it.
+ *
+ * @param {string} runId Which run.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Array<Object>>} One group per reason.
+ */
+export function listUncollected(runId, options = {}) {
+  return ask(`/runs/${encodeURIComponent(runId)}/uncollected`, options);
+}
+
+/** Pull one event the search missed into a run's current revision.
+ *
+ * **No `Idempotency-Key`, and none is needed**: naming an event the
+ * revision already holds is refused, so a second arrival of the same
+ * request is a refusal rather than a second row.
+ *
+ * Only an event the uncollected list marks `addable` may be named.
+ * That is the server's answer and not a client's reading of the
+ * reason, so a button and the endpoint behind it cannot disagree.
+ *
+ * @param {string} runId Which run.
+ * @param {string} uncollectedId The identifier its uncollected entry
+ *     carries, which is the calendar's own.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The revision as it now is, and what the
+ *     pull-in added to the change log.
+ */
+export function addEvent(runId, uncollectedId, options = {}) {
+  return ask(`/runs/${encodeURIComponent(runId)}/events`, {
+    ...options,
+    method: 'POST',
+    body: { uncollectedId }
+  });
+}
+
+/** Return every title the data model has not matched.
+ *
+ * Belongs to no run: a run is a window that is eventually superseded,
+ * and what the model is missing outlives it. So this is read beside a
+ * run rather than out of one.
+ *
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Array<Object>>} One entry per title in a calendar,
+ *     newest sighting first.
+ */
+export function listUnmatchedTitles(options = {}) {
+  return ask('/unmatched-titles', options);
+}
+
+/** Record one sighting of a title the data model did not match.
+ *
+ * The calendar is part of what a title *is* rather than a note beside
+ * it: the categories a title is matched against belong to a calendar,
+ * so the same title can be matched in one and unmatched in another.
+ * The run is provenance, and the log outlives it.
+ *
+ * No key here either. A run is held to one sighting of a title by the
+ * repository, so asking twice from the same run adds nothing.
+ *
+ * @param {string} calendar Which configured calendar it was seen in.
+ * @param {string} title The title, as the calendar gave it.
+ * @param {string} runId The run it was noticed in.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The entry as the log now holds it.
+ */
+export function recordUnmatchedTitle(calendar, title, runId, options = {}) {
+  return ask('/unmatched-titles', {
+    ...options,
+    method: 'POST',
+    body: { calendar, title, runId }
+  });
+}
+
 /** Ask for a calendar window to be collected into a new run.
  *
  * Answers with a job as soon as the run exists rather than when it

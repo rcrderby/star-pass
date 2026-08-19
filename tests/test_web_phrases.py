@@ -25,7 +25,11 @@ from typing import Any, Dict
 
 # Imports - Local
 from star_pass._preview import BLOCKER_REASONS
-from star_pass._records import MATCH_KINDS, RUN_STATUSES
+from star_pass._records import (
+    MATCH_KINDS,
+    RUN_STATUSES,
+    UNCOLLECTED_REASONS
+)
 from star_pass._reporting import STEPS
 
 # Where the page keeps them, from this file.
@@ -86,6 +90,32 @@ class TestWebPhrases:
         for step, wording in phrases()['step'].items():
             assert wording != step
 
+    def test_every_uncollected_reason_is_headed(self) -> None:
+        # The Not collected tab draws a section per reason. One with no
+        # wording heads its section as 'allday'.
+        assert set(phrases()['uncollected']) == set(UNCOLLECTED_REASONS)
+
+    def test_every_uncollected_reason_is_explained(self) -> None:
+        # The heading and the paragraph under it are two maps because
+        # they are two sentences, and a reason missing from either is
+        # a section that says half of what it exists to say.
+        assert set(phrases()['uncollectedNote']) == set(UNCOLLECTED_REASONS)
+
+    def test_no_uncollected_reason_is_worded_as_itself(self) -> None:
+        for group in ('uncollected', 'uncollectedNote'):
+            for reason, wording in phrases()[group].items():
+                assert wording != reason
+
+    def test_a_heading_and_its_explanation_are_not_the_same(self) -> None:
+        # A heading repeated as its own paragraph is a paragraph
+        # somebody meant to come back to, and neither test above
+        # would notice.
+        for reason in UNCOLLECTED_REASONS:
+            assert (
+                phrases()['uncollected'][reason]
+                != phrases()['uncollectedNote'][reason]
+            )
+
     def test_every_blocker_the_core_publishes_is_worded(self) -> None:
         # The preview names why nothing can be sent, and the reason
         # crosses the wire as an identifier. One with no wording
@@ -112,7 +142,9 @@ class TestWebPhrases:
             'blocker': set(),
             'row': {
                 'start', 'end', 'minutes', 'direction', 'title'
-            }
+            },
+            'uncollected': set(),
+            'uncollectedNote': set()
         }
 
         for group, names in allowed.items():

@@ -35,6 +35,44 @@ function banner({ tone, glyph, words, action = null }) {
   );
 }
 
+/** Return what a refused call says, above the content it was about.
+ *
+ * A notice rather than the screen-wide failure, which would throw
+ * away a run that is still perfectly readable. The service applies an
+ * action whole or not at all, so nothing was half done and what is
+ * below this is what it was.
+ *
+ * Here rather than in whichever screen first needed one: both views
+ * over a run can have a call refused, and two copies of the sentence
+ * that says so would eventually differ about what a reference is
+ * called.
+ *
+ * @param {Object} options What was refused.
+ * @param {string} options.said What did not happen, as a sentence.
+ * @param {ApiError} options.failure Why not.
+ * @returns {HTMLElement} The notice.
+ */
+export function refusalNotice({ said, failure }) {
+  return el(
+    'div',
+    { class: ALERT, role: 'alert' },
+    icon('warning-circle'),
+    el(
+      'span',
+      { class: 'banner-words meta' },
+      el('span', { text: `${said} ${failure.detail}` }),
+      failure.reference
+        ? el(
+          'span',
+          { class: 'muted micro failure-reference' },
+          'Reference ',
+          el('span', { class: 'mono', text: failure.reference })
+        )
+        : null
+    )
+  );
+}
+
 /** Return the toggle that narrows the table to what a banner counted.
  *
  * @param {boolean} on Whether it is showing only those.

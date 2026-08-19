@@ -350,6 +350,18 @@ through the Amplify API. It is run once per month.
   had already changed. A key names one action and is never reused for
   the next: it makes a *resend* safe, and two nudges are two actions
   that must move the shift twice.
+  `js/review/uncollected.js` is the screen's second tab: what the
+  window held and the run left out, grouped by reason. **Whether a
+  row may be pulled in is `addable`**, which the server answers, and
+  the reason a group is drawn under is never read to decide it — the
+  two line up today and a client deciding for itself would go on
+  disagreeing quietly once they stopped. A pulled-in row keeps its
+  entry and stops being addable, so the pull-in is followed by a
+  re-read rather than by striking the row off. Its last section is
+  the log kept for the next edit of the shift data model, which
+  belongs to no run and has nothing to remove on it: a title leaves
+  that log when the model matches it (D20), which is the edit
+  somebody notes one in order to make.
   `js/collect/` is the drawer a run is asked for in and the screen
   that follows the job doing it. The drawer is where the two
   conversions live that no other screen makes: a window preset is
