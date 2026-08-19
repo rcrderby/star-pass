@@ -192,7 +192,7 @@ function sendRow(row, jobId, onCopy, copied) {
 
   return el(
     'div',
-    { class: `send-row send-row-${row.state}` },
+    { class: `row-card send-row send-row-${row.state}` },
     icon(shown.glyph),
     el(
       'span',

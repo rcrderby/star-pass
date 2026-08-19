@@ -378,8 +378,8 @@ through the Amplify API. It is run once per month.
   the repository would notice.
   **Nothing sets a `style` attribute from a script** — the policy
   refuses one, so a size worked out while the page runs is a custom
-  property the stylesheet reads, which is how the send's progress bar
-  is drawn. `docs/design` holds a
+  property the CSS reads, which is how the send's progress bar is
+  drawn. `docs/design` holds a
   prototype of the screens, which is a reference and is not ported.
 - `compose.yaml` and `deploy/caddy/` — the deployment (D5, D14, D17).
   Caddy is the only container with a published port; the frontend and

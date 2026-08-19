@@ -263,7 +263,9 @@ function eventRows(event, context) {
   const main = el(
     'div',
     {
-      class: event.blocking ? 'event-row event-row-blocking' : 'event-row',
+      class: event.blocking
+        ? 'row-card event-row event-row-blocking'
+        : 'row-card event-row',
       role: 'row'
     },
     el(

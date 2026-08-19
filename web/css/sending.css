@@ -302,10 +302,6 @@
   align-items: center;
   flex-wrap: wrap;
   padding: 12px 16px;
-  border-left: 3px solid var(--color-accent-800);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
 }
 
 .send-row > .icon {
