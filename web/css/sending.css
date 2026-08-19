@@ -367,6 +367,29 @@
   color: var(--color-alert);
 }
 
+.sending-checking,
+.sending-failed,
+.sending-notice {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: var(--space-4) 0 0;
+  text-wrap: pretty;
+}
+
+.sending-checking .icon {
+  animation: om-spin 1s linear infinite;
+}
+
+.sending-failed {
+  color: var(--color-alert);
+}
+
+.sending-notice {
+  color: var(--color-accent-300);
+}
+
 .sending-unreached {
   margin: var(--space-3) 0 0;
   text-wrap: pretty;

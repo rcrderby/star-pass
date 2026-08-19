@@ -68,6 +68,19 @@ const NOT_REACHED = (
   + 'had not reached them.'
 );
 
+/* What a retry says while it is reading the preview again. Its own
+ * line because that read is a request per opportunity and takes
+ * seconds: without it, the button does nothing visible and then a
+ * dialog appears. */
+const RECHECKING = 'Checking Amplify before sending again';
+
+/* And when that read could not be made. The retry stops here rather
+ * than sending a number nobody could work out. */
+const RECHECK_FAILED = (
+  'Amplify did not answer the check for shifts that already exist, so '
+  + 'sending again is held back.'
+);
+
 /* When the connection dropped. Not a failure of the send: the browser
  * reconnects on its own and is given what it missed. */
 const RECONNECTING = (
@@ -226,6 +239,52 @@ function sendRow(row, jobId, onCopy, copied) {
   );
 }
 
+/** Return what a retry has to say before it opens the confirmation.
+ *
+ * The three things the preview screen says about the same read, said
+ * here because a retry makes that read from this screen: it is
+ * happening, it could not be made, or it found nothing left to do.
+ * Without them the button reads as broken -- nothing moves for
+ * several seconds, and a read that failed moves nothing at all.
+ *
+ * @param {Object} state What the screen is showing.
+ * @returns {Array<HTMLElement|null>} What to show, if anything.
+ */
+function retryStatus(state) {
+  return [
+    state.reading
+      ? el(
+        'p',
+        { class: 'sending-checking muted meta', role: 'status' },
+        icon('circle-notch'),
+        el('span', { text: RECHECKING })
+      )
+      : null,
+    state.failure === null
+      ? null
+      : el(
+        'p',
+        { class: 'sending-failed meta', role: 'alert' },
+        icon('warning-circle'),
+        el('span', { text: RECHECK_FAILED }),
+        state.failure.reference
+          ? el('span', {
+            class: 'mono micro',
+            text: state.failure.reference
+          })
+          : null
+      ),
+    state.notice === ''
+      ? null
+      : el(
+        'p',
+        { class: 'sending-notice meta', role: 'status' },
+        icon('info'),
+        el('span', { text: state.notice })
+      )
+  ];
+}
+
 /** Return the whole sending screen.
  *
  * @param {Object} state What the screen is showing.
@@ -275,6 +334,7 @@ export function sendingScreen(state, handlers) {
           .replace('{n}', String(state.total - state.rows.length))
           .replace('{total}', String(state.total))
       }),
+    retryStatus(state),
     el(
       'div',
       { class: 'sending-actions' },
@@ -285,10 +345,12 @@ export function sendingScreen(state, handlers) {
           {
             type: 'button',
             class: 'btn btn-primary',
-            /* Never disabled, even while it runs: walking away and
-             * coming back is the point, and a control that is
-             * unavailable for minutes reads as a control that is
-             * broken. */
+            /* Not disabled while the send runs: walking away and
+             * coming back is the point, and a control unavailable for
+             * minutes reads as one that is broken. Disabled only
+             * while this button's own read is out, because a second
+             * click would start a second one. */
+            disabled: state.reading,
             onclick: handlers.onRetry
           },
           icon('arrows-clockwise'),

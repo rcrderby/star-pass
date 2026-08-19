@@ -18,6 +18,12 @@
  * the job is doing.  Nothing waits for the send: the browser is not
  * what holds it open, and this screen can be closed and reopened
  * against the same job.
+ *
+ * **Both ways to the send go through the confirmation** (D11), which
+ * is why the retry reads the preview again before it opens one: the
+ * count it restates has to be the count the request carries, and
+ * after a partial send that is no longer the number anybody agreed
+ * to.
  */
 
 import {
@@ -353,16 +359,32 @@ export class SendingScreen {
     this.draw();
   }
 
-  /** Read the preview again and send what is left.
+  /** Read the preview again, and confirm what is left to send.
    *
-   * The count has moved -- some of what the first attempt was
-   * confirmed against is now in Amplify -- so this reads it again
-   * rather than sending the number somebody agreed to before. A
-   * request carrying the old one would be refused, and rightly.
+   * **Read again, because the count has moved.** Some of what the
+   * first attempt was confirmed against is now in Amplify, so the
+   * number that request carried describes a moment that has passed
+   * and a second one carrying it would be refused, rightly.
    *
-   * @returns {Promise<void>} When the second attempt is under way.
+   * **Confirmed again, because a retry is a send.** D11 gates the
+   * write and does not distinguish the first from the second; the
+   * design draws this as a plain button because the prototype it was
+   * drawn against could not have its count move underneath it. And
+   * the guard that protects the first send stops guarding here
+   * otherwise: `expectedShiftCount` is what somebody read and agreed
+   * to, but a retry that read the preview and handed the same number
+   * straight back satisfies that check by construction. It could
+   * never refuse, and nobody would have seen the number. A run edited
+   * in another tab between the failure and this click would then
+   * create shifts nobody previewed -- not duplicates, which the live
+   * read per opportunity prevents whatever happens, but rows that
+   * reached Amplify unreviewed.
+   *
+   * @returns {Promise<void>} When the confirmation is on screen, or
+   *     when there was nothing to confirm.
    */
   async retry() {
+    this.state.notice = '';
     await this.read();
 
     if (this.state.failure !== null) {
@@ -370,14 +392,15 @@ export class SendingScreen {
     }
 
     if (this.state.preview.totals.willCreate === 0) {
+      /* The rows stay. They are the record of what failed, and
+       * somebody reading this notice is reading it about them. */
       this.state.notice = RETRY_NOTHING;
-      this.state.rows = [];
       this.draw();
 
       return;
     }
 
-    await this.send(this.state.preview.totals.willCreate);
+    this.confirm();
   }
 
   /** Put a reference on the clipboard.
