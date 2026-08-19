@@ -5,6 +5,14 @@
     "partly_sent": "Partly sent",
     "sent": "Sent"
   },
+  "step": {
+    "read_calendar": "Reading the calendar",
+    "filter_events": "Filtering events",
+    "match_events": "Matching titles to opportunities",
+    "read_opportunities": "Reading the Amplify opportunities",
+    "store_events": "Storing the collected events",
+    "read_opportunity": "Reading what opportunity {subject} already holds"
+  },
   "matchKind": {
     "keyword": "Matched by the keyword \"{keyword}\"",
     "fuzzy": "Matched to {category} by wording alone, scoring {score} of 100. Worth a look."

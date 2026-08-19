@@ -15,7 +15,11 @@ from ._records import (
     UNCOLLECTED_EXCLUDED,
     UNCOLLECTED_UNTITLED
 )
-from ._reporting import Reporter
+from ._reporting import (
+    Reporter,
+    STEP_FILTER_EVENTS,
+    STEP_READ_CALENDAR
+)
 from ._helpers import Helpers, load_env_file
 from ._logging import get_logger
 
@@ -373,8 +377,6 @@ class GCALData:
                     Data returned by the Google Calendar service.
         """
 
-        self.reporter.calendar_read_started()
-
         _, query_strings = self._calendar_settings()
 
         return self._read(
@@ -423,14 +425,19 @@ class GCALData:
                     holds.
         """
 
+        # The step covers both readings rather than the searched one
+        # alone.  Reported around 'get_gcal_shift_data' it would
+        # finish while a second call to the calendar was still to be
+        # made, which is a step saying it is done before it is.
+        self.reporter.step_started(step=STEP_READ_CALENDAR)
+
         _, query_strings = self._calendar_settings()
         searched = self.get_gcal_shift_data(
             timeMin=timeMin,
             timeMax=timeMax,
             timeout=timeout
         )
-
-        return WindowRead(
+        read = WindowRead(
             searched=searched,
             everything=(
                 searched
@@ -443,6 +450,10 @@ class GCALData:
                 )
             )
         )
+
+        self.reporter.step_finished()
+
+        return read
 
     def filter_gcal_items(
             self,
@@ -476,9 +487,7 @@ class GCALData:
         """
 
         # Display preliminary status message
-        self.reporter.step_started(
-            label='Filtering event data'
-        )
+        self.reporter.step_started(step=STEP_FILTER_EVENTS)
 
         filtered_gcal_items = []
         for gcal_item in gcal_shift_data:

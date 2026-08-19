@@ -33,7 +33,14 @@ from star_pass._records import (
     RUN_STATUS_COLLECTING,
     RUN_STATUS_UNSENT
 )
-from star_pass._reporting import Reporter
+from star_pass._reporting import (
+    Reporter,
+    STEP_FILTER_EVENTS,
+    STEP_MATCH_EVENTS,
+    STEP_READ_CALENDAR,
+    STEP_READ_OPPORTUNITIES,
+    STEP_STORE_EVENTS
+)
 from star_pass._repository import (
     EventRepository,
     RevisionRepository,
@@ -487,6 +494,61 @@ class TestWhatStopsTheRun:
             )
 
         assert 'no-such-run' in str(error.value)
+
+
+class Steps(Reporter):
+    """ A reporter that keeps the steps it was told about. """
+
+    def __init__(self) -> None:
+        """ Start with nothing recorded. """
+        self.reported: list = []
+
+    def step_started(self, step: str, subject: str = '') -> None:
+        """ Keep which step began. """
+        del subject
+        self.reported.append(step)
+
+    def step_finished(self) -> None:
+        """ Keep that the step before it ended. """
+        self.reported.append('finished')
+
+
+class TestWhatACollectionReports:
+    def test_it_reports_five_steps_in_the_order_it_does_them(
+        self,
+        collect_run: Callable[..., Any]
+    ) -> None:
+        # Five, not the four the design was drawn with: reading the
+        # calendar and reading the Amplify opportunities are separate
+        # upstream services, and an operator whose collection stopped
+        # needs to see which of them stopped it.
+        steps = Steps()
+
+        collect_run(items=[an_item()], reporter=steps)
+
+        assert [
+            reported for reported in steps.reported
+            if reported != 'finished'
+        ] == [
+            STEP_READ_CALENDAR,
+            STEP_FILTER_EVENTS,
+            STEP_MATCH_EVENTS,
+            STEP_READ_OPPORTUNITIES,
+            STEP_STORE_EVENTS
+        ]
+
+    def test_every_step_it_starts_is_one_it_finishes(
+        self,
+        collect_run: Callable[..., Any]
+    ) -> None:
+        # The calendar read included, which was announced rather than
+        # opened before it became a step. A step nothing finishes
+        # leaves a screen with a row that never resolves.
+        steps = Steps()
+
+        collect_run(items=[an_item()], reporter=steps)
+
+        assert steps.reported[1::2] == ['finished'] * 5
 
 
 class TestReadingTheCalendarTwice:

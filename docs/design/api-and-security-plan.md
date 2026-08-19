@@ -258,7 +258,7 @@ mechanical once they're right.
 ## 11. Settled and still open
 
 Every decision, with its rationale and a revisit trigger, is recorded in
-`decisions.md` (D1–D21). Settled since this plan was first written:
+`decisions.md` (D1–D22). Settled since this plan was first written:
 
 - Credentials arrive as a **read-only mounted secret file**, path from an env var,
   0400, read once at startup, fail fast (D9). Replacement stays out of the API (D8).

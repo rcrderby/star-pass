@@ -25,6 +25,7 @@ from typing import Any, Dict
 
 # Imports - Local
 from star_pass._records import MATCH_KINDS, RUN_STATUSES
+from star_pass._reporting import STEPS
 
 # Where the page keeps them, from this file.
 PHRASES_PATH = Path(__file__).parent.parent / 'web' / 'phrases.json'
@@ -68,11 +69,28 @@ class TestWebPhrases:
         for kind in phrases()['matchKind']:
             assert kind in MATCH_KINDS
 
+    def test_every_step_the_core_publishes_is_worded(self) -> None:
+        # The collecting screen draws one row per step and the sending
+        # screen names the opportunity each read is about. A step with
+        # no wording reaches both as 'read_opportunities'.
+        assert set(phrases()['step']) == set(STEPS)
+
+    def test_no_step_wording_is_for_a_step_that_does_not_exist(
+        self
+    ) -> None:
+        for step in phrases()['step']:
+            assert step in STEPS
+
+    def test_no_step_is_worded_as_itself(self) -> None:
+        for step, wording in phrases()['step'].items():
+            assert wording != step
+
     def test_a_wording_only_asks_for_values_it_is_given(self) -> None:
         # The row notes carry '{name}' where a value goes, and a name
         # the page does not pass is left on screen in braces.
         allowed = {
             'matchKind': {'keyword', 'category', 'score'},
+            'step': {'subject'},
             'row': {
                 'start', 'end', 'minutes', 'direction', 'title'
             }

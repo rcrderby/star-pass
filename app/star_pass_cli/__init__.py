@@ -21,6 +21,7 @@ from ._maintenance import (
 )
 from ._mode import client_for, service_url
 from ._output import write
+from ._sending import step_text
 
 __all__ = [
     'add_commands',
@@ -31,5 +32,6 @@ __all__ = [
     'run_command',
     'selected',
     'service_url',
+    'step_text',
     'write'
 ]

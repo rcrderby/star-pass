@@ -259,6 +259,21 @@ through the Amplify API. It is run once per month.
 - `app/star_pass/_reporting.py` — `Reporter`, which accepts progress
   and result events and discards them. The default, so the core runs
   unobserved; the CLI passes `TerminalReporter` from `__main__.py`.
+  **A step is named, not described**: `step_started` carries an
+  identifier from `STEPS` and, where a step works on one thing, what
+  it is working on. The words are each client's — `STEP_PHRASES` in
+  `star_pass_cli/_sending.py` for both the terminal renderer and the
+  job watcher, and `web/phrases.json` for the browser — because a
+  job's event log is read back over the API by clients that word
+  everything else the contract publishes themselves. A collection
+  reports five steps, not the four the design was drawn with: reading
+  the calendar and reading the Amplify opportunities are two upstream
+  services, and which of them stopped a collection is what an
+  operator needs to see. `sending_started` carries how many
+  opportunities the send will work through, and `opportunity_sent` is
+  reported for **every** opportunity, including one Amplify already
+  held every shift for — reported only when rows were created, a
+  screen drawing a row per opportunity could never finish that row.
 - `app/star_pass/_logging.py` — package logger setup (`get_logger`);
   level via the `LOG_LEVEL` environment variable. Diagnostics and status
   flow through `logging`; report data goes to the caller's

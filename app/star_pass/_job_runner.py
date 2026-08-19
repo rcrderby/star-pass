@@ -120,19 +120,33 @@ class JobReporter(Reporter):
 
     def step_started(
             self,
-            label: str
+            step: str,
+            subject: str = ''
     ) -> None:
         """ A named unit of work began.
 
+            The step is recorded as the identifier the core reported,
+            and the subject beside it, rather than as a sentence: a
+            job's event log is read back over the API, and a client
+            reading it words the step the way it words everything else
+            the contract publishes.
+
             Args:
-                label (str):
-                    What the work is, in the present participle.
+                step (str):
+                    Which one, from 'STEPS'.
+
+                subject (str, optional):
+                    What it is working on, or an empty string.
 
             Returns:
                 None.
         """
 
-        return self._record(kind='step_started', label=label)
+        return self._record(
+            kind='step_started',
+            step=step,
+            subject=subject
+        )
 
     def step_finished(self) -> None:
         """ The step most recently started completed.
@@ -161,29 +175,24 @@ class JobReporter(Reporter):
 
         return self._record(kind='step_failed')
 
-    def calendar_read_started(self) -> None:
-        """ The run began reading the Google Calendar service.
-
-            Args:
-                None.
-
-            Returns:
-                None.
-        """
-
-        return self._record(kind='calendar_read_started')
-
-    def sending_started(self) -> None:
+    def sending_started(
+            self,
+            opportunities: int
+    ) -> None:
         """ The run began sending shift data to Amplify.
 
             Args:
-                None.
+                opportunities (int):
+                    How many opportunities the send will work through.
 
             Returns:
                 None.
         """
 
-        return self._record(kind='sending_started')
+        return self._record(
+            kind='sending_started',
+            opportunities=opportunities
+        )
 
     def slack_dry_run(
             self,
@@ -221,33 +230,38 @@ class JobReporter(Reporter):
 
         return self._record(kind='summary_skipped')
 
-    def shifts_sent(
+    def opportunity_sent(
             self,
             batch: ShiftBatch
     ) -> None:
-        """ A batch of shifts was created for one opportunity.
+        """ One opportunity's turn in the send is over.
 
             The request body is not recorded.  It is built from the
             shifts, so storing both keeps two copies of one fact, and
             the shifts are the half a reader can act on.  The need ID
             is recorded as text, so that a reader is not given a number
-            by one run and a string by the next.
+            by one run and a string by the next, and under the name
+            the contract uses for it everywhere else: this payload
+            crosses the wire to the same browser that reads 'needId'
+            on every other answer.
 
             Args:
                 batch (ShiftBatch):
-                    The opportunity, and the shifts created under it.
+                    The opportunity, what was created under it, and
+                    what it already held.
 
             Returns:
                 None.
         """
 
         return self._record(
-            kind='shifts_sent',
+            kind='opportunity_sent',
             index=batch.index,
-            need_id=str(batch.need_id),
+            needId=str(batch.need_id),
             title=batch.title,
             url=batch.url,
-            shifts=batch.shifts
+            shifts=batch.shifts,
+            skipped=batch.skipped
         )
 
 
