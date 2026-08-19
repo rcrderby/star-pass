@@ -590,6 +590,62 @@ def fixture_make_event() -> Callable[..., Event]:
     return build
 
 
+@pytest.fixture(name='matching_model')
+def fixture_matching_model(shift_model: Callable[..., None]) -> None:
+    """ Install a data model the fixture event's category is in.
+
+        'make_event' names a category and a need ID, and the data model
+        this repository ships holds neither under that name.  A test
+        about what the model says of an event -- whether its shift
+        times still follow from the calendar's, above all -- has to
+        arrange one that answers, or it is testing the case where
+        nothing does.
+
+        The offsets and the count are the ones that reproduce the
+        event's own shift times, so an event nothing has touched is one
+        the model agrees with.
+
+        Only the calendar the 'run_id' fixture collects from holds it,
+        so a reading that went to another calendar's model finds
+        nothing rather than finding the same answer by accident.
+    """
+    shift_model(
+        categories={
+            'scrimmage': a_category(
+                need_ids=[a_need(identifier='905196', slots=4)]
+            )
+        },
+        calendars=('practices',)
+    )
+
+    return None
+
+
+@pytest.fixture(name='moved_event')
+def fixture_moved_event(
+    events: EventRepository,
+    collected: str,
+    revision: int,
+    make_event: Callable[..., Event],
+    matching_model: None
+) -> str:
+    """ Return the collected run, its event's shift start moved.
+
+        A run holding something an undo would change, which is what
+        separates a row offered one from a row with nothing to put
+        back.  Arranged with the stand-in model, because what says the
+        row was moved is the model disagreeing with its shift times.
+    """
+    del matching_model
+    events.replace(
+        run_id=collected,
+        revision=revision,
+        event=make_event(shift_start='18:45')
+    )
+
+    return collected
+
+
 @pytest.fixture(name='make_opportunity')
 def fixture_make_opportunity() -> Callable[..., Opportunity]:
     """ Return a factory building an opportunity, fields overridable. """
@@ -679,6 +735,7 @@ def fixture_make_event_document() -> Callable[..., dict]:
             'category': 'scrimmage',
             'match': None,
             'addedByHand': False,
+            'edited': False,
             'roles': [
                 {'needId': '905196', 'slots': 4, 'edited': False}
             ],

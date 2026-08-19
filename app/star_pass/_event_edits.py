@@ -515,3 +515,58 @@ def slots_reset(
             for role in event.roles
         )
     )
+
+
+def was_edited(
+        event: Event,
+        calendar: str,
+        helpers: Helpers
+) -> bool:
+    """ Return whether a person has changed this event.
+
+        The same arithmetic 'undo' runs, asked as a question rather
+        than applied: an event is edited when putting it back as
+        collection produced it would change it.  Written here rather
+        than worked out from the stored fields because there is nothing
+        stored to work it out from -- the calendar times never move, so
+        an event that was nudged is one whose shift times no longer
+        follow from them, and only the category's offsets say what they
+        would have been.  A caller that compared them itself would be a
+        second copy of '_shift_timing'.
+
+        Covers the roles as well as the times, because undo resets
+        both: a row whose volunteers were changed is a row undo would
+        change, and offering no way back from it because only the times
+        are looked at would be a control that lies about what it does.
+
+        Args:
+            event (Event):
+                The event as it stands.
+
+            calendar (str):
+                Calendar the run was collected from.
+
+            helpers (Helpers):
+                Where the data model is read through.
+
+        Returns:
+            edited (bool):
+                Whether undoing would change it.  False when the undo
+                could not be carried out at all -- a category that has
+                left the data model, or need IDs that now disagree
+                about their offsets -- because that is the same refusal
+                the operation itself would raise, and a row said to be
+                editable is a row offered a control that fails.  A
+                reading of a run answers rather than failing because
+                the model moved under it.
+    """
+
+    try:
+        return as_collected(
+            event=event,
+            calendar=calendar,
+            helpers=helpers
+        ) != event
+
+    except ValidationError:
+        return False

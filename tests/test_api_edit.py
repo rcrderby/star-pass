@@ -102,6 +102,32 @@ class TestWhatAnEditAnswers:
 
         assert len(answer.json()['events']) == 2
 
+    def test_a_moved_event_comes_back_edited(
+        self, edit, collected, matching_model
+    ):
+        # The screen is redrawn from this answer, so the undo it
+        # offers on a row follows from what the edit produced rather
+        # than from a reading of the run afterwards.
+        del matching_model
+
+        answer = edit(run_id=collected, operations=[a_nudge()])
+
+        assert answer.json()['events'][0]['edited'] is True
+
+    def test_an_undone_event_comes_back_not_edited(
+        self, edit, collected, matching_model
+    ):
+        del matching_model
+        edit(run_id=collected, operations=[a_nudge()])
+
+        answer = edit(
+            run_id=collected,
+            operations=[{'op': 'undo', 'eventIds': ['event-1']}],
+            key=SECOND_ATTEMPT
+        )
+
+        assert answer.json()['events'][0]['edited'] is False
+
     def test_the_log_carries_one_entry_per_operation(
         self, edit, collected
     ):

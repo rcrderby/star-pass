@@ -37,7 +37,9 @@ from star_pass._editing import (
     OPERATIONS,
     Operation
 )
+from star_pass._event_edits import was_edited
 from star_pass._exceptions import ValidationError
+from star_pass._helpers import Helpers
 from star_pass._records import Event, EventRole, Match, Opportunity
 
 
@@ -112,6 +114,32 @@ def fixture_edit(shift_model: Callable[..., None]) -> Callable[..., Any]:
         )
 
     return run
+
+
+@pytest.fixture(name='ask_if_edited')
+def fixture_ask_if_edited(
+    shift_model: Callable[..., None]
+) -> Callable[..., bool]:
+    """ Return a way to ask whether an event has been edited. """
+
+    def ask(
+        event: Event,
+        categories: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        shift_model(
+            categories=categories
+            if categories is not None
+            else {'adult_game': a_category(need_ids=[a_need()])},
+            calendars=(CALENDAR,)
+        )
+
+        return was_edited(
+            event=event,
+            calendar=CALENDAR,
+            helpers=Helpers()
+        )
+
+    return ask
 
 
 class TestSettingTheShiftTimes:
@@ -601,3 +629,90 @@ class TestWhatIsLogged:
         ])
 
         assert '"Adult Games - NSOs"' in result.entries[0]
+
+
+class TestWhetherAnEventHasBeenEdited:
+    # The same arithmetic 'undo' runs, asked as a question.  Nothing
+    # stored says whether a person changed an event, because the
+    # calendar times never move: what says so is that the shift times
+    # no longer follow from them.
+
+    def test_an_event_as_collection_left_it_is_not_edited(
+        self,
+        ask_if_edited
+    ):
+        # 19:00 to 21:00 with offsets of 15 and 30 is 19:15 to 21:30,
+        # which is what the event holds.
+        assert ask_if_edited(an_event()) is False
+
+    def test_a_moved_start_is_edited(self, ask_if_edited):
+        assert ask_if_edited(an_event(shift_start='18:45')) is True
+
+    def test_a_moved_end_is_edited(self, ask_if_edited):
+        assert ask_if_edited(an_event(shift_end='22:00')) is True
+
+    def test_a_changed_number_of_volunteers_is_edited(
+        self,
+        ask_if_edited
+    ):
+        # Undo resets the volunteers as well as the times, so a row
+        # whose count somebody set is a row undo would change.
+        assert ask_if_edited(
+            an_event(roles=(EventRole(need_id=NEED_ID, slots=6),))
+        ) is True
+
+    def test_an_event_moved_and_moved_back_is_not_edited(
+        self,
+        edit,
+        ask_if_edited
+    ):
+        # What makes this the right question to ask of the times
+        # rather than of a stored flag: the event has been through two
+        # operations and is what collection would produce.
+        moved = edit([
+            Operation(op=OP_NUDGE, event_ids=('gcal-1',), minutes=15),
+            Operation(op=OP_NUDGE, event_ids=('gcal-1',), minutes=-15)
+        ])
+
+        assert moved.events[0].shift_start == '19:15'
+        assert ask_if_edited(moved.events[0]) is False
+
+    def test_an_event_under_no_category_holds_the_calendar_times(
+        self,
+        ask_if_edited
+    ):
+        # Nothing says what its shift times should be, so the calendar
+        # times and no roles are what collection leaves it as.
+        assert ask_if_edited(
+            an_event(
+                shift_start='19:00',
+                shift_end='21:00',
+                category=None,
+                roles=()
+            )
+        ) is False
+
+    def test_an_event_under_no_category_that_was_moved_is_edited(
+        self,
+        ask_if_edited
+    ):
+        assert ask_if_edited(
+            an_event(
+                shift_start='18:45',
+                shift_end='21:00',
+                category=None,
+                roles=()
+            )
+        ) is True
+
+    def test_a_category_the_model_no_longer_holds_is_not_edited(
+        self,
+        ask_if_edited
+    ):
+        # Undo would be refused for the same reason this cannot be
+        # worked out, and a row said to be edited is a row offered a
+        # control that fails.
+        assert ask_if_edited(
+            an_event(shift_start='18:45'),
+            categories={'other_game': a_category(need_ids=[a_need()])}
+        ) is False

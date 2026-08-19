@@ -206,6 +206,13 @@ def _pulled_in(
 
     _, entry = added
     runs = RunRepository(connection=connection)
+    run = runs.get(run_id=run_id)
+
+    # The event was pulled into this run on this connection a moment
+    # ago, so the run is there; read for the calendar, which is what
+    # the data model is looked up under to say what has been edited.
+    if run is None:
+        raise missing_run(run_id=run_id)
 
     return to_edit_view(
         events=EventRepository(connection=connection).list_all(
@@ -213,7 +220,8 @@ def _pulled_in(
             revision=entry.revision
         ),
         opportunities=runs.get_opportunities(run_id=run_id),
-        entries=[entry]
+        entries=[entry],
+        calendar=run.calendar
     )
 
 

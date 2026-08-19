@@ -476,6 +476,50 @@ class TestWhatAnEventDoesNotStore:
         assert blocking == {'event-1': False, 'event-2': True}
 
 
+class TestWhetherAnEventHasBeenEdited:
+    # The review screen offers an undo per row, and this is what says
+    # which rows have one.  Nothing stored answers it: the calendar
+    # times never move, so what says a person changed an event is that
+    # its shift times no longer follow from them.
+
+    def test_an_event_as_collection_left_it_is_not_edited(
+        self,
+        first_event: Callable[[str], Dict[str, Any]],
+        collected: str,
+        matching_model: None
+    ) -> None:
+        del matching_model
+
+        assert first_event(collected)['edited'] is False
+
+    def test_an_event_whose_shift_was_moved_is_edited(
+        self,
+        first_event: Callable[[str], Dict[str, Any]],
+        moved_event: str
+    ) -> None:
+        assert first_event(moved_event)['edited'] is True
+
+    def test_an_event_the_model_can_no_longer_place_is_not_edited(
+        self,
+        events: EventRepository,
+        first_event: Callable[[str], Dict[str, Any]],
+        collected: str,
+        revision: int,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # No model is installed, so the event's category is one this
+        # deployment does not hold.  Undo would be refused for the same
+        # reason the answer cannot be worked out, and a row said to be
+        # edited is a row offered a control that fails.
+        events.replace(
+            run_id=collected,
+            revision=revision,
+            event=make_event(shift_start='18:45')
+        )
+
+        assert first_event(collected)['edited'] is False
+
+
 class TestWhatIsShownBesideARun:
     def test_the_opportunities_are_returned(
         self,

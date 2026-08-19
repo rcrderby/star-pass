@@ -322,6 +322,22 @@ class EventView(ApiModel):
             'search finding it.'
         )
     )
+    edited: bool = Field(
+        description=(
+            'Whether undoing the changes to this event would change '
+            'it. True when its shift times no longer follow from the '
+            'calendar times and the category\'s offsets, or when a '
+            'role wants a number of volunteers somebody set. Answered '
+            'here because nothing stored says it: the calendar times '
+            'never move, so only the data model says what the shift '
+            'times would have been, and a caller working that out '
+            'would be a second copy of the timing rules. False as '
+            'well when the undo could not be carried out -- a category '
+            'that has left the data model -- because that is the '
+            'refusal the operation itself would raise, and a row said '
+            'to be editable is a row offered a control that fails.'
+        )
+    )
     roles: List[EventRoleView] = Field(
         description='The opportunities this event creates shifts for.'
     )
