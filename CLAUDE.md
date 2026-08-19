@@ -161,8 +161,13 @@ through the Amplify API. It is run once per month.
   change nobody made; who sealed or reverted is recorded against the
   idempotency key instead (D13). A run that has collected nothing has
   no revision to seal and none to go back to, and both refuse it: the
-  first revision belongs to the collection, which labels it for what
-  filled it.
+  first revision belongs to the collection, which is the one that
+  says what filled it. **What kind of revision each is is not a
+  caller's to say**: it follows from whether the revision replaces
+  what was there and whether the run held anything, so the repository
+  works it out and nothing above it can disagree with what happened.
+  A revert is the one that also records a number, because which
+  revision a run went back to is not derivable from anything else.
 - `app/star_pass/_shift_timing.py` — what a category asks of an event
   and the shift times it produces (`role_timings`, `shift_times`).
   Below both callers: collection works them out from a calendar item
@@ -626,9 +631,15 @@ The notes below are the ones that are not obvious from the commands.
   pragma, and `_database.py` carries an earlier database forward by
   running its `CREATE ... IF NOT EXISTS` statements. That handles an
   **additive** change only. A column whose type changed, one that was
-  removed, or data that has to be rewritten needs a migration step
-  written for it; bumping `SCHEMA_VERSION` alone would record that the
-  change happened without doing it.
+  removed, or data that has to be rewritten needs a step in
+  `MIGRATIONS` written for it; bumping `SCHEMA_VERSION` alone would
+  record that the change happened without doing it. Every step of a
+  version is asked whether it still has something to do **before any
+  of them runs**, which is what lets a step that fills a column be
+  gated on the column it fills. Do not rebuild a table to change it:
+  `events` points at `revisions` with a cascade, so the copy, drop
+  and rename that is the portable answer elsewhere would delete every
+  event in the database.
 - A SQLite connection belongs to the thread that opened it, so
   anything working on another thread is given a way to open one, not a
   connection to share. `JobRunner` opens one per job and closes it.

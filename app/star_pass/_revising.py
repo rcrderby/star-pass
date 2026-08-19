@@ -37,16 +37,6 @@ from ._records import Revision
 from ._repository import EventRepository, RevisionRepository, RunRepository
 
 # Constants
-# How a revision opened by sealing the one before it is named to a
-# reader.  It says what happened rather than what is in it, because
-# what is in it is a copy of the revision it names.
-CONTINUED_LABEL = 'Continued from revision {number}'
-
-# How a revision opened by reverting to an earlier one is named.  It
-# names the revision that was copied, because that is the question a
-# reader of the history has: which one did the run go back to.
-REVERTED_LABEL = 'Reverted to revision {number}'
-
 # The revision a collection fills.  Reverting to it is asking for the
 # run as the calendar gave it, which is why it is the one revert that
 # drops what a person pulled in by hand.
@@ -106,10 +96,7 @@ def seal(
         logger.error(message)
         raise ValidationError(message)
 
-    opened = revisions.create(
-        run_id=run_id,
-        label=CONTINUED_LABEL.format(number=sealed[-1].number)
-    )
+    opened = revisions.create(run_id=run_id)
 
     message = (
         f'Sealed revision {opened.number - 1} of run {run_id} and '
@@ -169,8 +156,7 @@ def revert(
     with transaction(connection=connection):
         opened = RevisionRepository(connection=connection).revert_to(
             run_id=run_id,
-            number=number,
-            label=REVERTED_LABEL.format(number=number)
+            number=number
         )
 
         if number == COLLECTED_REVISION:

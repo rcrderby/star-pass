@@ -19,6 +19,7 @@ from star_pass._records import (
     EventRole,
     Match,
     Opportunity,
+    REVISION_COLLECTED,
     RUN_STATUS_COLLECTING
 )
 from star_pass._repository import (
@@ -241,7 +242,7 @@ class TestRevisions:
         events: EventRepository,
         run_id: str
     ) -> None:
-        revision = revisions.create(run_id=run_id, label='As collected')
+        revision = revisions.create(run_id=run_id, replacing=True)
 
         assert revision.number == 1
         assert events.list_all(run_id=run_id, revision=1) == []
@@ -252,8 +253,8 @@ class TestRevisions:
         revisions: RevisionRepository,
         run_id: str
     ) -> None:
-        revisions.create(run_id=run_id, label='As collected')
-        revisions.create(run_id=run_id, label='Edited')
+        revisions.create(run_id=run_id, replacing=True)
+        revisions.create(run_id=run_id)
 
         assert runs.get(run_id=run_id).current_revision == 2
 
@@ -263,7 +264,7 @@ class TestRevisions:
         events: EventRepository,
         collected: str
     ) -> None:
-        revisions.create(run_id=collected, label='Edited')
+        revisions.create(run_id=collected)
 
         copied = events.list_all(run_id=collected, revision=2)
 
@@ -285,8 +286,8 @@ class TestRevisions:
         revisions: RevisionRepository,
         run_id: str
     ) -> None:
-        revisions.create(run_id=run_id, label='As collected')
-        revisions.create(run_id=run_id, label='Edited')
+        revisions.create(run_id=run_id, replacing=True)
+        revisions.create(run_id=run_id)
 
         listed = revisions.list_all(run_id=run_id)
 
@@ -301,7 +302,7 @@ class TestRevisions:
         assert revisions.get(
             run_id=run_id,
             number=revision
-        ).label == 'As collected'
+        ).kind == REVISION_COLLECTED
 
     def test_an_unknown_revision_reads_as_nothing(
         self,
@@ -316,11 +317,7 @@ class TestRevisions:
         events: EventRepository,
         edited: str
     ) -> None:
-        reverted = revisions.revert_to(
-            run_id=edited,
-            number=1,
-            label='Reverted to revision 1'
-        )
+        reverted = revisions.revert_to(run_id=edited, number=1)
         listed = revisions.list_all(run_id=edited)
 
         assert reverted.number == 3
@@ -337,11 +334,7 @@ class TestRevisions:
         revision: int
     ) -> None:
         with pytest.raises(ValidationError) as error:
-            revisions.revert_to(
-                run_id=run_id,
-                number=revision + 5,
-                label='Reverted'
-            )
+            revisions.revert_to(run_id=run_id, number=revision + 5)
 
         assert 'no revision' in str(error.value)
 

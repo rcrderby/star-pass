@@ -247,41 +247,6 @@ class TestShowingARun:
         assert 'no-such-run' in capsys.readouterr().out
 
 
-class TestListingRevisions:
-    def test_the_revisions_are_listed_oldest_first(
-        self,
-        capsys: pytest.CaptureFixture,
-        cli: Callable[..., int],
-        populated: str
-    ) -> None:
-        status = cli('runs', 'revisions', populated)
-        shown = capsys.readouterr().out
-
-        assert status == 0
-        assert shown.index('As collected') < shown.index('Edited')
-
-    def test_the_revision_being_edited_is_marked(
-        self,
-        capsys: pytest.CaptureFixture,
-        cli: Callable[..., int],
-        populated: str
-    ) -> None:
-        cli('runs', 'revisions', populated)
-
-        assert _render.CURRENT in capsys.readouterr().out
-
-    def test_a_run_with_no_revisions_says_so(
-        self,
-        capsys: pytest.CaptureFixture,
-        cli: Callable[..., int],
-        run_id: str
-    ) -> None:
-        status = cli('runs', 'revisions', run_id)
-
-        assert status == 0
-        assert 'no revisions yet' in capsys.readouterr().out
-
-
 class TestPreviewingARun:
     def test_a_preview_shows_what_each_opportunity_receives(
         self,

@@ -9,7 +9,13 @@ from typing import List, Optional
 from .._database import execute, query, query_one, transaction
 from .._exceptions import ValidationError
 from .._logging import get_logger
-from .._records import Revision
+from .._records import (
+    Revision,
+    REVISION_COLLECTED,
+    REVISION_CONTINUED,
+    REVISION_RECOLLECTED,
+    REVISION_REVERTED
+)
 from ._common import (
     copy_statement,
     EVENT_COLUMNS,
@@ -29,7 +35,8 @@ REVISION_SELECT = """
         revisions.run_id      AS run_id,
         revisions.number      AS number,
         revisions.created_at  AS created_at,
-        revisions.label       AS label,
+        revisions.kind        AS kind,
+        revisions.source      AS source,
         (
             SELECT COUNT(*)
             FROM change_log
@@ -61,7 +68,8 @@ def _to_revision(
         run_id=row['run_id'],
         number=row['number'],
         created_at=row['created_at'],
-        label=row['label'],
+        kind=row['kind'],
+        source_revision=row['source'],
         change_count=row['change_count']
     )
 
@@ -78,7 +86,6 @@ class RevisionRepository(Repository):
     def create(
             self,
             run_id: str,
-            label: str,
             replacing: bool = False
     ) -> Revision:
         """ Add a revision, continuing from the current one or replacing it.
@@ -92,12 +99,16 @@ class RevisionRepository(Repository):
             The first revision of a run has nothing to copy either
             way.
 
+            **What kind of revision it is is not a caller's to say.**
+            It follows from the two things this method already knows:
+            a revision that replaces is a collection's, and which
+            collection it was depends on whether the run held
+            anything.  A caller passing it as well would be a caller
+            that can disagree with what actually happened.
+
             Args:
                 run_id (str):
                     Run to add the revision to.
-
-                label (str):
-                    How to name the revision to a reader.
 
                 replacing (bool, optional):
                     Whether the revision starts empty rather than
@@ -119,17 +130,27 @@ class RevisionRepository(Repository):
         with transaction(connection=self._connection):
             current = self._current_number(run_id=run_id)
 
+            if not replacing:
+                return self._add(
+                    run_id=run_id,
+                    kind=REVISION_CONTINUED,
+                    source=current or None
+                )
+
             return self._add(
                 run_id=run_id,
-                label=label,
-                source=None if replacing else (current or None)
+                kind=(
+                    REVISION_COLLECTED
+                    if current == 0
+                    else REVISION_RECOLLECTED
+                ),
+                source=None
             )
 
     def revert_to(
             self,
             run_id: str,
-            number: int,
-            label: str
+            number: int
     ) -> Revision:
         """ Add a revision holding a copy of an earlier one.
 
@@ -142,10 +163,8 @@ class RevisionRepository(Repository):
                     Run to revert.
 
                 number (int):
-                    Revision to copy.
-
-                label (str):
-                    How to name the new revision to a reader.
+                    Revision to copy, which is also the revision the
+                    new one records itself as having been made from.
 
             Raises:
                 ValidationError:
@@ -170,7 +189,7 @@ class RevisionRepository(Repository):
 
             return self._add(
                 run_id=run_id,
-                label=label,
+                kind=REVISION_REVERTED,
                 source=number
             )
 
@@ -339,17 +358,23 @@ class RevisionRepository(Repository):
     def _add(
             self,
             run_id: str,
-            label: str,
+            kind: str,
             source: Optional[int]
     ) -> Revision:
         """ Add the next revision, optionally copying an earlier one.
+
+            **The revision copied from is the revision recorded**, and
+            they are one value because they are one fact: what a
+            revision was made from is what its rows came from. A
+            collection's is empty of both, being made from a calendar.
 
             Args:
                 run_id (str):
                     Run to add the revision to.
 
-                label (str):
-                    How to name the revision to a reader.
+                kind (str):
+                    How it came to exist, one of
+                    '_records.REVISION_KINDS'.
 
                 source (int, optional):
                     Revision to copy the events of, or None to start
@@ -375,9 +400,15 @@ class RevisionRepository(Repository):
                 connection=self._connection,
                 statement=insert_statement(
                     table='revisions',
-                    columns=('run_id', 'number', 'created_at', 'label')
+                    columns=(
+                        'run_id',
+                        'number',
+                        'created_at',
+                        'kind',
+                        'source'
+                    )
                 ),
-                parameters=(run_id, number, created_at, label)
+                parameters=(run_id, number, created_at, kind, source)
             )
 
             if source is not None:
@@ -405,7 +436,8 @@ class RevisionRepository(Repository):
             run_id=run_id,
             number=number,
             created_at=created_at,
-            label=label,
+            kind=kind,
+            source_revision=source,
             change_count=0
         )
 

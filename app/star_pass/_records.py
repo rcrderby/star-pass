@@ -172,8 +172,15 @@ class Revision:
                 When the revision was created, as an ISO-8601 UTC
                 timestamp.
 
-            label (str):
-                How the revision is named to a reader.
+            kind (str):
+                How the revision came to exist, one of
+                'REVISION_KINDS'.
+
+            source_revision (int, optional):
+                The revision it was made from, where that is a fact
+                about it rather than something a reader can work out.
+                None for the two a collection fills, which are made
+                from a calendar and not from a revision.
 
             change_count (int):
                 How many changes were made while this revision was the
@@ -186,7 +193,8 @@ class Revision:
     run_id: str
     number: int
     created_at: str
-    label: str
+    kind: str
+    source_revision: Optional[int]
     change_count: int
 
 
@@ -360,6 +368,28 @@ class Event:
 # did not return -- and it is the only one a person may pull in, since
 # the other three describe events that cannot become a correct shift
 # rather than events nobody looked for.
+# How a revision came to exist.  Stored rather than worked out: the
+# first is always revision 1 and the third always continues from the
+# revision below it, but nothing else separates a revision a
+# recollection replaced from one a seal opened, and only the revert
+# knows which revision it went back to.
+#
+# An identifier rather than the sentence it used to be.  The sentence
+# was written by the core, stored in the row, and printed unchanged by
+# both clients -- so neither could word it, and changing the wording
+# would have left every revision already recorded saying the old
+# thing beside a new one saying the new.
+REVISION_COLLECTED = 'collected'
+REVISION_RECOLLECTED = 'recollected'
+REVISION_CONTINUED = 'continued'
+REVISION_REVERTED = 'reverted'
+REVISION_KINDS = (
+    REVISION_COLLECTED,
+    REVISION_RECOLLECTED,
+    REVISION_CONTINUED,
+    REVISION_REVERTED
+)
+
 UNCOLLECTED_SEARCH = 'search'
 UNCOLLECTED_EXCLUDED = 'excluded'
 UNCOLLECTED_ALL_DAY = 'allday'

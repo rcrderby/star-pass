@@ -17,6 +17,7 @@ from star_pass._exceptions import (
     UpstreamError,
     ValidationError
 )
+from star_pass._repository import RevisionRepository
 
 # Constants
 EXPECTED_TABLES = {
@@ -194,10 +195,15 @@ def test_a_violated_constraint_is_a_validation_error(
         _database.execute(
             connection=connection,
             statement=(
-                'INSERT INTO revisions (run_id, number, created_at, label) '
+                'INSERT INTO revisions (run_id, number, created_at, kind) '
                 'VALUES (?, ?, ?, ?)'
             ),
-            parameters=('no-such-run', 1, '2026-09-01T00:00:00+00:00', 'x')
+            parameters=(
+                'no-such-run',
+                1,
+                '2026-09-01T00:00:00+00:00',
+                'collected'
+            )
         )
 
     assert 'rejected the data' in str(error.value)
@@ -394,3 +400,126 @@ class TestCarryingAnOlderDatabaseForward:
             _database.connect(path=database_path)
 
         assert 'newer than' in str(error.value)
+
+
+# The four sentences the core ever wrote into a revision's row, and
+# what each was saying.  A migration reads them back into an
+# identifier and the revision it names, so this is the whole of what
+# version 7 has to recover.
+# One of them names a revision with two digits in it, because a
+# sentence is read back by counting past its opening words and a
+# count that was one out would still cast " 2" to 2.  It is numbered
+# past a gap for the same reason retention leaves gaps: the middle
+# revisions of an old run are removed and the ones around them stay.
+LABELLED_REVISIONS = (
+    (1, 'As collected', 'collected', None),
+    (2, 'Continued from revision 1', 'continued', 1),
+    (3, 'As recollected', 'recollected', None),
+    (4, 'Reverted to revision 2', 'reverted', 2),
+    (14, 'Continued from revision 13', 'continued', 13)
+)
+
+# The revisions table as version 6 wrote it, which is the shape the
+# migration has to find.  Written out rather than wound back from the
+# current one: the column it reads no longer exists to be restored,
+# and a test that dropped 'kind' from today's table would be testing
+# the migration against a row it could recover nothing from.
+VERSION_SIX_REVISIONS = """
+    CREATE TABLE revisions (
+        run_id      TEXT    NOT NULL
+                            REFERENCES runs (id) ON DELETE CASCADE,
+        number      INTEGER NOT NULL,
+        created_at  TEXT    NOT NULL,
+        label       TEXT    NOT NULL,
+        PRIMARY KEY (run_id, number)
+    )
+"""
+
+
+@pytest.fixture(name='labelled_database')
+def fixture_labelled_database(
+    database_path: Path
+) -> Path:
+    """ Return a database at version 6, holding the old sentences.
+
+        The table is replaced rather than altered, because what
+        version 7 changed about it cannot be undone by dropping a
+        column: 'kind' is NOT NULL and 'label' is gone.
+    """
+    connection = _database.connect(path=database_path)
+
+    insert_run(connection=connection, run_id='run-1')
+    _database.execute(connection=connection, statement='DROP TABLE revisions')
+    _database.execute(connection=connection, statement=VERSION_SIX_REVISIONS)
+
+    for number, label, _kind, _source in LABELLED_REVISIONS:
+        _database.execute(
+            connection=connection,
+            statement=(
+                'INSERT INTO revisions (run_id, number, created_at, '
+                'label) VALUES (?, ?, ?, ?)'
+            ),
+            parameters=('run-1', number, '2026-09-01T00:00:00+00:00', label)
+        )
+
+    _database.execute(
+        connection=connection,
+        statement='PRAGMA user_version = 6'
+    )
+    connection.close()
+
+    return database_path
+
+
+class TestReadingTheOldRevisionLabels:
+    def test_each_label_becomes_what_it_was_saying(
+        self,
+        labelled_database: Path
+    ) -> None:
+        connection = _database.connect(path=labelled_database)
+        rows = _database.query(
+            connection=connection,
+            statement=(
+                'SELECT number, kind, source FROM revisions '
+                'ORDER BY number'
+            )
+        )
+        connection.close()
+
+        assert [
+            (row['number'], row['kind'], row['source']) for row in rows
+        ] == [
+            (number, kind, source)
+            for number, _label, kind, source in LABELLED_REVISIONS
+        ]
+
+    def test_the_sentence_itself_is_gone(
+        self,
+        labelled_database: Path
+    ) -> None:
+        # It has to be: an insert now names 'kind' and 'source' and
+        # not 'label', so a NOT NULL column left behind would refuse
+        # every revision written after the migration.
+        connection = _database.connect(path=labelled_database)
+        columns = column_names(connection=connection, table='revisions')
+        connection.close()
+
+        assert 'label' not in columns
+
+    def test_a_revision_can_still_be_written(
+        self,
+        labelled_database: Path
+    ) -> None:
+        # The question the column above exists to answer, asked of the
+        # statement that would actually fail.
+        connection = _database.connect(path=labelled_database)
+
+        RevisionRepository(connection=connection).create(run_id='run-1')
+
+        rows = _database.query(
+            connection=connection,
+            statement='SELECT number FROM revisions ORDER BY number'
+        )
+        connection.close()
+
+        assert [row['number'] for row in rows] == [1, 2, 3, 4, 14, 15]

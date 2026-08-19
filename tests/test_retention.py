@@ -70,8 +70,8 @@ def fixture_sealed(
 ) -> List[int]:
     """ Return a run with four revisions, the last one current. """
     return [
-        revisions.create(run_id=run_id, label=f'Revision {number}').number
-        for number in range(1, 5)
+        revisions.create(run_id=run_id).number
+        for _number in range(1, 5)
     ]
 
 
@@ -212,8 +212,8 @@ class TestWhichRevisionsAreKept:
             'star_pass._repository._change_log.utc_now',
             lambda: long_ago
         )
-        for number in range(1, 4):
-            revisions.create(run_id=run_id, label=f'Revision {number}')
+        for _number in range(1, 4):
+            revisions.create(run_id=run_id)
         # Two entries, an old one and a recent one, because the run's
         # age is the *latest* of them. With only one, reading the
         # earliest would give the same answer and the test would not
@@ -248,8 +248,8 @@ class TestWhichRevisionsAreKept:
         # is the difference between forgetting a revision and leaving
         # the calendar text that was in it behind.
         del collected
-        revisions.create(run_id=run_id, label='Revision 2')
-        revisions.create(run_id=run_id, label='Revision 3')
+        revisions.create(run_id=run_id)
+        revisions.create(run_id=run_id)
 
         sweep(connection=connection, now=later(days=200))
 

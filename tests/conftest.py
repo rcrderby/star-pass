@@ -256,10 +256,7 @@ def fixture_revision(
     run_id: str
 ) -> int:
     """ Return the number of a first, empty revision of the run. """
-    return revisions.create(
-        run_id=run_id,
-        label='As collected'
-    ).number
+    return revisions.create(run_id=run_id, replacing=True).number
 
 
 @pytest.fixture(name='collected')
@@ -295,7 +292,7 @@ def fixture_edited(
     make_event: Callable[..., Event]
 ) -> str:
     """ Return that run with a second revision moving the event. """
-    revisions.create(run_id=collected, label='Edited')
+    revisions.create(run_id=collected)
     events.replace(
         run_id=collected,
         revision=2,

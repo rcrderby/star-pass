@@ -109,7 +109,10 @@ def fixture_another_sendable_run(
     make_event: Callable[..., Event]
 ) -> str:
     """ Return a second run asking for as many shifts as the first. """
-    revision = revisions.create(run_id=other_run_id, label='As collected')
+    revision = revisions.create(
+        run_id=other_run_id,
+        replacing=True
+    )
     events.add(
         run_id=other_run_id,
         revision=revision.number,
