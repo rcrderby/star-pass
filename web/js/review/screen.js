@@ -397,7 +397,7 @@ export class ReviewScreen {
       },
       onView: () => alert(NOT_YET),
       onCollectAgain: () => alert(NOT_YET),
-      onPreview: () => alert(NOT_YET)
+      onPreview: () => this.handlers.onPreview()
     });
 
     this.element.replaceChildren(

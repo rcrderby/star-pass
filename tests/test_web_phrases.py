@@ -24,6 +24,7 @@ from re import findall
 from typing import Any, Dict
 
 # Imports - Local
+from star_pass._preview import BLOCKER_REASONS
 from star_pass._records import MATCH_KINDS, RUN_STATUSES
 from star_pass._reporting import STEPS
 
@@ -85,12 +86,30 @@ class TestWebPhrases:
         for step, wording in phrases()['step'].items():
             assert wording != step
 
+    def test_every_blocker_the_core_publishes_is_worded(self) -> None:
+        # The preview names why nothing can be sent, and the reason
+        # crosses the wire as an identifier. One with no wording
+        # reaches the line under the send button as
+        # 'ends_before_start'.
+        assert set(phrases()['blocker']) == set(BLOCKER_REASONS)
+
+    def test_no_blocker_wording_is_for_a_reason_that_is_gone(
+        self
+    ) -> None:
+        for reason in phrases()['blocker']:
+            assert reason in BLOCKER_REASONS
+
+    def test_no_blocker_is_worded_as_itself(self) -> None:
+        for reason, wording in phrases()['blocker'].items():
+            assert wording != reason
+
     def test_a_wording_only_asks_for_values_it_is_given(self) -> None:
         # The row notes carry '{name}' where a value goes, and a name
         # the page does not pass is left on screen in braces.
         allowed = {
             'matchKind': {'keyword', 'category', 'score'},
             'step': {'subject'},
+            'blocker': set(),
             'row': {
                 'start', 'end', 'minutes', 'direction', 'title'
             }

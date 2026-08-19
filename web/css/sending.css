@@ -1,0 +1,385 @@
+/* The three screens a run leaves by: what a send would create, the
+ * confirmation, and the send as it happens.
+ *
+ * Two column layouts and a modal, at the handoff's interface density.
+ * The one thing worth saying twice: **no size here is set from a
+ * script through a `style` attribute**. The Content Security Policy
+ * is `default-src 'self'` with no `unsafe-inline`, which refuses one
+ * -- so the progress bar's width arrives as a custom property, which
+ * a script may set and this file reads.
+ */
+
+.screen {
+  animation: om-fade-up 0.2s ease-out both;
+}
+
+.screen-title {
+  margin: 0;
+  font-size: 20px;
+}
+
+/* — the preview — */
+
+.preview {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+.preview-main {
+  flex: 1;
+  min-width: 0;
+  max-width: 820px;
+}
+
+.preview-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 380px;
+}
+
+.preview-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.preview-line {
+  margin: var(--space-1) 0 var(--space-4);
+  text-wrap: pretty;
+}
+
+.preview-notice {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0 0 var(--space-4);
+  color: var(--color-accent-300);
+  text-wrap: pretty;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 0 12px var(--space-2) 0;
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: var(--font-heading-weight);
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.table td {
+  padding: var(--space-3) 12px var(--space-3) 0;
+  font-size: 13px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.preview-opportunity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.preview-existing {
+  color: var(--color-accent-300);
+  text-wrap: pretty;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: var(--space-6);
+}
+
+.checking,
+.preview-failed,
+.preview-blocked {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.checking .icon {
+  animation: om-spin 1s linear infinite;
+}
+
+.preview-failed,
+.preview-blocked {
+  color: var(--color-alert);
+  text-wrap: pretty;
+}
+
+/* Given the whole line to itself, under the controls rather than
+ * beside them: it is the sentence somebody should be reading as they
+ * decide, not a note on a button. */
+.preview-warning {
+  flex-basis: 100%;
+}
+
+/* — the checks card — */
+
+.card-kicker {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.checks {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 12px;
+  text-wrap: pretty;
+}
+
+.check .icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-accent);
+}
+
+.check-noted .icon {
+  color: var(--color-accent-300);
+}
+
+.check-bad .icon {
+  color: var(--color-alert);
+}
+
+/* — the confirmation — */
+
+.scrim {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  padding: 20px;
+  place-items: center;
+  background: color-mix(in srgb, var(--color-neutral-900) 60%, transparent);
+  animation: om-fade 0.16s ease-out both;
+}
+
+.confirm-card {
+  gap: var(--space-4);
+  width: 540px;
+  max-width: 100%;
+  padding: var(--space-6);
+  animation: om-pop 0.18s ease-out both;
+}
+
+.confirm-title {
+  margin: 0 0 3px;
+  font-size: 17px;
+}
+
+.confirm-line {
+  margin: 0;
+  font-size: 13px;
+  text-wrap: pretty;
+}
+
+.confirm-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.confirm-row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+.confirm-row-name {
+  margin-right: auto;
+}
+
+.confirm-warning {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  color: var(--color-alert);
+  text-wrap: pretty;
+}
+
+.confirm-warning .icon {
+  flex: none;
+  margin-top: 2px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* — sending — */
+
+.sending {
+  max-width: 760px;
+}
+
+.sending-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.sending-subline {
+  margin: var(--space-1) 0 var(--space-6);
+  text-wrap: pretty;
+}
+
+.sending-lost {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 var(--space-4);
+  color: var(--color-alert);
+}
+
+.progress {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+
+.progress-track {
+  overflow: hidden;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+/* The width is a custom property a script sets, because the policy
+ * refuses a `style` attribute and a stylesheet cannot know how far a
+ * send has got. */
+.progress-fill {
+  width: var(--progress, 0%);
+  height: 100%;
+  border-radius: 3px;
+  background: var(--color-accent);
+  transition: width 0.4s ease;
+}
+
+.progress-count {
+  white-space: nowrap;
+}
+
+.send-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.send-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-left: 3px solid var(--color-accent-800);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.send-row > .icon {
+  flex: none;
+  color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+
+.send-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.send-row-status {
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+}
+
+.send-row-error {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--color-alert);
+  text-wrap: pretty;
+}
+
+.send-row-error .btn {
+  color: inherit;
+}
+
+/* After the plain row, because each of these outranks it and a rule
+ * that outranks one it precedes is a rule whose order nobody can
+ * reason about. */
+.send-row-sending > .icon {
+  color: var(--color-accent);
+  animation: om-spin 1s linear infinite;
+}
+
+.send-row-done {
+  border-left-color: var(--color-accent);
+}
+
+.send-row-done > .icon {
+  color: var(--color-accent);
+}
+
+.send-row-done .send-row-status {
+  color: var(--color-accent-300);
+}
+
+.send-row-failed {
+  border-left-color: var(--color-alert);
+}
+
+.send-row-failed > .icon {
+  color: var(--color-alert);
+}
+
+.send-row-failed .send-row-status {
+  color: var(--color-alert);
+}
+
+.sending-unreached {
+  margin: var(--space-3) 0 0;
+  text-wrap: pretty;
+}
+
+.sending-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: var(--space-8);
+}

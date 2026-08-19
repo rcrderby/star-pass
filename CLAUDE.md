@@ -342,6 +342,22 @@ through the Amplify API. It is run once per month.
   had already changed. A key names one action and is never reused for
   the next: it makes a *resend* safe, and two nudges are two actions
   that must move the shift twice.
+  `js/sending/` is the preview, the send confirmation and the send as
+  it happens, which are one movement over one answer: the preview says
+  what would be created, the confirmation restates it (D11), and the
+  request carries its `willCreate` as `expectedShiftCount`, so a
+  screen that no longer agrees with Amplify is refused rather than
+  acted on. **The preview is the duplicate check** — one request reads
+  every opportunity live, so nothing on that screen is worked out from
+  the events. **A send is a call and then a stream**: the call answers
+  with a job, and the browser follows `GET /v1/jobs/{id}/events`,
+  which replays from its first frame for a client that is not
+  resuming. That is the whole of what leaving a send running and
+  coming back to it means, and it is why the opportunity count comes
+  off `sending_started` rather than out of the preview — a reload has
+  no preview, and reading one mid-send would ask Amplify about the
+  opportunities being written to. A run carrying an `activeJobId` for
+  a send opens on that screen rather than on the review screen.
   `api.js` is the only
   thing that talks to the service, and holds the three rules no screen
   should repeat: the CSRF header on a write, an `Idempotency-Key`
@@ -354,7 +370,16 @@ through the Amplify API. It is run once per month.
   the words the page puts on the identifiers the contract publishes,
   bound to what the core publishes by `tests/test_web_phrases.py` —
   a Python test for a file the browser reads, because there is no
-  build step and no JavaScript test runner. `docs/design` holds a
+  build step and no JavaScript test runner.
+  `tests/test_web_page.py` is there for the same reason and answers a
+  different question: every path the page names and every module a
+  module imports is a URL a browser fetches, so a misspelled one is a
+  screen with no styles or one that never draws, and nothing else in
+  the repository would notice.
+  **Nothing sets a `style` attribute from a script** — the policy
+  refuses one, so a size worked out while the page runs is a custom
+  property the stylesheet reads, which is how the send's progress bar
+  is drawn. `docs/design` holds a
   prototype of the screens, which is a reference and is not ported.
 - `compose.yaml` and `deploy/caddy/` — the deployment (D5, D14, D17).
   Caddy is the only container with a published port; the frontend and
