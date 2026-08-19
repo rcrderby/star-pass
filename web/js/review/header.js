@@ -7,6 +7,7 @@
  * the count is a fact about the run rather than about the button.
  */
 
+import { changesNow } from './changelog.js';
 import { el, icon } from '../dom.js';
 import { moment, windowText } from '../format.js';
 import { Popover } from '../popover.js';
@@ -18,6 +19,21 @@ const UNCOLLECTED_TAB = 'Not collected';
 
 /* The last entry in the run picker. */
 const NEW_RUN = 'Collect a new run';
+
+/* What the revision picker's two actions say. */
+const SEAL = 'Save a revision now';
+const REVERT = 'Revert';
+
+/* What the revision picker says under its list. Both facts are the
+ * service's and neither is carried out here: going back adds a
+ * revision rather than deleting one, and the first revision is the
+ * run as the calendar gave it. */
+const ABOUT_REVISIONS = (
+  'Going back adds a revision holding what that one held. Nothing '
+  + 'between them is deleted, so a revert can itself be reverted. '
+  + 'Going back to revision 1 drops the events added by hand and '
+  + 'offers them again under Not collected.'
+);
 
 /** Return the sentence under the run label.
  *
@@ -55,7 +71,7 @@ function runLine(run, current, onOpen) {
       'span',
       { class: 'picker-row-main' },
       el('span', {
-        class: 'picker-row-label',
+        class: 'picker-row-label picker-row-calendar',
         text: `${run.calendar} · ${windowText(run.window)}`
       }),
       el('span', {
@@ -73,15 +89,26 @@ function runLine(run, current, onOpen) {
 
 /** Return one revision's line in the revision picker.
  *
- * Reverting is a write and arrives with editing. The line names what
- * each revision is and how much was done while it was current, which
- * is what a reader needs to tell them apart.
+ * The line names what each revision is and how much was done while it
+ * was current, which is what a reader needs to tell them apart.
+ *
+ * **The current revision is offered no revert.** The service would
+ * take one -- going back to where you already are is a legal request
+ * -- and it would spend a revision to arrive at the revision it
+ * started from. So the row that is current says so instead.
  *
  * @param {Object} revision A revision, as the contract lists it.
+ * @param {Object} run The run, for the count on the current one.
+ * @param {boolean} busy Whether a call is already in the air.
+ * @param {Function} onRevert What going back to it does.
  * @returns {HTMLElement} The line.
  */
-function revisionLine(revision) {
-  const changes = revision.changes;
+function revisionLine(revision, run, busy, onRevert) {
+  /* The published count for a sealed revision, which is final, and
+   * the log for the one being edited, which is not: an edit does not
+   * read the revisions again, so the number the service last gave
+   * for the current one describes a moment that has passed. */
+  const changes = revision.current ? changesNow(run) : revision.changes;
 
   return el(
     'div',
@@ -105,7 +132,17 @@ function revisionLine(revision) {
     ),
     revision.current
       ? el('span', { class: 'tag tag-outline', text: 'Current' })
-      : null
+      : el(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-ghost picker-row-action',
+          disabled: busy,
+          onclick: () => onRevert(revision.number)
+        },
+        icon('arrow-counter-clockwise'),
+        REVERT
+      )
   );
 }
 
@@ -171,10 +208,13 @@ function runPicker(state, onOpenRun, onCollectNew) {
 /** Return the revision picker.
  *
  * @param {Object} state What the screen is showing.
+ * @param {Object} handlers What its two actions do.
+ * @param {Function} handlers.onSeal Fix what the run holds now.
+ * @param {Function} handlers.onRevert Go back to one revision.
  * @returns {HTMLElement} The picker.
  */
-function revisionPicker(state) {
-  const { run, revisions } = state;
+function revisionPicker(state, handlers) {
+  const { run, revisions, busy } = state;
   const trigger = el(
     'button',
     { type: 'button', class: 'revision-picker' },
@@ -189,11 +229,32 @@ function revisionPicker(state) {
     top: 30,
     contents: () => [
       el('span', { class: 'popover-heading muted', text: 'Revisions' }),
-      revisions.map(revisionLine),
+      revisions.map(
+        (revision) => revisionLine(
+          revision,
+          run,
+          busy,
+          handlers.onRevert
+        )
+      ),
+      el('div', { class: 'popover-rule' }),
+      el(
+        'button',
+        {
+          type: 'button',
+          class: 'picker-row picker-row-new',
+          /* A run that has collected nothing has no revision to
+           * seal, which the service refuses. There is nothing to
+           * offer rather than nothing to say. */
+          disabled: busy || revisions.length === 0,
+          onclick: handlers.onSeal
+        },
+        icon('bookmark-simple'),
+        SEAL
+      ),
       el('p', {
         class: 'popover-note muted micro',
-        text: 'Saving a revision and going back to one arrive with '
-          + 'editing.'
+        text: ABOUT_REVISIONS
       })
     ]
   }).element;
@@ -272,7 +333,7 @@ export function reviewHeader(state, handlers) {
         tabs(state, handlers.onView)
       ),
       el('p', { class: 'run-meta muted meta', text: metaText(run) }),
-      revisionPicker(state)
+      revisionPicker(state, handlers)
     ),
     el(
       'div',

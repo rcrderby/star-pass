@@ -24,13 +24,16 @@ import {
   ApiError,
   editEvents,
   idempotencyKey,
+  listRevisions,
   listUncollected,
   listUnmatchedTitles,
-  recordUnmatchedTitle
+  recordUnmatchedTitle,
+  revertRevision,
+  sealRevision
 } from '../api.js';
 import { el, fill, icon } from '../dom.js';
 import { anyPopoverOpen, closeAnyPopover } from '../popover.js';
-import { changeLogPanel } from './changelog.js';
+import { changeLogPanel, changesNow } from './changelog.js';
 import { refusalNotice, reviewBanners } from './banners.js';
 import { reviewHeader } from './header.js';
 import { reviewTable } from './table.js';
@@ -72,6 +75,8 @@ const UNCOLLECTED_VIEW = 'uncollected';
 const NOT_CHANGED = 'That change was not made.';
 const NOT_NOTED = 'That title was not noted.';
 const NOT_READ = 'What this run left out could not be read.';
+const NOT_SEALED = 'That revision was not saved.';
+const NOT_REVERTED = 'This run was not taken back.';
 
 /* Said while the second tab is being read, and never left up once the
  * read has failed: a line saying something is happening, above a
@@ -115,13 +120,7 @@ function showing(events, state) {
  */
 function toolbar(state, shown, handlers) {
   const total = state.events.length;
-  /* Counted from the log rather than read off the revision, which
-   * is the same number -- a revision's count is what was logged while
-   * it was current -- and stays right after an edit without asking
-   * the service for the revisions again. */
-  const changes = state.run.log.filter(
-    (entry) => entry.revision === state.run.currentRevision
-  ).length;
+  const changes = changesNow(state.run);
   const search = el('input', {
     class: 'input search-field',
     type: 'search',
@@ -463,6 +462,8 @@ export class ReviewScreen {
         this.handlers.onOpenRun(runId);
       },
       onView: (view) => this.setView(view),
+      onSeal: () => this.seal(),
+      onRevert: (number) => this.revertTo(number),
       onCollectNew: () => {
         closeAnyPopover();
 
@@ -486,6 +487,22 @@ export class ReviewScreen {
       },
       onPreview: () => this.handlers.onPreview()
     });
+  }
+
+  /** Put the header back, built against what the screen now shows.
+   *
+   * Called for the few things the header states and nothing else:
+   * which tab is pressed, which revision is current, and how many
+   * there are. Everything else leaves it alone, which is what keeps
+   * an open popover open while a filter is applied.
+   *
+   * @returns {void}
+   */
+  renderHeader() {
+    const header = this.buildHeader();
+
+    this.headerElement.replaceWith(header);
+    this.headerElement = header;
   }
 
   /** Show one of the two tabs.
@@ -512,10 +529,7 @@ export class ReviewScreen {
      * into the search field. */
     this.focusSearch = false;
 
-    const header = this.buildHeader();
-
-    this.headerElement.replaceWith(header);
-    this.headerElement = header;
+    this.renderHeader();
     this.redraw();
 
     if (view === UNCOLLECTED_VIEW && this.state.uncollected === null) {
@@ -594,6 +608,121 @@ export class ReviewScreen {
       this.state.busy = false;
       this.redraw();
     }
+  }
+
+  /** Fix what the run holds now as a numbered revision.
+   *
+   * The answer is the revision the work has moved to, which is not
+   * the whole of what the picker draws: the one just sealed stops
+   * being current and the list gains a member. So the list is read
+   * again rather than adjusted here, the way every other answer this
+   * screen redraws from is the server's.
+   *
+   * @returns {Promise<void>} When the header has redrawn.
+   */
+  async seal() {
+    if (this.state.busy) {
+      return;
+    }
+
+    closeAnyPopover();
+    this.state.busy = true;
+    this.state.refusal = null;
+    this.redraw();
+
+    try {
+      const opened = await sealRevision(
+        this.state.run.id,
+        idempotencyKey()
+      );
+
+      /* The events do not move: the revision opened holds a copy,
+       * keeping each event's own identifier, so the rows on screen
+       * are the rows it holds. What changes is which revision they
+       * are in, and the change count with it -- the log is counted
+       * by revision, so entries made in the one just sealed stay
+       * under its number. */
+      this.state.run.currentRevision = opened.number;
+      this.state.revisions = await listRevisions(this.state.run.id);
+    } catch (error) {
+      this.refused(error, NOT_SEALED);
+    } finally {
+      this.state.busy = false;
+      this.renderHeader();
+      this.redraw();
+    }
+  }
+
+  /** Take the run back to what an earlier revision holds.
+   *
+   * One revision per revert, which is the service's doing and not
+   * this screen's: nothing is sealed first and nothing between the
+   * two is touched.
+   *
+   * @param {number} number Which revision to go back to.
+   * @returns {Promise<void>} When the screen has redrawn.
+   */
+  async revertTo(number) {
+    if (this.state.busy) {
+      return;
+    }
+
+    closeAnyPopover();
+    this.state.busy = true;
+    this.state.refusal = null;
+    this.redraw();
+
+    try {
+      const run = await revertRevision(
+        this.state.run.id,
+        number,
+        idempotencyKey()
+      );
+
+      /* The run in full, because every row has changed. Replaced
+       * rather than merged, and the selection with it: the events a
+       * revert leaves are not necessarily the ones that were ticked. */
+      this.state.run = run;
+      this.state.events = run.events;
+      this.state.selection = new Set();
+      this.state.revisions = await listRevisions(run.id);
+      this.forgetUncollected();
+    } catch (error) {
+      this.refused(error, NOT_REVERTED);
+    } finally {
+      this.state.busy = false;
+      this.renderHeader();
+      this.redraw();
+
+      /* Read after the redraw and not before it, so the tab is put
+       * back into its reading state by a screen that is no longer
+       * busy -- started inside the call above, the two would be
+       * drawing over each other. */
+      if (
+        this.state.view === UNCOLLECTED_VIEW
+        && this.state.uncollected === null
+      ) {
+        this.loadUncollected();
+      }
+    }
+  }
+
+  /** Let go of what the second tab holds, so it is asked for again.
+   *
+   * Going back to the first revision drops the events somebody pulled
+   * in and offers them there once more. Whether a row may be pulled
+   * in is `addable`, which is the server's answer and never this
+   * screen's, so what that tab holds after a revert is a question
+   * rather than something to adjust here. Both are dropped, because
+   * they are read together: a tab assembled from two moments is one
+   * whose rows and whose noted list can disagree about a title.
+   *
+   * @returns {void}
+   */
+  forgetUncollected() {
+    this.state.uncollected = null;
+    this.state.noted = null;
+    this.state.notedKeys = new Set();
   }
 
   /** Remember why a call was refused, in the shape the notice reads.

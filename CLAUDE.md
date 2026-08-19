@@ -350,6 +350,15 @@ through the Amplify API. It is run once per month.
   had already changed. A key names one action and is never reused for
   the next: it makes a *resend* safe, and two nudges are two actions
   that must move the shift twice.
+  The revision picker seals a revision and reverts to one, both
+  keyed. A seal answers with the revision the work moved to and a
+  revert with the run in full, and neither is the whole of what the
+  picker draws, so the revisions are read again after both rather
+  than adjusted in the page. **The current revision is offered no
+  revert**: the service would take one and spend a revision arriving
+  where it started. A revert to revision 1 drops the events added by
+  hand, so what the second tab holds is let go of and asked for
+  again.
   `js/review/uncollected.js` is the screen's second tab: what the
   window held and the run left out, grouped by reason. **Whether a
   row may be pulled in is `addable`**, which the server answers, and
