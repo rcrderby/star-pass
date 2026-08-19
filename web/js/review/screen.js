@@ -198,6 +198,8 @@ export class ReviewScreen {
    * @param {Object} answers.config What the deployment was configured
    *     with, read for the calendar's categories.
    * @param {Object} handlers What the screen's exits do.
+   * @param {Function} handlers.onCollectAgain Open the collect drawer
+   *     over this run, to read its window again.
    */
   constructor({ runs, run, revisions, config }, handlers = {}) {
     this.state = {
@@ -396,7 +398,10 @@ export class ReviewScreen {
         this.handlers.onOpenRun(runId);
       },
       onView: () => alert(NOT_YET),
-      onCollectAgain: () => alert(NOT_YET),
+      onCollectAgain: () => {
+        closeAnyPopover();
+        this.handlers.onCollectAgain();
+      },
       onPreview: () => this.handlers.onPreview()
     });
 

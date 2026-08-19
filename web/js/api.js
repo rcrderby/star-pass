@@ -326,6 +326,60 @@ export function editEvents(runId, operations, key, options = {}) {
   });
 }
 
+/** Ask for a calendar window to be collected into a new run.
+ *
+ * Answers with a job as soon as the run exists rather than when it
+ * has been filled: reading a calendar and naming every opportunity it
+ * finds takes longer than a request should be held open. The run is
+ * in the list from that moment, so somebody who closed the page can
+ * find it again.
+ *
+ * **No `Idempotency-Key`, deliberately**, so nothing here makes a
+ * second arrival of the same request safe: two would be two runs.
+ * Preventing that is the screen's job, and the screen does it by
+ * refusing to have two of these in the air at once.
+ *
+ * The window's `end` is the day **after** the last day to cover. No
+ * request takes an inclusive day, which is why the caller converts.
+ *
+ * @param {string} calendar Which configured calendar to read.
+ * @param {Object} window The days to cover.
+ * @param {string} window.start First day, as an ISO date.
+ * @param {string} window.end Day after the last, as an ISO date.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The job doing the collection.
+ */
+export function collectRun(calendar, window, options = {}) {
+  return ask('/runs', {
+    ...options,
+    method: 'POST',
+    body: { calendar, window }
+  });
+}
+
+/** Ask for a run to be collected again, replacing what it holds.
+ *
+ * `expectedChangeCount` is how many changes the operator was told
+ * would be discarded. The service refuses when that is no longer the
+ * number the run holds, which closes the case of a tab left open
+ * while the run was edited somewhere else.
+ *
+ * Takes no `Idempotency-Key` either, for the same reason and with the
+ * same answer.
+ *
+ * @param {string} runId Which run to replace.
+ * @param {number} expectedChangeCount What the operator was shown.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The job doing the collection.
+ */
+export function recollectRun(runId, expectedChangeCount, options = {}) {
+  return ask(`/runs/${encodeURIComponent(runId)}/recollect`, {
+    ...options,
+    method: 'POST',
+    body: { expectedChangeCount }
+  });
+}
+
 /** Return what sending this run's current revision would create.
  *
  * **This request is the duplicate check.** Every opportunity the

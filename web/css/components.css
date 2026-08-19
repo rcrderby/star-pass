@@ -247,3 +247,24 @@ select.input {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+/* — a panel over a scrim —
+ *
+ * The backdrop both the send confirmation and the collect drawer are
+ * put on. Where the panel sits is the modifier's: a dialog is centred
+ * and a drawer is against an edge, and that is the whole difference
+ * between them here. */
+
+.scrim {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-neutral-900) 60%, transparent);
+  animation: om-fade 0.16s ease-out both;
+}
+
+.scrim-centred {
+  display: grid;
+  padding: 20px;
+  place-items: center;
+}

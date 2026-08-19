@@ -28,13 +28,13 @@
 
 import {
   ApiError,
-  followJob,
   getPreview,
   idempotencyKey,
   sendRun
 } from '../api.js';
 import { el, icon } from '../dom.js';
 import { phrase } from '../phrases.js';
+import { watchJob } from '../watching.js';
 import { ConfirmDialog } from './confirm.js';
 import {
   checksCard,
@@ -260,15 +260,20 @@ export class SendingScreen {
     this.state.jobId = job.id;
     this.state.lost = false;
 
-    this.source = followJob(job.id, {
-      onEvent: (kind, payload) => this.reported(kind, payload),
-      onFinished: (ending) => this.finished(ending),
-      onLost: () => {
-        this.state.lost = true;
-        this.draw();
-      }
-    });
+    this.source = watchJob(job, this);
 
+    this.draw();
+  }
+
+  /** Say that the connection dropped.
+   *
+   * Not a failure of the send: the browser reconnects on its own and
+   * is given what it missed.
+   *
+   * @returns {void}
+   */
+  lost() {
+    this.state.lost = true;
     this.draw();
   }
 

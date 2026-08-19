@@ -1,0 +1,322 @@
+/* The drawer a collection is asked for in, and the screen it leads
+ * to.
+ *
+ * The drawer is 452px against the right edge, over the shared scrim.
+ * It slides rather than fades, which is the handoff's `omDrawer`, and
+ * the motion setting turns that off along with everything else.
+ */
+
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 452px;
+  max-width: 100%;
+  padding: 22px;
+  overflow-y: auto;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  animation: om-drawer 0.22s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+
+.drawer-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.drawer-head-words {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.drawer-title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 11px;
+  color: color-mix(in srgb, var(--color-text) 62%, transparent);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.field-note {
+  display: block;
+}
+
+/* Each option takes an equal share, so a two-calendar deployment and a
+ * three-preset control both fill the drawer's width. */
+.drawer-seg-opt {
+  flex: 1;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.drawer-days {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.drawer-zone,
+.drawer-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 11.5px;
+  text-wrap: pretty;
+}
+
+.drawer-zone > .icon,
+.drawer-note > .icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-accent);
+}
+
+.drawer-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-md);
+}
+
+.drawer-summary-window {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+.drawer-summary-window > .icon {
+  color: var(--color-accent);
+}
+
+/* What the request will actually carry, so the exclusive end is on
+ * screen rather than implied by the sentence under it. */
+.drawer-summary-sent {
+  font-size: 10.5px;
+  word-break: break-all;
+}
+
+.drawer-summary-note {
+  text-wrap: pretty;
+}
+
+.drawer-bad {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-alert);
+}
+
+.drawer-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.drawer-replace,
+.drawer-failure {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 11px 13px;
+  border-left: 3px solid var(--color-alert);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--color-alert);
+  text-wrap: pretty;
+  background: color-mix(in srgb, var(--color-alert) 12%, transparent);
+}
+
+.drawer-replace > .icon,
+.drawer-failure > .icon {
+  flex: none;
+  margin-top: 1px;
+  font-size: 15px;
+}
+
+.drawer-failure span {
+  display: block;
+}
+
+.drawer-failure-reference {
+  margin-top: 4px;
+}
+
+/* Pinned to the bottom of the drawer however short its contents are,
+ * which is what keeps the primary action in one place. */
+.drawer-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.drawer-collect {
+  flex: 1;
+}
+
+/* — the collecting screen — */
+
+.collect-lede {
+  max-width: 620px;
+  margin: 5px 0 14px;
+  font-size: 13px;
+  text-wrap: pretty;
+}
+
+.collect-run {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  max-width: 620px;
+  margin-bottom: 16px;
+  padding: 9px 13px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+}
+
+.collect-run-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.collect-run-id {
+  font-size: 12.5px;
+  color: var(--color-accent-300);
+}
+
+.collect-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 620px;
+}
+
+.collect-step {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  padding: 12px 16px;
+  font-size: 13px;
+  animation: om-fade-up 0.18s ease-out both;
+}
+
+.collect-step > .icon {
+  font-size: 15px;
+  color: color-mix(in srgb, var(--color-text) 40%, transparent);
+}
+
+.collect-step-words {
+  margin-right: auto;
+}
+
+.collect-step-state {
+  white-space: nowrap;
+}
+
+.collect-step-running > .icon,
+.collect-step-done > .icon {
+  color: var(--color-accent);
+}
+
+.collect-step-done {
+  border-left-color: var(--color-accent);
+}
+
+.collect-step-failed {
+  border-left-color: var(--color-alert);
+}
+
+.collect-step-failed > .icon {
+  color: var(--color-alert);
+}
+
+.collect-lost,
+.collect-failure {
+  display: flex;
+  max-width: 620px;
+  margin: 16px 0;
+  padding: 13px 15px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  text-wrap: pretty;
+}
+
+.collect-lost {
+  gap: 9px;
+  align-items: center;
+  border-left: 3px solid var(--color-accent-800);
+  background: var(--color-surface);
+}
+
+.collect-failure {
+  flex-direction: column;
+  gap: 10px;
+  border-left: 3px solid var(--color-alert);
+  background: color-mix(in srgb, var(--color-alert) 12%, transparent);
+}
+
+.collect-failure-words {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  color: var(--color-alert);
+}
+
+.collect-failure-words > .icon {
+  flex: none;
+  margin-top: 1px;
+  font-size: 15px;
+}
+
+.collect-failure-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.collect-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  max-width: 620px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+/* Last in the file, after every plain rule it could outrank: a more
+ * specific selector placed before a less specific one is what
+ * stylelint's no-descending-specificity is about, and this is the only
+ * selector here with two parts.
+ *
+ * The one thing on these screens that moves on its own, which the
+ * motion setting stops along with everything else. */
+[data-motion="subtle"] .collect-step-running > .icon,
+[data-motion="smooth"] .collect-step-running > .icon {
+  animation: om-spin 1s linear infinite;
+}

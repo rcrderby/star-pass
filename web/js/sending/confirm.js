@@ -21,6 +21,7 @@
 
 import { el, icon } from '../dom.js';
 import { windowText } from '../format.js';
+import { Modal } from '../modal.js';
 import { counted } from './preview.js';
 
 /* Said last, above the buttons, in the alert colour. */
@@ -35,26 +36,6 @@ const CHECKED_AGAIN = (
   'Amplify is checked once more as this starts, so nothing can be '
   + 'created twice.'
 );
-
-/* What can be focused inside the dialog, for the trap. Queried rather
- * than kept as a list, because the buttons are rebuilt when the
- * dialog is drawn and a remembered element would be one that is no
- * longer on screen.
- *
- * **`a[href]`, never a bare `[href]`.** Every icon on these screens is
- * an `<svg>` holding a `<use href="...">`, so a bare attribute
- * selector matches the first icon in the card -- which comes before
- * the buttons, and which focusing does nothing at all. The dialog
- * then opens with focus still on the button behind it, which is the
- * one thing a modal must not do. */
-const FOCUSABLE = [
-  'button:not(:disabled)',
-  'a[href]',
-  'input:not(:disabled)',
-  'select:not(:disabled)',
-  'textarea:not(:disabled)',
-  '[tabindex]:not([tabindex="-1"])'
-].join(', ');
 
 /** Return the sentence restating what is about to happen.
  *
@@ -96,11 +77,6 @@ export class ConfirmDialog {
    */
   constructor({ run, preview }, handlers) {
     this.handlers = handlers;
-
-    /* Where focus came from, so it can be given back. A dialog that
-     * dropped focus on the body would leave somebody working by
-     * keyboard at the top of the page. */
-    this.opener = document.activeElement;
 
     const willCreate = preview.totals.willCreate;
     const title = `Create ${counted(willCreate, 'shift')} in Amplify?`;
@@ -175,24 +151,12 @@ export class ConfirmDialog {
       )
     );
 
-    this.element = el(
-      'div',
-      {
-        class: 'scrim',
-        /* A click on the scrim is a click outside the dialog, and
-         * only that: a click that started inside and ended here as
-         * the pointer moved is not somebody dismissing it. */
-        onmousedown: (event) => {
-          if (event.target === this.element) {
-            this.close();
-          }
-        }
-      },
-      this.card
-    );
+    this.modal = new Modal(this.card, {
+      scrimClass: 'scrim scrim-centred',
+      onClose: () => handlers.onCancel()
+    });
 
-    this.onKey = (event) => this.key(event);
-    document.addEventListener('keydown', this.onKey);
+    this.element = this.modal.element;
   }
 
   /** Put the dialog on screen and take focus into it.
@@ -201,51 +165,7 @@ export class ConfirmDialog {
    * @returns {void}
    */
   open(parent) {
-    parent.append(this.element);
-
-    const first = this.card.querySelector(FOCUSABLE);
-
-    if (first !== null) {
-      first.focus();
-    }
-  }
-
-  /** Keep Tab inside the dialog, and let Escape close it.
-   *
-   * A modal that let Tab walk out of it would put focus on the
-   * screen behind, which is the screen this exists to interrupt.
-   *
-   * @param {KeyboardEvent} event What was pressed.
-   * @returns {void}
-   */
-  key(event) {
-    if (event.key === 'Escape') {
-      event.stopPropagation();
-      this.close();
-
-      return;
-    }
-
-    if (event.key !== 'Tab') {
-      return;
-    }
-
-    const inside = [...this.card.querySelectorAll(FOCUSABLE)];
-
-    if (inside.length === 0) {
-      return;
-    }
-
-    const first = inside[0];
-    const last = inside[inside.length - 1];
-
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
+    this.modal.open(parent);
   }
 
   /** Take the dialog away and give focus back to what opened it.
@@ -256,12 +176,7 @@ export class ConfirmDialog {
    * @returns {void}
    */
   dismiss() {
-    document.removeEventListener('keydown', this.onKey);
-    this.element.remove();
-
-    if (this.opener !== null && this.opener.isConnected) {
-      this.opener.focus();
-    }
+    this.modal.dismiss();
   }
 
   /** Close without sending.
@@ -269,7 +184,6 @@ export class ConfirmDialog {
    * @returns {void}
    */
   close() {
-    this.dismiss();
-    this.handlers.onCancel();
+    this.modal.close();
   }
 }
