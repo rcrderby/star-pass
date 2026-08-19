@@ -573,3 +573,104 @@ button.picker-row:hover {
   gap: 4px;
   align-items: center;
 }
+
+/* — the Not collected tab —
+ *
+ * A stack of sections rather than a table: the reason is what a
+ * reader came with, so it heads its group instead of being a column
+ * repeated down one. The rows are `.row-card` from `components.css`,
+ * which is what a list row is on every screen that has one. */
+
+.uncollected-lede {
+  max-width: 700px;
+  margin: 0 0 20px;
+  text-wrap: pretty;
+}
+
+.uncollected-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+/* The log kept for the data model sits below the run's own groups,
+ * with a gap wider than the one between them: it is a different list
+ * about a different thing, and belongs to no run at all. */
+.uncollected-noted {
+  margin-top: 30px;
+}
+
+.uncollected-head {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.uncollected-head h4 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.uncollected-note {
+  max-width: 700px;
+  margin: 0 0 12px;
+  text-wrap: pretty;
+}
+
+.uncollected-terms {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: -6px 0 12px;
+}
+
+.uncollected-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uncollected-row,
+.noted-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 11px 16px;
+}
+
+/* The log kept for the data model is the run's own leavings no
+ * longer: it belongs to no run, and the accent edge is what says so
+ * beside the neutral ones above it. */
+.noted-row {
+  border-left-color: var(--color-accent);
+}
+
+.uncollected-title {
+  font-size: 13px;
+}
+
+.uncollected-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.uncollected-seen {
+  margin-left: auto;
+}
+
+/* Said while the tab is being read. The icon turns for as long as
+ * the line is up, which is the whole of what it says. */
+.reading {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  margin: 0 0 14px;
+}
+
+.reading .icon {
+  animation: om-spin 1s linear infinite;
+}
