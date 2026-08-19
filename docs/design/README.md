@@ -14,7 +14,7 @@ comes first. Read in this order:
 
 1. `claude-code-kickoff.md` — the prompt to start with, covering steps 1–3.
 2. `api-and-security-plan.md` — the full plan and security model.
-3. `decisions.md` — D1–D22, each with why, what was rejected, and what would make
+3. `decisions.md` — D1–D23, each with why, what was rejected, and what would make
    us revisit it.
 
 The v1 surface itself is `docs/api/openapi.json` in the repository root, which
@@ -101,7 +101,9 @@ The main screen. Header, then banners, then a toolbar, then the table.
   a send has happened, and the two-tab segmented control (Shifts to create / Not
   collected + count). Under it: run meta line, and a revision picker
   ("Revision 2 of 2") opening a 330px popover with a revert action per revision
-  and "Save a revision now". Right: "Collect again" (secondary) and "Preview
+  and "Save a revision now". The revision that is **current** is offered no
+  revert: the service would take one and spend a revision arriving at the
+  revision it started from. Right: "Collect again" (secondary) and "Preview
   shifts" (primary).
 - **Banners**, stacked, each 11px 14px padding, `--radius-md`, 3px left border:
   sent (accent), already-in-Amplify (accent-600), blockers (alert, with a
@@ -138,6 +140,16 @@ explanation per group: outside the calendar search, excluded by title, all day,
 untitled. Only the first group's rows are addable ("Add to run"); every row can be
 noted for the model. A final section, "Noted for the model", lists what has been
 noted with its source and a way to remove the note.
+
+**Three of those do not survive contact with the API.** Whether a row is
+addable is `addable`, the server's answer, and is not read off the group.
+An untitled event has no title and the request refuses an empty one, so
+that group's rows carry no note control rather than one that fails when
+pressed. And there is no way to remove a note, on purpose: a title leaves
+that log when the data model matches it (D20), which is the edit somebody
+notes one in order to make. The `source` the design shows — a search miss
+against a collected-but-unmatched event — is not a field either; what is
+published is the calendar, the sighting count and the last sighting.
 
 ### 3. Preview
 
@@ -184,6 +196,20 @@ month / next month / custom), first and last day date inputs, a timezone note, a
 summary panel showing the resolved window and the environment line, notes on what
 the search does and does not collect, a replace-warning when the run has edits,
 then "Collect events" and "Cancel". Same focus-trap behaviour as the dialog.
+
+**Opened over a run it offers no window and no calendar.**
+`POST /runs/{id}/recollect` carries neither: it reads the same calendar over
+the same days and the run keeps its own window, so the controls show what
+the run already has and are refused. A different window is a different run.
+The environment line is not there either — no such field is published — and
+the warning about what a replacement discards is shown for every
+recollection rather than only for one with edits to lose, because the run
+is replaced and its earlier revisions go either way.
+
+**A new run is started from the run picker**, which is where *which run*
+lives. The drawer opened from the empty state is otherwise the only way to
+a fresh collection, and the empty state exists only while there are no
+runs — so a second run could never be collected.
 
 ### 8. Settings
 

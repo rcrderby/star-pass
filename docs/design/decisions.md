@@ -4,7 +4,7 @@ One entry per decision, with why, what was rejected, and **what would make us
 revisit it**. Append new entries; don't rewrite old ones — supersede them.
 
 Companion to `api-and-security-plan.md` (the plan these decisions produced).
-Last updated: 2026-08-18.
+Last updated: 2026-08-19.
 
 ---
 
@@ -573,6 +573,60 @@ outcome.
 
 **Revisit if:** a step needs to carry more than one value, which would
 mean the subject should be a mapping rather than a string.
+
+---
+
+
+## D23 — A revision is named by an identifier, not a stored sentence
+
+**Decided:** A revision publishes `kind` — one of `collected`,
+`recollected`, `continued`, `reverted` — and `sourceRevision`, the revision
+it was made from. Each client words it: `_render.REVISION_PHRASES` and
+`web/phrases.json`, both bound to the core's tuple by a test. Which kind a
+revision is is worked out by the repository from what it already knows, not
+passed in by a caller.
+
+**Supersedes:** `RevisionView.label`, which carried sentences the core
+wrote — "Continued from revision 1", "Reverted to revision 2", "As
+collected", "As recollected".
+
+**Why:** D22 named this rule for the job stream and the plan states it for
+the contract, but a label survived both, and it was the worse case of the
+two. It was not merely *returned* as English, it was **stored** as English:
+changing the wording would have left every revision already recorded saying
+the old thing beside a new one saying the new, in the same list, with no
+way to reconcile them short of rewriting rows. A sentence returned by a
+service is a wording mistake; a sentence written into a row is a wording
+mistake with a migration attached.
+
+Deriving the kind rather than accepting it removes a whole class of
+disagreement: a caller that named the kind could name one that did not
+match what actually happened. Whether a revision replaces what was there
+and whether the run held anything are both known where the row is written,
+and they decide three of the four kinds between them. The fourth, a revert,
+is the one that also records a number, because which revision a run went
+back to is not derivable from anything else — which is exactly why it is
+the field worth publishing.
+
+**Consequence:** schema version 7, and the first migration in this
+repository that rewrites data rather than adding a column. It adds the two
+columns, reads the four sentences back into what they were saying, and
+drops the sentence — which it must, since an insert now names `kind` and
+`source` and a `NOT NULL` column left behind would refuse every revision
+written afterwards. **A column and not the table:** `events` references
+`revisions` with `ON DELETE CASCADE` and `foreign_keys` is on, so the
+copy-drop-rename that is the portable way to change a SQLite table would
+delete every event in the database.
+
+**Rejected:** keeping the sentence and publishing the identifier beside it
+(two ways to say one thing, and the stored copy stays wrong); deriving the
+kind at read time by parsing the stored English (a migration that runs
+forever instead of once); leaving it alone as too small to be worth a
+schema version (it is the wording that is small — the stored copy is not).
+
+**Revisit if:** never for the direction, but a kind that needs to carry
+more than one number would mean `sourceRevision` should be a mapping, which
+is the same trigger D22 records.
 
 ---
 
