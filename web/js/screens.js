@@ -27,6 +27,11 @@ const STEPS = [
   ]
 ];
 
+/* What the page says when the read it starts with did not answer.
+ * The default, because listing the runs is what every visit begins
+ * with. */
+const NO_RUNS = 'This page could not load your runs';
+
 const LEDE = (
   'A run is one collection, from one calendar, over one window of '
   + 'league dates. Collecting reads the calendar and builds a list of '
@@ -73,20 +78,25 @@ export function emptyState(onCollect) {
   );
 }
 
-/** Return what a page that could not start says.
+/** Return what a page that could not read what it is made of says.
  *
  * The reference is shown whenever there is one, and is the only thing
  * worth showing at 500 and above: the reason is in the service's log
  * under it, deliberately not in the answer.
  *
+ * The heading is the caller's, because what could not be read is: a
+ * page that could not list the runs and a settings screen that could
+ * not read the settings are the same shape and not the same sentence.
+ *
  * @param {ApiError} error What went wrong.
+ * @param {string} [heading] What could not be read.
  * @returns {HTMLElement} The screen.
  */
-export function failureState(error) {
+export function failureState(error, heading = NO_RUNS) {
   return el(
     'section',
     { class: 'failure', role: 'alert' },
-    el('h2', { text: 'This page could not load your runs' }),
+    el('h2', { text: heading }),
     el('p', { class: 'meta', text: error.detail }),
     error.reference
       ? el(

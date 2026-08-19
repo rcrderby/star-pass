@@ -40,6 +40,12 @@ const PROBLEM_MEDIA_TYPE = 'application/problem+json';
 /* At and above this, a problem document carries no reason on purpose. */
 const OPAQUE_FROM = 500;
 
+/* Asked for too often. Worth telling apart from every other refusal
+ * because it is the one whose answer carries a `Retry-After`: what a
+ * caller can do about it is wait, and how long is a value rather than
+ * a sentence. */
+const TOO_OFTEN = 429;
+
 /* What a job's stream can send.  Server-sent events are delivered by
  * name and there is no way to listen for all of them, so a client
  * that wants a frame has to say which -- these are the reporting
@@ -109,6 +115,20 @@ export class ApiError extends Error {
    */
   get isOpaque() {
     return this.status >= OPAQUE_FROM;
+  }
+
+  /** Whether this caller has asked for something too often.
+   *
+   * The one refusal a screen is expected to word itself rather than
+   * repeat: `retryAfter` says when to come back, and a sentence built
+   * from it is more use than the reason, which can only name the
+   * limit and the header carrying the answer.
+   *
+   * @returns {boolean} Whether it was refused for being asked too
+   *     often.
+   */
+  get isTooOften() {
+    return this.status === TOO_OFTEN;
   }
 }
 
@@ -341,6 +361,47 @@ export function revertRevision(runId, number, key, options = {}) {
  */
 export function getConfig(options = {}) {
   return ask('/config', options);
+}
+
+/** Return the release this service is running.
+ *
+ * Behind authentication, unlike the health check: a version number
+ * answers an operator's question, and telling an unauthenticated
+ * caller which release is running hands them the list of which
+ * published faults apply to it.
+ *
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The version.
+ */
+export function getVersion(options = {}) {
+  return ask('/version', options);
+}
+
+/** Ask Amplify whether the service's credential still works.
+ *
+ * **The only thing published about that credential, and deliberately
+ * so**: no endpoint replaces one, because an endpoint able to
+ * overwrite the service's own production credential is the
+ * highest-value target in the system for the least benefit (D8).
+ * Rotation is changing the secret and restarting.
+ *
+ * The answer is whether one small authenticated read was accepted and
+ * the last four characters, which is enough to tell two credentials
+ * apart and no use to whoever reads them. A credential Amplify
+ * refuses comes back as an answer rather than as a failure -- whether
+ * it works is what was asked.
+ *
+ * A `POST` because it is not free: every call reaches somebody else's
+ * service. It is rate-limited per caller, and asking too often is
+ * refused with the limit named in the reason. It stores nothing and
+ * takes no `Idempotency-Key`.
+ *
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} Whether it works, and its last four
+ *     characters.
+ */
+export function testCredential(options = {}) {
+  return ask('/credentials/test', { ...options, method: 'POST' });
 }
 
 /** Apply one thing somebody did to a run's current revision.

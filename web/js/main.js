@@ -36,13 +36,9 @@ import { loadPhrases } from './phrases.js';
 import { emptyState, failureState } from './screens.js';
 import { ReviewScreen } from './review/screen.js';
 import { SEND_JOB, SendingScreen } from './sending/screen.js';
+import { SettingsScreen } from './settings/screen.js';
 import { shell } from './shell.js';
 import { Appearance } from './theme.js';
-
-/* What the settings screen does until it exists. Said out loud rather
- * than left as a dead button, because a control that does nothing at
- * all reads as a bug. */
-const NOT_YET = 'That screen is not built yet.';
 
 /** Draw the page.
  *
@@ -54,12 +50,17 @@ async function start() {
   const main = document.createElement('main');
 
   main.className = 'main';
-  fill(root, shell(appearance, () => alert(NOT_YET)), main);
+  fill(root, shell(appearance, openSettings), main);
 
   /* The screen currently drawn, so that leaving one lets go of
    * whatever it was holding open. Only the sending screen has
    * anything: a job's event stream, which the service keeps open. */
   let showing = null;
+
+  /* Which run is being looked at, so that Settings -- which is
+   * reached from the bar above every screen and belongs to no run --
+   * has somewhere to go back to. Empty while there are none. */
+  let opened = '';
 
   /** Put a screen on, letting go of the one before it.
    *
@@ -157,6 +158,8 @@ async function start() {
       getConfig()
     ]);
 
+    opened = runId;
+
     const job = await activeJob(run);
 
     /* A run being worked on opens on the work. Which screen that is
@@ -191,26 +194,17 @@ async function start() {
     ));
   }
 
-  /** Read a run again and draw it.
+  /** Read what runs there are, and draw what that answer calls for.
    *
-   * The run list is read again with it: a send changes the run's
-   * status, and the picker on the review screen shows that status
-   * for every run it lists.
+   * The run list is read every time rather than kept: a send changes
+   * the run's status, and the picker on the review screen shows that
+   * status for every run it lists.
    *
-   * @param {string} runId Which run.
+   * @param {string} [runId] Which run to open. The newest when it is
+   *     not named, and when the one named is no longer there.
    * @returns {Promise<void>} When it is on screen.
    */
-  async function reopen(runId) {
-    try {
-      await openRun(await listRuns(), runId);
-    } catch (error) {
-      failed(error);
-    }
-  }
-
-  try {
-    await loadPhrases();
-
+  async function showRuns(runId = '') {
     const runs = await listRuns();
 
     if (runs.length === 0) {
@@ -219,12 +213,51 @@ async function start() {
        * one that appears empty and then fills in. */
       const config = await getConfig();
 
-      fill(main, emptyState(() => collect(config)));
+      opened = '';
+      show({ element: emptyState(() => collect(config)) });
 
       return;
     }
 
-    await openRun(runs, runs[0].id);
+    await openRun(
+      runs,
+      runs.some((run) => run.id === runId) ? runId : runs[0].id
+    );
+  }
+
+  /** Read a run again and draw it.
+   *
+   * @param {string} runId Which run.
+   * @returns {Promise<void>} When it is on screen.
+   */
+  async function reopen(runId) {
+    try {
+      await showRuns(runId);
+    } catch (error) {
+      failed(error);
+    }
+  }
+
+  /** Show the settings, over whatever was being looked at.
+   *
+   * Reached from the bar above every screen, and belonging to no run,
+   * so leaving it goes back to the run that was open rather than
+   * anywhere in particular. Read again on the way back rather than
+   * kept: a send may have finished while somebody was reading what
+   * the service is configured with.
+   *
+   * @returns {void}
+   */
+  function openSettings() {
+    show(new SettingsScreen(
+      { appearance },
+      { onBack: () => reopen(opened) }
+    ));
+  }
+
+  try {
+    await loadPhrases();
+    await showRuns();
   } catch (error) {
     failed(error);
   }
