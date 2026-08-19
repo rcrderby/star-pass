@@ -190,6 +190,8 @@ export class ReviewScreen {
    * @param {Object} answers.config What the deployment was configured
    *     with, read for the calendar's categories.
    * @param {Object} handlers What the screen's exits do.
+   * @param {Function} handlers.onCollectNew Open the collect drawer
+   *     over nothing, to collect a window into a new run.
    * @param {Function} handlers.onCollectAgain Open the collect drawer
    *     over this run, to read its window again.
    */
@@ -461,6 +463,23 @@ export class ReviewScreen {
         this.handlers.onOpenRun(runId);
       },
       onView: (view) => this.setView(view),
+      onCollectNew: () => {
+        closeAnyPopover();
+
+        /* The entry that was pressed is inside the popover just
+         * closed, so a drawer opening now would record a button no
+         * longer on the page and hand focus to nothing when it is
+         * cancelled. The picker is what opened it and is still here.
+         * "Collect again" needs none of this: it is a header button
+         * that stays put. */
+        const picker = this.headerElement.querySelector('.run-picker');
+
+        if (picker !== null) {
+          picker.focus();
+        }
+
+        this.handlers.onCollectNew();
+      },
       onCollectAgain: () => {
         closeAnyPopover();
         this.handlers.onCollectAgain();

@@ -127,6 +127,23 @@ button.picker-row:hover {
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 }
 
+/* The last entry: not one of the runs, so it is separated from them
+ * and carries the accent every other action on this screen does.
+ * `.picker-row` resets the font, which is why this restates it. */
+.picker-row-new {
+  color: var(--color-accent);
+  font-family: var(--font-heading);
+  font-size: 13px;
+}
+
+/* Between the runs and the entry that makes another one. A rule
+ * rather than a gap, because a gap alone reads as spacing. */
+.popover-rule {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--color-divider);
+}
+
 .picker-row-main {
   display: flex;
   flex-direction: column;

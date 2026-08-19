@@ -181,6 +181,7 @@ async function start() {
       { runs, run, revisions, config },
       {
         onOpenRun: (chosen) => openRun(runs, chosen).catch(failed),
+        onCollectNew: () => collect(config),
         onCollectAgain: () => collect(config, run),
         onPreview: () => show(new SendingScreen(
           { run },

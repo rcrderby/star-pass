@@ -16,6 +16,9 @@ import { phrase } from '../phrases.js';
 const SHIFTS_TAB = 'Shifts to create';
 const UNCOLLECTED_TAB = 'Not collected';
 
+/* The last entry in the run picker. */
+const NEW_RUN = 'Collect a new run';
+
 /** Return the sentence under the run label.
  *
  * @param {Object} run The run being reviewed.
@@ -106,13 +109,43 @@ function revisionLine(revision) {
   );
 }
 
+/** Return the entry that starts a fresh run.
+ *
+ * Here rather than beside "Collect again", which is about the run on
+ * screen: this popover is where *which run* lives, and a new one is
+ * another answer to that question.
+ *
+ * It is also the only way to a second run. Every other route into the
+ * drawer carries the run being looked at, so without this the page
+ * could do nothing but replace the run it opened on -- and a run that
+ * has sent shifts refuses that, which would make a sent run the end
+ * of what the browser could do. The monthly workflow is a new run a
+ * month.
+ *
+ * @param {Function} onCollectNew What pressing it does.
+ * @returns {HTMLElement} The entry.
+ */
+function newRunLine(onCollectNew) {
+  return el(
+    'button',
+    {
+      type: 'button',
+      class: 'picker-row picker-row-new',
+      onclick: onCollectNew
+    },
+    icon('calendar-plus'),
+    NEW_RUN
+  );
+}
+
 /** Return the run picker.
  *
  * @param {Object} state What the screen is showing.
  * @param {Function} onOpenRun What choosing a run does.
+ * @param {Function} onCollectNew What asking for a fresh one does.
  * @returns {HTMLElement} The picker.
  */
-function runPicker(state, onOpenRun) {
+function runPicker(state, onOpenRun, onCollectNew) {
   const { run, runs } = state;
   const trigger = el(
     'button',
@@ -128,7 +161,9 @@ function runPicker(state, onOpenRun) {
       el('span', { class: 'popover-heading muted', text: 'Runs' }),
       runs.map(
         (each) => runLine(each, each.id === run.id, onOpenRun)
-      )
+      ),
+      el('div', { class: 'popover-rule' }),
+      newRunLine(onCollectNew)
     ]
   }).element;
 }
@@ -227,7 +262,7 @@ export function reviewHeader(state, handlers) {
       el(
         'div',
         { class: 'run-header-top' },
-        runPicker(state, handlers.onOpenRun),
+        runPicker(state, handlers.onOpenRun, handlers.onCollectNew),
         run.sentAt
           ? el('span', {
             class: 'tag tag-accent',
