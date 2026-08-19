@@ -166,17 +166,6 @@
 
 /* — the confirmation — */
 
-.scrim {
-  position: fixed;
-  z-index: 60;
-  inset: 0;
-  display: grid;
-  padding: 20px;
-  place-items: center;
-  background: color-mix(in srgb, var(--color-neutral-900) 60%, transparent);
-  animation: om-fade 0.16s ease-out both;
-}
-
 .confirm-card {
   gap: var(--space-4);
   width: 540px;

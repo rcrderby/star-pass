@@ -1,10 +1,10 @@
 /* The top of the review screen: which run, which revision, and the
  * two things you can do to the whole of it.
  *
- * Everything here reads.  'Collect again' and 'Preview shifts' are
- * the screens that follow this one and are not built yet; they say so
- * rather than being absent, because a control that vanishes is a
- * control somebody looks for.
+ * Everything here reads.  'Collect again' opens the drawer over this
+ * run, which is where the warning about what a replacement discards
+ * belongs -- the drawer is what shows the window being asked for, and
+ * the count is a fact about the run rather than about the button.
  */
 
 import { el, icon } from '../dom.js';

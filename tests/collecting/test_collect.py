@@ -12,6 +12,8 @@
 
 # Imports - Python Standard Library
 import sqlite3
+from pathlib import Path
+from re import findall
 from typing import Any, Callable
 
 # Imports - Third-Party
@@ -46,6 +48,17 @@ from star_pass._repository import (
     RevisionRepository,
     RunRepository
 )
+
+# The list the collecting screen draws its rows from.  Read as text
+# because there is no build step and no JavaScript test runner: the
+# module under 'web/js' is what a browser is given, and a screen
+# drawing four of five steps is a row that never appears, which
+# nothing else here would notice.
+COLLECT_STEPS_JS = (
+    Path(__file__).parent.parent.parent / 'web' / 'js' / 'collect'
+    / 'steps.js'
+)
+COLLECT_STEPS_PATTERN = r'COLLECT_STEPS = \[([^\]]*)\]'
 
 
 class TestWhatACollectedRunHolds:
@@ -535,6 +548,34 @@ class TestWhatACollectionReports:
             STEP_MATCH_EVENTS,
             STEP_READ_OPPORTUNITIES,
             STEP_STORE_EVENTS
+        ]
+
+    def test_the_browser_draws_exactly_the_steps_it_reports(
+        self,
+        collect_run: Callable[..., Any]
+    ) -> None:
+        # The screen lists its five in a constant of its own, because
+        # a step is drawn pending before anything has been reported
+        # about it.  A list that fell behind the core would be a step
+        # nobody is told is running, or a row that stays pending for
+        # ever -- and the wordings test cannot see it, because that
+        # one holds 'phrases.json' to every step there is rather than
+        # to the ones a collection takes.
+        steps = Steps()
+
+        collect_run(items=[an_item()], reporter=steps)
+
+        listed = findall(
+            r"'([^']+)'",
+            findall(
+                COLLECT_STEPS_PATTERN,
+                COLLECT_STEPS_JS.read_text(encoding='utf-8')
+            )[0]
+        )
+
+        assert listed == [
+            reported for reported in steps.reported
+            if reported != 'finished'
         ]
 
     def test_every_step_it_starts_is_one_it_finishes(

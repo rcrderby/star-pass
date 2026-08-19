@@ -350,6 +350,31 @@ through the Amplify API. It is run once per month.
   had already changed. A key names one action and is never reused for
   the next: it makes a *resend* safe, and two nudges are two actions
   that must move the shift twice.
+  `js/collect/` is the drawer a run is asked for in and the screen
+  that follows the job doing it. The drawer is where the two
+  conversions live that no other screen makes: a window preset is
+  worked out from **today in the server's zone**, never the browser's
+  (D16), and the inclusive last day a person types becomes the
+  exclusive `end` a request takes. Collect and recollect carry no
+  `Idempotency-Key`, so the drawer disables every control from the
+  moment one is in the air -- that is the whole of what stops a
+  double-clicked button becoming two runs. The collecting screen draws
+  **five** steps (D22), listed in `collect/steps.js` and bound to what
+  a collection really reports by a test in
+  `tests/collecting/test_collect.py`. It marks the running step failed
+  when the job reports a failure, because `step_failed` is called
+  nowhere in the core and the collection stops at the first thing that
+  raises, so there is never more than one. It offers no Cancel: the run
+  is minted by the request and the contract publishes no way to stop a
+  job, so the only honest offer is to stop watching, which "Leave this
+  running" already is.
+  `js/watching.js` is how a screen follows a job -- one place, because
+  a collection and a send follow one identically and what differs is
+  what the frames mean. `js/modal.js` is what a dialog and a drawer
+  both are -- a panel over
+  a scrim that takes focus, keeps Tab inside itself and gives focus
+  back. Below both, because that is the part which is easy to get
+  subtly wrong and impossible to see in a diff.
   `js/sending/` is the preview, the send confirmation and the send as
   it happens, which are one movement over one answer: the preview says
   what would be created, the confirmation restates it (D11), and the

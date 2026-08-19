@@ -15,6 +15,10 @@
  * quietly answers in whoever-is-looking's zone. */
 const MISSING_ZONE = 'A time cannot be shown without the zone it belongs to.';
 
+/* For working a span of days out of two dates built in UTC, where
+ * every day is this long because no offset changes inside it. */
+const MILLISECONDS_PER_DAY = 86400000;
+
 /** Return one timestamp as a reader sees it.
  *
  * @param {string} when ISO-8601 UTC, as the repository records it.
@@ -101,4 +105,110 @@ export function windowText(window) {
  */
 export function lengthText(minutes) {
   return `${minutes} min`;
+}
+
+/** Return today's date, as the server's zone has it.
+ *
+ * **This is the one place the current moment is turned into a day**,
+ * and it is turned into one in the zone the service published rather
+ * than the zone the browser happens to be in. D16 calls a preset
+ * computed in the visitor's zone a live bug in the original design,
+ * and it is: somebody in London opening the drawer at nine in the
+ * morning would otherwise be offered a September window on the last
+ * day of August.
+ *
+ * `en-CA` because its short date is an ISO one, which is the shape
+ * every date in this contract crosses the wire as.
+ *
+ * @param {string} timeZone The zone `GET /config` reports.
+ * @throws {Error} When no zone was given.
+ * @returns {string} Today there, as an ISO date.
+ */
+export function today(timeZone) {
+  if (!timeZone) {
+    throw new Error(MISSING_ZONE);
+  }
+
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+}
+
+/** Return the day after a given one.
+ *
+ * A run's window crosses the wire with an **exclusive** end, and a
+ * person says a window by its last day, so a request has one more
+ * day added to it. That conversion is the client's here and only
+ * here: the answer publishes `lastDay` beside `end` so nothing has to
+ * subtract, but no request takes an inclusive day, which is why the
+ * command line's `_render.after` does the same thing in the same
+ * direction.
+ *
+ * Read out as parts and built in UTC. `new Date('2026-09-30')` is
+ * parsed as UTC midnight and lands on the 29th anywhere behind UTC,
+ * which is a window a day short.
+ *
+ * @param {string} day An ISO date.
+ * @returns {string} The next one.
+ */
+export function dayAfter(day) {
+  const [year, month, date] = day.split('-').map(Number);
+  const next = new Date(Date.UTC(year, month - 1, date + 1));
+
+  return next.toISOString().slice(0, 10);
+}
+
+/** Return how many days a window covers, counting its last day.
+ *
+ * @param {string} first The first day, as an ISO date.
+ * @param {string} last The last day it covers.
+ * @returns {number} Days covered, which is not above zero when the
+ *     last day comes before the first.
+ */
+export function spanDays(first, last) {
+  const [fromYear, fromMonth, fromDate] = first.split('-').map(Number);
+  const [toYear, toMonth, toDate] = last.split('-').map(Number);
+  const from = Date.UTC(fromYear, fromMonth - 1, fromDate);
+  const to = Date.UTC(toYear, toMonth - 1, toDate);
+
+  return Math.round((to - from) / MILLISECONDS_PER_DAY) + 1;
+}
+
+/** Return a month's window, as a first day and a last day.
+ *
+ * Worked out from today in the server's zone, so "this month" means
+ * the month it is there.
+ *
+ * @param {string} timeZone The zone `GET /config` reports.
+ * @param {number} monthsAhead 0 for this month, 1 for the next.
+ * @returns {Object} Its `first` and `last` day, as ISO dates.
+ */
+export function monthWindow(timeZone, monthsAhead) {
+  const [year, month] = today(timeZone).split('-').map(Number);
+  const first = new Date(Date.UTC(year, month - 1 + monthsAhead, 1));
+  const last = new Date(Date.UTC(year, month + monthsAhead, 0));
+
+  return {
+    first: first.toISOString().slice(0, 10),
+    last: last.toISOString().slice(0, 10)
+  };
+}
+
+/** Return a bare calendar day, spelled out.
+ *
+ * @param {string} day An ISO date.
+ * @returns {string} Such as `September 1, 2026`.
+ */
+export function longDay(day) {
+  const [year, month, date] = day.split('-').map(Number);
+
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }).format(new Date(Date.UTC(year, month - 1, date)));
 }
