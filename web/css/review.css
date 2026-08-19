@@ -127,6 +127,14 @@ button.picker-row:hover {
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 }
 
+/* The revert on a revision's row. Smaller than a button elsewhere
+ * because it sits inside a 330px popover beside two lines of text. */
+.picker-row-action {
+  flex: none;
+  padding: 2px 7px;
+  font-size: 11.5px;
+}
+
 /* The last entry: not one of the runs, so it is separated from them
  * and carries the accent every other action on this screen does.
  * `.picker-row` resets the font, which is why this restates it. */
@@ -155,6 +163,13 @@ button.picker-row:hover {
 .picker-row-label {
   font-family: var(--font-heading);
   font-size: 13px;
+}
+
+/* A calendar key is lower case in the configuration and a name on
+ * screen. Here rather than on every picker row, because a revision's
+ * label is a sentence the service wrote and title-casing one turns
+ * "Continued from revision 1" into something nobody wrote. */
+.picker-row-calendar {
   text-transform: capitalize;
 }
 

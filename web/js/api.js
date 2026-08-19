@@ -280,6 +280,55 @@ export function listRevisions(runId, options = {}) {
   return ask(`/runs/${encodeURIComponent(runId)}/revisions`, options);
 }
 
+/** Fix what a run holds now as a numbered revision.
+ *
+ * Editing changes the revision a run is working in as it goes, so
+ * this is what makes a point in that work something to come back to.
+ * Nothing is deleted: the revision that was current keeps its rows
+ * and stays readable at its own number, and the work moves to a new
+ * one holding a copy.
+ *
+ * The key names this seal. Sealing is not idempotent in itself --
+ * twice is two revisions -- so a retry after a lost answer is given
+ * the first answer rather than opening a second one.
+ *
+ * @param {string} runId Which run.
+ * @param {string} key The `Idempotency-Key` naming this seal.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The revision now being worked in.
+ */
+export function sealRevision(runId, key, options = {}) {
+  return ask(`/runs/${encodeURIComponent(runId)}/revisions`, {
+    ...options,
+    method: 'POST',
+    key
+  });
+}
+
+/** Put a run back to what one of its earlier revisions holds.
+ *
+ * **One revision per revert**, and nothing between the two is
+ * touched, so a revert can itself be reverted. Answers with the run
+ * in full, because every row on the screen that asked has changed.
+ *
+ * The key remembers which revision was asked for: sent again naming a
+ * different one it is refused rather than answered from the first.
+ *
+ * @param {string} runId Which run.
+ * @param {number} number Revision to go back to the contents of.
+ * @param {string} key The `Idempotency-Key` naming this revert.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The run as it now is.
+ */
+export function revertRevision(runId, number, key, options = {}) {
+  const run = encodeURIComponent(runId);
+
+  return ask(
+    `/runs/${run}/revisions/${encodeURIComponent(number)}/revert`,
+    { ...options, method: 'POST', key }
+  );
+}
+
 /** Return what this deployment was configured with.
  *
  * Read for the categories each calendar offers, which is what an
