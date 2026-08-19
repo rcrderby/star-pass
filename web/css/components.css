@@ -177,6 +177,19 @@ select.input {
   box-shadow: var(--shadow-lg);
 }
 
+/* A row of a list, as both screens that have one draw it: a surface
+ * with a hairline edge and a 3px border down its leading side, which
+ * the row recolours to say what state it is in.  Here rather than in
+ * either screen's file, because the review table's rows and the send's
+ * rows are the same object and two copies would drift -- which is what
+ * the duplicate check reported when the second one appeared. */
+.row-card {
+  border-left: 3px solid var(--color-accent-800);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
 /* — tags — */
 
 .tag {

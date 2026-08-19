@@ -40,6 +40,25 @@ const PROBLEM_MEDIA_TYPE = 'application/problem+json';
 /* At and above this, a problem document carries no reason on purpose. */
 const OPAQUE_FROM = 500;
 
+/* What a job's stream can send.  Server-sent events are delivered by
+ * name and there is no way to listen for all of them, so a client
+ * that wants a frame has to say which -- these are the reporting
+ * methods the core describes its work through, which is what the
+ * command line's own reader lists for the same reason. A kind absent
+ * here is a kind no screen would see. */
+const STREAM_EVENTS = [
+  'step_started',
+  'step_finished',
+  'step_failed',
+  'sending_started',
+  'opportunity_sent'
+];
+
+/* The frame that ends a stream. Named unlike any of the job's own
+ * events, and the only one that is not something the job reported:
+ * it says how the job ended. */
+const JOB_FINISHED = 'job_finished';
+
 /* What to say when the service could not be reached at all, which is a
  * different thing from the service refusing: nothing answered, so
  * there is no reference to quote and nothing to look up. */
@@ -305,4 +324,120 @@ export function editEvents(runId, operations, key, options = {}) {
     body: { operations },
     key
   });
+}
+
+/** Return what sending this run's current revision would create.
+ *
+ * **This request is the duplicate check.** Every opportunity the
+ * revision touches is read from Amplify while it is answered, so the
+ * totals are net of what Amplify already holds and `skipped` names
+ * every row that will not arrive. Nothing here works that out; the
+ * design's separate "checking Amplify" step is this call.
+ *
+ * @param {string} runId Which run.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The preview.
+ */
+export function getPreview(runId, options = {}) {
+  return ask(`/runs/${encodeURIComponent(runId)}/preview`, options);
+}
+
+/** Ask for this run's shifts to be created in Amplify.
+ *
+ * Answers with a job as soon as one exists, rather than when the
+ * shifts have been created: a send is minutes of upstream requests
+ * and the browser is not what holds it open.
+ *
+ * `expectedShiftCount` is the preview's `totals.willCreate` -- the
+ * number the confirmation restated (D11). The service refuses when it
+ * no longer matches what a send would create, which is what closes
+ * the case of a tab left open while the run was edited or Amplify
+ * gained a shift.
+ *
+ * @param {string} runId Which run.
+ * @param {number} expectedShiftCount What the operator was shown.
+ * @param {string} key The `Idempotency-Key` naming this attempt.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The job doing it.
+ */
+export function sendRun(runId, expectedShiftCount, key, options = {}) {
+  return ask(`/runs/${encodeURIComponent(runId)}/send`, {
+    ...options,
+    method: 'POST',
+    body: { expectedShiftCount },
+    key
+  });
+}
+
+/** Return where a job has got to.
+ *
+ * Read when a screen picks up a job it did not start -- a reload
+ * during a send, or a run whose `activeJobId` says something is still
+ * working on it.
+ *
+ * @param {string} jobId Which job.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} The job.
+ */
+export function getJob(jobId, options = {}) {
+  return ask(`/jobs/${encodeURIComponent(jobId)}`, options);
+}
+
+/** Follow what a job reports, until it is over.
+ *
+ * An `EventSource` rather than polling: the service holds the
+ * connection open and the frontend passes it through unbuffered, so a
+ * frame arrives when the job writes it.
+ *
+ * **Reattachable, and that is what "leave this running" means.** A
+ * browser that opens this stream with no history is sent the job's
+ * whole event log from the first frame, because a client that is not
+ * resuming names no last event. So a reload during a send is
+ * answered with everything it missed rather than with whatever
+ * happens next, and a screen rebuilt from it knows as much as one
+ * that never went away. A browser that *is* resuming sends
+ * `Last-Event-ID` itself.
+ *
+ * The stream is closed here when the job's own last frame arrives.
+ * Left open, the connection would end anyway and the browser would
+ * reconnect to a job that has nothing further to say, forever.
+ *
+ * @param {string} jobId Which job.
+ * @param {Object} handlers What to do with what arrives.
+ * @param {Function} handlers.onEvent Called with the name of each
+ *     frame and what it carried.
+ * @param {Function} handlers.onFinished Called with the job's last
+ *     frame: its identifier, status and detail.
+ * @param {Function} handlers.onLost Called when the connection
+ *     dropped and the browser is retrying, so a screen can say so.
+ * @returns {EventSource} The stream, for a caller that wants to stop
+ *     following before it ends.
+ */
+export function followJob(jobId, handlers) {
+  const source = new EventSource(
+    `${BASE}/jobs/${encodeURIComponent(jobId)}/events`
+  );
+
+  for (const kind of STREAM_EVENTS) {
+    source.addEventListener(kind, (frame) => {
+      handlers.onEvent(kind, JSON.parse(frame.data));
+    });
+  }
+
+  source.addEventListener(JOB_FINISHED, (frame) => {
+    source.close();
+    handlers.onFinished(JSON.parse(frame.data));
+  });
+
+  source.addEventListener('error', () => {
+    /* Not necessarily a failure: the browser reconnects on its own
+     * and says nothing while it does. Reported so a screen can stop
+     * looking live, and never treated as the end of the job -- what
+     * ends a job is the job saying so. */
+    if (source.readyState !== EventSource.CLOSED) {
+      handlers.onLost();
+    }
+  });
+
+  return source;
 }

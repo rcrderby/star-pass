@@ -13,6 +13,11 @@
     "store_events": "Storing the collected events",
     "read_opportunity": "Reading what opportunity {subject} already holds"
   },
+  "blocker": {
+    "no_opportunity": "no opportunity to create a shift under",
+    "ends_before_start": "a shift that ends before it starts",
+    "no_slots": "no volunteers wanted"
+  },
   "matchKind": {
     "keyword": "Matched by the keyword \"{keyword}\"",
     "fuzzy": "Matched to {category} by wording alone, scoring {score} of 100. Worth a look."
