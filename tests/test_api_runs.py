@@ -662,17 +662,29 @@ class TestListingRevisions:
 
         assert [item['current'] for item in listed] == [False, True]
 
-    def test_a_revisions_label_is_returned(
+    def test_what_kind_of_revision_each_is_is_returned(
         self,
         running_client: TestClient,
         edited: str
     ) -> None:
         listed = running_client.get(revisions_path(run_id=edited)).json()
 
-        assert [item['label'] for item in listed] == [
-            'As collected',
-            'Edited'
+        assert [item['kind'] for item in listed] == [
+            'collected',
+            'continued'
         ]
+
+    def test_a_revision_names_the_one_it_was_made_from(
+        self,
+        running_client: TestClient,
+        edited: str
+    ) -> None:
+        # A value rather than part of a sentence, so a client can put
+        # it into its own. Null for the one a collection filled, which
+        # was made from a calendar and not from a revision.
+        listed = running_client.get(revisions_path(run_id=edited)).json()
+
+        assert [item['sourceRevision'] for item in listed] == [None, 1]
 
     def test_a_run_with_no_revision_reads_as_an_empty_list(
         self,
@@ -772,7 +784,7 @@ class TestWhatWasDoneInARevision:
             window_start='2026-09-01',
             window_end='2026-10-01'
         )
-        revisions.create(run_id=other.id, label='As collected')
+        revisions.create(run_id=other.id, replacing=True)
         change_log.add(
             run_id=other.id,
             revision=revision,

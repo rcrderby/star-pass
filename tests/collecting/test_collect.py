@@ -32,6 +32,8 @@ from star_pass._exceptions import ValidationError
 from star_pass._reading import changes_in_current, read_run_history
 from star_pass._records import (
     MATCH_KIND_KEYWORD,
+    REVISION_COLLECTED,
+    REVISION_RECOLLECTED,
     RUN_STATUS_COLLECTING,
     RUN_STATUS_UNSENT
 )
@@ -107,7 +109,8 @@ class TestWhatACollectedRunHolds:
         stored = revisions.list_all(run_id=collecting)
 
         assert [revision.number for revision in stored] == [1]
-        assert stored[0].label == 'As collected'
+        assert stored[0].kind == REVISION_COLLECTED
+        assert stored[0].source_revision is None
 
     def test_an_event_carries_a_role_for_every_need_it_serves(
         self,
@@ -628,21 +631,21 @@ class TestCollectingARunAgain:
             for revision in revisions.list_all(run_id=collecting)
         ] == [1, 2]
 
-    def test_a_second_collection_is_labelled_as_one(
+    def test_a_second_collection_says_it_is_one(
         self,
         collect_run: Callable[..., Any],
         collecting: str,
         revisions: RevisionRepository
     ) -> None:
         # Which of the two it is says whether anything was there
-        # before, which is what a reader wants from the label.
+        # before, which is the one thing a reader wants from it.
         collect_run(items=[an_item()])
         collect_run(items=[an_item()])
 
         assert [
-            revision.label
+            revision.kind
             for revision in revisions.list_all(run_id=collecting)
-        ] == ['As collected', 'As recollected']
+        ] == [REVISION_COLLECTED, REVISION_RECOLLECTED]
 
     def test_a_second_collection_holds_only_what_the_calendar_has_now(
         self,

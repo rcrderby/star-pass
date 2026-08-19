@@ -47,7 +47,7 @@ DATABASE_BUSY_TIMEOUT = _defaults.DATABASE_BUSY_TIMEOUT
 # forward.  A later one means the file was written by a newer version
 # of the application, which is a deployment problem rather than
 # something to guess at.
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 # Pragmas applied to every connection.  'foreign_keys' is off by
 # default and is per-connection rather than stored in the file, so
@@ -101,7 +101,8 @@ SCHEMA_STATEMENTS = (
                             REFERENCES runs (id) ON DELETE CASCADE,
         number      INTEGER NOT NULL,
         created_at  TEXT    NOT NULL,
-        label       TEXT    NOT NULL,
+        kind        TEXT    NOT NULL,
+        source      INTEGER,
         PRIMARY KEY (run_id, number)
     )
     """,
@@ -308,21 +309,30 @@ SCHEMA_STATEMENTS = (
 
 
 @dataclass(frozen=True)
-class AddedColumn:
-    """ A column added to a table that already existed.
+class Step:
+    """ One statement that carries a database forward.
+
+        Most add a column, and their statement declares it exactly as
+        the create above declares it, so a database carried here and
+        one built here are the same database.  Some fill one instead:
+        a column added to rows that already exist arrives empty, and
+        what belongs in it is worked out from what those rows already
+        say.
 
         Attributes:
             table (str):
-                Table the column belongs to.
+                Table the step is about.
 
             column (str):
-                What it is called, which is what says whether the step
-                still has anything to do.
+                The column whose absence says the step still has
+                something to do -- the one being added, or the one a
+                filling step fills.  Every step of a version is asked
+                this before any of them runs, which is what lets a
+                fill be gated on the column it fills rather than
+                needing a test of its own.
 
             statement (str):
-                What adds it.  It declares the column exactly as the
-                create above declares it, so a database carried here
-                and one built here are the same database.
+                What to run.
     """
 
     table: str
@@ -357,7 +367,7 @@ MIGRATIONS = {
         # was held by: the service, which was the only thing writing
         # jobs then.  It is a literal because a schema statement takes
         # one, and it is the value of '_records.JOB_HOLDER_SERVICE'.
-        AddedColumn(
+        Step(
             table='jobs',
             column='held_by',
             statement=(
@@ -365,6 +375,85 @@ MIGRATIONS = {
                 "ADD COLUMN held_by TEXT NOT NULL DEFAULT 'service'"
             )
         ),
+    ),
+    7: (
+        # How a revision came to exist, and the revision it was made
+        # from.  Both were one column of English written by the core
+        # and printed unchanged by every client, so neither client
+        # could word it and a change of wording would have left the
+        # revisions already recorded saying the old thing.
+        #
+        # The default is false of every row and is corrected by the
+        # four statements below, which run in the same transaction:
+        # SQLite cannot add a column that is NOT NULL without one, and
+        # a default that was true of some rows would be a guess about
+        # the rest.
+        Step(
+            table='revisions',
+            column='kind',
+            statement=(
+                'ALTER TABLE revisions '
+                "ADD COLUMN kind TEXT NOT NULL DEFAULT ''"
+            )
+        ),
+        Step(
+            table='revisions',
+            column='source',
+            statement='ALTER TABLE revisions ADD COLUMN source INTEGER'
+        ),
+        # The four sentences the core ever wrote, read back into what
+        # they were saying.  Gated on 'kind', which is asked about
+        # before any statement of this version runs and so is still
+        # absent when these are chosen.
+        Step(
+            table='revisions',
+            column='kind',
+            statement=(
+                "UPDATE revisions SET kind = 'collected' "
+                "WHERE label = 'As collected'"
+            )
+        ),
+        Step(
+            table='revisions',
+            column='kind',
+            statement=(
+                "UPDATE revisions SET kind = 'recollected' "
+                "WHERE label = 'As recollected'"
+            )
+        ),
+        Step(
+            table='revisions',
+            column='kind',
+            statement=(
+                "UPDATE revisions SET kind = 'continued', "
+                "source = CAST("
+                "SUBSTR(label, LENGTH('Continued from revision ') + 1) "
+                'AS INTEGER) '
+                "WHERE label LIKE 'Continued from revision %'"
+            )
+        ),
+        Step(
+            table='revisions',
+            column='kind',
+            statement=(
+                "UPDATE revisions SET kind = 'reverted', "
+                "source = CAST("
+                "SUBSTR(label, LENGTH('Reverted to revision ') + 1) "
+                'AS INTEGER) '
+                "WHERE label LIKE 'Reverted to revision %'"
+            )
+        ),
+        # And the sentence goes.  It has to: an insert now names
+        # 'kind' and 'source' and not 'label', so a NOT NULL column
+        # left behind would refuse every revision written after this.
+        # A column and not the table -- 'events' points at
+        # 'revisions' with a cascade, so rebuilding the table the
+        # portable way would delete every event in the database.
+        Step(
+            table='revisions',
+            column='kind',
+            statement='ALTER TABLE revisions DROP COLUMN label'
+        )
     )
 }
 

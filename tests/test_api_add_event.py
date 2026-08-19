@@ -218,7 +218,7 @@ class TestWhatPullingOneInAnswers:
         # working in the latest one, and an answer built from an
         # earlier one would show the reviewer a screen without the row
         # they just added.
-        revisions.create(run_id=collected, label='After an edit')
+        revisions.create(run_id=collected)
         missed(run_id=collected)
 
         answer = add(run_id=collected).json()

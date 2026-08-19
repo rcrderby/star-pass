@@ -1010,21 +1010,39 @@
             "title": "Current",
             "type": "boolean"
           },
-          "label": {
-            "description": "How the revision is named to a reader.",
-            "title": "Label",
+          "kind": {
+            "description": "How the revision came to exist: collected, recollected, continued, reverted. An identifier rather than a sentence, because a client that is handed the words cannot word it -- and the sentence used to be stored on the row, so a change of wording would have left every revision already recorded saying the old thing beside a new one saying the new.",
+            "examples": [
+              "reverted"
+            ],
+            "title": "Kind",
             "type": "string"
           },
           "number": {
             "description": "Position in the run's history, from one.",
             "title": "Number",
             "type": "integer"
+          },
+          "sourceRevision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The revision this one was made from, which is the revision its rows were copied from. The one a revert went back to, or the one a seal fixed; null for the two a collection fills, which are made from a calendar and not from a revision.",
+            "examples": [
+              1
+            ],
+            "title": "Sourcerevision"
           }
         },
         "required": [
           "number",
           "createdAt",
-          "label",
+          "kind",
           "changes",
           "current"
         ],

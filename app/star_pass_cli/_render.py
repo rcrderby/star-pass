@@ -37,6 +37,10 @@ from typing import Any, Dict, List, Sequence, Tuple
 # Imports - Local
 from star_pass._records import (
     MATCH_KIND_FUZZY,
+    REVISION_COLLECTED,
+    REVISION_CONTINUED,
+    REVISION_RECOLLECTED,
+    REVISION_REVERTED,
     UNCOLLECTED_ALL_DAY,
     UNCOLLECTED_EXCLUDED,
     UNCOLLECTED_SEARCH,
@@ -96,7 +100,7 @@ LOG_HEADERS = (
 REVISION_HEADERS = (
     'NUMBER',
     'CREATED',
-    'LABEL',
+    'WHAT IT IS',
     'CHANGES',
     'CURRENT'
 )
@@ -120,6 +124,20 @@ CURRENT = 'current'
 
 # Said of an event that may be pulled into the run, in its column.
 ADDABLE = 'yes'
+
+# What each kind of revision is called.  Worded here for the reason
+# the two maps below it are: the contract publishes an identifier and
+# the revision it was made from, and each client says it in its own
+# words.  It used to be a sentence the core wrote and stored on the
+# row, which neither client could word and which a change of wording
+# would have left inconsistent between the revisions already recorded
+# and the next one.
+REVISION_PHRASES = {
+    REVISION_COLLECTED: 'As collected',
+    REVISION_RECOLLECTED: 'As recollected',
+    REVISION_CONTINUED: 'Continued from revision {number}',
+    REVISION_REVERTED: 'Reverted to revision {number}'
+}
 
 # How each reason an event was left out of a run heads its group.
 # Worded here for the same reason a blocker's is: the contract
@@ -613,6 +631,31 @@ def run_detail(
     )
 
 
+def revision_words(
+        revision: Dict[str, Any]
+) -> str:
+    """ Return what a revision is, in words.
+
+        The two kinds a collection fills name no revision, so the
+        wording for them holds no placeholder and formatting one with
+        a number nobody asked for would be formatting a sentence that
+        has no room for it.
+
+        Args:
+            revision (Dict[str, Any]):
+                A revision from an answer.
+
+        Returns:
+            words (str):
+                What kind of revision it is, naming the one it was
+                made from where there is one.
+    """
+
+    wording = REVISION_PHRASES.get(revision['kind'], revision['kind'])
+
+    return wording.format(number=revision['sourceRevision'])
+
+
 def revision_row(
         revision: Dict[str, Any]
 ) -> List[str]:
@@ -634,7 +677,7 @@ def revision_row(
     return [
         str(revision['number']),
         revision['createdAt'],
-        revision['label'],
+        revision_words(revision=revision),
         str(revision['changes']),
         CURRENT if revision['current'] else NOTHING
     ]

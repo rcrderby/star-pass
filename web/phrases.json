@@ -43,5 +43,11 @@
     "excluded": "The title carries a term this deployment never collects, whatever else is true about the event. These cannot be added to a run.",
     "allday": "All day, so there are no times to build a shift from. These cannot be added to a run.",
     "untitled": "No title, so there is nothing to match an opportunity on, and nothing to note for the model either. These cannot be added to a run."
+  },
+  "revision": {
+    "collected": "As collected",
+    "recollected": "As recollected",
+    "continued": "Continued from revision {number}",
+    "reverted": "Reverted to revision {number}"
   }
 }

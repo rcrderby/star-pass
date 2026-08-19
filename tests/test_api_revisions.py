@@ -116,9 +116,12 @@ class TestWhatSealingAnswers:
         collected: str,
         seal: Callable[..., Any]
     ) -> None:
-        # A label describing what happened, because what is in it is a
-        # copy of the revision it names.
-        assert '1' in seal(run_id=collected).json()['label']
+        # What is in it is a copy of the revision it names, so which
+        # one that was is the fact worth publishing about it.
+        opened = seal(run_id=collected).json()
+
+        assert opened['kind'] == 'continued'
+        assert opened['sourceRevision'] == 1
 
     def test_the_new_revision_has_had_nothing_done_to_it(
         self,
@@ -439,8 +442,9 @@ class TestHowManyRevisionsARevertAdds:
         revert(run_id=collected)
 
         assert [
-            revision['label'] for revision in listed(collected)
-        ] == ['As collected', 'Reverted to revision 1']
+            (revision['kind'], revision['sourceRevision'])
+            for revision in listed(collected)
+        ] == [('collected', None), ('reverted', 1)]
 
 
 class TestWhatGoingBackToTheCollectionOffersAgain:

@@ -31,6 +31,7 @@ from star_pass._records import (
     JOB_STATUSES,
     MATCH_KIND_FUZZY,
     MATCH_KIND_KEYWORD,
+    REVISION_KINDS,
     RUN_STATUSES,
     UNCOLLECTED_REASONS
 )
@@ -462,8 +463,27 @@ class RevisionView(ApiModel):
     created_at: str = Field(
         description='When it was created, as an ISO-8601 UTC time.'
     )
-    label: str = Field(
-        description='How the revision is named to a reader.'
+    kind: str = Field(
+        description=(
+            f'How the revision came to exist: {", ".join(REVISION_KINDS)}. '
+            'An identifier rather than a sentence, because a client '
+            'that is handed the words cannot word it -- and the '
+            'sentence used to be stored on the row, so a change of '
+            'wording would have left every revision already recorded '
+            'saying the old thing beside a new one saying the new.'
+        ),
+        examples=['reverted']
+    )
+    source_revision: int | None = Field(
+        default=None,
+        description=(
+            'The revision this one was made from, which is the '
+            'revision its rows were copied from. The one a revert '
+            'went back to, or the one a seal fixed; null for the two '
+            'a collection fills, which are made from a calendar and '
+            'not from a revision.'
+        ),
+        examples=[1]
     )
     changes: int = Field(
         description=(

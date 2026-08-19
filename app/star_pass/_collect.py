@@ -77,12 +77,6 @@ from ._repository import (
 ISO_DATE_FORMAT = _defaults.ISO_DATE_FORMAT
 SIMPLE_TIME_FORMAT = _defaults.SIMPLE_TIME_FORMAT
 
-# What a revision a collection produced is called.  Which of the two
-# it is says whether anything was there before, which is the one thing
-# a reader wants from the label.
-FIRST_REVISION_LABEL = 'As collected'
-LATER_REVISION_LABEL = 'As recollected'
-
 # Module logger
 logger = get_logger(__name__)
 
@@ -628,11 +622,6 @@ def collect(
         # forward would leave behind ones the calendar no longer has.
         revision = RevisionRepository(connection=connection).create(
             run_id=run_id,
-            label=(
-                FIRST_REVISION_LABEL
-                if run.current_revision == 0
-                else LATER_REVISION_LABEL
-            ),
             replacing=True
         )
         EventRepository(connection=connection).add_all(

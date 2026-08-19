@@ -77,7 +77,7 @@ def fixture_run(
         with offsets lives; a run on the other one would match
         nothing and could not show the times being worked out.
     """
-    revisions.create(run_id=other_run_id, label='As collected')
+    revisions.create(run_id=other_run_id, replacing=True)
 
     return other_run_id
 

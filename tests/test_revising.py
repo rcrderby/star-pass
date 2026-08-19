@@ -22,7 +22,11 @@ import pytest
 
 # Imports - Local
 from star_pass._exceptions import ValidationError
-from star_pass._records import Event
+from star_pass._records import (
+    Event,
+    REVISION_CONTINUED,
+    REVISION_REVERTED
+)
 from star_pass._repository import EventRepository, RevisionRepository
 from star_pass._revising import revert, seal
 
@@ -134,7 +138,10 @@ class TestWhatSealingOpens:
         collected: str,
         sealing: Callable[..., Any]
     ) -> None:
-        assert sealing(collected).label == 'Continued from revision 1'
+        opened = sealing(collected)
+
+        assert opened.kind == REVISION_CONTINUED
+        assert opened.source_revision == 1
 
 
 class TestWhatSealingLeavesAlone:
@@ -291,7 +298,10 @@ class TestWhatRevertingOpens:
         sealing(collected)
         sealing(collected)
 
-        assert reverting(collected, 2).label == 'Reverted to revision 2'
+        opened = reverting(collected, 2)
+
+        assert opened.kind == REVISION_REVERTED
+        assert opened.source_revision == 2
 
 
 class TestHowManyRevisionsARevertAdds:

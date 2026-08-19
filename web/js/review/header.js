@@ -11,7 +11,7 @@ import { changesNow } from './changelog.js';
 import { el, icon } from '../dom.js';
 import { moment, windowText } from '../format.js';
 import { Popover } from '../popover.js';
-import { phrase } from '../phrases.js';
+import { filled, phrase } from '../phrases.js';
 
 /* What the two tabs are called. The count belongs to the second. */
 const SHIFTS_TAB = 'Shifts to create';
@@ -122,7 +122,12 @@ function revisionLine(revision, run, busy, onRevert) {
       { class: 'picker-row-main' },
       el('span', {
         class: 'picker-row-label',
-        text: `Revision ${revision.number} · ${revision.label}`
+        /* The two kinds a collection fills name no revision, and
+         * their wording holds no placeholder to put one in. */
+        text: `Revision ${revision.number} · `
+          + filled('revision', revision.kind, {
+            number: revision.sourceRevision
+          })
       }),
       el('span', {
         class: 'picker-row-meta muted micro',

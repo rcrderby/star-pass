@@ -455,7 +455,8 @@ def to_revision_views(
         RevisionView(
             number=revision.number,
             created_at=revision.created_at,
-            label=revision.label,
+            kind=revision.kind,
+            source_revision=revision.source_revision,
             changes=revision.change_count,
             current=revision.number == run.current_revision
         )

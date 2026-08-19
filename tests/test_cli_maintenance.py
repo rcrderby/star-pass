@@ -91,8 +91,8 @@ class TestWhatItDoes:
         sweeping: Callable[[], None]
     ) -> None:
         monkeypatch.setattr(_defaults, 'RETENTION_REVISION_DAYS', -1)
-        for number in range(1, 4):
-            revisions.create(run_id=run_id, label=f'Revision {number}')
+        for _number in range(1, 4):
+            revisions.create(run_id=run_id)
 
         sweeping()
 

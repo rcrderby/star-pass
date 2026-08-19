@@ -27,6 +27,7 @@ from typing import Any, Dict
 from star_pass._preview import BLOCKER_REASONS
 from star_pass._records import (
     MATCH_KINDS,
+    REVISION_KINDS,
     RUN_STATUSES,
     UNCOLLECTED_REASONS
 )
@@ -116,6 +117,30 @@ class TestWebPhrases:
                 != phrases()['uncollectedNote'][reason]
             )
 
+    def test_every_revision_kind_the_core_publishes_is_worded(
+        self
+    ) -> None:
+        # The revision picker names each one. A kind with no wording
+        # reaches it as 'recollected'.
+        assert set(phrases()['revision']) == set(REVISION_KINDS)
+
+    def test_no_revision_kind_is_worded_as_itself(self) -> None:
+        for kind, wording in phrases()['revision'].items():
+            assert wording != kind
+
+    def test_only_the_kinds_made_from_one_name_a_revision(self) -> None:
+        # A collection is made from a calendar and publishes no source
+        # revision, so a wording asking for one would leave "{number}"
+        # on screen. The other two are made from a revision and have
+        # to say which.
+        asking = {
+            kind
+            for kind, wording in phrases()['revision'].items()
+            if '{number}' in wording
+        }
+
+        assert asking == {'continued', 'reverted'}
+
     def test_every_blocker_the_core_publishes_is_worded(self) -> None:
         # The preview names why nothing can be sent, and the reason
         # crosses the wire as an identifier. One with no wording
@@ -144,7 +169,8 @@ class TestWebPhrases:
                 'start', 'end', 'minutes', 'direction', 'title'
             },
             'uncollected': set(),
-            'uncollectedNote': set()
+            'uncollectedNote': set(),
+            'revision': {'number'}
         }
 
         for group, names in allowed.items():
