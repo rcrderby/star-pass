@@ -32,15 +32,25 @@ const WAITING = 'waiting';
 const SENDING = 'sending';
 const DONE = 'done';
 const FAILED = 'failed';
+const UNKNOWN = 'unknown';
 
 /* What each state is called and drawn as. `done` says how many rows
  * arrived rather than the word, because that is the answer somebody
- * is watching for. */
+ * is watching for.
+ *
+ * `unknown` is the one an interrupted send leaves, and it is **not**
+ * `failed`: a failure is Amplify refusing, which the service saw and
+ * recorded, while an interruption is the service stopping with a
+ * request in the air. The batch may have arrived or may not have, and
+ * the only thing that knows is Amplify -- which is what the next send
+ * asks. Drawing it as failed would be this page making a claim the
+ * service does not. */
 const STATES = {
   [WAITING]: { words: 'Waiting', glyph: 'circle-dashed' },
   [SENDING]: { words: 'Sending', glyph: 'circle-notch' },
   [DONE]: { words: '', glyph: 'check-circle' },
-  [FAILED]: { words: 'Failed', glyph: 'warning-circle' }
+  [FAILED]: { words: 'Failed', glyph: 'warning-circle' },
+  [UNKNOWN]: { words: 'Unknown', glyph: 'info' }
 };
 
 /* Said while it runs, under the heading. */
@@ -88,6 +98,20 @@ const RECONNECTING = (
   + 'itself is unaffected.'
 );
 
+/* What an interrupted send says, in place of the outcome. The
+ * unfinished opportunity is the whole of the uncertainty: everything
+ * before it was recorded and everything after it was never reached. */
+const INTERRUPTED_LEDE = (
+  'The service stopped while this send was running. The opportunity it '
+  + 'was working on may or may not have been created — Amplify is what '
+  + 'knows, and resuming asks it. Every opportunity is read again '
+  + 'immediately before it is written to, so resuming creates only '
+  + 'what is missing and nothing can arrive twice.'
+);
+
+/* On the button that asks for it. */
+const RESUME = 'Resume the send';
+
 /** Return what the heading says.
  *
  * @param {Object} state What the screen is showing.
@@ -96,6 +120,10 @@ const RECONNECTING = (
 export function heading(state) {
   if (state.running) {
     return 'Sending to Amplify';
+  }
+
+  if (state.interrupted) {
+    return 'Send interrupted';
   }
 
   return state.rows.some((row) => row.state === FAILED)
@@ -113,6 +141,10 @@ export function statusText(state) {
     return 'Sending';
   }
 
+  if (state.interrupted) {
+    return 'Interrupted';
+  }
+
   const done = state.rows.filter((row) => row.state === DONE).length;
 
   return done === state.total && state.total > 0
@@ -126,6 +158,10 @@ export function statusText(state) {
  * @returns {string} What happened.
  */
 export function outcomeText(state) {
+  if (state.interrupted) {
+    return INTERRUPTED_LEDE;
+  }
+
   const failed = state.rows.filter((row) => row.state === FAILED).length;
   const created = state.rows.reduce(
     (total, row) => total + row.created,
@@ -294,6 +330,11 @@ function retryStatus(state) {
 export function sendingScreen(state, handlers) {
   const failed = state.rows.filter((row) => row.state === FAILED).length;
 
+  /* Offered only once the send has stopped. While one is running the
+   * question has an answer on the way, and a button asking to start
+   * it again would be asking for a second worker. */
+  const resumable = state.interrupted && !state.running;
+
   return el(
     'div',
     { class: 'sending' },
@@ -338,7 +379,11 @@ export function sendingScreen(state, handlers) {
     el(
       'div',
       { class: 'sending-actions' },
-      failed === 0
+      /* One button, whichever way this send stopped. A run cannot be
+       * both interrupted and holding a refusal: an interruption is
+       * the job's own ending, so the frames that would have said an
+       * opportunity failed were never written. */
+      failed === 0 && !resumable
         ? null
         : el(
           'button',
@@ -354,7 +399,7 @@ export function sendingScreen(state, handlers) {
             onclick: handlers.onRetry
           },
           icon('arrows-clockwise'),
-          `Retry the ${failed} that failed`
+          resumable ? RESUME : `Retry the ${failed} that failed`
         ),
       el(
         'button',
@@ -372,4 +417,4 @@ export function sendingScreen(state, handlers) {
   );
 }
 
-export { WAITING, SENDING, DONE, FAILED };
+export { WAITING, SENDING, DONE, FAILED, UNKNOWN };

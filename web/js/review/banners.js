@@ -93,10 +93,26 @@ function showOnlyThese(on, onToggle) {
   );
 }
 
+/** Return the control that opens the job a run was left with.
+ *
+ * @param {Function} onSee What pressing it does.
+ * @returns {HTMLElement} The control.
+ */
+function seeWhatHappened(onSee) {
+  return el(
+    'button',
+    { type: 'button', class: 'btn btn-primary', onclick: onSee },
+    icon('arrow-right'),
+    'See what happened'
+  );
+}
+
 /** Return the banners this run wants, in order.
  *
  * @param {Object} state What the screen is showing.
  * @param {Object} handlers What the filters do.
+ * @param {Function} handlers.onSeeInterrupted Open the job the
+ *     service stopped in the middle of.
  * @returns {Array<HTMLElement>} The banners.
  */
 export function reviewBanners(state, handlers) {
@@ -107,6 +123,27 @@ export function reviewBanners(state, handlers) {
   );
   const repeated = events.filter((event) => event.duplicateOf !== null);
   const banners = [];
+
+  /* First, and in the alert colour, because it is the one thing here
+   * that is not a fact about the run but a question left open about
+   * it: a write to Amplify stopped in the middle, and how far it got
+   * is not something this service knows (D10).
+   *
+   * A banner rather than a screen of its own to open on. An
+   * interrupted job stays interrupted until somebody acts on it, so a
+   * run that opened on it would be a run whose "Back to the run"
+   * came straight back -- unlike a job still running, which finishes
+   * and stops being the run's. */
+  if (run.interruptedJobId !== null) {
+    banners.push(banner({
+      tone: ALERT,
+      glyph: 'warning-circle',
+      words: 'The service stopped while this run had work in hand. '
+        + 'What it had done by then is worth looking at before '
+        + 'anything else is asked of the run.',
+      action: seeWhatHappened(handlers.onSeeInterrupted)
+    }));
+  }
 
   if (run.sentAt) {
     banners.push(banner({

@@ -191,6 +191,8 @@ export class ReviewScreen {
    * @param {Object} handlers What the screen's exits do.
    * @param {Function} handlers.onCollectNew Open the collect drawer
    *     over nothing, to collect a window into a new run.
+   * @param {Function} handlers.onSeeInterrupted Open the job the
+   *     service stopped in the middle of, which the run names.
    * @param {Function} handlers.onCollectAgain Open the collect drawer
    *     over this run, to read its window again.
    */
@@ -331,7 +333,8 @@ export class ReviewScreen {
           : new Set(shown.map((event) => event.id));
 
         this.redraw();
-      }
+      },
+      onSeeInterrupted: () => this.handlers.onSeeInterrupted()
     };
 
     /* Each of these is one operation naming every selected event, not

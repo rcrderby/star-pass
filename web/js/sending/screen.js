@@ -30,6 +30,7 @@ import {
   ApiError,
   getPreview,
   idempotencyKey,
+  resumeJob,
   sendRun
 } from '../api.js';
 import { el, icon } from '../dom.js';
@@ -46,6 +47,7 @@ import {
   DONE,
   FAILED,
   SENDING,
+  UNKNOWN,
   WAITING,
   sendingScreen
 } from './progress.js';
@@ -54,8 +56,12 @@ import {
  * collection, which is a different screen. */
 export const SEND_JOB = 'send';
 
-/* What the job says when it ended well. */
+/* What the job says when it ended well, and what it says when the
+ * service stopped while it was in hand. The second is not a failure:
+ * nothing refused anything, and how far it got is a question for
+ * Amplify rather than for the job (D10). */
 const SUCCEEDED = 'succeeded';
+const INTERRUPTED = 'interrupted';
 
 /* The step whose subject names the opportunity being worked on. The
  * send reports it immediately before writing to that opportunity, so
@@ -68,7 +74,9 @@ const READ_OPPORTUNITY = 'read_opportunity';
 const READING = 'Reading what a send would create, and asking Amplify '
   + 'what it already has.';
 
-/* Said on the preview screen when a retry found nothing left to do. */
+/* Said when a retry or a resume found nothing left to do. The run is
+ * still readable and still sendable from the preview, which is the
+ * way out of a job that stayed interrupted with nothing to finish. */
 const RETRY_NOTHING = (
   'Nothing was left to send: Amplify already holds every shift this '
   + 'run asks for.'
@@ -127,6 +135,11 @@ export class SendingScreen {
       total: 0,
       rows: [],
       running: false,
+      interrupted: false,
+      /* How many attempts this stream has reported. A resumed job
+       * keeps its event log, so one stream can carry the attempt that
+       * was interrupted and the one that replaced it. */
+      attempts: 0,
       lost: false,
       copied: ''
     };
@@ -185,7 +198,15 @@ export class SendingScreen {
     const dialog = new ConfirmDialog(
       { run: this.state.run, preview: this.state.preview },
       {
-        onSend: () => this.send(this.state.preview.totals.willCreate),
+        /* Which write it gates is the only thing that differs. All
+         * three ways a run reaches Amplify come through here (D11):
+         * the first send, a retry after a refusal, and a resume after
+         * the service stopped. */
+        onSend: () => (
+          this.state.interrupted
+            ? this.resumeSend()
+            : this.send(this.state.preview.totals.willCreate)
+        ),
         onCancel: () => {}
       }
     );
@@ -204,6 +225,48 @@ export class SendingScreen {
    * @returns {Promise<void>} When the job is being followed.
    */
   async send(expected) {
+    return this.write(() => sendRun(
+      this.state.run.id,
+      expected,
+      idempotencyKey()
+    ));
+  }
+
+  /** Ask for the interrupted job to be run again (D10).
+   *
+   * The same movement as a send and deliberately so: the preview said
+   * what is left, the confirmation restated it, and this is the third
+   * way a write to Amplify starts. It carries no count, because the
+   * request takes none -- what it carries is that a person asked.
+   *
+   * @returns {Promise<void>} When the job is being followed.
+   */
+  async resumeSend() {
+    return this.write(() => resumeJob(this.state.jobId));
+  }
+
+  /** Start a write to Amplify, and follow the job that does it.
+   *
+   * Below both callers, because what differs between a send and a
+   * resume is one request: everything about how the screen goes from
+   * a preview to a job being watched is the same, and two copies
+   * would drift into showing the two differently.
+   *
+   * The key names one attempt. A retry of *this* request sends it
+   * again and is answered with the first answer rather than sending
+   * twice; asking again after a partial send is a different action
+   * and takes a new one.
+   *
+   * @param {Function} ask What to call for the job.
+   * @returns {Promise<void>} When the job is being followed.
+   */
+  async write(ask) {
+    /* What is on screen now, because a refused request leaves it the
+     * truth. For a first send that is nothing; for a resume it is how
+     * far the interrupted attempt got, which is the whole of what
+     * this screen had to say about it. */
+    const before = this.state.rows;
+
     this.state.notice = '';
     this.state.rows = this.state.preview.rows.map(
       (row) => waitingRow(row.needId, row.title === null
@@ -215,21 +278,21 @@ export class SendingScreen {
     this.draw();
 
     try {
-      const job = await sendRun(
-        this.state.run.id,
-        expected,
-        idempotencyKey()
-      );
+      const job = await ask();
 
+      /* Only now, because a refused request leaves the job exactly as
+       * it was. A screen that had already let go of "interrupted"
+       * would answer a refusal by saying the send was over. */
+      this.state.interrupted = false;
       this.follow(job);
     } catch (error) {
-      /* Refused before a job existed, so nothing was written and the
-       * preview is what to go back to -- most often because what was
-       * shown no longer matches what a send would create, which is
-       * the case the count exists to catch. */
+      /* Refused before anything was written, so the preview is what
+       * to go back to -- most often because what was shown no longer
+       * matches what a send would create, which is the case the count
+       * exists to catch. */
       this.state.running = false;
       this.state.failure = this.asApiError(error);
-      this.state.rows = [];
+      this.state.rows = before;
       this.draw();
       this.read();
     }
@@ -259,6 +322,7 @@ export class SendingScreen {
   follow(job) {
     this.state.jobId = job.id;
     this.state.lost = false;
+    this.state.attempts = 0;
 
     this.source = watchJob(job, this);
 
@@ -318,6 +382,7 @@ export class SendingScreen {
        * counted its own rows would be counting what it had been told
        * about so far. */
       this.state.total = payload.opportunities;
+      this.startedAnAttempt();
     }
 
     if (kind === 'step_started' && payload.step === READ_OPPORTUNITY) {
@@ -335,6 +400,36 @@ export class SendingScreen {
     this.draw();
   }
 
+  /** Begin an attempt, letting go of what an earlier one reported.
+   *
+   * **A resumed job keeps its event log**, so a stream can carry the
+   * attempt that was interrupted and the one that replaced it, one
+   * after the other. What is worth drawing is the attempt now
+   * running: the earlier one's rows describe requests this one has
+   * made again, and an opportunity the first attempt created is one
+   * the second is told Amplify already holds. Left as they were, a
+   * row the job did create would end up reporting nothing created.
+   *
+   * The rows themselves stay. They came from the preview or from the
+   * replay, and either way they are the opportunities this send
+   * works through; it is what was reported about them that belongs
+   * to the attempt.
+   *
+   * @returns {void}
+   */
+  startedAnAttempt() {
+    if (this.state.attempts > 0) {
+      for (const row of this.state.rows) {
+        row.state = WAITING;
+        row.created = 0;
+        row.skipped = 0;
+        row.detail = '';
+      }
+    }
+
+    this.state.attempts += 1;
+  }
+
   /** Take in the job's last frame.
    *
    * A send stops at the first opportunity Amplify refuses rather than
@@ -349,6 +444,7 @@ export class SendingScreen {
   finished(ending) {
     this.state.running = false;
     this.state.lost = false;
+    this.state.interrupted = ending.status === INTERRUPTED;
 
     if (ending.status !== SUCCEEDED) {
       const reached = this.state.rows.find(
@@ -356,7 +452,11 @@ export class SendingScreen {
       );
 
       if (reached !== undefined) {
-        reached.state = FAILED;
+        /* An interruption is the service stopping with a request in
+         * the air, so what became of that one opportunity is a
+         * question for Amplify. A failure is Amplify refusing, which
+         * the service saw. */
+        reached.state = this.state.interrupted ? UNKNOWN : FAILED;
         reached.detail = ending.detail || '';
       }
     }
@@ -366,10 +466,18 @@ export class SendingScreen {
 
   /** Read the preview again, and confirm what is left to send.
    *
+   * **Both ways back to Amplify come through here**: a retry after an
+   * opportunity was refused, and a resume after the service stopped
+   * (D10). They differ in one request and in nothing else -- what is
+   * left is worked out the same way, by asking Amplify.
+   *
    * **Read again, because the count has moved.** Some of what the
    * first attempt was confirmed against is now in Amplify, so the
    * number that request carried describes a moment that has passed
-   * and a second one carrying it would be refused, rightly.
+   * and a second one carrying it would be refused, rightly. A resume
+   * carries no count at all: the request takes none, so what the
+   * confirmation buys there is only that somebody read what is about
+   * to happen -- which is what D11 says the confirmation is for.
    *
    * **Confirmed again, because a retry is a send.** D11 gates the
    * write and does not distinguish the first from the second; the
@@ -385,6 +493,11 @@ export class SendingScreen {
    * read per opportunity prevents whatever happens, but rows that
    * reached Amplify unreviewed.
    *
+   * When nothing is left, nothing is written and the notice says so.
+   * An interrupted job that turns out to have finished its work stays
+   * interrupted, which is true of it -- and the run below is still
+   * readable and still sendable from its own preview.
+   *
    * @returns {Promise<void>} When the confirmation is on screen, or
    *     when there was nothing to confirm.
    */
@@ -397,8 +510,8 @@ export class SendingScreen {
     }
 
     if (this.state.preview.totals.willCreate === 0) {
-      /* The rows stay. They are the record of what failed, and
-       * somebody reading this notice is reading it about them. */
+      /* The rows stay. They are the record of how far the send got,
+       * and somebody reading this notice is reading it about them. */
       this.state.notice = RETRY_NOTHING;
       this.draw();
 
