@@ -498,12 +498,15 @@ button.picker-row:hover {
   display: none;
 }
 
+/* The panel is capped and the entries scroll inside it, rather than
+ * the panel scrolling as a whole: its heading says what the list is
+ * and its close button is the way out of it, and neither is any use
+ * once reading the list has carried them off the top. */
 .log-panel {
   position: sticky;
   top: var(--space-4);
   width: 340px;
   max-height: 70vh;
-  overflow-y: auto;
   animation: om-fade-up 0.18s ease-out both;
 }
 
@@ -523,8 +526,14 @@ button.picker-row:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
+
+  /* The card is a flex column, so the list is the item that gives:
+   * `min-height` is what lets it shrink below its content and scroll,
+   * because a flex item's own minimum is its content otherwise. */
+  min-height: 0;
   margin: 0;
   padding: 0;
+  overflow-y: auto;
   list-style: none;
 }
 
