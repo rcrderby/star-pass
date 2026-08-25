@@ -373,7 +373,14 @@ def _to_log_entry_view(
         revision=entry.revision,
         logged_at=entry.logged_at,
         principal_id=entry.principal_id,
-        entry=entry.entry
+        action=entry.action,
+        subject=entry.subject,
+        subject_count=entry.subject_count,
+        category=entry.category,
+        shift_time=entry.shift_time,
+        minutes=entry.minutes,
+        slots=entry.slots,
+        need_id=entry.need_id
     )
 
 

@@ -698,10 +698,28 @@
       "LogEntryView": {
         "description": "One line of a run's change log. ",
         "properties": {
-          "entry": {
-            "description": "What changed, written for a reader.",
-            "title": "Entry",
+          "action": {
+            "description": "What was done. One of the operations an edit may carry, or `added` for an event pulled in off the not-collected list. An identifier rather than a sentence: a client words it, the way it words a run status or a revision kind, so the wording can change without every entry already recorded still saying the old thing.",
+            "examples": [
+              "set_category"
+            ],
+            "title": "Action",
             "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The category a `set_category` put them under, as the data model names it, or null for every other action. The key rather than the label: what a category is called belongs to whoever is showing it, and `GET /v1/config` publishes the labels.",
+            "examples": [
+              "junior_scrimmage"
+            ],
+            "title": "Category"
           },
           "id": {
             "description": "Identifier, ascending in the order entries were written.",
@@ -713,6 +731,36 @@
             "title": "Loggedat",
             "type": "string"
           },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How far a `nudge` moved them, negative for earlier, or null for every other action. Signed rather than split into a size and a direction, which is a wording each client makes for itself.",
+            "examples": [
+              -15
+            ],
+            "title": "Minutes"
+          },
+          "needId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The opportunity a `set_slots` was about, or null for every other action. The identifier rather than the Amplify title, which a reader of the run already holds beside it.",
+            "examples": [
+              "905196"
+            ],
+            "title": "Needid"
+          },
           "principalId": {
             "description": "Who made it. One value while the credential is a static token, and a real subject once an identity provider issues one, with no change to what records it.",
             "title": "Principalid",
@@ -722,6 +770,59 @@
             "description": "Revision that was current when the change was made.",
             "title": "Revision",
             "type": "integer"
+          },
+          "shiftTime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The time a `set_start` or `set_end` set, as `HH:MM` in the league's own zone, or null for every other action.",
+            "examples": [
+              "18:15"
+            ],
+            "title": "Shifttime"
+          },
+          "slots": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many volunteers a `set_slots` asked for, or null for every other action.",
+            "examples": [
+              4
+            ],
+            "title": "Slots"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Title of the event this was done to, or null when it named more than one. One event is worth naming and a selection is worth counting, so read this beside `subjectCount`.",
+            "examples": [
+              "Adult Scrimmages"
+            ],
+            "title": "Subject"
+          },
+          "subjectCount": {
+            "description": "How many events it named.",
+            "examples": [
+              1
+            ],
+            "title": "Subjectcount",
+            "type": "integer"
           }
         },
         "required": [
@@ -729,7 +830,8 @@
           "revision",
           "loggedAt",
           "principalId",
-          "entry"
+          "action",
+          "subjectCount"
         ],
         "title": "LogEntryView",
         "type": "object"

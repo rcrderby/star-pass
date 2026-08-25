@@ -28,6 +28,8 @@ from star_pass import _defaults
 from star_pass._records import (
     JOB_KIND_SEND,
     JOB_STATUS_SUCCEEDED,
+    LogEntry,
+    OP_NUDGE,
     ShiftIdentity
 )
 from star_pass._repository import (
@@ -223,14 +225,14 @@ class TestWhichRevisionsAreKept:
             run_id=run_id,
             revision=3,
             principal_id=SOMEBODY,
-            entry='Moved a shift last year'
+            recorded=LogEntry(action=OP_NUDGE, minutes=30)
         )
         monkeypatch.undo()
         change_log.add(
             run_id=run_id,
             revision=3,
             principal_id=SOMEBODY,
-            entry='Moved a shift today'
+            recorded=LogEntry(action=OP_NUDGE, minutes=-30)
         )
 
         sweep(connection=connection)

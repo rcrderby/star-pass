@@ -538,36 +538,88 @@ class LogEntry:
         client, so the log survives a reload and reads the same in a
         browser and a terminal.
 
+        **What was done comes first, and the identity has defaults.**
+        Whoever performs an operation knows what it did and none of
+        the rest: which run, which revision, who and when are the
+        repository's to stamp on as it stores the entry.  So an
+        operation builds one of these from its action and its values
+        alone, and what comes back from the repository is the same
+        record with its identity filled in.
+
         Attributes:
+            action (str):
+                What was done, one of 'LOG_ACTIONS'.  An identifier
+                rather than the sentence it would make: a sentence
+                returned by a service is a wording mistake, and a
+                sentence written into a row is a wording mistake with
+                a migration attached (D27).  Each client words it.
+
+            subject (str, optional):
+                Title of the event it was done to, or None when it
+                named more than one.  One event is worth naming and a
+                selection is worth counting, so a client reads this
+                beside the count.
+
+            subject_count (int):
+                How many events it named.
+
+            category (str, optional):
+                The category a 'set_category' put them under, as the
+                data model names it.  The key rather than the label,
+                because what a category is called belongs to whoever
+                is showing it.
+
+            shift_time (str, optional):
+                The time a 'set_start' or 'set_end' set, as 'HH:MM'.
+
+            minutes (int, optional):
+                How far a 'nudge' moved them, negative for earlier.
+                Signed rather than split into a size and a direction,
+                which is a wording each client makes for itself.
+
+            slots (int, optional):
+                How many volunteers a 'set_slots' asked for.
+
+            need_id (str, optional):
+                The opportunity a 'set_slots' was about.  The
+                identifier rather than the Amplify title, which a
+                reader of a run already holds beside it.
+
             id (int):
                 Identifier, ascending in the order entries were
-                written.
+                written.  The repository's to set.
 
             run_id (str):
-                Run the entry belongs to.
+                Run the entry belongs to.  The repository's to set.
 
             revision (int):
                 Revision that was current when the change was made.
+                The repository's to set.
 
             logged_at (str):
-                When the change was made, as an ISO-8601 UTC timestamp.
+                When the change was made, as an ISO-8601 UTC
+                timestamp.  The repository's to set.
 
             principal_id (str):
-                Who made it.  Recorded from the first entry, while
-                there is still only one principal, so that the column
-                is already there and already populated when there is
-                more than one.
-
-            entry (str):
-                What changed, written for a reader.
+                Who made it.  The repository's to set.  Recorded from
+                the first entry, while there is still only one
+                principal, so that the column is already there and
+                already populated when there is more than one.
     """
 
-    id: int
-    run_id: str
-    revision: int
-    logged_at: str
-    principal_id: str
-    entry: str
+    action: str
+    subject: Optional[str] = None
+    subject_count: int = 1
+    category: Optional[str] = None
+    shift_time: Optional[str] = None
+    minutes: Optional[int] = None
+    slots: Optional[int] = None
+    need_id: Optional[str] = None
+    id: int = 0
+    run_id: str = ''
+    revision: int = 0
+    logged_at: str = ''
+    principal_id: str = ''
 
 
 # What a job is doing.  One per operation that takes long enough that a
@@ -596,6 +648,42 @@ IDEMPOTENT_OPERATIONS = JOB_KINDS + (
     OPERATION_REVERT,
     OPERATION_SEAL
 )
+
+# What a reviewer may ask to be done to the events in a revision.
+# Named here beside the other vocabularies the contract publishes,
+# because three separate things read them: the operation a request
+# carries, the table in '_editing' that answers it, and the wordings
+# each client keeps for the change log.  Distinct from
+# 'IDEMPOTENT_OPERATIONS' above, which is what a key may be claimed
+# on -- a whole call of these is one 'edit'.
+OP_SET_CATEGORY = 'set_category'
+OP_UNASSIGN = 'unassign'
+OP_SET_START = 'set_start'
+OP_SET_END = 'set_end'
+OP_SET_SLOTS = 'set_slots'
+OP_NUDGE = 'nudge'
+OP_RESET_SLOTS = 'reset_slots'
+OP_REMOVE = 'remove'
+OP_UNDO = 'undo'
+
+EDIT_OPERATIONS = (
+    OP_SET_CATEGORY,
+    OP_UNASSIGN,
+    OP_SET_START,
+    OP_SET_END,
+    OP_SET_SLOTS,
+    OP_NUDGE,
+    OP_RESET_SLOTS,
+    OP_REMOVE,
+    OP_UNDO
+)
+
+# What a change-log entry can record: every edit, plus the one action
+# that is not one.  Pulling in an event the collection left out
+# changes what the revision holds without being an operation over the
+# events already in it, and the log has to be able to say so.
+LOG_ADDED = 'added'
+LOG_ACTIONS = EDIT_OPERATIONS + (LOG_ADDED,)
 
 # Where a job is in its life.  'interrupted' is the one that needs
 # explaining: it means the service stopped while the job was in hand,

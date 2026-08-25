@@ -20,7 +20,15 @@ from fastapi.testclient import TestClient
 
 # Imports - Local
 from star_pass._defaults import LOCAL_TIMEZONE
-from star_pass._records import Event, EventRole, Match
+from star_pass._records import (
+    Event,
+    EventRole,
+    LogEntry,
+    Match,
+    OP_NUDGE,
+    OP_REMOVE,
+    OP_SET_SLOTS
+)
 from star_pass._repository import (
     ChangeLogRepository,
     EventRepository,
@@ -550,14 +558,23 @@ class TestWhatIsShownBesideARun:
         add_log_entry(
             run_id=run_id,
             revision=revision,
-            entry='Set slots to 6 on Adult Scrimmages'
+            action=OP_SET_SLOTS,
+            subject='Adult Scrimmages',
+            slots=6,
+            need_id='905196'
         )
 
         returned = read_run(run_id)['log']
 
-        assert [entry['entry'] for entry in returned] == [
-            'Set slots to 6 on Adult Scrimmages'
-        ]
+        assert [
+            (
+                entry['action'],
+                entry['subject'],
+                entry['slots'],
+                entry['needId']
+            )
+            for entry in returned
+        ] == [(OP_SET_SLOTS, 'Adult Scrimmages', 6, '905196')]
 
     def test_the_change_log_records_who_made_the_change(
         self,
@@ -573,7 +590,7 @@ class TestWhatIsShownBesideARun:
             run_id=run_id,
             revision=revision,
             principal_id=_defaults.API_PRINCIPAL_ID,
-            entry='Removed Adult Scrimmages'
+            recorded=LogEntry(action=OP_REMOVE, subject='Adult Scrimmages')
         )
 
         assert read_run(run_id)['log'][0]['principalId'] == (
@@ -739,12 +756,12 @@ class TestWhatWasDoneInARevision:
         run_id: str,
         revision: int
     ) -> None:
-        for entry in ('Set slots to 6', 'Removed Adult Scrimmages'):
+        for title in ('Adult Scrimmages', 'Junior Scrimmages'):
             change_log.add(
                 run_id=run_id,
                 revision=revision,
                 principal_id=_defaults.API_PRINCIPAL_ID,
-                entry=entry
+                recorded=LogEntry(action=OP_REMOVE, subject=title)
             )
 
         listed = running_client.get(revisions_path(run_id=run_id)).json()
@@ -764,7 +781,11 @@ class TestWhatWasDoneInARevision:
             run_id=edited,
             revision=2,
             principal_id=_defaults.API_PRINCIPAL_ID,
-            entry='Nudged Adult Scrimmages by 30 minutes'
+            recorded=LogEntry(
+                action=OP_NUDGE,
+                subject='Adult Scrimmages',
+                minutes=30
+            )
         )
 
         listed = running_client.get(revisions_path(run_id=edited)).json()
@@ -790,7 +811,7 @@ class TestWhatWasDoneInARevision:
             run_id=other.id,
             revision=revision,
             principal_id=_defaults.API_PRINCIPAL_ID,
-            entry='Removed something from the other run'
+            recorded=LogEntry(action=OP_REMOVE, subject='Something Else')
         )
 
         listed = running_client.get(revisions_path(run_id=run_id)).json()

@@ -459,8 +459,77 @@ class LogEntryView(ApiModel):
             'issues one, with no change to what records it.'
         )
     )
-    entry: str = Field(
-        description='What changed, written for a reader.'
+    action: str = Field(
+        description=(
+            'What was done. One of the operations an edit may carry, '
+            'or `added` for an event pulled in off the not-collected '
+            'list. An identifier rather than a sentence: a client '
+            'words it, the way it words a run status or a revision '
+            'kind, so the wording can change without every entry '
+            'already recorded still saying the old thing.'
+        ),
+        examples=['set_category']
+    )
+    subject: str | None = Field(
+        default=None,
+        description=(
+            'Title of the event this was done to, or null when it '
+            'named more than one. One event is worth naming and a '
+            'selection is worth counting, so read this beside '
+            '`subjectCount`.'
+        ),
+        examples=['Adult Scrimmages']
+    )
+    subject_count: int = Field(
+        description='How many events it named.',
+        examples=[1]
+    )
+    category: str | None = Field(
+        default=None,
+        description=(
+            'The category a `set_category` put them under, as the data '
+            'model names it, or null for every other action. The key '
+            'rather than the label: what a category is called belongs '
+            'to whoever is showing it, and `GET /v1/config` publishes '
+            'the labels.'
+        ),
+        examples=['junior_scrimmage']
+    )
+    shift_time: str | None = Field(
+        default=None,
+        description=(
+            'The time a `set_start` or `set_end` set, as `HH:MM` in '
+            'the league\'s own zone, or null for every other action.'
+        ),
+        examples=['18:15']
+    )
+    minutes: int | None = Field(
+        default=None,
+        description=(
+            'How far a `nudge` moved them, negative for earlier, or '
+            'null for every other action. Signed rather than split '
+            'into a size and a direction, which is a wording each '
+            'client makes for itself.'
+        ),
+        examples=[-15]
+    )
+    slots: int | None = Field(
+        default=None,
+        description=(
+            'How many volunteers a `set_slots` asked for, or null for '
+            'every other action.'
+        ),
+        examples=[4]
+    )
+    need_id: str | None = Field(
+        default=None,
+        description=(
+            'The opportunity a `set_slots` was about, or null for '
+            'every other action. The identifier rather than the '
+            'Amplify title, which a reader of the run already holds '
+            'beside it.'
+        ),
+        examples=['905196']
     )
 
 

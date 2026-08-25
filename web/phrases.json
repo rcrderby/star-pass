@@ -50,5 +50,28 @@
     "recollected": "As recollected",
     "continued": "Continued from revision {number}",
     "reverted": "Reverted to revision {number}"
+  },
+  "logAction": {
+    "set_category": "Set the opportunity for {subject} to {category}.",
+    "unassign": "Set {subject} back to unassigned.",
+    "set_start": "Set the shift start of {subject} to {time}.",
+    "set_end": "Set the shift end of {subject} to {time}.",
+    "set_slots": "Set {slots} volunteers wanted on {subject} for {opportunity}.",
+    "nudge": "Moved {subject} {minutes} minutes {direction}.",
+    "reset_slots": "Reset the volunteers wanted on {subject} to what the opportunity asks for.",
+    "remove": "Removed {subject}.",
+    "undo": "Undid the changes to {subject}.",
+    "added": "Added {subject}, which no configured search returned."
+  },
+  "logSubject": {
+    "one": "\"{title}\"",
+    "many": "{count} events"
+  },
+  "logDirection": {
+    "later": "later",
+    "earlier": "earlier"
+  },
+  "logValue": {
+    "unknownOpportunity": "need {needId}"
   }
 }

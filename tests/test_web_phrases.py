@@ -26,6 +26,7 @@ from typing import Any, Dict
 # Imports - Local
 from star_pass._preview import BLOCKER_REASONS
 from star_pass._records import (
+    LOG_ACTIONS,
     MATCH_KINDS,
     REVISION_KINDS,
     RUN_STATUSES,
@@ -170,9 +171,60 @@ class TestWebPhrases:
             },
             'uncollected': set(),
             'uncollectedNote': set(),
-            'revision': {'number'}
+            'revision': {'number'},
+            'logAction': {
+                'subject', 'category', 'time', 'slots', 'opportunity',
+                'minutes', 'direction'
+            },
+            'logSubject': {'title', 'count'},
+            'logDirection': set(),
+            'logValue': {'needId'}
         }
 
         for group, names in allowed.items():
             for wording in phrases()[group].values():
                 assert set(findall(r'\{(\w+)\}', wording)) <= names
+
+
+class TestTheChangeLogWordings:
+    # Its own class rather than more methods on the one above, which
+    # is at the number pylint allows.  The change log is one subject:
+    # the contract publishes what was done and the values it carried,
+    # and every wording here is part of saying that.
+
+    def test_every_log_action_the_core_publishes_is_worded(self) -> None:
+        # The change log names what was done. An action with no
+        # wording reaches the panel as 'set_category'.
+        assert set(phrases()['logAction']) == set(LOG_ACTIONS)
+
+    def test_no_log_wording_is_for_an_action_that_does_not_exist(
+        self
+    ) -> None:
+        for action in phrases()['logAction']:
+            assert action in LOG_ACTIONS
+
+    def test_no_log_action_is_worded_as_itself(self) -> None:
+        for action, wording in phrases()['logAction'].items():
+            assert wording != action
+
+    def test_every_log_wording_names_what_it_was_done_to(self) -> None:
+        # Every action is done to an event, and an entry that did not
+        # say which reads as a change to nothing in particular.
+        for wording in phrases()['logAction'].values():
+            assert '{subject}' in wording
+
+    def test_only_the_actions_carrying_a_value_ask_for_one(self) -> None:
+        # A wording asking for a value its action never carries leaves
+        # the placeholder on screen, and one that does not ask for the
+        # value its action carries throws it away.
+        carried = {
+            'set_category': {'category'},
+            'set_start': {'time'},
+            'set_end': {'time'},
+            'set_slots': {'slots', 'opportunity'},
+            'nudge': {'minutes', 'direction'}
+        }
+
+        for action, wording in phrases()['logAction'].items():
+            named = set(findall(r'\{(\w+)\}', wording)) - {'subject'}
+            assert named == carried.get(action, set())

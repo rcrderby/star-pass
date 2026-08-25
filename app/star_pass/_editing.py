@@ -30,7 +30,7 @@
 # Imports - Python Standard Library
 import sqlite3
 from dataclasses import dataclass, field, replace
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 # Imports - Local
 from ._event_edits import (
@@ -48,36 +48,24 @@ from ._derived import may_unassign
 from ._exceptions import ValidationError
 from ._helpers import Helpers
 from ._logging import get_logger
-from ._records import Event, LogEntry, Opportunity
+from ._records import (
+    EDIT_OPERATIONS,
+    Event,
+    LogEntry,
+    OP_NUDGE,
+    OP_REMOVE,
+    OP_RESET_SLOTS,
+    OP_SET_CATEGORY,
+    OP_SET_END,
+    OP_SET_SLOTS,
+    OP_SET_START,
+    OP_UNASSIGN,
+    OP_UNDO
+)
 from ._repository import (
     ChangeLogRepository,
     EventRepository,
     RunRepository
-)
-
-# What a caller may ask for.  Named here rather than left as loose
-# strings so the contract, the command line and this module cannot
-# drift apart about what an operation is called.
-OP_SET_CATEGORY = 'set_category'
-OP_UNASSIGN = 'unassign'
-OP_SET_START = 'set_start'
-OP_SET_END = 'set_end'
-OP_SET_SLOTS = 'set_slots'
-OP_NUDGE = 'nudge'
-OP_RESET_SLOTS = 'reset_slots'
-OP_REMOVE = 'remove'
-OP_UNDO = 'undo'
-
-OPERATIONS = (
-    OP_SET_CATEGORY,
-    OP_UNASSIGN,
-    OP_SET_START,
-    OP_SET_END,
-    OP_SET_SLOTS,
-    OP_NUDGE,
-    OP_RESET_SLOTS,
-    OP_REMOVE,
-    OP_UNDO
 )
 
 # Module logger
@@ -143,15 +131,16 @@ class Edit:
             removed (Tuple[str, ...]):
                 Identifiers of the events the operations took out.
 
-            entries (Tuple[str, ...]):
-                One line per operation, written for a reader.  The
-                caller writes these to the change log, because when an
-                entry is durable is the caller's business.
+            entries (Tuple[LogEntry, ...]):
+                One per operation: what was done and the values it
+                carried.  The caller writes these to the change log,
+                because when an entry is durable is the caller's
+                business.
     """
 
     events: Tuple[Event, ...]
     removed: Tuple[str, ...]
-    entries: Tuple[str, ...]
+    entries: Tuple[LogEntry, ...]
 
 
 @dataclass(frozen=True)
@@ -159,8 +148,8 @@ class _Result:
     """ What one operation did.
 
         Attributes:
-            entry (str):
-                The line to log, written for a reader.
+            entry (LogEntry):
+                What to log: the operation and the values it carried.
 
             changed (Dict[str, Event]):
                 The events it changed, by ID.  Empty for an operation
@@ -170,7 +159,7 @@ class _Result:
                 Identifiers it took out of the revision.
     """
 
-    entry: str
+    entry: LogEntry
     changed: Dict[str, Event] = field(default_factory=dict)
     removed: Tuple[str, ...] = ()
 
@@ -178,14 +167,15 @@ class _Result:
 def _named(
         events: Sequence[Event]
 ) -> str:
-    """ Return what to call a set of events in a log entry.
+    """ Return what to call a set of events in a refusal.
 
-        One event is worth naming; a selection is worth counting.  A
-        log line listing thirty titles is one nobody reads.
+        For the core's own messages, which are sentences it owns and
+        writes for a person.  What the change log records is not a
+        sentence at all -- see '_recorded'.
 
         Args:
             events (Sequence[Event]):
-                The events an operation applied to.
+                The events a refusal is about.
 
         Returns:
             name (str):
@@ -196,6 +186,42 @@ def _named(
         return f'"{events[0].title}"'
 
     return f'{len(events)} events'
+
+
+def _recorded(
+        action: str,
+        events: Sequence[Event],
+        **values: Any
+) -> LogEntry:
+    """ Return what an operation writes to the change log.
+
+        One event is named and a selection is counted, because a line
+        listing thirty titles is one nobody reads -- but both are
+        recorded and neither is worded here, so whoever shows the
+        entry decides how it reads.
+
+        Args:
+            action (str):
+                What was done, one of 'LOG_ACTIONS'.
+
+            events (Sequence[Event]):
+                The events it applied to.
+
+            **values:
+                The values the action carried, by the name 'LogEntry'
+                holds each under.
+
+        Returns:
+            entry (LogEntry):
+                The entry, less the identity the repository stamps on.
+    """
+
+    return LogEntry(
+        action=action,
+        subject=events[0].title if len(events) == 1 else None,
+        subject_count=len(events),
+        **values
+    )
 
 
 def _remove(
@@ -209,7 +235,7 @@ def _remove(
 
     return _Result(
         removed=tuple(event.id for event in events),
-        entry=f'Removed {_named(events)}.'
+        entry=_recorded(action=OP_REMOVE, events=events)
     )
 
 
@@ -241,7 +267,11 @@ def _set_category(
             )
             for event in events
         },
-        entry=f'Set the category of {_named(events)} to "{category}".'
+        entry=_recorded(
+            action=OP_SET_CATEGORY,
+            events=events,
+            category=category
+        )
     )
 
 
@@ -284,7 +314,7 @@ def _unassign(
             )
             for event in events
         },
-        entry=f'Set {_named(events)} back to unassigned.'
+        entry=_recorded(action=OP_UNASSIGN, events=events)
     )
 
 
@@ -307,7 +337,11 @@ def _set_start(
             )
             for event in events
         },
-        entry=f'Set the shift start of {_named(events)} to {time}.'
+        entry=_recorded(
+            action=OP_SET_START,
+            events=events,
+            shift_time=time
+        )
     )
 
 
@@ -330,7 +364,11 @@ def _set_end(
             )
             for event in events
         },
-        entry=f'Set the shift end of {_named(events)} to {time}.'
+        entry=_recorded(
+            action=OP_SET_END,
+            events=events,
+            shift_time=time
+        )
     )
 
 
@@ -347,14 +385,17 @@ def _nudge(
         name='minutes',
         op=operation.op
     )
-    moved = 'later' if minutes > 0 else 'earlier'
 
     return _Result(
         changed={
             event.id: nudged(event=event, minutes=minutes)
             for event in events
         },
-        entry=f'Moved {_named(events)} {abs(minutes)} minutes {moved}.'
+        entry=_recorded(
+            action=OP_NUDGE,
+            events=events,
+            minutes=minutes
+        )
     )
 
 
@@ -365,6 +406,7 @@ def _set_slots(
 ) -> '_Result':
     """ Set how many volunteers one role wants. """
 
+    del context
     need_id = required(
         value=operation.need_id,
         name='needId',
@@ -385,9 +427,11 @@ def _set_slots(
             )
             for event in events
         },
-        entry=(
-            f'Set {slots} volunteers wanted on {_named(events)} for '
-            f'{context.opportunity_name(need_id)}.'
+        entry=_recorded(
+            action=OP_SET_SLOTS,
+            events=events,
+            slots=slots,
+            need_id=need_id
         )
     )
 
@@ -406,10 +450,7 @@ def _reset_slots(
             event.id: slots_reset(event=event)
             for event in events
         },
-        entry=(
-            f'Reset the volunteers wanted on {_named(events)} to what '
-            'the opportunity asks for.'
-        )
+        entry=_recorded(action=OP_RESET_SLOTS, events=events)
     )
 
 
@@ -431,7 +472,7 @@ def _undo(
             )
             for event in events
         },
-        entry=f'Undid the changes to {_named(events)}.'
+        entry=_recorded(action=OP_UNDO, events=events)
     )
 
 
@@ -485,7 +526,7 @@ def _apply_one(
     handler = HANDLERS.get(operation.op)
 
     if handler is None:
-        known = ', '.join(OPERATIONS)
+        known = ', '.join(EDIT_OPERATIONS)
         message = (
             f'"{operation.op}" is not something that can be done to an '
             f'event. The operations are: {known}.'
@@ -503,7 +544,6 @@ def _apply_one(
 def apply(
         operations: Sequence[Operation],
         events: Sequence[Event],
-        opportunities: Sequence[Opportunity],
         calendar: str,
         helpers: Optional[Helpers] = None
 ) -> Edit:
@@ -522,9 +562,6 @@ def apply(
 
             events (Sequence[Event]):
                 The revision's events, in the order they are read.
-
-            opportunities (Sequence[Opportunity]):
-                The run's opportunities, for what each asks by default.
 
             calendar (str):
                 Calendar the run was collected from.
@@ -547,11 +584,7 @@ def apply(
 
     context = EditContext(
         calendar=calendar,
-        helpers=helpers if helpers is not None else Helpers(),
-        opportunities={
-            opportunity.need_id: opportunity
-            for opportunity in opportunities
-        }
+        helpers=helpers if helpers is not None else Helpers()
     )
 
     if not operations:
@@ -700,7 +733,6 @@ def edit(
     applied = apply(
         operations=operations,
         events=events.list_all(run_id=run_id, revision=revision),
-        opportunities=runs.get_opportunities(run_id=run_id),
         calendar=run.calendar
     )
 
@@ -726,7 +758,7 @@ def edit(
                 run_id=run_id,
                 revision=revision,
                 principal_id=principal_id,
-                entry=entry
+                recorded=entry
             )
             for entry in applied.entries
         ]

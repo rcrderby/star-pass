@@ -53,7 +53,7 @@ DATABASE_BUSY_TIMEOUT = _defaults.DATABASE_BUSY_TIMEOUT
 # forward.  A later one means the file was written by a newer version
 # of the application, which is a deployment problem rather than
 # something to guess at.
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 # Pragmas applied to every connection.  'foreign_keys' is off by
 # default and is per-connection rather than stored in the file, so
@@ -185,13 +185,20 @@ SCHEMA_STATEMENTS = (
     """,
     """
     CREATE TABLE IF NOT EXISTS change_log (
-        id            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        run_id        TEXT    NOT NULL
-                              REFERENCES runs (id) ON DELETE CASCADE,
-        revision      INTEGER NOT NULL,
-        logged_at     TEXT    NOT NULL,
-        principal_id  TEXT    NOT NULL,
-        entry         TEXT    NOT NULL
+        id             INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        run_id         TEXT    NOT NULL
+                               REFERENCES runs (id) ON DELETE CASCADE,
+        revision       INTEGER NOT NULL,
+        logged_at      TEXT    NOT NULL,
+        principal_id   TEXT    NOT NULL,
+        action         TEXT    NOT NULL,
+        subject        TEXT,
+        subject_count  INTEGER NOT NULL,
+        category       TEXT,
+        shift_time     TEXT,
+        minutes        INTEGER,
+        slots          INTEGER,
+        need_id        TEXT
     )
     """,
     """

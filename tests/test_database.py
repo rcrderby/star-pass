@@ -17,8 +17,12 @@ from star_pass._exceptions import (
     UpstreamError,
     ValidationError
 )
-from star_pass._records import Event
-from star_pass._repository import EventRepository, RevisionRepository
+from star_pass._records import Event, LogEntry, OP_NUDGE
+from star_pass._repository import (
+    ChangeLogRepository,
+    EventRepository,
+    RevisionRepository
+)
 
 # Constants
 EXPECTED_TABLES = {
@@ -52,7 +56,21 @@ EARLIER_VERSIONS = (
     (3, (), (('jobs', 'held_by'),)),
     (4, ('uncollected_events',), ()),
     (5, ('unmatched_titles',), ()),
-    (8, (), (('events', 'collected_category'),))
+    (8, (), (('events', 'collected_category'),)),
+    (
+        9,
+        (),
+        (
+            ('change_log', 'action'),
+            ('change_log', 'subject'),
+            ('change_log', 'subject_count'),
+            ('change_log', 'category'),
+            ('change_log', 'shift_time'),
+            ('change_log', 'minutes'),
+            ('change_log', 'slots'),
+            ('change_log', 'need_id')
+        )
+    )
 )
 
 
@@ -655,3 +673,110 @@ class TestFillingInWhatTheCollectionMatched:
         connection.close()
 
         assert stored.collected_category == 'junior_scrimmage'
+
+
+# The change log as version 9 wrote it: one English sentence, with no
+# record of what was done or what it carried.
+VERSION_NINE_CHANGE_LOG = """
+    CREATE TABLE change_log (
+        id            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        run_id        TEXT    NOT NULL
+                              REFERENCES runs (id) ON DELETE CASCADE,
+        revision      INTEGER NOT NULL,
+        logged_at     TEXT    NOT NULL,
+        principal_id  TEXT    NOT NULL,
+        entry         TEXT    NOT NULL
+    )
+"""
+
+
+@pytest.fixture(name='sentenced_database')
+def fixture_sentenced_database(
+    database_path: Path
+) -> Path:
+    """ Return a database at version 9, holding the old sentences.
+
+        The table is replaced rather than altered, because what
+        version 10 changed about it cannot be undone by dropping
+        columns: 'action' is NOT NULL and 'entry' is gone.
+    """
+    connection = _database.connect(path=database_path)
+
+    insert_run(connection=connection, run_id='run-1')
+    _database.execute(connection=connection, statement='DROP TABLE change_log')
+    _database.execute(connection=connection, statement=VERSION_NINE_CHANGE_LOG)
+    _database.execute(
+        connection=connection,
+        statement=(
+            'INSERT INTO change_log (run_id, revision, logged_at, '
+            "principal_id, entry) VALUES ('run-1', 1, "
+            "'2026-09-01T00:00:00+00:00', 'static-token', "
+            "'Set the category of \"X\" to \"junior_scrimmage\".')"
+        )
+    )
+    _database.execute(
+        connection=connection,
+        statement='PRAGMA user_version = 9'
+    )
+    connection.close()
+
+    return database_path
+
+
+class TestDiscardingTheOldSentences:
+    def test_the_sentence_itself_is_gone(
+        self,
+        sentenced_database: Path
+    ) -> None:
+        # It has to be: an insert now names 'action' and not 'entry',
+        # so a NOT NULL column left behind would refuse every entry
+        # written after the migration.
+        connection = _database.connect(path=sentenced_database)
+        columns = column_names(connection=connection, table='change_log')
+        connection.close()
+
+        assert 'entry' not in columns
+
+    def test_the_entry_is_left_saying_nothing_was_done(
+        self,
+        sentenced_database: Path
+    ) -> None:
+        # Nothing recovers an action from prose.  What a sentence
+        # carried is an event title, a time and a category
+        # interpolated into English, and reading those back would be a
+        # migration written against wording -- for entries the wipe
+        # that follows this release discards anyway.
+        connection = _database.connect(path=sentenced_database)
+        row = _database.query_one(
+            connection=connection,
+            statement='SELECT action, subject FROM change_log'
+        )
+        connection.close()
+
+        assert (row['action'], row['subject']) == ('', None)
+
+    def test_an_entry_can_still_be_written(
+        self,
+        sentenced_database: Path
+    ) -> None:
+        # The question the column above exists to answer, asked of the
+        # statement that would actually fail.
+        connection = _database.connect(path=sentenced_database)
+        _database.execute(
+            connection=connection,
+            statement=(
+                "INSERT INTO revisions (run_id, number, created_at, kind) "
+                "VALUES ('run-1', 1, '2026-09-01T00:00:00+00:00', "
+                "'collected')"
+            )
+        )
+
+        written = ChangeLogRepository(connection=connection).add(
+            run_id='run-1',
+            revision=1,
+            principal_id='static-token',
+            recorded=LogEntry(action=OP_NUDGE, minutes=-15)
+        )
+        connection.close()
+
+        assert (written.action, written.minutes) == (OP_NUDGE, -15)

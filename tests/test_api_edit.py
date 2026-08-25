@@ -270,9 +270,10 @@ class TestWhatAnEditAnswers:
 
         log = answer.json()['log']
         assert len(log) == 2
-        assert log[0]['entry'] == (
-            'Moved "Adult Scrimmages" 15 minutes earlier.'
-        )
+        assert log[0]['action'] == 'nudge'
+        assert log[0]['subject'] == 'Adult Scrimmages'
+        assert log[0]['subjectCount'] == 1
+        assert log[0]['minutes'] == -15
 
     def test_the_entries_reach_the_run_s_change_log(
         self, edit, collected, connection

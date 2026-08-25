@@ -20,14 +20,14 @@
 # Imports - Python Standard Library
 from dataclasses import dataclass, replace
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 # Imports - Local
 from . import _defaults
 from ._exceptions import ValidationError
 from ._helpers import Helpers
 from ._logging import get_logger
-from ._records import Event, EventRole, Opportunity
+from ._records import Event, EventRole
 from ._shift_timing import (
     MINUTES_PER_DAY,
     role_timings,
@@ -47,9 +47,8 @@ class EditContext:
     """ What every operation needs and none of them decides.
 
         Gathered once rather than threaded through each operation
-        separately: the calendar, the data model reader and the run's
-        opportunities are read the same way whatever is being done, and
-        seven parameters is a signature nobody reads.
+        separately: the calendar and the data model reader are read the
+        same way whatever is being done.
 
         Attributes:
             calendar (str):
@@ -57,38 +56,10 @@ class EditContext:
 
             helpers (Helpers):
                 Where the shift data model is read through.
-
-            opportunities (Dict[str, Opportunity]):
-                The run's opportunities, by need ID.
     """
 
     calendar: str
     helpers: Helpers
-    opportunities: Dict[str, Opportunity]
-
-    def opportunity_name(
-            self,
-            need_id: str
-    ) -> str:
-        """ Return what to call an opportunity in a log entry.
-
-            Args:
-                need_id (str):
-                    The opportunity's need ID.
-
-            Returns:
-                name (str):
-                    Its Amplify title, or the need ID when the run
-                    holds no title for it -- a log entry is worth
-                    writing either way.
-        """
-
-        opportunity = self.opportunities.get(need_id)
-
-        if opportunity is None:
-            return f'need {need_id}'
-
-        return f'"{opportunity.title}"'
 
 
 def _minutes_of(

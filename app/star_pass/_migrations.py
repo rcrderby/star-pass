@@ -325,5 +325,79 @@ MIGRATIONS = {
             column='collected_category',
             statement='UPDATE events SET collected_category = category'
         )
+    ),
+    10: (
+        # What an edit did, as the operation it was and the values it
+        # carried, rather than as an English sentence written into a
+        # row (D27).  A sentence stored in a column cannot be reworded
+        # without rewriting every row already holding the old one, and
+        # this one was already wrong in the way a stored sentence
+        # cannot be corrected: it carried a raw category key.
+        #
+        # The defaults are what SQLite requires of a NOT NULL column
+        # added to a table that has rows.  Nothing fills them in
+        # afterwards: recovering an operation and its values from
+        # prose would be a migration written against English, for
+        # entries that carry nothing a later reader can act on.  An
+        # entry from before this version therefore says only when it
+        # was made, by whom, and in which revision.
+        Step(
+            table='change_log',
+            column='action',
+            statement=(
+                'ALTER TABLE change_log '
+                "ADD COLUMN action TEXT NOT NULL DEFAULT ''"
+            )
+        ),
+        Step(
+            table='change_log',
+            column='subject',
+            statement='ALTER TABLE change_log ADD COLUMN subject TEXT'
+        ),
+        Step(
+            table='change_log',
+            column='subject_count',
+            statement=(
+                'ALTER TABLE change_log '
+                'ADD COLUMN subject_count INTEGER NOT NULL DEFAULT 1'
+            )
+        ),
+        Step(
+            table='change_log',
+            column='category',
+            statement='ALTER TABLE change_log ADD COLUMN category TEXT'
+        ),
+        Step(
+            table='change_log',
+            column='shift_time',
+            statement='ALTER TABLE change_log ADD COLUMN shift_time TEXT'
+        ),
+        Step(
+            table='change_log',
+            column='minutes',
+            statement='ALTER TABLE change_log ADD COLUMN minutes INTEGER'
+        ),
+        Step(
+            table='change_log',
+            column='slots',
+            statement='ALTER TABLE change_log ADD COLUMN slots INTEGER'
+        ),
+        Step(
+            table='change_log',
+            column='need_id',
+            statement='ALTER TABLE change_log ADD COLUMN need_id TEXT'
+        ),
+        # And the sentence goes.  It has to: an insert now names
+        # 'action' and not 'entry', so a NOT NULL column left behind
+        # would refuse every entry written after this.  A column and
+        # not the table -- 'change_log' points at 'runs' with a
+        # cascade, so rebuilding it the portable way is the wrong
+        # habit in this file.
+        Step(
+            table='change_log',
+            column='entry',
+            removes=True,
+            statement='ALTER TABLE change_log DROP COLUMN entry'
+        )
     )
 }
