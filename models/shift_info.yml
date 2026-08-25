@@ -30,7 +30,22 @@ calendar:
         group: adults
         initiative: officiating
         type: game
-        aliases: [aoa, axles, bb, gnr, hh, hr, woj, wheels, justice, wreckers]
+        aliases:
+          - aoa
+          - axles
+          - bb
+          - bnb
+          - 'break neck betties'
+          - gnr
+          - 'guns n rollers'
+          - hh
+          - 'heartless heathers'
+          - hr
+          - 'high rollers'
+          - justice
+          - wheels
+          - woj
+          - wreckers
         need_ids:
           - description: NSOs
             id: 879609
@@ -50,7 +65,15 @@ calendar:
         group: juniors
         initiative: officiating
         type: game
-        aliases: [petals, ptt]
+        aliases:
+          - 'bad apples'
+          - ba
+          - 'killer bees'
+          - kb
+          - petals
+          - ptt
+          - 'skaters of doom'
+          - sod
         need_ids:
           - description: NSOs
             id: 905196
@@ -70,7 +93,19 @@ calendar:
         group: juniors
         initiative: officiating
         type: game
-        aliases: [buds, roses, rtt, ntt]
+        aliases:
+          - bh
+          - 'bleeding hearts'
+          - buds
+          - 'death scar derby droids'
+          - dsdd
+          - ntt
+          - 'rainbow bites'
+          - rbb
+          - roses
+          - rtt
+          - ua
+          - 'undead avengers'
         need_ids:
           - description: NSOs
             id: 905196
@@ -83,46 +118,6 @@ calendar:
             max_length: 165
             offset_start: 0
             offset_end: 75
-            slots: 8
-
-      junior_game_buds_closed:
-        description: Rose Buds Closed Scored Scrimmage
-        group: juniors
-        initiative: officiating
-        type: game
-        aliases: ['buds closed scored scrimmage']
-        need_ids:
-          - description: NSOs
-            id: 905196
-            max_length: 165
-            offset_start: -30
-            offset_end: 15
-            slots: 12
-          - description: SOs
-            id: 905197
-            max_length: 165
-            offset_start: -30
-            offset_end: 15
-            slots: 8
-
-      junior_game:
-        description: Juniors Games - Unspecified
-        group: juniors
-        initiative: officiating
-        type: game
-        aliases: [juniors]
-        need_ids:
-          - description: NSOs
-            id: 905196
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
-            slots: 12
-          - description: SOs
-            id: 905197
-            max_length: 165
-            offset_start: 15
-            offset_end: 30
             slots: 8
 
     # Fallback when no alias matches: empty IDs signal 'operator must review'.
