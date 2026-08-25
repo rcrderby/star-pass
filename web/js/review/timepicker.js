@@ -70,6 +70,43 @@ function everyStep() {
   return times;
 }
 
+/** Put the list where the time it is showing is, as it opens.
+ *
+ * Ninety-six options and nothing scrolling them leaves the list at
+ * 00:00, so a field reading 19:15 opens on a list of small hours with
+ * the time it holds nineteen hours below the fold - and the list
+ * reads as offering the wrong day rather than the wrong scroll
+ * position.
+ *
+ * Centred rather than merely brought to an edge: the steps either
+ * side of the current time are what somebody opening this list most
+ * often wants, and an option resting on the last row has none of the
+ * ones after it.
+ *
+ * @param {HTMLElement} panel The list, once it is on the page.
+ * @param {string} clock What the field says.
+ * @returns {void}
+ */
+function showTime(panel, clock) {
+  const minutes = asMinutes(clock);
+  /* Rounded rather than floored, and clamped: the field can hold a
+   * time the list does not offer, because the keyboard steps from
+   * wherever it already was and because a time can be typed. That
+   * opens on the step nearest it. */
+  const index = Math.min(
+    panel.children.length - 1,
+    Math.max(0, Math.round((minutes === null ? 0 : minutes) / STEP))
+  );
+  const option = panel.children[index];
+
+  if (option === undefined) {
+    return;
+  }
+
+  panel.scrollTop = option.offsetTop
+    - ((panel.clientHeight - option.offsetHeight) / 2);
+}
+
 /** Return a shift time field, and the list that opens beside it.
  *
  * @param {Object} options What it edits.
@@ -191,7 +228,10 @@ export function timeField({ value, label, busy, onChoose }) {
    * the trigger, so tabbing to it offers the list without a second
    * control to find. */
   if (!busy) {
-    field.addEventListener('focus', () => popover.show());
+    field.addEventListener('focus', () => {
+      popover.show();
+      showTime(popover.panel, field.value);
+    });
   }
 
   return popover.element;
