@@ -38,10 +38,15 @@ const NO_UNDO = (
   + 'Amplify by hand.'
 );
 
-/* While the preview is being read, and when it could not be. */
+/* While the preview is being read, and when it could not be.  The
+ * lead says what this screen knows -- the check did not happen, so
+ * nothing will be sent -- and what stopped it is the service's own
+ * sentence beside it.  This screen cannot tell an Amplify refusal
+ * from a star-pass API that never answered, and naming one of them
+ * for both is how a reader is sent to look at the wrong service. */
 const CHECKING = 'Checking Amplify first';
 const CHECK_FAILED = (
-  'Amplify did not answer the check for shifts that already exist, so '
+  'The check for shifts that already exist could not be made, so '
   + 'sending is held back.'
 );
 
@@ -395,10 +400,19 @@ export function previewActions(state, handlers) {
         'span',
         { class: 'preview-failed meta' },
         icon('warning-circle'),
-        el('span', { text: CHECK_FAILED }),
-        failure.reference
-          ? el('span', { class: 'mono micro', text: failure.reference })
-          : null,
+        el(
+          'span',
+          { class: 'failed-words' },
+          el('span', { text: `${CHECK_FAILED} ${failure.detail}` }),
+          failure.reference
+            ? el(
+              'span',
+              { class: 'muted micro failure-reference' },
+              'Reference ',
+              el('span', { class: 'mono', text: failure.reference })
+            )
+            : null
+        ),
         el(
           'button',
           {
