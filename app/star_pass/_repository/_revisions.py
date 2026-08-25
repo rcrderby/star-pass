@@ -21,6 +21,7 @@ from ._common import (
     EVENT_COLUMNS,
     EVENT_ROLE_COLUMNS,
     insert_statement,
+    LAST_TOUCHED,
     Repository,
     utc_now
 )
@@ -45,6 +46,27 @@ REVISION_SELECT = """
         ) AS change_count
     FROM revisions
 """
+
+# What the retention policy deletes: the revisions of a run that are
+# neither its first nor its current one, for runs nobody has worked on
+# since the cutoff.  Built here rather than at the call, so that the
+# whole statement is one literal and nothing about it is decided while
+# a request is being served.  What is interpolated is the expression
+# for when a run was last worked on, which is a constant in this
+# package; the cutoff itself binds through a placeholder like every
+# other value.
+FORGET_SUPERSEDED = f"""
+    DELETE FROM revisions
+    WHERE number > 1
+      AND number < (
+          SELECT MAX(later.number) FROM revisions AS later
+          WHERE later.run_id = revisions.run_id
+      )
+      AND run_id IN (
+          SELECT runs.id FROM runs
+          WHERE {LAST_TOUCHED} < ?
+      )
+"""  # nosec B608
 
 # Module logger
 logger = get_logger(__name__)
@@ -295,25 +317,7 @@ class RevisionRepository(Repository):
 
         cursor = execute(
             connection=self._connection,
-            statement=(
-                'DELETE FROM revisions '
-                'WHERE number > 1 '
-                '  AND number < ('
-                '      SELECT MAX(later.number) FROM revisions AS later'
-                '      WHERE later.run_id = revisions.run_id'
-                '  ) '
-                '  AND run_id IN ('
-                '      SELECT runs.id FROM runs '
-                '      WHERE COALESCE('
-                '          ('
-                '              SELECT MAX(change_log.logged_at) '
-                '              FROM change_log '
-                '              WHERE change_log.run_id = runs.id'
-                '          ),'
-                '          runs.collected_at'
-                '      ) < ?'
-                '  )'
-            ),
+            statement=FORGET_SUPERSEDED,
             parameters=(cutoff,)
         )
 
