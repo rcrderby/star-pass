@@ -7,10 +7,12 @@
  * cannot drift out of line with its own heading.
  */
 
+/* The two columns stretch to the taller of them, which is what gives
+ * the change log's `position: sticky` somewhere to slide: a panel
+ * column only as tall as its own panel has no room to move within. */
 .review-with-panel {
   display: flex;
   gap: var(--space-4);
-  align-items: flex-start;
 }
 
 .review-body {
@@ -269,8 +271,18 @@ button.picker-row:hover {
 .table-head,
 .event-row {
   display: grid;
+
+  /* The trailing track holds a per-row undo, which most rows do not
+   * have. Sized from the content it would shrink to nothing on the
+   * rows without one and to the control's width on the rows with one,
+   * so the name column - the only flexible one - would give up 60px on
+   * an edited row alone and every heading after it would sit over a
+   * different place. The floor reserves the control's width on every
+   * row instead; the fraction is what keeps the cell against the right
+   * edge once the name column reaches its 700px. */
   grid-template-columns:
-    24px minmax(300px, 700px) 240px 128px 128px 108px 32px 0.25fr;
+    24px minmax(300px, 700px) 240px 128px 128px 108px 32px
+    minmax(72px, 0.25fr);
   gap: 14px;
 }
 

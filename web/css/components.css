@@ -146,7 +146,15 @@ select.input {
   color: var(--color-accent);
 }
 
-.seg-opt[aria-pressed="false"]:hover {
+.seg-opt:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* After the rule above, for the reason `.input:hover` states: it is the
+ * more specific of the two, and the guard is what keeps a refused
+ * option from lighting up under the pointer as a live one does. */
+.seg-opt[aria-pressed="false"]:hover:not(:disabled) {
   background: color-mix(in srgb, var(--color-text) 7%, transparent);
 }
 
