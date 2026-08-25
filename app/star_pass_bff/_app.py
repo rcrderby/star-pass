@@ -18,7 +18,9 @@
     Order matters where the page is mounted.  It answers everything
     under the root, so the proxy is included first and the mount takes
     what is left; the other order would serve a file, or a refusal,
-    where an API call was meant to go.
+    where an API call was meant to go.  The page's own paths (D28) are
+    added between the two for the same reason: the mount would answer
+    '/settings' with a 404 before they were reached.
 """
 
 # Imports - Python Standard Library
@@ -28,6 +30,7 @@ from typing import AsyncIterator, Awaitable, Callable
 # Imports - Third-Party
 import httpx2
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 # Imports - Local
@@ -62,6 +65,41 @@ async def _lifespan(
         yield
 
 
+def _answer_the_screens_with_the_page(
+        api: FastAPI
+) -> None:
+    """ Answer each of the page's own paths with the page (D28).
+
+        The page routes itself, so every one of them draws a different
+        screen in the browser and every one of them is the same file
+        here.  Registered from the tuple rather than written out, so
+        that adding a screen is one line in one place and the test
+        holding the page's table to this list has one list to hold.
+
+        Args:
+            api (FastAPI):
+                The application to add them to.
+
+        Returns:
+            None.
+    """
+
+    async def page() -> FileResponse:
+        """ Answer with the page. """
+        return FileResponse(_defaults.WEB_ROOT / _defaults.WEB_INDEX)
+
+    for path in _defaults.SCREEN_PATHS:
+        api.add_api_route(
+            path=path,
+            endpoint=page,
+            methods=['GET'],
+            # Nothing here is a published surface: this service
+            # generates no specification at all, and a screen is not
+            # an operation a client calls.
+            include_in_schema=False
+        )
+
+
 def create_app() -> FastAPI:
     """ Return the front-end service, ready to serve.
 
@@ -91,6 +129,7 @@ def create_app() -> FastAPI:
 
     add_problem_handlers(api=api)
     api.include_router(proxy_router)
+    _answer_the_screens_with_the_page(api=api)
     api.mount(
         '/',
         StaticFiles(
