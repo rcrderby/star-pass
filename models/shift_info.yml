@@ -194,13 +194,12 @@ calendar:
             offset_end: 0
             slots: 20
 
-      # One category for everybody: officiating practice is no longer
-      # split by group, and both halves now go to the needs this one
-      # names.  'group' is null because the category serves adults and
-      # juniors alike and naming one of them would be untrue.  The
-      # junior aliases are gone with the junior category and nothing
-      # stops matching: a title reading "Junior Officials Practice"
-      # still holds 'officials'.
+      # One category for everybody, which is why 'group' is null:
+      # officiating practice serves adults and juniors alike, and
+      # naming one of them would be untrue.  The aliases carry no
+      # group word for the same reason, and none is needed -- a title
+      # that names a group still holds 'officials' or 'officiating',
+      # and reaches this category on that.
       officiating_practice:
         description: Officials Practice
         group: null
