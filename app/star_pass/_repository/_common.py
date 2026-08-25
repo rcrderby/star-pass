@@ -48,7 +48,11 @@ EVENT_ROLE_COLUMNS = (
     'event_id',
     'need_id',
     'slots',
-    'edited'
+    'edited',
+    'offset_start',
+    'offset_end',
+    'max_length',
+    'default_slots'
 )
 
 # SQLite has no placeholder for a table or a column name, so the two

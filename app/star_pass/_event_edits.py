@@ -27,7 +27,6 @@ from ._logging import get_logger
 from ._records import Event, EventRole, Opportunity
 from ._shift_timing import (
     MINUTES_PER_DAY,
-    RoleTiming,
     role_timings,
     shift_times
 )
@@ -63,37 +62,6 @@ class EditContext:
     calendar: str
     helpers: Helpers
     opportunities: Dict[str, Opportunity]
-
-    def default_slots(
-            self,
-            need_id: str
-    ) -> int:
-        """ Return what an opportunity asks for by default.
-
-            Args:
-                need_id (str):
-                    The opportunity's need ID.
-
-            Raises:
-                ValidationError:
-                    If the run holds no such opportunity.
-
-            Returns:
-                slots (int):
-                    Volunteers wanted, before any edit.
-        """
-
-        opportunity = self.opportunities.get(need_id)
-
-        if opportunity is None:
-            message = (
-                f'This run holds no opportunity for need {need_id}, so '
-                'there is no usual number of volunteers to go back to.'
-            )
-            logger.error(message)
-            raise ValidationError(message)
-
-        return opportunity.default_slots
 
     def opportunity_name(
             self,
@@ -236,7 +204,7 @@ def timings_for(
         event: Event,
         calendar: str,
         helpers: Helpers
-) -> List[RoleTiming]:
+) -> List[EventRole]:
     """ Return what the event's category asks of it.
 
         Read from the data model rather than from the event, because an
@@ -261,8 +229,9 @@ def timings_for(
                 need IDs disagree about their offsets.
 
         Returns:
-            timings (List[RoleTiming]):
-                One per need ID that can become a shift.
+            timings (List[EventRole]):
+                One per need ID that can become a shift, carrying
+                what the category asks of it.
     """
 
     if event.category is None:
@@ -342,7 +311,7 @@ def as_collected(
         event,
         shift_start=shift_start,
         shift_end=shift_end,
-        roles=tuple(timing.role for timing in timings)
+        roles=tuple(timings)
     )
 
 
@@ -478,26 +447,18 @@ def with_slots(
 
 
 def slots_reset(
-        event: Event,
-        context: EditContext
+        event: Event
 ) -> Event:
-    """ Return an event whose roles want what the opportunity asks.
+    """ Return an event whose roles want what their category asked.
 
-        The run's own opportunities supply the number, not the data
-        model as it stands now.  A run records what the opportunity
-        wanted when it was collected, and resetting to today's model
-        would quietly move a number the reviewer never touched.
+        The role's own default supplies the number, not the data model
+        as it stands now.  A role records what it was collected with,
+        and resetting to today's model would quietly move a number the
+        reviewer never touched.
 
         Args:
             event (Event):
                 The event as it stands.
-
-            context (_Context):
-                The run's opportunities, by need ID.
-
-        Raises:
-            ValidationError:
-                If the run holds no opportunity for one of its roles.
 
         Returns:
             event (Event):
@@ -507,11 +468,7 @@ def slots_reset(
     return replace(
         event,
         roles=tuple(
-            EventRole(
-                need_id=role.need_id,
-                slots=context.default_slots(need_id=role.need_id),
-                edited=False
-            )
+            replace(role, slots=role.default_slots, edited=False)
             for role in event.roles
         )
     )

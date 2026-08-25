@@ -344,13 +344,13 @@ def _reset_slots(
         events: Sequence[Event],
         context: EditContext
 ) -> '_Result':
-    """ Put every role back to what its opportunity asks for. """
+    """ Put every role back to what its category asked for. """
 
-    del operation
+    del operation, context
 
     return _Result(
         changed={
-            event.id: slots_reset(event=event, context=context)
+            event.id: slots_reset(event=event)
             for event in events
         },
         entry=(

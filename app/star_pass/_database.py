@@ -11,6 +11,12 @@
     the statements and the records they produce; nothing above either
     module sees a cursor, a row or an exception from 'sqlite3'.
 
+    What the schema *is* lives here.  What carries an existing database
+    up to it lives in '_migrations', because the two grow at different
+    rates: the statements below are edited in place as the shape
+    changes, and a version's steps are a record that may never be
+    edited again once a release has run them.
+
     A failure here reaches a caller as one of the core's own exceptions,
     chosen by what the caller can do about it: a database that cannot be
     opened is a deployment to fix (ConfigurationError), a constraint the
@@ -23,11 +29,11 @@
 # Imports - Python Standard Library
 import sqlite3
 from contextlib import contextmanager
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator, List, Optional, Sequence
 
 # Imports - Local
+from ._migrations import MIGRATIONS, Step
 from . import _defaults
 from ._exceptions import (
     ConfigurationError,
@@ -47,7 +53,7 @@ DATABASE_BUSY_TIMEOUT = _defaults.DATABASE_BUSY_TIMEOUT
 # forward.  A later one means the file was written by a newer version
 # of the application, which is a deployment problem rather than
 # something to guess at.
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 # Pragmas applied to every connection.  'foreign_keys' is off by
 # default and is per-connection rather than stored in the file, so
@@ -108,15 +114,11 @@ SCHEMA_STATEMENTS = (
     """,
     """
     CREATE TABLE IF NOT EXISTS opportunities (
-        run_id         TEXT    NOT NULL
-                               REFERENCES runs (id) ON DELETE CASCADE,
-        need_id        TEXT    NOT NULL,
-        title          TEXT    NOT NULL,
-        url            TEXT    NOT NULL,
-        max_length     INTEGER,
-        offset_start   INTEGER NOT NULL,
-        offset_end     INTEGER NOT NULL,
-        default_slots  INTEGER NOT NULL,
+        run_id  TEXT NOT NULL
+                     REFERENCES runs (id) ON DELETE CASCADE,
+        need_id TEXT NOT NULL,
+        title   TEXT NOT NULL,
+        url     TEXT NOT NULL,
         PRIMARY KEY (run_id, need_id)
     )
     """,
@@ -143,12 +145,16 @@ SCHEMA_STATEMENTS = (
     """,
     """
     CREATE TABLE IF NOT EXISTS event_roles (
-        run_id    TEXT    NOT NULL,
-        revision  INTEGER NOT NULL,
-        event_id  TEXT    NOT NULL,
-        need_id   TEXT    NOT NULL,
-        slots     INTEGER NOT NULL,
-        edited    INTEGER NOT NULL,
+        run_id         TEXT    NOT NULL,
+        revision       INTEGER NOT NULL,
+        event_id       TEXT    NOT NULL,
+        need_id        TEXT    NOT NULL,
+        slots          INTEGER NOT NULL,
+        edited         INTEGER NOT NULL,
+        offset_start   INTEGER NOT NULL,
+        offset_end     INTEGER NOT NULL,
+        max_length     INTEGER,
+        default_slots  INTEGER NOT NULL,
         PRIMARY KEY (run_id, revision, event_id, need_id),
         FOREIGN KEY (run_id, revision, event_id)
             REFERENCES events (run_id, revision, id) ON DELETE CASCADE
@@ -308,155 +314,6 @@ SCHEMA_STATEMENTS = (
 )
 
 
-@dataclass(frozen=True)
-class Step:
-    """ One statement that carries a database forward.
-
-        Most add a column, and their statement declares it exactly as
-        the create above declares it, so a database carried here and
-        one built here are the same database.  Some fill one instead:
-        a column added to rows that already exist arrives empty, and
-        what belongs in it is worked out from what those rows already
-        say.
-
-        Attributes:
-            table (str):
-                Table the step is about.
-
-            column (str):
-                The column whose absence says the step still has
-                something to do -- the one being added, or the one a
-                filling step fills.  Every step of a version is asked
-                this before any of them runs, which is what lets a
-                fill be gated on the column it fills rather than
-                needing a test of its own.
-
-            statement (str):
-                What to run.
-    """
-
-    table: str
-    column: str
-    statement: str
-
-
-# What carries a database that already exists forward, by the version
-# each step raises it to.  Separate from the statements above because
-# those create things and these change a thing that is already there:
-# a 'CREATE TABLE IF NOT EXISTS' does nothing at all to a table that
-# exists, so a column added to one arrives here or not at all.
-#
-# A step runs on a database below its version whose table still lacks
-# the column.  The second half of that matters: a database from before
-# the table itself existed is given the current table by the
-# statements above, so there is nothing left for the step to add and
-# adding it again would fail.
-#
-# Nothing here may be edited after a release has run it, because a
-# database already carried past it will never run it again; a
-# correction is a further step.
-MIGRATIONS = {
-    4: (
-        # Which process is holding a job, so a sweep of what a stopped
-        # process left behind can leave alone what it never held.  The
-        # service and the command line share a database, and a sweep
-        # that took everything unfinished would mark a live send
-        # interrupted.
-        #
-        # The default is what a job written before the column existed
-        # was held by: the service, which was the only thing writing
-        # jobs then.  It is a literal because a schema statement takes
-        # one, and it is the value of '_records.JOB_HOLDER_SERVICE'.
-        Step(
-            table='jobs',
-            column='held_by',
-            statement=(
-                'ALTER TABLE jobs '
-                "ADD COLUMN held_by TEXT NOT NULL DEFAULT 'service'"
-            )
-        ),
-    ),
-    7: (
-        # How a revision came to exist, and the revision it was made
-        # from.  Both were one column of English written by the core
-        # and printed unchanged by every client, so neither client
-        # could word it and a change of wording would have left the
-        # revisions already recorded saying the old thing.
-        #
-        # The default is false of every row and is corrected by the
-        # four statements below, which run in the same transaction:
-        # SQLite cannot add a column that is NOT NULL without one, and
-        # a default that was true of some rows would be a guess about
-        # the rest.
-        Step(
-            table='revisions',
-            column='kind',
-            statement=(
-                'ALTER TABLE revisions '
-                "ADD COLUMN kind TEXT NOT NULL DEFAULT ''"
-            )
-        ),
-        Step(
-            table='revisions',
-            column='source',
-            statement='ALTER TABLE revisions ADD COLUMN source INTEGER'
-        ),
-        # The four sentences the core ever wrote, read back into what
-        # they were saying.  Gated on 'kind', which is asked about
-        # before any statement of this version runs and so is still
-        # absent when these are chosen.
-        Step(
-            table='revisions',
-            column='kind',
-            statement=(
-                "UPDATE revisions SET kind = 'collected' "
-                "WHERE label = 'As collected'"
-            )
-        ),
-        Step(
-            table='revisions',
-            column='kind',
-            statement=(
-                "UPDATE revisions SET kind = 'recollected' "
-                "WHERE label = 'As recollected'"
-            )
-        ),
-        Step(
-            table='revisions',
-            column='kind',
-            statement=(
-                "UPDATE revisions SET kind = 'continued', "
-                "source = CAST("
-                "SUBSTR(label, LENGTH('Continued from revision ') + 1) "
-                'AS INTEGER) '
-                "WHERE label LIKE 'Continued from revision %'"
-            )
-        ),
-        Step(
-            table='revisions',
-            column='kind',
-            statement=(
-                "UPDATE revisions SET kind = 'reverted', "
-                "source = CAST("
-                "SUBSTR(label, LENGTH('Reverted to revision ') + 1) "
-                'AS INTEGER) '
-                "WHERE label LIKE 'Reverted to revision %'"
-            )
-        ),
-        # And the sentence goes.  It has to: an insert now names
-        # 'kind' and 'source' and not 'label', so a NOT NULL column
-        # left behind would refuse every revision written after this.
-        # A column and not the table -- 'events' points at
-        # 'revisions' with a cascade, so rebuilding the table the
-        # portable way would delete every event in the database.
-        Step(
-            table='revisions',
-            column='kind',
-            statement='ALTER TABLE revisions DROP COLUMN label'
-        )
-    )
-}
-
 # Module logger
 logger = get_logger(__name__)
 
@@ -586,6 +443,33 @@ def _lacks_column(
     return column not in {row['name'] for row in rows}
 
 
+def _still_to_do(
+        connection: sqlite3.Connection,
+        step: Step
+) -> bool:
+    """ Return whether a step has anything left to do.
+
+        Args:
+            connection (sqlite3.Connection):
+                The database to look at.
+
+            step (Step):
+                The step to ask about.
+
+        Returns:
+            to_do (bool):
+                Whether to run it.
+    """
+
+    lacking = _lacks_column(
+        connection=connection,
+        table=step.table,
+        column=step.column
+    )
+
+    return lacking is not step.removes
+
+
 def _migrations_from(
         connection: sqlite3.Connection,
         version: int
@@ -617,11 +501,7 @@ def _migrations_from(
         step.statement
         for level in range(version + 1, SCHEMA_VERSION + 1)
         for step in MIGRATIONS.get(level, ())
-        if _lacks_column(
-            connection=connection,
-            table=step.table,
-            column=step.column
-        )
+        if _still_to_do(connection=connection, step=step)
     ]
 
 

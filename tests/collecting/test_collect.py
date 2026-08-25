@@ -287,7 +287,31 @@ class TestTheOpportunitiesARunResolves:
             run_id=collecting
         )[0].url.endswith(NEED_ID)
 
-    def test_an_opportunity_carries_the_timing_the_model_gives_it(
+    def test_a_role_carries_the_timing_the_model_gives_it(
+        self,
+        collect_run: Callable[..., Any],
+        collecting: str,
+        events: EventRepository
+    ) -> None:
+        # The role and not the opportunity: what a shift asks of its
+        # event is decided by the category the event matched (D25).
+        collect_run(
+            items=[an_item()]
+        )
+
+        stored = events.list_all(
+            run_id=collecting,
+            revision=1
+        )[0].roles[0]
+
+        assert (
+            stored.offset_start,
+            stored.offset_end,
+            stored.max_length,
+            stored.default_slots
+        ) == (15, 30, 165, 12)
+
+    def test_an_opportunity_carries_what_amplify_says_and_no_timing(
         self,
         collect_run: Callable[..., Any],
         collecting: str,
@@ -299,12 +323,11 @@ class TestTheOpportunitiesARunResolves:
 
         stored = runs.get_opportunities(run_id=collecting)[0]
 
-        assert (
-            stored.offset_start,
-            stored.offset_end,
-            stored.max_length,
-            stored.default_slots
-        ) == (15, 30, 165, 12)
+        assert (stored.need_id, stored.title) == (
+            NEED_ID,
+            f'Need {NEED_ID}'
+        )
+        assert not hasattr(stored, 'offset_start')
 
     def test_one_opportunity_is_stored_however_many_events_name_it(
         self,
@@ -358,6 +381,74 @@ class TestAnEventThatCannotBecomeAShift:
         )
 
 
+class TestOneListingTimedTwoWays:
+    @pytest.fixture(name='timed_two_ways')
+    def fixture_timed_two_ways(
+        self,
+        collect_run: Callable[..., Any]
+    ) -> None:
+        """ Collect a window two categories time one need in.
+
+            What used to stop the run, and is why the 'events'
+            calendar had never been collected: need 905196 is named by
+            three categories there, on three sets of offsets.  The
+            timing is the role's now, so this is a window the run can
+            store (D25).
+        """
+        collect_run(
+            items=[
+                an_item(),
+                an_item(identifier='gcal-2', summary='Axles of Evil')
+            ],
+            categories={
+                'adult_game': a_category(need_ids=[a_need()]),
+                'other_game': a_category(
+                    need_ids=[a_need(offset_start=45)],
+                    aliases=('axles',)
+                )
+            }
+        )
+
+        return None
+
+    def test_each_event_keeps_the_timing_its_category_gave_it(
+        self,
+        collecting: str,
+        events: EventRepository,
+        timed_two_ways: None
+    ) -> None:
+        del timed_two_ways
+
+        timings = {
+            event.id: (
+                event.roles[0].need_id,
+                event.roles[0].offset_start
+            )
+            for event in events.list_all(run_id=collecting, revision=1)
+        }
+
+        assert timings == {
+            'gcal-1': (NEED_ID, 15),
+            'gcal-2': (NEED_ID, 45)
+        }
+
+    def test_the_run_holds_one_opportunity_for_the_listing(
+        self,
+        collecting: str,
+        runs: RunRepository,
+        timed_two_ways: None
+    ) -> None:
+        # One Amplify listing is one opportunity however many
+        # categories name it: what the run stores about it is what
+        # Amplify says, and Amplify says one thing.
+        del timed_two_ways
+
+        assert [
+            opportunity.need_id
+            for opportunity in runs.get_opportunities(run_id=collecting)
+        ] == [NEED_ID]
+
+
 class TestWhatStopsTheRun:
     def test_a_shift_ending_before_it_starts_stops_the_run(
         self,
@@ -400,28 +491,6 @@ class TestWhatStopsTheRun:
             )
 
         assert 'adult_game' in str(error.value)
-
-    def test_two_categories_timing_one_need_differently_stop_the_run(
-        self,
-        collect_run: Callable[..., Any]
-    ) -> None:
-        # A run records one set of offsets per opportunity.
-        with pytest.raises(ValidationError) as error:
-            collect_run(
-                items=[
-                    an_item(),
-                    an_item(identifier='gcal-2', summary='Axles of Evil')
-                ],
-                categories={
-                    'adult_game': a_category(need_ids=[a_need()]),
-                    'other_game': a_category(
-                        need_ids=[a_need(offset_start=45)],
-                        aliases=('axles',)
-                    )
-                }
-            )
-
-        assert NEED_ID in str(error.value)
 
     def test_a_shift_crossing_midnight_stops_the_run(
         self,

@@ -22,7 +22,7 @@ from . import _defaults
 from ._helpers import CategoryMatch, Helpers
 from ._opportunities import public_url, read_need, title_of
 from ._records import Event, Opportunity
-from ._shift_timing import RoleTiming, role_timings, shift_times
+from ._shift_timing import role_timings, shift_times
 
 # Constants
 ISO_DATE_FORMAT = _defaults.ISO_DATE_FORMAT
@@ -102,14 +102,13 @@ def event_from(
         category=matched.category,
         match=matched.match,
         added_by_hand=added_by_hand,
-        roles=tuple(timing.role for timing in timings)
+        roles=tuple(timings)
     )
 
 
 def opportunity_read(
         helpers: Helpers,
-        need_id: str,
-        timing: RoleTiming
+        need_id: str
 ) -> Opportunity:
     """ Return the opportunity a need ID names, as Amplify calls it.
 
@@ -119,15 +118,18 @@ def opportunity_read(
         never read.  Split, the reading would be written twice and one
         of them would eventually store a run's own guess at a title.
 
+        What the data model says about the need ID is not asked for
+        here and is not stored here: how a shift is timed under a
+        listing belongs to the role that creates the shift, because
+        one listing can be named by categories that time it
+        differently (D25).
+
         Args:
             helpers (Helpers):
                 What the read is sent through.
 
             need_id (str):
                 Amplify need ID.
-
-            timing (RoleTiming):
-                What the data model says about it.
 
         Raises:
             UpstreamError:
@@ -143,9 +145,5 @@ def opportunity_read(
         title=title_of(
             need=read_need(helpers=helpers, need_id=need_id)
         ),
-        url=public_url(need_id=need_id),
-        max_length=timing.max_length,
-        offset_start=timing.offset_start,
-        offset_end=timing.offset_end,
-        default_slots=timing.role.slots
+        url=public_url(need_id=need_id)
     )

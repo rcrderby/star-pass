@@ -22,11 +22,11 @@
 
 # Imports - Python Standard Library
 from datetime import datetime
-from typing import Dict, Iterable, Mapping, Optional
+from typing import Dict, Iterable, Optional
 
 # Imports - Local
 from ._defaults import SIMPLE_TIME_FORMAT
-from ._records import Event, EventRole, Opportunity, ShiftIdentity
+from ._records import Event, EventRole, ShiftIdentity
 
 # How many minutes are in an hour, for turning a time of day into one
 # number that can be subtracted from another.
@@ -160,8 +160,7 @@ def shift_length(
 
 
 def capping_maximum(
-        event: Event,
-        opportunities: Mapping[str, Opportunity]
+        event: Event
 ) -> Optional[int]:
     """ Return the maximum that shortened an event's shift, if one did.
 
@@ -179,14 +178,13 @@ def capping_maximum(
         one; nothing enforces that, which is why this does not assume
         it.
 
+        Read from the roles and not from the run's opportunities: the
+        offsets and the maximum are what the role was collected with,
+        which is what produced the times being explained (D25).
+
         Args:
             event (Event):
                 The event to examine.
-
-            opportunities (Mapping[str, Opportunity]):
-                The run's opportunities, by need ID.  A role naming one
-                that is not here is ignored: an opportunity that cannot
-                be read cannot be shown to have capped anything.
 
         Raises:
             ValueError:
@@ -205,19 +203,17 @@ def capping_maximum(
     applied = []
 
     for role in event.roles:
-        opportunity = opportunities.get(role.need_id)
-
-        if opportunity is None or opportunity.max_length is None:
+        if role.max_length is None:
             continue
 
         uncapped = (
             calendar_length
-            + opportunity.offset_end
-            - opportunity.offset_start
+            + role.offset_end
+            - role.offset_start
         )
 
-        if uncapped > opportunity.max_length:
-            applied.append(opportunity.max_length)
+        if uncapped > role.max_length:
+            applied.append(role.max_length)
 
     return min(applied) if applied else None
 

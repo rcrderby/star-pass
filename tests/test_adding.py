@@ -289,12 +289,7 @@ class TestTheOpportunityItNames:
         runs.set_opportunities(
             run_id=run,
             opportunities=[
-                make_opportunity(
-                    need_id=NEED_IDS[0],
-                    offset_start=-15,
-                    offset_end=30,
-                    max_length=135
-                )
+                make_opportunity(need_id=NEED_IDS[0])
             ]
         )
         missed()
@@ -321,10 +316,7 @@ class TestTheOpportunityItNames:
             opportunities=[
                 make_opportunity(
                     need_id=NEED_IDS[0],
-                    title='Read when the run was collected',
-                    offset_start=-15,
-                    offset_end=30,
-                    max_length=135
+                    title='Read when the run was collected'
                 )
             ]
         )
@@ -340,28 +332,29 @@ class TestTheOpportunityItNames:
             f'Need {NEED_IDS[1]}'
         ]
 
-    def test_an_opportunity_timed_differently_is_refused(
+    def test_an_event_may_time_a_listing_the_run_holds_its_own_way(
         self,
         add: Callable[..., Any],
+        events: EventRepository,
         make_opportunity: Callable[..., Opportunity],
         missed: Callable[..., str],
         run: str,
         runs: RunRepository
     ) -> None:
-        # A run records one set of offsets per opportunity, so an
-        # event arriving with another set describes a shift it cannot
-        # store beside the ones it has.
+        # It used to be refused, because the run recorded one set of
+        # offsets per opportunity. The timing is the role's now, so an
+        # event pulled in brings its own and nothing disagrees (D25).
         runs.set_opportunities(
             run_id=run,
             opportunities=[make_opportunity(need_id=NEED_IDS[0])]
         )
         missed()
 
-        with pytest.raises(ValidationError) as error:
-            add()
+        add()
 
-        assert NEED_IDS[0] in str(error.value)
-        assert 'one set of offsets' in str(error.value)
+        added = events.list_all(run_id=run, revision=1)[0]
+
+        assert [role.need_id for role in added.roles] == list(NEED_IDS)
 
 
 class TestWhatMayNotBePulledIn:

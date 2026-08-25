@@ -15,11 +15,12 @@ from typing import Any, Callable, Dict
 
 # Imports - Third-Party
 import pytest
+from documents import ROLE_DOCUMENT
 from fastapi.testclient import TestClient
 
 # Imports - Local
 from star_pass._defaults import LOCAL_TIMEZONE
-from star_pass._records import Event, Match, Opportunity
+from star_pass._records import Event, EventRole, Match
 from star_pass._repository import (
     ChangeLogRepository,
     EventRepository,
@@ -368,9 +369,9 @@ class TestTheEventsOfARun:
         first_event: Callable[[str], Dict[str, Any]],
         collected: str
     ) -> None:
-        assert first_event(collected)['roles'] == [
-            {'needId': '905196', 'slots': 4, 'edited': False}
-        ]
+        # The timing is the role's, so it is returned with the role
+        # rather than with the run's opportunity (D25).
+        assert first_event(collected)['roles'] == [ROLE_DOCUMENT]
 
     def test_how_a_title_matched_is_returned(
         self,
@@ -426,19 +427,19 @@ class TestWhatAnEventDoesNotStore:
         run_id: str,
         revision: int,
         make_event: Callable[..., Event],
-        make_opportunity: Callable[..., Opportunity]
+        make_role: Callable[..., EventRole]
     ) -> None:
         # Two calendar hours and a quarter of an hour of offsets would
         # run 135 minutes; the maximum allows 120, which is why the
         # stored shift ends at 21:15.
-        runs.set_opportunities(
-            run_id=run_id,
-            opportunities=[make_opportunity(max_length=120)]
-        )
+        del runs
         events.add(
             run_id=run_id,
             revision=revision,
-            event=make_event(shift_end='21:15')
+            event=make_event(
+                shift_end='21:15',
+                roles=(make_role(max_length=120),)
+            )
         )
 
         assert first_event(run_id)['cappedAt'] == 120

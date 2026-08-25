@@ -448,7 +448,6 @@ def edited(
 
         return to_edit_view(
             events=events,
-            opportunities=runs.get_opportunities(run_id=run_id),
             entries=entries,
             calendar=run.calendar
         ).model_dump(by_alias=True, mode='json')

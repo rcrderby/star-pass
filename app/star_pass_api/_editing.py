@@ -219,7 +219,6 @@ def _pulled_in(
             run_id=run_id,
             revision=entry.revision
         ),
-        opportunities=runs.get_opportunities(run_id=run_id),
         entries=[entry],
         calendar=run.calendar
     )

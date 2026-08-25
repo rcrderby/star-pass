@@ -218,6 +218,11 @@ class Opportunity:
         preview time would leave the main screen unable to name
         anything.
 
+        **What Amplify says about the listing, and nothing else.**  How
+        a shift is timed under it belongs to the role that creates the
+        shift, because one listing can be named by categories that time
+        it differently (D25).
+
         Attributes:
             need_id (str):
                 Amplify need ID.
@@ -227,28 +232,11 @@ class Opportunity:
 
             url (str):
                 Public address of the opportunity.
-
-            max_length (int, optional):
-                Longest shift the opportunity accepts, in minutes, or
-                None when it sets no maximum.
-
-            offset_start (int):
-                Minutes added to an event's start to reach the shift's.
-
-            offset_end (int):
-                Minutes added to an event's end to reach the shift's.
-
-            default_slots (int):
-                Volunteers wanted per shift, before any edit.
     """
 
     need_id: str
     title: str
     url: str
-    max_length: Optional[int]
-    offset_start: int
-    offset_end: int
-    default_slots: int
 
 
 @dataclass(frozen=True)
@@ -279,10 +267,17 @@ class Match:
 
 @dataclass(frozen=True)
 class EventRole:
-    """ One opportunity an event creates shifts for, and how many.
+    """ One opportunity an event creates shifts for, and how it does.
 
         An event produces a shift per role: a scrimmage wanting both
         skating and non-skating officials carries two.
+
+        **The timing is the role's, not the opportunity's.**  What a
+        shift asks of its event is decided by the category the event
+        matched, and one Amplify listing can be named by categories
+        that time it differently -- need 905196 is named by three, on
+        three sets of offsets.  Recorded per role, so a run can hold
+        two events sending to one listing on different timings (D25).
 
         Attributes:
             need_id (str):
@@ -292,15 +287,36 @@ class EventRole:
                 Volunteers wanted.
 
             edited (bool):
-                Whether a person changed 'slots' from the
-                opportunity's default.  Kept so a revision can show
-                what was touched, which a comparison against the
-                current default could not: the default can change.
+                Whether a person changed 'slots' from
+                'default_slots'.  Kept so a revision can show what was
+                touched, which a comparison against the default could
+                not: an event collected again can arrive with another.
+
+            offset_start (int):
+                Minutes added to the event's start to reach the
+                shift's.
+
+            offset_end (int):
+                Minutes added to the event's end to reach the shift's.
+
+            max_length (int, optional):
+                Longest shift the opportunity accepts, in minutes, or
+                None when it sets no maximum.
+
+            default_slots (int):
+                Volunteers the category asked for, before any edit.
+                Stored beside 'slots' rather than looked up, for the
+                reason 'edited' is stored: what to go back to is what
+                this event was collected with.
     """
 
     need_id: str
     slots: int
     edited: bool = False
+    offset_start: int = 0
+    offset_end: int = 0
+    max_length: Optional[int] = None
+    default_slots: int = 0
 
 
 @dataclass(frozen=True)
