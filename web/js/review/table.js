@@ -17,6 +17,7 @@
 import { el, icon } from '../dom.js';
 import { lengthText, dayHeading } from '../format.js';
 import { filled, phrase } from '../phrases.js';
+import { Popover } from '../popover.js';
 import { timeField } from './timepicker.js';
 
 /* How many columns the grid has. Stated for assistive technology,
@@ -35,6 +36,54 @@ const HEADERS = [
   ['', 'Remove'],
   ['', 'Undo changes']
 ];
+
+/** Return the control showing what the calendar said about a row.
+ *
+ * Drawn on every row of a calendar that carries notes, including the
+ * rows that have none: a control that appeared only where there was
+ * something to read would make its absence look like a fault, and a
+ * reader could not tell "nothing was written" from "this row is
+ * different".  Which calendars carry notes is the service's answer
+ * (D30), never a test of the calendar's name.
+ *
+ * The note is set as text, so what a calendar's description held
+ * cannot become markup here.  It is already text by the time it is
+ * published -- the conversion happens once, at collection -- and this
+ * is the second of the two reasons it can be shown safely.
+ *
+ * @param {Object} event The event.
+ * @returns {HTMLElement} The trigger, and the callout it opens.
+ */
+function calendarNote(event) {
+  const trigger = el('button', {
+    type: 'button',
+    class: 'note-open',
+    'aria-label': `${phrase('row', 'calendarNote')} for ${event.title}`
+  }, icon('info'));
+
+  return new Popover({
+    trigger,
+    width: 260,
+    top: 26,
+    contents: () => el(
+      'span',
+      { class: 'note-callout' },
+      el('span', {
+        class: 'note-callout-head micro muted',
+        text: phrase('row', 'calendarNote')
+      }),
+      el('span', {
+        class: event.calendarNote === null
+          ? 'note-callout-body micro muted'
+          : 'note-callout-body micro',
+        text: event.calendarNote === null
+          ? phrase('row', 'noCalendarNote')
+          : event.calendarNote
+      })
+    )
+  }).element;
+}
+
 
 /** Return the note saying how a title reached its category.
  *
@@ -309,13 +358,18 @@ function eventRows(event, context) {
       'span',
       { class: 'cell-title', role: 'cell' },
       el('span', { class: 'row-title', text: event.title }),
-      el('span', {
-        class: 'row-note mono micro muted',
-        text: filled('row', 'calendarTimes', {
-          start: event.calendarStart,
-          end: event.calendarEnd
-        })
-      }),
+      el(
+        'span',
+        { class: 'row-note row-note-line' },
+        el('span', {
+          class: 'mono micro muted',
+          text: filled('row', 'calendarTimes', {
+            start: event.calendarStart,
+            end: event.calendarEnd
+          })
+        }),
+        context.calendarNotes ? calendarNote(event) : null
+      ),
       event.blocking
         ? el(
           'span',

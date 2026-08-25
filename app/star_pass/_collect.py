@@ -31,6 +31,7 @@
 
 # Imports - Python Standard Library
 import sqlite3
+from dataclasses import replace
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 from zoneinfo import ZoneInfo
@@ -47,6 +48,7 @@ from .gcal_data import (
     WindowRead
 )
 from ._building import event_from, opportunity_read
+from ._calendar_note import as_text
 from ._helpers import CategoryMatch, Helpers
 from ._logging import get_logger
 from ._shift_timing import role_timings
@@ -152,10 +154,60 @@ def _local_moment(
     return moment
 
 
+def carries_notes(
+        calendar: str
+) -> bool:
+    """ Return whether this calendar's entries carry notes.
+
+        Configuration rather than a name to test against, so that a
+        calendar added or renamed carries its own answer (D30).
+
+        Args:
+            calendar (str):
+                The calendar a run was collected from.
+
+        Returns:
+            carries (bool):
+                Whether a description on one of its entries is kept
+                with the event.
+    """
+
+    return bool(
+        _defaults.GCAL_CALENDARS.get(calendar, {}).get('notes')
+    )
+
+
+def _note_of(
+        item: Dict[str, Any],
+        carries: bool
+) -> Optional[str]:
+    """ Return what to store as this item's calendar note.
+
+        Args:
+            item (Dict[str, Any]):
+                A calendar item, whose description may be absent,
+                plain text, or a fragment of HTML.
+
+            carries (bool):
+                Whether this calendar carries notes at all.
+
+        Returns:
+            note (str | None):
+                The description as text, or None where the calendar
+                carries no notes or the item has none.
+    """
+
+    if not carries:
+        return None
+
+    return as_text(description=item.get('description'))
+
+
 def _event_from(
         item: Dict[str, Any],
         matched: CategoryMatch,
-        timezone: ZoneInfo
+        timezone: ZoneInfo,
+        note: Optional[str]
 ) -> Event:
     """ Return one calendar item as a revision holds it.
 
@@ -175,6 +227,10 @@ def _event_from(
             timezone (ZoneInfo):
                 The zone its times are read in.
 
+            note (str | None):
+                What the calendar's description said, already text,
+                or None where this calendar carries no notes.
+
         Raises:
             ValidationError:
                 If the item cannot become a correct shift.
@@ -184,25 +240,33 @@ def _event_from(
                 The event, with a role per need ID it serves.
     """
 
-    return event_from(
-        identifier=item['id'],
-        title=item['summary'],
-        start=_local_moment(
-            value=item['start']['dateTime'],
-            timezone=timezone
+    # Attached rather than passed in: the note takes no part in
+    # working out a shift, and 'event_from' is where a shift is worked
+    # out.  What it is part of is the event, which is why it is here
+    # and not on the row alone.
+    return replace(
+        event_from(
+            identifier=item['id'],
+            title=item['summary'],
+            start=_local_moment(
+                value=item['start']['dateTime'],
+                timezone=timezone
+            ),
+            end=_local_moment(
+                value=item['end']['dateTime'],
+                timezone=timezone
+            ),
+            matched=matched
         ),
-        end=_local_moment(
-            value=item['end']['dateTime'],
-            timezone=timezone
-        ),
-        matched=matched
+        calendar_note=note
     )
 
 
 def _uncollected_from(
         item: Dict[str, Any],
         reason: str,
-        timezone: ZoneInfo
+        timezone: ZoneInfo,
+        note: Optional[str]
 ) -> UncollectedEvent:
     """ Return one calendar item as the record of a thing left out.
 
@@ -224,6 +288,13 @@ def _uncollected_from(
             timezone (ZoneInfo):
                 The zone its times are read in.
 
+            note (str | None):
+                What the calendar's description said, already text,
+                or None where this calendar carries no notes.  Kept
+                here as well as on the event so that pulling this row
+                in by hand produces the event a collection would
+                (D30): adding reads this row and never the calendar.
+
         Returns:
             uncollected (UncollectedEvent):
                 The item, as the run records what it left out.
@@ -244,6 +315,7 @@ def _uncollected_from(
     return UncollectedEvent(
         id=item['id'],
         reason=reason,
+        calendar_note=note,
         title=item.get('summary'),
         # An all-day event carries the day it covers instead of a time,
         # which is the one thing worth saying about it.
@@ -267,7 +339,8 @@ def _uncollected_from(
 
 def _uncollected(
         read: WindowRead,
-        timezone: ZoneInfo
+        timezone: ZoneInfo,
+        carries: bool
 ) -> List[UncollectedEvent]:
     """ Return what the window held that the run will not collect.
 
@@ -309,7 +382,8 @@ def _uncollected(
         left_out[identifier] = _uncollected_from(
             item=item,
             reason=reason if reason is not None else UNCOLLECTED_SEARCH,
-            timezone=timezone
+            timezone=timezone,
+            note=_note_of(item=item, carries=carries)
         )
 
     return list(left_out.values())
@@ -384,7 +458,11 @@ def _window_contents(
 
     return (
         list(seen.values()),
-        _uncollected(read=read, timezone=timezone)
+        _uncollected(
+            read=read,
+            timezone=timezone,
+            carries=carries_notes(calendar=run.calendar)
+        )
     )
 
 
@@ -435,6 +513,7 @@ def _collected(
 
     events = []
     need_ids = set()
+    carries = carries_notes(calendar=run.calendar)
 
     for item in items:
         matched = helpers.match_shift_info(
@@ -445,7 +524,8 @@ def _collected(
             _event_from(
                 item=item,
                 matched=matched,
-                timezone=timezone
+                timezone=timezone,
+                note=_note_of(item=item, carries=carries)
             )
         )
 

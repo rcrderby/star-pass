@@ -41,7 +41,8 @@ EVENT_COLUMNS = (
     'match_keyword',
     'match_score',
     'added_by_hand',
-    'collected_category'
+    'collected_category',
+    'calendar_note'
 )
 EVENT_ROLE_COLUMNS = (
     'run_id',

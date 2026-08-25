@@ -780,3 +780,111 @@ class TestDiscardingTheOldSentences:
         connection.close()
 
         assert (written.action, written.minutes) == (OP_NUDGE, -15)
+
+
+@pytest.fixture(name='unnoted_database')
+def fixture_unnoted_database(
+    database_path: Path
+) -> Path:
+    """ Return a database at version 10, before the note existed.
+
+        Both columns are dropped, because version 11 adds one to each
+        of two tables and a migration proved on one of them is a
+        migration half proved.
+    """
+    connection = _database.connect(path=database_path)
+
+    insert_run(connection=connection, run_id='run-1')
+    _database.execute(
+        connection=connection,
+        statement=(
+            "INSERT INTO revisions (run_id, number, created_at, kind) "
+            "VALUES ('run-1', 1, '2026-09-01T00:00:00+00:00', 'collected')"
+        )
+    )
+    _database.execute(
+        connection=connection,
+        statement=(
+            'INSERT INTO events (run_id, revision, id, title, date, '
+            'calendar_start, calendar_end, shift_start, shift_end, '
+            "added_by_hand) VALUES ('run-1', 1, 'event-1', 'A Game', "
+            "'2026-09-03', '19:00', '21:00', '19:15', '21:30', 0)"
+        )
+    )
+    _database.execute(
+        connection=connection,
+        statement=(
+            'INSERT INTO uncollected_events (run_id, id, reason) '
+            "VALUES ('run-1', 'gcal-9', 'search')"
+        )
+    )
+
+    for table in ('events', 'uncollected_events'):
+        _database.execute(
+            connection=connection,
+            statement=f'ALTER TABLE {table} DROP COLUMN calendar_note'
+        )
+
+    _database.execute(
+        connection=connection,
+        statement='PRAGMA user_version = 10'
+    )
+    connection.close()
+
+    return database_path
+
+
+class TestMakingRoomForWhatTheCalendarSaid:
+    @pytest.mark.parametrize(
+        'table', ['events', 'uncollected_events']
+    )
+    def test_the_column_arrives_on_both_tables(
+        self,
+        unnoted_database: Path,
+        table: str
+    ) -> None:
+        connection = _database.connect(path=unnoted_database)
+        columns = column_names(connection=connection, table=table)
+        connection.close()
+
+        assert 'calendar_note' in columns
+
+    def test_a_row_written_before_it_has_no_note(
+        self,
+        unnoted_database: Path
+    ) -> None:
+        # Nothing is filled in.  A note can only come from reading the
+        # calendar, and the description of an event collected before
+        # this version is not recoverable from anything the run holds
+        # (D30).  Those rows read as having none until the run is
+        # collected again.
+        connection = _database.connect(path=unnoted_database)
+        row = _database.query_one(
+            connection=connection,
+            statement='SELECT calendar_note FROM events'
+        )
+        connection.close()
+
+        assert row['calendar_note'] is None
+
+    def test_a_note_can_be_written_afterwards(
+        self,
+        unnoted_database: Path
+    ) -> None:
+        # The question the column exists to answer, asked of the
+        # statement that would actually fail.
+        connection = _database.connect(path=unnoted_database)
+        _database.execute(
+            connection=connection,
+            statement=(
+                "UPDATE events SET calendar_note = 'Doors at 6 PM' "
+                "WHERE id = 'event-1'"
+            )
+        )
+        row = _database.query_one(
+            connection=connection,
+            statement='SELECT calendar_note FROM events'
+        )
+        connection.close()
+
+        assert row['calendar_note'] == 'Doors at 6 PM'

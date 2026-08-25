@@ -31,7 +31,9 @@
     "offsetEnd": "Set {minutes} min {direction} calendar end",
     "capped": "Created as {minutes} min, the longest this opportunity allows",
     "endsFirst": "End is before start",
-    "shiftTime": "Shift {start} to {end} ({minutes} min)"
+    "shiftTime": "Shift {start} to {end} ({minutes} min)",
+    "calendarNote": "Calendar note",
+    "noCalendarNote": "No calendar note found."
   },
   "uncollected": {
     "search": "Outside the calendar search",

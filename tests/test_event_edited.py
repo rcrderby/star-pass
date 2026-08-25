@@ -82,6 +82,18 @@ class TestWhetherAnEventHasBeenEdited:
         # which is what the event holds.
         assert ask_if_edited(an_event()) is False
 
+    def test_a_note_the_calendar_wrote_is_not_an_edit(
+        self,
+        ask_if_edited
+    ):
+        # The note is truth about the calendar, in the same way and
+        # for the same reason the calendar times are (D30).  A row
+        # whose note counted as an edit would be a row a reviewer
+        # could not have changed and could not put back.
+        assert ask_if_edited(
+            an_event(calendar_note='Doors at 6 PM, Game at 7 PM')
+        ) is False
+
     def test_a_moved_start_is_edited(self, ask_if_edited):
         assert ask_if_edited(an_event(shift_start='18:45')) is True
 

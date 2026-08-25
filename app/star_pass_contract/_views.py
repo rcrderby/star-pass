@@ -312,6 +312,7 @@ def _to_event_view(
         date=event.date,
         calendar_start=event.calendar_start,
         calendar_end=event.calendar_end,
+        calendar_note=event.calendar_note,
         shift_start=event.shift_start,
         shift_end=event.shift_end,
         length_minutes=shift_length(event=event),
@@ -525,6 +526,7 @@ def to_uncollected_views(
                         date=event.date,
                         calendar_start=event.calendar_start,
                         calendar_end=event.calendar_end,
+                        calendar_note=event.calendar_note,
                         addable=(
                             reason == UNCOLLECTED_SEARCH
                             and event.id not in in_revision
@@ -762,6 +764,7 @@ def to_config_view() -> ConfigView:
             CalendarView(
                 key=key,
                 search_terms=list(GCAL_CALENDARS[key]['query_strings']),
+                notes=bool(GCAL_CALENDARS[key].get('notes')),
                 categories=_categories_of(calendar=key)
             )
             for key in sorted(GCAL_CALENDARS)

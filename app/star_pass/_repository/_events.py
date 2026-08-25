@@ -86,6 +86,7 @@ def _to_event(
         collected_category=row['collected_category'],
         match=match,
         added_by_hand=bool(row['added_by_hand']),
+        calendar_note=row['calendar_note'],
         roles=roles
     )
 
@@ -129,7 +130,8 @@ def _event_values(
         match.keyword if match is not None else None,
         match.score if match is not None else None,
         event.added_by_hand,
-        event.collected_category
+        event.collected_category,
+        event.calendar_note
     )
 
 

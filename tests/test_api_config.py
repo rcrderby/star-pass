@@ -108,9 +108,29 @@ class TestWhatTheServiceReports:
             {
                 'key': 'practices',
                 'searchTerms': ['officials', 'scrimmage'],
+                'notes': False,
                 'categories': categories_of('practices')
             }
         ]
+
+    def test_a_calendar_says_whether_its_entries_carry_notes(
+        self,
+        configured: Callable[..., Dict[str, Any]]
+    ) -> None:
+        # Read by whoever shows the note, so that the answer is the
+        # calendar's configuration rather than a client testing the
+        # calendar's name (D30).  A calendar configured without the
+        # setting carries no notes, which is what the test above
+        # asserts from the other side.
+        assert configured(
+            GCAL_CALENDARS={
+                'events': {
+                    'gcal_id': 'a-calendar-identifier',
+                    'query_strings': [''],
+                    'notes': True
+                }
+            }
+        )['calendars'][0]['notes'] is True
 
     def test_a_calendar_reports_the_categories_it_offers(
         self,

@@ -31,6 +31,7 @@
 
 # Imports - Python Standard Library
 import sqlite3
+from dataclasses import replace
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
@@ -270,13 +271,19 @@ def _built(
     start, end = _moments(uncollected=uncollected)
 
     return (
-        event_from(
-            identifier=uncollected.id,
-            title=uncollected.title,
-            start=start,
-            end=end,
-            matched=matched,
-            added_by_hand=True
+        # The note comes off the stored row, which is the only place
+        # it could: adding never reads the calendar, so an event
+        # pulled in by hand carries what the collection saw (D30).
+        replace(
+            event_from(
+                identifier=uncollected.id,
+                title=uncollected.title,
+                start=start,
+                end=end,
+                matched=matched,
+                added_by_hand=True
+            ),
+            calendar_note=uncollected.calendar_note
         ),
         _opportunities_for(
             roles=role_timings(

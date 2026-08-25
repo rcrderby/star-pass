@@ -155,6 +155,21 @@ class TestWhatIsPulledIn:
             event.id for event in events.list_all(run_id=run, revision=1)
         ] == [EVENT_ID]
 
+    def test_the_event_carries_the_note_the_row_held(
+        self,
+        add: Callable[..., Any],
+        missed: Callable[..., str]
+    ) -> None:
+        # Adding reads the stored row and never the calendar, so the
+        # note is kept on the row for this (D30).  Without it, an
+        # event pulled in from Not collected would say the calendar
+        # wrote nothing about it while the calendar had.
+        missed(calendar_note='Doors at 6 PM, Game at 7 PM')
+
+        event, _ = add()
+
+        assert event.calendar_note == 'Doors at 6 PM, Game at 7 PM'
+
     def test_the_event_is_marked_as_added_by_hand(
         self,
         add: Callable[..., Any],

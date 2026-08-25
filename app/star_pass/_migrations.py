@@ -399,5 +399,29 @@ MIGRATIONS = {
             removes=True,
             statement='ALTER TABLE change_log DROP COLUMN entry'
         )
+    ),
+    11: (
+        # What the calendar's description said, on the event and on
+        # the row an event may be added from (D30).  Nullable and
+        # filled with nothing: a note can only come from reading the
+        # calendar, and the description of an event collected before
+        # this version is not recoverable from anything the run holds.
+        # Those rows read as having no note until the run is collected
+        # again, which is the same shape of cost version 10 accepted.
+        Step(
+            table='events',
+            column='calendar_note',
+            statement=(
+                'ALTER TABLE events ADD COLUMN calendar_note TEXT'
+            )
+        ),
+        Step(
+            table='uncollected_events',
+            column='calendar_note',
+            statement=(
+                'ALTER TABLE uncollected_events '
+                'ADD COLUMN calendar_note TEXT'
+            )
+        )
     )
 }
