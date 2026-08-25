@@ -16,6 +16,11 @@ const ACCENT = 'banner banner-accent';
 const SECONDARY = 'banner banner-secondary';
 const ALERT = 'banner banner-alert';
 
+/* The two statuses that mean shifts reached Amplify, which the run
+ * publishes and which each get their own banner. */
+const PARTLY_SENT = 'partly_sent';
+const SENT = 'sent';
+
 /** Return one banner.
  *
  * @param {Object} options What it says and how it looks.
@@ -145,7 +150,23 @@ export function reviewBanners(state, handlers) {
     }));
   }
 
-  if (run.sentAt) {
+  /* Keyed on the status and not on `sent_at`, which `mark_sent`
+   * writes for both of the statuses that mean shifts reached Amplify.
+   * A partly sent run told "This run has been sent" is a run
+   * contradicting the tag one line above it, and the two states are
+   * not the same news: one is a run that is done, the other a run
+   * with work still in it. */
+  if (run.status === PARTLY_SENT) {
+    banners.push(banner({
+      tone: ACCENT,
+      glyph: 'circle-half-tilt',
+      words: 'Part of this run reached Amplify before the send '
+        + 'stopped. Sending again creates only what Amplify does not '
+        + 'already have.'
+    }));
+  }
+
+  if (run.status === SENT) {
     banners.push(banner({
       tone: ACCENT,
       glyph: 'check-circle',
