@@ -19,8 +19,10 @@ RUN python -m pip install --no-cache-dir --upgrade pip && \
     python -m pip install --no-cache-dir -r requirements/requirements_dev.txt && \
     rm -rf requirements
 
-# Set the PYTHONPATH environment variable
-ENV PYTHONPATH=/workspaces/star-pass
+# Set the PYTHONPATH environment variable to the import root, which is
+# 'app' and not the repository: modules import as 'star_pass.<module>',
+# and 'pyproject.toml' puts the same directory on the path for pytest.
+ENV PYTHONPATH=/workspaces/star-pass/app
 
 # Start the bash prompt
 CMD ["/bin/bash"]

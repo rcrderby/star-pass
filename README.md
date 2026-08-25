@@ -177,7 +177,6 @@ Note this is unrelated to `-d`/`--days`: it bounds when a *sign-up*
 was created, not when a *shift* starts, so narrowing the day window
 does not shorten that read.
 
-
 #### Running the summary from a container
 
 The summary has a container image of its own, carrying what the `-s`
