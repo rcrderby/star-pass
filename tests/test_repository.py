@@ -6,6 +6,7 @@
 
 # Imports - Python Standard Library
 import sqlite3
+from datetime import datetime, timedelta
 from typing import Callable
 
 # Imports - Third-Party
@@ -29,6 +30,27 @@ from star_pass._repository import (
     RunRepository
 )
 from star_pass._repository._common import copy_statement, insert_statement
+
+
+def _a_day_after(when: str) -> str:
+    """ Return an ISO-8601 UTC timestamp a day after the one given.
+
+        Stored times are written to the second, so a row that has to
+        be later than another cannot be written in the same test run
+        without saying by how much.
+
+        Args:
+            when (str):
+                The timestamp to move on from.
+
+        Returns:
+            later (str):
+                A day after it, in the format the repository writes.
+    """
+
+    moved = datetime.fromisoformat(when) + timedelta(days=1)
+
+    return moved.isoformat(timespec='seconds')
 
 
 class TestRuns:
@@ -81,6 +103,80 @@ class TestRuns:
         run = runs.get(run_id=run_id)
 
         assert run.revised_at == run.collected_at
+
+    def test_sealing_a_revision_dates_the_run(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        revisions: RevisionRepository,
+        run_id: str,
+        runs: RunRepository
+    ) -> None:
+        # Sealing writes no change-log entry, deliberately, so a run
+        # dated by the log alone reads as untouched however many times
+        # somebody sealed it. The run is collected in the past so that
+        # the seal is a moment later rather than the same second.
+        collected = runs.get(run_id=run_id).collected_at
+        sealed_at = _a_day_after(collected)
+        monkeypatch.setattr(
+            'star_pass._repository._revisions.utc_now',
+            lambda: sealed_at
+        )
+        revisions.create(run_id=run_id)
+
+        assert runs.get(run_id=run_id).revised_at == sealed_at
+
+    def test_reverting_dates_the_run(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        revisions: RevisionRepository,
+        run_id: str,
+        runs: RunRepository
+    ) -> None:
+        # A revert writes no change-log entry either, for the same
+        # reason, and is the other way a run is worked on without one.
+        revisions.create(run_id=run_id)
+        collected = runs.get(run_id=run_id).collected_at
+        reverted_at = _a_day_after(collected)
+        monkeypatch.setattr(
+            'star_pass._repository._revisions.utc_now',
+            lambda: reverted_at
+        )
+        revisions.revert_to(run_id=run_id, number=1)
+
+        assert runs.get(run_id=run_id).revised_at == reverted_at
+
+    def test_the_later_of_the_two_dates_the_run(
+        self,
+        change_log: ChangeLogRepository,
+        monkeypatch: pytest.MonkeyPatch,
+        revisions: RevisionRepository,
+        run_id: str,
+        runs: RunRepository
+    ) -> None:
+        # An edit after a seal, so that reading the revisions alone
+        # would answer the older of the two. The seal above is the
+        # other way round, so between them they say the later source
+        # is read and not simply one of them.
+        collected = runs.get(run_id=run_id).collected_at
+        sealed_at = _a_day_after(collected)
+        edited_at = _a_day_after(sealed_at)
+        monkeypatch.setattr(
+            'star_pass._repository._revisions.utc_now',
+            lambda: sealed_at
+        )
+        monkeypatch.setattr(
+            'star_pass._repository._change_log.utc_now',
+            lambda: edited_at
+        )
+        revisions.create(run_id=run_id)
+        change_log.add(
+            run_id=run_id,
+            revision=1,
+            principal_id='static-token',
+            entry='Slots raised to six'
+        )
+
+        assert runs.get(run_id=run_id).revised_at == edited_at
 
     def test_an_unknown_run_reads_as_nothing(
         self,

@@ -34,6 +34,7 @@ from star_pass._repository import (
     ChangeLogRepository,
     JobRepository,
     RevisionRepository,
+    RunRepository,
     SentShiftRepository,
     UnmatchedTitleRepository
 )
@@ -235,6 +236,48 @@ class TestWhichRevisionsAreKept:
         sweep(connection=connection)
 
         assert len(revisions.list_all(run_id=run_id)) == 3
+
+    def test_a_run_sealed_recently_counts_as_recent(
+        self,
+        connection: sqlite3.Connection,
+        monkeypatch: pytest.MonkeyPatch,
+        revisions: RevisionRepository,
+        runs: RunRepository
+    ) -> None:
+        # A run somebody has done nothing to but seal. Sealing writes
+        # no change-log entry, deliberately, so a run dated by the log
+        # alone reads as untouched since it was collected -- and has
+        # its middle revisions swept while somebody is working in it.
+        #
+        # The run is collected long ago rather than taken from the
+        # fixture, because collection is itself the floor this date
+        # cannot go below: a run collected today is recent whatever
+        # else is read, and a test using one could not tell the seal
+        # from the collection.
+        long_ago = (
+            datetime.now(timezone.utc) - timedelta(days=400)
+        ).isoformat(timespec='seconds')
+        monkeypatch.setattr(
+            'star_pass._repository._runs.utc_now',
+            lambda: long_ago
+        )
+        monkeypatch.setattr(
+            'star_pass._repository._revisions.utc_now',
+            lambda: long_ago
+        )
+        run_id = runs.create(
+            calendar=CALENDAR,
+            window_start='2026-09-01',
+            window_end='2026-10-01'
+        ).id
+        for _number in range(1, 4):
+            revisions.create(run_id=run_id)
+        monkeypatch.undo()
+        revisions.create(run_id=run_id)
+
+        sweep(connection=connection)
+
+        assert len(revisions.list_all(run_id=run_id)) == 4
 
     def test_the_events_in_one_go_with_it(
         self,

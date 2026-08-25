@@ -20,6 +20,7 @@ from .._records import (
 )
 from ._common import (
     insert_statement,
+    LAST_TOUCHED,
     Repository,
     require_one_of,
     require_row,
@@ -77,14 +78,7 @@ RUN_SELECT = f"""
         runs.collected_at  AS collected_at,
         runs.sent_at       AS sent_at,
         COALESCE(current.number, 0) AS current_revision,
-        COALESCE(
-            (
-                SELECT MAX(change_log.logged_at)
-                FROM change_log
-                WHERE change_log.run_id = runs.id
-            ),
-            runs.collected_at
-        ) AS revised_at,
+        {LAST_TOUCHED} AS revised_at,
         (
             SELECT COUNT(*)
             FROM events
