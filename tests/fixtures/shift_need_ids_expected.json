@@ -251,24 +251,6 @@
       "slots": 20
     }
   ],
-  "practices|junior officials": [
-    {
-      "description": "Attendees",
-      "id": 773454,
-      "max_length": null,
-      "offset_end": 0,
-      "offset_start": 0,
-      "slots": 20
-    },
-    {
-      "description": "Coaches",
-      "id": 892230,
-      "max_length": null,
-      "offset_end": 0,
-      "offset_start": 0,
-      "slots": 2
-    }
-  ],
   "practices|officials": [
     {
       "description": "Attendees",

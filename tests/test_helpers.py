@@ -131,13 +131,12 @@ class TestSearchShiftInfo:
             ('events', 'PTT vs Cherry City', 'Rose Petals Games'),
             ('events', 'BB vs. JRD', 'Adult Games'),
             ('practices', 'Officials Training', 'Officials Practice'),
-            # Officiating practice is one category for everybody now,
-            # so a title still saying "junior" reaches the same one --
-            # by holding 'officials', the alias that outlived the
-            # junior category.
+            # One category serves everybody, so a title naming a
+            # group reaches it like any other: the alias it matches
+            # on carries no group word, and neither does the category.
             (
                 'practices',
-                'Junior Officials Practice',
+                'Adult Officials Practice',
                 'Officials Practice'
             ),
             ('practices', 'Wreckers Mod. Contact', 'Adult Scrimmages'),
