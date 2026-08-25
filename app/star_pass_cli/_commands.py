@@ -41,7 +41,12 @@ from uuid import uuid4
 # Imports - Local
 from star_pass._exceptions import StarPassError
 from star_pass_client import ApiProblem, LocalOperationUnavailable
-from ._confirm import confirmed, ConfirmationUnavailable
+from ._confirm import (
+    confirmed,
+    ConfirmationUnavailable,
+    NO_TERMINAL_TO_DELETE,
+    NO_TERMINAL_TO_SEND
+)
 from ._configuration import (
     config_text,
     credential_text,
@@ -53,6 +58,7 @@ from ._render import (
     after,
     revisions_table,
     run_detail,
+    delete_restatement,
     deleted_text,
     runs_table,
     uncollected_text
@@ -79,6 +85,10 @@ NOTHING_TO_SEND = (
     'Amplify already has every shift this run asks for. Nothing sent.'
 )
 NOT_SENT = 'Nothing was sent.'
+DELETE_QUESTION = (
+    'Delete this run and everything in it? This cannot be undone.'
+)
+NOT_DELETED = 'Nothing was deleted.'
 
 # The word each group of commands is selected by, and what it covers.
 GROUPS = {
@@ -289,7 +299,8 @@ COMMANDS = (
         summary='Delete a run that never sent shifts to Amplify.',
         operation='delete_run',
         render=deleted_text,
-        argument='run_id'
+        argument='run_id',
+        answer=lambda command, args: _delete(command=command, args=args)
     ),
     Command(
         group='runs',
@@ -630,7 +641,10 @@ def _send(
 
         return None
 
-    if not confirmed(question=SEND_QUESTION):
+    if not confirmed(
+        question=SEND_QUESTION,
+        unavailable=NO_TERMINAL_TO_SEND
+    ):
         write(NOT_SENT)
 
         return None
@@ -644,6 +658,64 @@ def _send(
             )
         )
     )
+
+    return None
+
+
+def _delete(
+        command: Command,
+        args: argparse.Namespace
+) -> None:
+    """ Ask whether to delete a run, and delete it if the answer is yes.
+
+        The same shape as the send above and for the same reason
+        (D11): what is about to happen is restated, somebody reads it
+        and answers, and no answer is not yes.  A deletion destroys
+        nothing Amplify holds, because a run that sent anything is
+        refused one (D24) -- but what it destroys here is gone.
+
+        The run is read before the question so that the restatement
+        can say what is in it.  Whether it may be deleted at all is
+        not decided here: that is the core's answer (D1), and a rule
+        this client kept and the service did not would be a rule the
+        system does not have.
+
+        Args:
+            command (Command):
+                The command the words selected.
+
+            args (argparse.Namespace):
+                The parsed command line.
+
+        Raises:
+            ApiProblem:
+                If there is no such run, or it is not one that may be
+                deleted.
+
+            ConfirmationUnavailable:
+                If there is no terminal to answer from.
+
+            StarPassError:
+                If the mode cannot be reached as configured.
+
+        Returns:
+            None.
+    """
+
+    client = client_for(api_url=args.api_url)
+    run_id = getattr(args, command.argument)
+
+    write(delete_restatement(run=client.get_run(run_id=run_id)))
+
+    if not confirmed(
+        question=DELETE_QUESTION,
+        unavailable=NO_TERMINAL_TO_DELETE
+    ):
+        write(NOT_DELETED)
+
+        return None
+
+    write(command.render(answer=client.delete_run(run_id=run_id)))
 
     return None
 

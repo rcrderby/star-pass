@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" The gate in front of the one thing that cannot be undone (D11).
+""" The gate in front of the things that cannot be undone (D11).
 
     A send writes into a live volunteer system and Amplify has no way
     to take a shift back, so somebody reads what is about to happen and
@@ -7,6 +7,11 @@
     which is why it restates the count, the window and the
     opportunities on the line above the question rather than asking a
     bare "are you sure".
+
+    A deletion is the second.  It destroys nothing Amplify holds -- a
+    run that sent anything is refused one (D24) -- but what it destroys
+    here is gone, so it is put the same way and restates the run it is
+    about.  What cannot be undone is not always what reached Amplify.
 
     **A typed number was rejected** (D11): it tests typing rather than
     attention, and on a routine monthly task it becomes something the
@@ -34,9 +39,16 @@ AFFIRMATIVE = frozenset({'y', 'yes'})
 # default one.
 CHOICES = '[y/N]'
 
-# What a caller is told when nothing can answer.
-NO_TERMINAL = (
+# What a caller is told when nothing can answer.  One for each thing
+# asked about, because a caller told the wrong reason would go looking
+# for a send that is not there.
+NO_TERMINAL_TO_SEND = (
     'This command writes to Amplify and cannot be undone, so it asks '
+    'first -- and there is no terminal here to ask. Run it where '
+    'somebody can answer.'
+)
+NO_TERMINAL_TO_DELETE = (
+    'This command deletes a run and cannot be undone, so it asks '
     'first -- and there is no terminal here to ask. Run it where '
     'somebody can answer.'
 )
@@ -52,13 +64,19 @@ class ConfirmationUnavailable(Exception):
 
 
 def confirmed(
-        question: str
+        question: str,
+        unavailable: str
 ) -> bool:
     """ Put a question and return whether the answer was yes.
 
         Args:
             question (str):
                 What to ask, without the choices, which are added.
+
+            unavailable (str):
+                What to say when there is nobody to ask, which names
+                what was being asked about rather than leaving a
+                caller to guess.
 
         Raises:
             ConfirmationUnavailable:
@@ -70,7 +88,7 @@ def confirmed(
     """
 
     if not sys.stdin.isatty():
-        raise ConfirmationUnavailable(NO_TERMINAL)
+        raise ConfirmationUnavailable(unavailable)
 
     write(f'{question} {CHOICES} ', end='')
 

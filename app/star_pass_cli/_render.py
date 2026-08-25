@@ -784,6 +784,45 @@ def revision_row(
     ]
 
 
+def delete_restatement(
+        run: Dict[str, Any]
+) -> str:
+    """ Return what a deletion is about to destroy, for somebody to read.
+
+        The confirmation's job is to make them read it (D11), so what
+        is about to go is on the line above the question rather than a
+        bare "are you sure".  The counts are the point: a run holding
+        nothing and a run holding a month of reviewed events read the
+        same way in an identifier alone.
+
+        The status is here because it is what says whether the
+        deletion will be refused at all -- a run that has sent is kept
+        (D24) -- so somebody reading "sent" learns why before asking.
+
+        Args:
+            run (Dict[str, Any]):
+                The run, as an answer carries it.
+
+        Returns:
+            text (str):
+                The restatement.
+    """
+
+    counts = run['counts']
+
+    return labelled(
+        pairs=(
+            ('Run', run['id']),
+            ('Calendar', run['calendar']),
+            ('Window', window_text(window=run['window'])),
+            ('Status', run['status']),
+            ('Revisions', str(run['currentRevision'])),
+            ('Events', str(counts['events'])),
+            ('Shifts', str(counts['shifts']))
+        )
+    )
+
+
 def deleted_text(
         answer: None
 ) -> str:
