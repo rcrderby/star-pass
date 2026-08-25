@@ -67,9 +67,12 @@ const NOTHING_MATCHES = (
   'No event in this run matches what you are looking for.'
 );
 
-/* Which tab is showing. The names the header's control reports. */
-const SHIFTS_VIEW = 'shifts';
-const UNCOLLECTED_VIEW = 'uncollected';
+/* Which tab is showing. The names the header's control reports, and
+ * the names a path is routed to: each tab is one of the run's two
+ * addresses (D28), so what the header says and what the address says
+ * have to be the same word. */
+export const SHIFTS_VIEW = 'shifts';
+export const UNCOLLECTED_VIEW = 'uncollected';
 
 /* What did not happen, said above what is still readable. */
 const NOT_CHANGED = 'That change was not made.';
@@ -188,7 +191,13 @@ export class ReviewScreen {
    * @param {Array<Object>} answers.revisions Its revisions.
    * @param {Object} answers.config What the deployment was configured
    *     with, read for the calendar's categories.
+   * @param {string} [answers.view] Which tab to open on, which is
+   *     what the address named. The run's own rows by default.
    * @param {Object} handlers What the screen's exits do.
+   * @param {Function} handlers.onView Go to a tab, which is a path
+   *     rather than a state this screen sets for itself: the tab is
+   *     addressable, so pressing one and arriving at one have to be
+   *     the same drawing.
    * @param {Function} handlers.onCollectNew Open the collect drawer
    *     over nothing, to collect a window into a new run.
    * @param {Function} handlers.onSeeInterrupted Open the job the
@@ -196,14 +205,17 @@ export class ReviewScreen {
    * @param {Function} handlers.onCollectAgain Open the collect drawer
    *     over this run, to read its window again.
    */
-  constructor({ runs, run, revisions, config }, handlers = {}) {
+  constructor(
+    { runs, run, revisions, config, view = SHIFTS_VIEW },
+    handlers = {}
+  ) {
     this.state = {
       runs,
       run,
       revisions,
       config,
       events: run.events,
-      view: SHIFTS_VIEW,
+      view,
       search: '',
       filters: { blocking: false, fuzzy: false },
       collapsed: new Set(),
@@ -227,6 +239,13 @@ export class ReviewScreen {
     this.body = el('div', { class: 'review-body' });
 
     this.draw();
+
+    /* Opening straight onto the second tab reads it, the way pressing
+     * it does. 'setView' does that read on the way in and is not
+     * called for the tab the screen opens on. */
+    if (this.state.view === UNCOLLECTED_VIEW) {
+      this.loadUncollected();
+    }
   }
 
   /** Return what the rows are drawn against.
@@ -473,7 +492,12 @@ export class ReviewScreen {
         closeAnyPopover();
         this.handlers.onOpenRun(runId);
       },
-      onView: (view) => this.setView(view),
+      /* Out to the address and back in, rather than straight to
+       * 'setView': the tab is a path, and a tab pressed has to leave
+       * the same history entry behind as a tab arrived at. What comes
+       * back is 'setView', on this same screen, so nothing the reader
+       * has done to the table is thrown away. */
+      onView: (view) => this.handlers.onView(view),
       onSeal: () => this.seal(),
       onRevert: (number) => this.revertTo(number),
       onCollectNew: () => {

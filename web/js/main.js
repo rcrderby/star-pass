@@ -1,22 +1,32 @@
 /* Starting the page, and which screen it is on.
  *
- * Read what was remembered about the theme, read the wordings, ask the
- * service what runs it holds, and draw whichever screen that answer
- * calls for.  Nothing is drawn before the answer arrives: a page that
- * showed the empty state and then replaced it would be telling
- * somebody they have no runs while it finds out.
+ * Read what was remembered about the theme, read the wordings, and
+ * draw whatever the address names.  Nothing is drawn before the
+ * answers arrive: a page that showed the empty state and then
+ * replaced it would be telling somebody they have no runs while it
+ * finds out.
  *
- * There are two screens over a run now, and moving between them
- * re-reads it rather than keeping what was read before.  A send
- * changes the run -- its status, when its shifts reached Amplify --
- * and coming back to a copy from before it would be coming back to a
- * run that had not been sent.
+ * **The address decides the screen (D28).**  Every screen with a path
+ * is reached by going to that path and drawing what it names, whether
+ * somebody pressed a control, pressed Back, reloaded, or typed the
+ * address in a new tab.  One drawing for all four is what makes the
+ * last three work at all: a control that showed a screen itself would
+ * be a screen no address could reach.
+ *
+ * Moving between screens re-reads the run rather than keeping what
+ * was read before.  A send changes the run -- its status, when its
+ * shifts reached Amplify -- and coming back to a copy from before it
+ * would be coming back to a run that had not been sent.  Moving
+ * between the two **tabs** of one run does not: they are one screen
+ * with two addresses, and re-reading would throw away the search, the
+ * filters and the selection somebody is in the middle of using.
  *
  * **A run that is being worked on opens on the work.**  A run carries
  * the job still working on it, which is what makes one somebody
  * walked away from reattachable: opening it goes to the screen for
  * that job rather than to a review screen with no sign anything is
- * happening.
+ * happening.  A job has no address of its own -- it is what the run's
+ * own path draws while there is one.
  */
 
 import {
@@ -33,12 +43,31 @@ import { CollectDrawer } from './collect/drawer.js';
 import { COLLECT_JOBS, CollectingScreen } from './collect/screen.js';
 import { fill } from './dom.js';
 import { loadPhrases } from './phrases.js';
+import {
+  HOME,
+  RUN,
+  RUN_PREVIEW,
+  RUN_UNCOLLECTED,
+  Router,
+  SETTINGS,
+  pathFor
+} from './router.js';
 import { emptyState, failureState } from './screens.js';
-import { ReviewScreen } from './review/screen.js';
+import {
+  ReviewScreen,
+  SHIFTS_VIEW,
+  UNCOLLECTED_VIEW
+} from './review/screen.js';
 import { SEND_JOB, SendingScreen } from './sending/screen.js';
 import { SettingsScreen } from './settings/screen.js';
 import { shell } from './shell.js';
 import { Appearance } from './theme.js';
+
+/* Which tab each of a run's two addresses draws. */
+const VIEW_OF = {
+  [RUN]: SHIFTS_VIEW,
+  [RUN_UNCOLLECTED]: UNCOLLECTED_VIEW
+};
 
 /** Draw the page.
  *
@@ -50,29 +79,41 @@ async function start() {
   const main = document.createElement('main');
 
   main.className = 'main';
-  fill(root, shell(appearance, openSettings), main);
+  fill(root, shell(appearance, () => router.go(pathFor(SETTINGS))), main);
 
   /* The screen currently drawn, so that leaving one lets go of
    * whatever it was holding open. Only the sending screen has
    * anything: a job's event stream, which the service keeps open. */
   let showing = null;
 
-  /* Which run is being looked at, so that Settings -- which is
-   * reached from the bar above every screen and belongs to no run --
-   * has somewhere to go back to. Empty while there are none. */
+  /* Which run the screen on the page is over. Read to know that a
+   * route is the same run seen a different way, so that switching tab
+   * keeps the screen rather than reading the run again. Empty while
+   * the screen is over no run. */
   let opened = '';
+
+  /* The address Settings was reached from, so that leaving it comes
+   * back to the screen it was opened over rather than to the run's
+   * first tab. Settings belongs to no run and is reached from the bar
+   * above every screen, so what it goes back to is where the reader
+   * was, which is now a thing a path can say. Home until somebody has
+   * been anywhere, which is what a page opened straight on '/settings'
+   * gets. */
+  let cameFrom = pathFor(HOME);
 
   /** Put a screen on, letting go of the one before it.
    *
    * @param {Object} screen The screen to show.
+   * @param {string} [runId] The run it is over, where it is over one.
    * @returns {void}
    */
-  function show(screen) {
+  function show(screen, runId = '') {
     if (showing !== null && showing.release !== undefined) {
       showing.release();
     }
 
     showing = screen;
+    opened = runId;
     fill(main, screen.element);
   }
 
@@ -85,6 +126,8 @@ async function start() {
     if (!(error instanceof ApiError)) {
       console.error(error);
     }
+
+    showing = null;
 
     fill(main, failureState(
       error instanceof ApiError
@@ -121,6 +164,10 @@ async function start() {
    * reading of what it reported, and so is how far a collection got.
    * The resume lives there, behind the send confirmation.
    *
+   * Drawn where it stands rather than pushed as an address: the run's
+   * path is where the interrupted job is, and a reload finds it again
+   * from the banner it was reached by.
+   *
    * @param {Object} run The run, which names the job.
    * @param {Object} config What the deployment was configured with.
    * @returns {Promise<void>} When it is on screen.
@@ -130,10 +177,13 @@ async function start() {
       const job = await getJob(run.interruptedJobId);
 
       if (job.kind === SEND_JOB) {
-        show(new SendingScreen(
-          { run, job },
-          { onBack: () => reopen(run.id) }
-        ));
+        show(
+          new SendingScreen(
+            { run, job },
+            { onBack: () => router.go(pathFor(RUN, run.id)) }
+          ),
+          run.id
+        );
 
         return;
       }
@@ -146,16 +196,27 @@ async function start() {
 
   /** Show a collection, and open the run when it finishes.
    *
+   * The address becomes the run's as soon as the job names it, so a
+   * reload in the middle of a collection comes back to the run being
+   * collected -- which draws this screen again, the run carrying the
+   * job. Said rather than pushed: nobody pressed anything to arrive
+   * here, so there is nothing to go back to.
+   *
    * @param {Object} job The job doing it.
    * @param {Object} config What the deployment was configured with.
    * @param {string} [calendar] Which calendar it reads, when known.
    * @returns {void}
    */
   function watchCollection(job, config, calendar = '') {
-    show(new CollectingScreen(
-      { job, config, calendar },
-      { onOpenRun: (runId) => reopen(runId) }
-    ));
+    router.say(pathFor(RUN, job.runId));
+
+    show(
+      new CollectingScreen(
+        { job, config, calendar },
+        { onOpenRun: (runId) => router.go(pathFor(RUN, runId)) }
+      ),
+      job.runId
+    );
   }
 
   /** Open the drawer over whatever is on screen.
@@ -184,9 +245,10 @@ async function start() {
    *
    * @param {Array<Object>} runs Every run the service holds.
    * @param {string} runId Which one to open.
+   * @param {string} name Which of the run's addresses was asked for.
    * @returns {Promise<void>} When it is on screen.
    */
-  async function openRun(runs, runId) {
+  async function openRun(runs, runId, name) {
     /* Asked for together rather than one after another: three
      * sequential reads would draw a screen assembled from three
      * different moments, and the run is the slowest of them. */
@@ -196,18 +258,19 @@ async function start() {
       getConfig()
     ]);
 
-    opened = runId;
-
     const job = await activeJob(run);
 
     /* A run being worked on opens on the work. Which screen that is
      * depends on what the job is doing: a send and a collection are
      * different screens over the same kind of stream. */
     if (job !== null && job.kind === SEND_JOB) {
-      show(new SendingScreen(
-        { run, job },
-        { onBack: () => reopen(runId) }
-      ));
+      show(
+        new SendingScreen(
+          { run, job },
+          { onBack: () => router.go(pathFor(RUN, runId)) }
+        ),
+        runId
+      );
 
       return;
     }
@@ -218,32 +281,53 @@ async function start() {
       return;
     }
 
-    show(new ReviewScreen(
-      { runs, run, revisions, config },
-      {
-        onOpenRun: (chosen) => openRun(runs, chosen).catch(failed),
-        onSeeInterrupted: () => seeInterrupted(run, config),
-        onCollectNew: () => collect(config),
-        onCollectAgain: () => collect(config, run),
-        onPreview: () => show(new SendingScreen(
+    if (name === RUN_PREVIEW) {
+      show(
+        new SendingScreen(
           { run },
-          { onBack: () => reopen(runId) }
-        ))
-      }
-    ));
+          { onBack: () => router.go(pathFor(RUN, runId)) }
+        ),
+        runId
+      );
+
+      return;
+    }
+
+    show(
+      new ReviewScreen(
+        { runs, run, revisions, config, view: VIEW_OF[name] },
+        {
+          onOpenRun: (chosen) => router.go(pathFor(RUN, chosen)),
+          onView: (view) => router.go(pathFor(
+            view === UNCOLLECTED_VIEW ? RUN_UNCOLLECTED : RUN,
+            runId
+          )),
+          onSeeInterrupted: () => seeInterrupted(run, config),
+          onCollectNew: () => collect(config),
+          onCollectAgain: () => collect(config, run),
+          onPreview: () => router.go(pathFor(RUN_PREVIEW, runId))
+        }
+      ),
+      runId
+    );
   }
 
-  /** Read what runs there are, and draw what that answer calls for.
+  /** Draw the run a path named, or the newest when it named none.
    *
    * The run list is read every time rather than kept: a send changes
    * the run's status, and the picker on the review screen shows that
    * status for every run it lists.
    *
-   * @param {string} [runId] Which run to open. The newest when it is
-   *     not named, and when the one named is no longer there.
+   * An address naming a run the service does not hold draws the
+   * newest and says so, rather than leaving the address claiming a
+   * run nobody is looking at. What it should do is refuse on the runs
+   * list, which is a screen this does not have yet.
+   *
+   * @param {string} name Which address was asked for.
+   * @param {string} [runId] The run it named, where it named one.
    * @returns {Promise<void>} When it is on screen.
    */
-  async function showRuns(runId = '') {
+  async function showRuns(name, runId = '') {
     const runs = await listRuns();
 
     if (runs.length === 0) {
@@ -252,29 +336,20 @@ async function start() {
        * one that appears empty and then fills in. */
       const config = await getConfig();
 
-      opened = '';
+      router.say(pathFor(HOME));
       show({ element: emptyState(() => collect(config)) });
 
       return;
     }
 
-    await openRun(
-      runs,
-      runs.some((run) => run.id === runId) ? runId : runs[0].id
-    );
-  }
+    if (runs.some((run) => run.id === runId)) {
+      await openRun(runs, runId, name);
 
-  /** Read a run again and draw it.
-   *
-   * @param {string} runId Which run.
-   * @returns {Promise<void>} When it is on screen.
-   */
-  async function reopen(runId) {
-    try {
-      await showRuns(runId);
-    } catch (error) {
-      failed(error);
+      return;
     }
+
+    router.say(pathFor(RUN, runs[0].id));
+    await openRun(runs, runs[0].id, RUN);
   }
 
   /** Show the settings, over whatever was being looked at.
@@ -287,16 +362,62 @@ async function start() {
    *
    * @returns {void}
    */
-  function openSettings() {
+  function showSettings() {
     show(new SettingsScreen(
       { appearance },
-      { onBack: () => reopen(opened) }
+      { onBack: () => router.go(cameFrom) }
     ));
   }
 
+  /** Draw what an address names.
+   *
+   * @param {Object|null} route The screen and the run it is over.
+   * @returns {Promise<void>} When it is on screen.
+   */
+  async function draw(route) {
+    if (route === null) {
+      /* The service answers the page's own paths and refuses the
+       * rest, so arriving here means the page pushed something its
+       * own table does not know. Draw home and say so, rather than
+       * leaving an address nothing can return to. */
+      router.say(pathFor(HOME));
+      await showRuns(HOME);
+
+      return;
+    }
+
+    if (route.name === SETTINGS) {
+      showSettings();
+
+      return;
+    }
+
+    /* Every other screen is one Settings can be opened over, and the
+     * address is already this one by the time this runs. */
+    cameFrom = window.location.pathname;
+
+    /* One run's two tabs are one screen. Told to change rather than
+     * built again, so that Back and Forward between them keep the
+     * search, the filters and the selection -- and so that the second
+     * tab is read once rather than on every visit to it. */
+    if (
+      showing instanceof ReviewScreen
+      && route.runId === opened
+      && route.name in VIEW_OF
+    ) {
+      showing.setView(VIEW_OF[route.name]);
+
+      return;
+    }
+
+    await showRuns(route.name, route.runId);
+  }
+
+  const router = new Router((route) => draw(route).catch(failed));
+
   try {
     await loadPhrases();
-    await showRuns();
+    router.draw();
   } catch (error) {
     failed(error);
   }

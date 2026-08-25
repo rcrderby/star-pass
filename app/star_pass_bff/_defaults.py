@@ -101,3 +101,26 @@ WEB_ROOT = Path(
 # check that refuses to start without a page looks for this file and
 # the mount serves it.
 WEB_INDEX = 'index.html'
+
+# The paths the page routes itself (D28), each answered with the page.
+#
+# **Enumerated, and never a catch-all.**  The page is mounted with
+# 'html=True', which answers a path that is not a file with 404 -- and
+# that refusal is what says a module the page imports is missing.  A
+# blanket fallback would answer a mistyped module path with the page
+# and a 200, so the browser would be handed HTML where it asked for
+# JavaScript, and the screen would silently never draw.  Enumerating
+# costs this tuple; 'tests/test_web_routes.py' holds it to the table
+# the page routes with, because a path one of them knows and the other
+# does not is a screen that works until somebody reloads it.
+#
+# The root is here rather than left to the mount so that the list is
+# the whole answer to "which paths are the page".
+SCREEN_PATHS = (
+    '/',
+    '/runs',
+    '/runs/{run_id}',
+    '/runs/{run_id}/uncollected',
+    '/runs/{run_id}/preview',
+    '/settings'
+)
