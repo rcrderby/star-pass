@@ -10,15 +10,19 @@
     **What cannot be expressed.**  An event holds one pair of shift
     times and a role per need ID, so a category whose need IDs disagree
     about their offsets describes two different shifts and cannot be
-    stored as one event.  A shift running past midnight cannot be read
-    back either, because the times are stored as times of day.  Both
-    are refused here, so a collection and an edit refuse them alike.
+    stored as one event.  This is the refusal D25 does *not* remove.
+    What D25 makes storable is two categories timing one Amplify
+    listing differently, which the roles now carry separately.  What
+    stays impossible is one event needing two pairs of shift times.
+
+    A shift running past midnight cannot be read back either, because
+    the times are stored as times of day.  Both are refused here, so a
+    collection and an edit refuse them alike.
 """
 
 # Imports - Python Standard Library
-from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Sequence, Tuple
 
 # Imports - Local
 from . import _defaults
@@ -38,35 +42,10 @@ MINUTES_PER_DAY = 24 * 60
 logger = get_logger(__name__)
 
 
-@dataclass(frozen=True)
-class RoleTiming:
-    """ What one need ID contributes to an event and its shift.
-
-        Attributes:
-            role (EventRole):
-                The opportunity and how many volunteers it wants.
-
-            offset_start (int):
-                Minutes added to the event's start to reach the
-                shift's.
-
-            offset_end (int):
-                Minutes added to the event's end to reach the shift's.
-
-            max_length (int, optional):
-                Longest shift the opportunity accepts, or None.
-    """
-
-    role: EventRole
-    offset_start: int
-    offset_end: int
-    max_length: Optional[int]
-
-
 def role_timings(
         matched: CategoryMatch,
         title: str
-) -> List[RoleTiming]:
+) -> List[EventRole]:
     """ Return what each of a category's need IDs asks for.
 
         A need ID that is empty contributes nothing.  That is what the
@@ -89,19 +68,19 @@ def role_timings(
                 offsets, which one event cannot express.
 
         Returns:
-            timings (List[RoleTiming]):
-                One per need ID that can become a shift.
+            timings (List[EventRole]):
+                One per need ID that can become a shift, carrying
+                what the category asks of it.
     """
 
     timings = [
-        RoleTiming(
-            role=EventRole(
-                need_id=str(need['id']),
-                slots=int(need['slots'])
-            ),
+        EventRole(
+            need_id=str(need['id']),
+            slots=int(need['slots']),
             offset_start=int(need.get('offset_start', 0)),
             offset_end=int(need.get('offset_end', 0)),
-            max_length=need.get('max_length')
+            max_length=need.get('max_length'),
+            default_slots=int(need['slots'])
         )
         for need in matched.need_details.get('need_ids', ())
         if str(need.get('id', '')) != ''
@@ -131,7 +110,7 @@ def role_timings(
 def shift_times(
         start: datetime,
         end: datetime,
-        timings: Sequence[RoleTiming],
+        timings: Sequence[EventRole],
         title: str
 ) -> Tuple[str, str]:
     """ Return the times the shift an event creates runs between.
@@ -149,8 +128,8 @@ def shift_times(
             end (datetime):
                 When it ends.
 
-            timings (Sequence[RoleTiming]):
-                What its roles ask for.  All of them agree about the
+            timings (Sequence[EventRole]):
+                The event's roles.  All of them agree about the
                 offsets by the time this is called.
 
             title (str):
@@ -183,9 +162,9 @@ def shift_times(
     # The smallest maximum among the roles is the one that binds, the
     # same way a reader works out which maximum shortened a shift.
     maximums = [
-        timing.max_length
-        for timing in timings
-        if timing.max_length is not None
+        role.max_length
+        for role in timings
+        if role.max_length is not None
     ]
 
     if maximums and minutes > min(maximums):

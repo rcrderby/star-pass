@@ -212,11 +212,7 @@ def _to_opportunity(
     return Opportunity(
         need_id=row['need_id'],
         title=row['title'],
-        url=row['url'],
-        max_length=row['max_length'],
-        offset_start=row['offset_start'],
-        offset_end=row['offset_end'],
-        default_slots=row['default_slots']
+        url=row['url']
     )
 
 
@@ -503,11 +499,7 @@ class RunRepository(Repository):
             'run_id',
             'need_id',
             'title',
-            'url',
-            'max_length',
-            'offset_start',
-            'offset_end',
-            'default_slots'
+            'url'
         )
 
         with transaction(connection=self._connection):
@@ -527,11 +519,7 @@ class RunRepository(Repository):
                         run_id,
                         opportunity.need_id,
                         opportunity.title,
-                        opportunity.url,
-                        opportunity.max_length,
-                        opportunity.offset_start,
-                        opportunity.offset_end,
-                        opportunity.default_slots
+                        opportunity.url
                     )
                     for opportunity in opportunities
                 ]

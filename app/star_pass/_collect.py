@@ -49,7 +49,7 @@ from .gcal_data import (
 from ._building import event_from, opportunity_read
 from ._helpers import CategoryMatch, Helpers
 from ._logging import get_logger
-from ._shift_timing import RoleTiming, role_timings
+from ._shift_timing import role_timings
 from ._records import (
     Event,
     Opportunity,
@@ -388,59 +388,6 @@ def _window_contents(
     )
 
 
-def _require_one_timing(
-        need_id: str,
-        timing: RoleTiming,
-        against: RoleTiming
-) -> None:
-    """ Fail when two categories time the same opportunity differently.
-
-        A run stores one opportunity per need ID, so two categories
-        sending shifts to one Amplify listing on different offsets
-        cannot both be recorded.  Refused rather than resolved by
-        whichever event was read first, which would make the answer
-        depend on the order the calendar returned.
-
-        Args:
-            need_id (str):
-                The opportunity both categories name.
-
-            timing (RoleTiming):
-                What this event asks for.
-
-            against (RoleTiming):
-                What an earlier event asked for.
-
-        Raises:
-            ValidationError:
-                If the two disagree.
-
-        Returns:
-            None.
-    """
-
-    if (
-        timing.offset_start,
-        timing.offset_end,
-        timing.max_length
-    ) != (
-        against.offset_start,
-        against.offset_end,
-        against.max_length
-    ):
-        message = (
-            f'Need ID {need_id} is timed two different ways by the '
-            'categories collected in this window. A run records one '
-            'set of offsets per opportunity, so the two cannot both '
-            'be stored. Give them the same timing, or send them to '
-            'different opportunities.'
-        )
-        logger.error(message)
-        raise ValidationError(message)
-
-    return None
-
-
 def _collected(
         items: Sequence[Dict[str, Any]],
         run: Run,
@@ -487,7 +434,7 @@ def _collected(
     reporter.step_started(step=STEP_MATCH_EVENTS)
 
     events = []
-    timings: Dict[str, RoleTiming] = {}
+    need_ids = set()
 
     for item in items:
         matched = helpers.match_shift_info(
@@ -502,31 +449,25 @@ def _collected(
             )
         )
 
-        for timing in role_timings(
-            matched=matched,
-            title=item['summary']
-        ):
-            need_id = timing.role.need_id
-
-            if need_id in timings:
-                _require_one_timing(
-                    need_id=need_id,
-                    timing=timing,
-                    against=timings[need_id]
-                )
-
-            timings.setdefault(need_id, timing)
+        # The need IDs alone.  How each one is timed is the business of
+        # the role that names it, which the event carries: two
+        # categories timing one listing differently is what this window
+        # is allowed to hold now (D25), so there is nothing left here
+        # for the categories to disagree about.
+        need_ids.update(
+            role.need_id
+            for role in role_timings(
+                matched=matched,
+                title=item['summary']
+            )
+        )
 
     reporter.step_finished()
     reporter.step_started(step=STEP_READ_OPPORTUNITIES)
 
     opportunities = [
-        opportunity_read(
-            helpers=helpers,
-            need_id=need_id,
-            timing=timing
-        )
-        for need_id, timing in sorted(timings.items())
+        opportunity_read(helpers=helpers, need_id=need_id)
+        for need_id in sorted(need_ids)
     ]
 
     reporter.step_finished()

@@ -409,17 +409,44 @@
         "type": "object"
       },
       "EventRoleView": {
-        "description": "One opportunity an event creates a shift for. ",
+        "description": "One opportunity an event creates a shift for, and how it does.\n\nThe timing is the role's and not the opportunity's: one Amplify\nlisting can be named by categories that time it differently, so\ntwo events in a run may send to one listing on different\noffsets (D25).",
         "properties": {
+          "defaultSlots": {
+            "description": "Volunteers the category asked for, before any edit.",
+            "title": "Defaultslots",
+            "type": "integer"
+          },
           "edited": {
-            "description": "Whether a person changed the count from the opportunity's default. Recorded rather than compared against the default now, because the default can change.",
+            "description": "Whether a person changed the count from 'defaultSlots'. Recorded rather than compared against the default now, because an event collected again can arrive with another.",
             "title": "Edited",
             "type": "boolean"
+          },
+          "maxLength": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Longest shift the opportunity accepts, in minutes, or null when it sets no maximum.",
+            "title": "Maxlength"
           },
           "needId": {
             "description": "Amplify need ID the shift is created under.",
             "title": "Needid",
             "type": "string"
+          },
+          "offsetEnd": {
+            "description": "Minutes added to the event's end to reach the shift's.",
+            "title": "Offsetend",
+            "type": "integer"
+          },
+          "offsetStart": {
+            "description": "Minutes added to the event's start to reach the shift's.",
+            "title": "Offsetstart",
+            "type": "integer"
           },
           "slots": {
             "description": "Volunteers wanted.",
@@ -430,7 +457,10 @@
         "required": [
           "needId",
           "slots",
-          "edited"
+          "edited",
+          "offsetStart",
+          "offsetEnd",
+          "defaultSlots"
         ],
         "title": "EventRoleView",
         "type": "object"
@@ -738,39 +768,12 @@
         "type": "object"
       },
       "OpportunityView": {
-        "description": "An Amplify opportunity a run creates shifts under. ",
+        "description": "An Amplify opportunity a run creates shifts under.\n\nWhat Amplify says about the listing, and nothing else. How a\nshift is timed under it belongs to the role that creates the\nshift (D25).",
         "properties": {
-          "defaultSlots": {
-            "description": "Volunteers wanted per shift, before any edit.",
-            "title": "Defaultslots",
-            "type": "integer"
-          },
-          "maxLength": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Longest shift the opportunity accepts, in minutes, or null when it sets no maximum.",
-            "title": "Maxlength"
-          },
           "needId": {
             "description": "Amplify need ID.",
             "title": "Needid",
             "type": "string"
-          },
-          "offsetEnd": {
-            "description": "Minutes added to an event's end to reach the shift's.",
-            "title": "Offsetend",
-            "type": "integer"
-          },
-          "offsetStart": {
-            "description": "Minutes added to an event's start to reach the shift's.",
-            "title": "Offsetstart",
-            "type": "integer"
           },
           "title": {
             "description": "Amplify opportunity title, as displayed.",
@@ -786,10 +789,7 @@
         "required": [
           "needId",
           "title",
-          "url",
-          "offsetStart",
-          "offsetEnd",
-          "defaultSlots"
+          "url"
         ],
         "title": "OpportunityView",
         "type": "object"

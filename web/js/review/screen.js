@@ -260,18 +260,18 @@ export class ReviewScreen {
       onToggleSelected: (eventId) => this.toggleSelected(eventId),
       onEdit: (operation) => this.edit([operation]),
 
-      /* An event's roles share their offsets: a category whose need
-       * IDs disagree about them is refused when the run is collected,
-       * so the first role speaks for the event. */
+      /* The role's own, not the run's opportunity: one Amplify
+       * listing can be named by categories that time it differently,
+       * so two rows here can send to one listing on different offsets.
+       * An event's roles still share their offsets -- a category whose
+       * need IDs disagree about them is refused when the run is
+       * collected -- so the first role speaks for the event. */
       offsetOf: (event) => {
         const first = event.roles[0];
-        const opportunity = first
-          ? opportunities.get(first.needId)
-          : null;
 
         return {
-          start: opportunity ? opportunity.offsetStart : 0,
-          end: opportunity ? opportunity.offsetEnd : 0
+          start: first ? first.offsetStart : 0,
+          end: first ? first.offsetEnd : 0
         };
       }
     };
@@ -298,8 +298,10 @@ export class ReviewScreen {
   drawShifts() {
     const context = this.context();
     const shown = showing(this.state.events, this.state);
-    const anyOffset = this.state.run.opportunities.some(
-      (each) => each.offsetStart || each.offsetEnd
+    const anyOffset = this.state.events.some(
+      (event) => event.roles.some(
+        (role) => role.offsetStart || role.offsetEnd
+      )
     );
 
     const chosen = [...this.state.selection];

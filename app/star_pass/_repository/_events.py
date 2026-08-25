@@ -39,7 +39,11 @@ def _to_event_role(
     return EventRole(
         need_id=row['need_id'],
         slots=row['slots'],
-        edited=bool(row['edited'])
+        edited=bool(row['edited']),
+        offset_start=row['offset_start'],
+        offset_end=row['offset_end'],
+        max_length=row['max_length'],
+        default_slots=row['default_slots']
     )
 
 
@@ -156,7 +160,11 @@ def _role_values(
             event.id,
             role.need_id,
             role.slots,
-            role.edited
+            role.edited,
+            role.offset_start,
+            role.offset_end,
+            role.max_length,
+            role.default_slots
         )
         for event in events
         for role in event.roles

@@ -43,6 +43,26 @@ from star_pass._helpers import Helpers
 from star_pass._records import Event, EventRole, Match, Opportunity
 
 
+def a_role(
+    need_id: str = NEED_ID,
+    slots: int = 12,
+    edited: bool = False,
+    default_slots: Optional[int] = None
+) -> EventRole:
+    # The timing every event in this file is written against: the
+    # calendar times are 19:00 to 21:00 and the offsets reproduce the
+    # 19:15 to 21:30 shift the default event carries.
+    return EventRole(
+        need_id=need_id,
+        slots=slots,
+        edited=edited,
+        offset_start=15,
+        offset_end=30,
+        max_length=165,
+        default_slots=slots if default_slots is None else default_slots
+    )
+
+
 def an_event(
     *,
     identifier: str = 'gcal-1',
@@ -50,7 +70,7 @@ def an_event(
     shift_start: str = '19:15',
     shift_end: str = '21:30',
     category: Optional[str] = 'adult_game',
-    roles: Tuple[EventRole, ...] = (EventRole(need_id=NEED_ID, slots=12),)
+    roles: Optional[Tuple[EventRole, ...]] = None
 ) -> Event:
     # The calendar times are 19:00 to 21:00, so the default offsets
     # (+15, +30) reproduce the shift times above.  A test that changes
@@ -65,23 +85,18 @@ def an_event(
         shift_end=shift_end,
         category=category,
         match=Match(kind='MATCH_KIND_KEYWORD', keyword='wheels'),
-        roles=roles
+        roles=(a_role(),) if roles is None else roles
     )
 
 
 def an_opportunity(
     need_id: str = NEED_ID,
-    default_slots: int = 12,
     title: str = 'Adult Games - NSOs'
 ) -> Opportunity:
     return Opportunity(
         need_id=need_id,
         title=title,
-        url=f'https://example.test/needs/{need_id}',
-        max_length=165,
-        offset_start=15,
-        offset_end=30,
-        default_slots=default_slots
+        url=f'https://example.test/needs/{need_id}'
     )
 
 
@@ -262,15 +277,23 @@ class TestSettingSlots:
             )
         ])
 
+        # The default stays what the event was collected with. Moving
+        # it with the count would leave the reset nothing to go back
+        # to.
         assert result.events[0].roles == (
-            EventRole(need_id=NEED_ID, slots=4, edited=True),
+            a_role(
+                need_id=NEED_ID,
+                slots=4,
+                edited=True,
+                default_slots=12
+            ),
         )
 
     def test_the_other_roles_are_left_alone(self, edit):
         event = an_event(
             roles=(
-                EventRole(need_id=NEED_ID, slots=12),
-                EventRole(need_id=OTHER_NEED_ID, slots=8)
+                a_role(need_id=NEED_ID, slots=12),
+                a_role(need_id=OTHER_NEED_ID, slots=8)
             )
         )
 
@@ -286,7 +309,7 @@ class TestSettingSlots:
             events=[event]
         )
 
-        assert result.events[0].roles[1] == EventRole(
+        assert result.events[0].roles[1] == a_role(
             need_id=OTHER_NEED_ID,
             slots=8
         )
@@ -335,35 +358,53 @@ class TestSettingSlots:
 
 
 class TestResettingSlots:
-    def test_the_run_s_own_default_is_what_comes_back(self, edit):
-        # The run's opportunity, not today's data model: a run records
-        # what the opportunity wanted when it was collected.
+    def test_the_role_s_own_default_is_what_comes_back(self, edit):
+        # What the role was collected with, not today's data model: an
+        # event collected again can arrive asking for another number.
         edited = an_event(
-            roles=(EventRole(need_id=NEED_ID, slots=4, edited=True),)
+            roles=(a_role(slots=4, edited=True, default_slots=9),)
         )
 
         result = edit(
             [Operation(op=OP_RESET_SLOTS, event_ids=('gcal-1',))],
-            events=[edited],
-            opportunities=[an_opportunity(default_slots=9)]
+            events=[edited]
         )
 
         assert result.events[0].roles == (
-            EventRole(need_id=NEED_ID, slots=9, edited=False),
+            a_role(slots=9, edited=False, default_slots=9),
         )
 
-    def test_a_role_with_no_opportunity_is_refused(self, edit):
+    def test_a_role_the_run_holds_no_opportunity_for_still_resets(
+        self, edit
+    ):
+        # It used to be refused, because the number came from the
+        # run's opportunity and a role naming one the run does not
+        # hold had nowhere to read it. The role carries its own now
+        # (D25), so there is nothing left to refuse.
         stray = an_event(
-            roles=(EventRole(need_id='000000', slots=4, edited=True),)
+            roles=(
+                a_role(
+                    need_id='000000',
+                    slots=4,
+                    edited=True,
+                    default_slots=7
+                ),
+            )
         )
 
-        with pytest.raises(ValidationError) as error:
-            edit(
-                [Operation(op=OP_RESET_SLOTS, event_ids=('gcal-1',))],
-                events=[stray]
-            )
+        result = edit(
+            [Operation(op=OP_RESET_SLOTS, event_ids=('gcal-1',))],
+            events=[stray]
+        )
 
-        assert 'no usual number of volunteers' in str(error.value)
+        assert result.events[0].roles == (
+            a_role(
+                need_id='000000',
+                slots=7,
+                edited=False,
+                default_slots=7
+            ),
+        )
 
 
 class TestSettingTheCategory:
@@ -386,7 +427,7 @@ class TestSettingTheCategory:
 
         assert result.events[0].category == 'junior_game'
         assert result.events[0].roles == (
-            EventRole(need_id=OTHER_NEED_ID, slots=6),
+            a_role(need_id=OTHER_NEED_ID, slots=6),
         )
 
     def test_the_times_are_worked_out_again(self, edit):
@@ -460,7 +501,7 @@ class TestUndo:
 
     def test_the_slots_go_back_to_what_the_category_asks(self, edit):
         edited = an_event(
-            roles=(EventRole(need_id=NEED_ID, slots=4, edited=True),)
+            roles=(a_role(need_id=NEED_ID, slots=4, edited=True),)
         )
 
         result = edit(
@@ -469,7 +510,7 @@ class TestUndo:
         )
 
         assert result.events[0].roles == (
-            EventRole(need_id=NEED_ID, slots=12, edited=False),
+            a_role(need_id=NEED_ID, slots=12, edited=False),
         )
 
     def test_an_undo_after_an_edit_in_the_same_call_undoes_it(self, edit):
@@ -658,7 +699,7 @@ class TestWhetherAnEventHasBeenEdited:
         # Undo resets the volunteers as well as the times, so a row
         # whose count somebody set is a row undo would change.
         assert ask_if_edited(
-            an_event(roles=(EventRole(need_id=NEED_ID, slots=6),))
+            an_event(roles=(a_role(need_id=NEED_ID, slots=6),))
         ) is True
 
     def test_an_event_moved_and_moved_back_is_not_edited(
@@ -714,8 +755,8 @@ class TestWhetherAnEventHasBeenEdited:
         # collected would otherwise put an undo on every row in it.
         both = [a_need(), a_need(identifier=OTHER_NEED_ID)]
         reversed_roles = (
-            EventRole(need_id=OTHER_NEED_ID, slots=12),
-            EventRole(need_id=NEED_ID, slots=12)
+            a_role(need_id=OTHER_NEED_ID, slots=12),
+            a_role(need_id=NEED_ID, slots=12)
         )
 
         assert ask_if_edited(
@@ -731,7 +772,7 @@ class TestWhetherAnEventHasBeenEdited:
         # which opportunities the event serves.
         assert ask_if_edited(
             an_event(
-                roles=(EventRole(need_id=OTHER_NEED_ID, slots=12),)
+                roles=(a_role(need_id=OTHER_NEED_ID, slots=12),)
             )
         ) is True
 

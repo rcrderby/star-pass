@@ -62,6 +62,15 @@ pytest_plugins = ('_upstream',)
 
 # Imports - Third-Party
 import pytest  # noqa: E402
+# Imported rather than defined here: pytest finds a fixture by its
+# presence in this module's namespace, so these are reachable from
+# every test while living beside the other answer documents.
+# pylint: disable-next=unused-import
+from documents import (  # noqa: E402,F401
+    fixture_make_event_document,
+    fixture_make_run_document,
+    fixture_window_document
+)
 from fastapi import FastAPI  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -326,7 +335,7 @@ def fixture_populated(
 
     runs.set_opportunities(
         run_id=edited,
-        opportunities=[make_opportunity(max_length=120)]
+        opportunities=[make_opportunity()]
     )
     events.add(
         run_id=edited,
@@ -593,7 +602,16 @@ def fixture_make_event() -> Callable[..., Event]:
             'shift_start': '19:15',
             'shift_end': '21:30',
             'category': 'scrimmage',
-            'roles': (EventRole(need_id='905196', slots=4),)
+            'roles': (
+                EventRole(
+                    need_id='905196',
+                    slots=4,
+                    offset_start=15,
+                    offset_end=30,
+                    max_length=165,
+                    default_slots=4
+                ),
+            )
         }
         fields.update(overrides)
 
@@ -658,6 +676,27 @@ def fixture_moved_event(
     return collected
 
 
+@pytest.fixture(name='make_role')
+def fixture_make_role() -> Callable[..., EventRole]:
+    """ Return a factory building an event role, fields overridable. """
+
+    def build(**overrides: Any) -> EventRole:
+        """ Return a role, replacing any overridden field. """
+        fields: dict = {
+            'need_id': '905196',
+            'slots': 4,
+            'offset_start': 15,
+            'offset_end': 30,
+            'max_length': 165,
+            'default_slots': 4
+        }
+        fields.update(overrides)
+
+        return EventRole(**fields)
+
+    return build
+
+
 @pytest.fixture(name='make_opportunity')
 def fixture_make_opportunity() -> Callable[..., Opportunity]:
     """ Return a factory building an opportunity, fields overridable. """
@@ -667,96 +706,11 @@ def fixture_make_opportunity() -> Callable[..., Opportunity]:
         fields: dict = {
             'need_id': '905196',
             'title': 'Adult Scrimmages: Skating Officials',
-            'url': 'https://example.test/need/detail/905196',
-            'max_length': 240,
-            'offset_start': 15,
-            'offset_end': 30,
-            'default_slots': 4
+            'url': 'https://example.test/need/detail/905196'
         }
         fields.update(overrides)
 
         return Opportunity(**fields)
-
-    return build
-
-
-@pytest.fixture(name='window_document')
-def fixture_window_document() -> dict:
-    """ Return a one-month window as an answer carries one.
-
-        Shared by the fixtures standing in for a service, because a
-        window is one fact: two copies of it can disagree about which
-        day a run ends on, which is the disagreement 'lastDay' was
-        published to stop.
-    """
-    return {
-        'start': '2026-09-01',
-        'end': '2026-10-01',
-        'lastDay': '2026-09-30',
-        'timezone': 'America/Los_Angeles'
-    }
-
-
-@pytest.fixture(name='make_run_document')
-def fixture_make_run_document(
-    window_document: dict
-) -> Callable[..., dict]:
-    """ Return a factory building a run as an answer carries one. """
-
-    def build(**overrides: Any) -> dict:
-        """ Return the document, replacing any overridden count. """
-        return {
-            'id': 'r-1',
-            'calendar': 'practices',
-            'window': dict(window_document),
-            'status': 'unsent',
-            'revisedAt': '2026-09-02T01:00:00+00:00',
-            'counts': {
-                'events': overrides.get('events', 1),
-                'shifts': overrides.get('shifts', 1),
-                'unmatched': overrides.get('unmatched', 0),
-                'uncollected': overrides.get('uncollected', 0)
-            }
-        }
-
-    return build
-
-
-@pytest.fixture(name='make_event_document')
-def fixture_make_event_document() -> Callable[..., dict]:
-    """ Return a factory building an event as an answer carries one.
-
-        Written out rather than read from a database, because what
-        reads one is deciding how to show a field and wants to set
-        that field.  A test holds these keys to the shape the contract
-        publishes, so a rename cannot leave this passing on its own.
-    """
-
-    def build(**overrides: Any) -> dict:
-        """ Return the document, replacing any overridden field. """
-        document: dict = {
-            'id': 'event-1',
-            'title': 'Adult Scrimmages',
-            'date': '2026-09-03',
-            'calendarStart': '19:00',
-            'calendarEnd': '21:00',
-            'shiftStart': '19:15',
-            'shiftEnd': '21:30',
-            'lengthMinutes': 135,
-            'cappedAt': None,
-            'category': 'scrimmage',
-            'match': None,
-            'addedByHand': False,
-            'edited': False,
-            'roles': [
-                {'needId': '905196', 'slots': 4, 'edited': False}
-            ],
-            'duplicateOf': None,
-            'blocking': False
-        }
-        document.update(overrides)
-
-        return document
 
     return build
 

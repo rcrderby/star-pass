@@ -274,7 +274,6 @@ def to_run_view(
 
 def _to_event_view(
         event: Event,
-        opportunities: Dict[str, Opportunity],
         repeats: Dict[str, str],
         calendar: str,
         helpers: Helpers
@@ -284,10 +283,6 @@ def _to_event_view(
         Args:
             event (Event):
                 The stored event.
-
-            opportunities (Dict[str, Opportunity]):
-                The run's opportunities, by need ID, which the cap is
-                worked out against.
 
             repeats (Dict[str, str]):
                 Which events repeat which, worked out once for the
@@ -319,10 +314,7 @@ def _to_event_view(
         shift_start=event.shift_start,
         shift_end=event.shift_end,
         length_minutes=shift_length(event=event),
-        capped_at=capping_maximum(
-            event=event,
-            opportunities=opportunities
-        ),
+        capped_at=capping_maximum(event=event),
         category=event.category,
         match=(
             MatchView(
@@ -343,7 +335,11 @@ def _to_event_view(
             EventRoleView(
                 need_id=role.need_id,
                 slots=role.slots,
-                edited=role.edited
+                edited=role.edited,
+                offset_start=role.offset_start,
+                offset_end=role.offset_end,
+                max_length=role.max_length,
+                default_slots=role.default_slots
             )
             for role in event.roles
         ],
@@ -397,7 +393,6 @@ def to_detail_view(
                 The run in full, shaped for the contract.
     """
 
-    keyed = _by_need_id(opportunities=detail.opportunities)
     repeats = repeated(events=detail.events)
     helpers = Helpers()
 
@@ -406,7 +401,6 @@ def to_detail_view(
         events=[
             _to_event_view(
                 event=event,
-                opportunities=keyed,
                 repeats=repeats,
                 calendar=detail.run.calendar,
                 helpers=helpers
@@ -417,11 +411,7 @@ def to_detail_view(
             OpportunityView(
                 need_id=opportunity.need_id,
                 title=opportunity.title,
-                url=opportunity.url,
-                max_length=opportunity.max_length,
-                offset_start=opportunity.offset_start,
-                offset_end=opportunity.offset_end,
-                default_slots=opportunity.default_slots
+                url=opportunity.url
             )
             for opportunity in detail.opportunities
         ],
@@ -652,7 +642,6 @@ def to_preview_view(
 
 def to_edit_view(
         events: Sequence[Event],
-        opportunities: Sequence[Opportunity],
         entries: Sequence[LogEntry],
         calendar: str
 ) -> EditView:
@@ -667,9 +656,6 @@ def to_edit_view(
         Args:
             events (Sequence[Event]):
                 The revision's events as they now are.
-
-            opportunities (Sequence[Opportunity]):
-                The run's opportunities, for labelling the roles.
 
             entries (Sequence[LogEntry]):
                 What the edit added to the change log.
@@ -686,7 +672,6 @@ def to_edit_view(
                 The revision and the entries, shaped for the contract.
     """
 
-    keyed = _by_need_id(opportunities=opportunities)
     repeats = repeated(events=events)
     helpers = Helpers()
 
@@ -694,7 +679,6 @@ def to_edit_view(
         events=[
             _to_event_view(
                 event=event,
-                opportunities=keyed,
                 repeats=repeats,
                 calendar=calendar,
                 helpers=helpers

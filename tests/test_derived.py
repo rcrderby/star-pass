@@ -22,7 +22,7 @@ from star_pass._derived import (
     repeated,
     shift_length
 )
-from star_pass._records import Event, EventRole, Opportunity
+from star_pass._records import Event, EventRole
 
 
 class TestShiftLength:
@@ -75,7 +75,7 @@ class TestCappingMaximum:
     def test_a_shift_the_maximum_shortened_names_it(
         self,
         make_event: Callable[..., Event],
-        make_opportunity: Callable[..., Opportunity]
+        make_role: Callable[..., EventRole]
     ) -> None:
         # Two calendar hours, and offsets adding a quarter of an hour
         # in total, so an uncapped shift would run 135 minutes. The
@@ -86,141 +86,90 @@ class TestCappingMaximum:
             calendar_start='19:00',
             calendar_end='21:00',
             shift_start='19:15',
-            shift_end='21:15'
-        )
-        opportunity = make_opportunity(
-            max_length=120,
-            offset_start=15,
-            offset_end=30
+            shift_end='21:15',
+            roles=(make_role(max_length=120),)
         )
 
-        assert capping_maximum(
-            event=event,
-            opportunities={opportunity.need_id: opportunity}
-        ) == 120
+        assert capping_maximum(event=event) == 120
 
     def test_a_shift_inside_the_maximum_was_not_capped(
         self,
         make_event: Callable[..., Event],
-        make_opportunity: Callable[..., Opportunity]
+        make_role: Callable[..., EventRole]
     ) -> None:
         event = make_event(
             calendar_start='19:00',
-            calendar_end='21:00'
-        )
-        opportunity = make_opportunity(
-            max_length=240,
-            offset_start=15,
-            offset_end=30
+            calendar_end='21:00',
+            roles=(make_role(max_length=240),)
         )
 
-        assert capping_maximum(
-            event=event,
-            opportunities={opportunity.need_id: opportunity}
-        ) is None
+        assert capping_maximum(event=event) is None
 
     def test_a_shift_exactly_at_the_maximum_was_not_capped(
         self,
         make_event: Callable[..., Event],
-        make_opportunity: Callable[..., Opportunity]
+        make_role: Callable[..., EventRole]
     ) -> None:
         # 120 calendar minutes and 15 more from the offsets is 135,
         # which the maximum allows in full, so nothing was taken off
         # it and there is no cap to name.
         event = make_event(
             calendar_start='19:00',
-            calendar_end='21:00'
-        )
-        opportunity = make_opportunity(
-            max_length=135,
-            offset_start=15,
-            offset_end=30
+            calendar_end='21:00',
+            roles=(make_role(max_length=135),)
         )
 
-        assert capping_maximum(
-            event=event,
-            opportunities={opportunity.need_id: opportunity}
-        ) is None
+        assert capping_maximum(event=event) is None
 
     def test_an_opportunity_with_no_maximum_caps_nothing(
         self,
         make_event: Callable[..., Event],
-        make_opportunity: Callable[..., Opportunity]
+        make_role: Callable[..., EventRole]
     ) -> None:
-        opportunity = make_opportunity(max_length=None)
-
         assert capping_maximum(
-            event=make_event(),
-            opportunities={opportunity.need_id: opportunity}
+            event=make_event(roles=(make_role(max_length=None),))
         ) is None
 
     def test_the_smallest_maximum_that_applied_is_the_binding_one(
         self,
         make_event: Callable[..., Event],
-        make_opportunity: Callable[..., Opportunity]
+        make_role: Callable[..., EventRole]
     ) -> None:
-        # Two roles whose opportunities cap differently.  The data
-        # model gives a category's need IDs the same timing today, but
-        # nothing enforces it, so the shorter is the one reported.
+        # Two roles that cap differently.  The data model gives a
+        # category's need IDs the same timing today, but nothing
+        # enforces it, so the shorter is the one reported.
         event = make_event(
             calendar_start='19:00',
             calendar_end='21:00',
             roles=(
-                EventRole(need_id='905196', slots=4),
-                EventRole(need_id='905197', slots=2)
+                make_role(need_id='905196', max_length=120),
+                make_role(need_id='905197', slots=2, max_length=90)
             )
         )
-        opportunities = {
-            '905196': make_opportunity(need_id='905196', max_length=120),
-            '905197': make_opportunity(need_id='905197', max_length=90)
-        }
 
-        assert capping_maximum(
-            event=event,
-            opportunities=opportunities
-        ) == 90
+        assert capping_maximum(event=event) == 90
 
-    def test_only_the_maxima_that_applied_are_considered(
+    def test_only_the_maxima_of_the_roles_it_has_are_considered(
         self,
         make_event: Callable[..., Event],
-        make_opportunity: Callable[..., Opportunity]
+        make_role: Callable[..., EventRole]
     ) -> None:
-        # The smaller maximum belongs to an opportunity this event has
-        # no role under, so it decided nothing about this shift.
-        event = make_event(calendar_start='19:00', calendar_end='21:00')
-        opportunities = {
-            '905196': make_opportunity(need_id='905196', max_length=120),
-            '905197': make_opportunity(need_id='905197', max_length=30)
-        }
+        # A maximum belonging to a role this event does not serve
+        # decided nothing about this shift, and is not reachable from
+        # the event at all now that the maximum is the role's.
+        event = make_event(
+            calendar_start='19:00',
+            calendar_end='21:00',
+            roles=(make_role(need_id='905196', max_length=120),)
+        )
 
-        assert capping_maximum(
-            event=event,
-            opportunities=opportunities
-        ) == 120
-
-    def test_an_unreadable_opportunity_caps_nothing(
-        self,
-        make_event: Callable[..., Event]
-    ) -> None:
-        # An opportunity that is not stored cannot be shown to have
-        # capped anything, so its role is passed over rather than
-        # raising while a list was being drawn.
-        assert capping_maximum(
-            event=make_event(),
-            opportunities={}
-        ) is None
+        assert capping_maximum(event=event) == 120
 
     def test_an_event_with_no_role_was_capped_by_nothing(
         self,
-        make_event: Callable[..., Event],
-        make_opportunity: Callable[..., Opportunity]
+        make_event: Callable[..., Event]
     ) -> None:
-        opportunity = make_opportunity(max_length=30)
-
-        assert capping_maximum(
-            event=make_event(roles=()),
-            opportunities={opportunity.need_id: opportunity}
-        ) is None
+        assert capping_maximum(event=make_event(roles=())) is None
 
 
 class TestRepeated:

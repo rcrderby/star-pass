@@ -79,13 +79,12 @@ EVENT_HEADERS = (
     'NOTES'
 )
 
-# What an opportunity's row shows, in order.
+# What an opportunity's row shows, in order.  What Amplify says about
+# the listing, and nothing else: how a shift is timed under it is the
+# role's and is shown with the role (D25).
 OPPORTUNITY_HEADERS = (
     'NEED',
-    'TITLE',
-    'MAXIMUM',
-    'OFFSETS',
-    'SLOTS'
+    'TITLE'
 )
 
 # What a change log entry shows, in order.
@@ -403,18 +402,27 @@ def roles_text(
 ) -> str:
     """ Return the opportunities an event creates shifts for.
 
+        With the offsets, because they are the role's: two events in
+        one run can send to one Amplify listing on different timings
+        (D25), and a reader comparing them has nowhere else to see
+        that.  Signed rather than plain, because which way the shift
+        moved from the event is the question, and a bare number leaves
+        it to be guessed.
+
         Args:
             event (Dict[str, Any]):
                 An event from an answer.
 
         Returns:
             text (str):
-                Each need ID with the volunteers it wants, or a dash
-                for an event with no opportunity at all.
+                Each need ID with the volunteers it wants and how it
+                is timed, or a dash for an event with no opportunity
+                at all.
     """
 
     return ', '.join(
-        f'{role["needId"]} ({role["slots"]})'
+        f'{role["needId"]} ({role["slots"]}) '
+        f'{role["offsetStart"]:+d}/{role["offsetEnd"]:+d}'
         for role in event['roles']
     ) or NOTHING
 
@@ -490,10 +498,6 @@ def opportunity_row(
 ) -> List[str]:
     """ Return one opportunity as a row.
 
-        The offsets are signed rather than plain, because a reader
-        wants to know which way the shift moved from the event and a
-        bare number leaves them to guess.
-
         Args:
             opportunity (Dict[str, Any]):
                 An opportunity from an answer.
@@ -505,13 +509,7 @@ def opportunity_row(
 
     return [
         opportunity['needId'],
-        opportunity['title'],
-        shown(opportunity['maxLength']),
-        (
-            f'{opportunity["offsetStart"]:+d}'
-            f'/{opportunity["offsetEnd"]:+d}'
-        ),
-        str(opportunity['defaultSlots'])
+        opportunity['title']
     ]
 
 

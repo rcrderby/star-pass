@@ -619,33 +619,62 @@ class TestWhatAnEventShows:
             event=make_event_document(roles=[])
         ) == _render.NOTHING
 
-    def test_a_role_shows_the_volunteers_it_wants(
+    def test_a_role_shows_the_volunteers_it_wants_and_its_timing(
         self,
         make_event_document: Callable[..., Any]
     ) -> None:
+        # The timing is the role's, so it is shown with the role: two
+        # events in one run can send to one listing on different
+        # offsets, and there is nowhere else to see that (D25).
         assert _render.roles_text(
             event=make_event_document()
-        ) == '905196 (4)'
+        ) == '905196 (4) +15/+30'
+
+
+class TestWhatAnEventShowsAboutItsTiming:
+    def test_the_offsets_are_signed(
+        self,
+        make_event_document: Callable[..., Any]
+    ) -> None:
+        # A bare number leaves a reader guessing which way the shift
+        # moved from the event.
+        event = make_event_document()
+        event['roles'][0]['offsetEnd'] = -30
+
+        assert _render.roles_text(event=event).endswith('+15/-30')
+
+    def test_two_roles_show_their_own_timings(
+        self,
+        make_event_document: Callable[..., Any]
+    ) -> None:
+        # One Amplify listing named by two categories is what D25
+        # makes storable, and this is where a reader sees it.
+        event = make_event_document()
+        first = event['roles'][0]
+        event['roles'] = [
+            first,
+            {**first, 'offsetStart': -15, 'offsetEnd': 15}
+        ]
+
+        assert _render.roles_text(event=event) == (
+            '905196 (4) +15/+30, 905196 (4) -15/+15'
+        )
 
 
 class TestWhatAnOpportunityShows:
-    def test_the_offsets_are_signed(self) -> None:
-        # A bare number leaves a reader guessing which way the shift
-        # moved from the event.
-        row = _render.opportunity_row(
+    def test_an_opportunity_shows_what_amplify_says_and_no_timing(
+        self
+    ) -> None:
+        # How a shift is timed under a listing is the role's, so an
+        # opportunity that named offsets would be claiming one set for
+        # a listing that can be timed several ways (D25).
+        assert _render.OPPORTUNITY_HEADERS == ('NEED', 'TITLE')
+        assert _render.opportunity_row(
             opportunity={
                 'needId': '905196',
-                'title': 'Adult Scrimmages',
-                'maxLength': None,
-                'offsetStart': 15,
-                'offsetEnd': -30,
-                'defaultSlots': 4
+                'title': 'Adult Scrimmages'
             }
-        )
-
-        assert row[_render.OPPORTUNITY_HEADERS.index('OFFSETS')] == (
-            '+15/-30'
-        )
+        ) == ['905196', 'Adult Scrimmages']
 
 
 class TestShowingWhatARunLeftOut:

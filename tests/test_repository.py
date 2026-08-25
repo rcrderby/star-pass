@@ -306,18 +306,25 @@ class TestOpportunities:
 
         assert [item.need_id for item in stored] == ['222222']
 
-    def test_an_opportunity_without_a_maximum_is_stored(
+    def test_a_role_without_a_maximum_is_stored(
         self,
-        runs: RunRepository,
+        events: EventRepository,
+        make_event: Callable[..., Event],
+        make_role: Callable[..., EventRole],
         run_id: str,
-        make_opportunity: Callable[..., Opportunity]
+        revision: int
     ) -> None:
-        runs.set_opportunities(
+        # The maximum is the role's and is the one column of the four
+        # that may be absent (D25).
+        events.add(
             run_id=run_id,
-            opportunities=[make_opportunity(max_length=None)]
+            revision=revision,
+            event=make_event(roles=(make_role(max_length=None),))
         )
 
-        assert runs.get_opportunities(run_id=run_id)[0].max_length is None
+        stored = events.list_all(run_id=run_id, revision=revision)[0]
+
+        assert stored.roles[0].max_length is None
 
     def test_opportunities_need_a_run_that_exists(
         self,

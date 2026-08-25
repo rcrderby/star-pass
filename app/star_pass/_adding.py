@@ -42,6 +42,7 @@ from ._helpers import Helpers
 from ._logging import get_logger
 from ._records import (
     Event,
+    EventRole,
     LogEntry,
     Opportunity,
     Run,
@@ -54,7 +55,7 @@ from ._repository import (
     RunRepository,
     UncollectedRepository
 )
-from ._shift_timing import RoleTiming, role_timings
+from ._shift_timing import role_timings
 
 # Constants
 # What the change log says about a pulled-in event.  It names the
@@ -185,55 +186,8 @@ def _moments(
     )
 
 
-def _agrees(
-        timing: RoleTiming,
-        opportunity: Opportunity
-) -> None:
-    """ Fail when an event times an opportunity the run already holds.
-
-        A run records one set of offsets per opportunity, so an event
-        arriving with another set describes a shift the run cannot
-        store beside the ones it has.  Refused for the reason a
-        collection refuses the same disagreement between two of its
-        own categories.
-
-        Args:
-            timing (RoleTiming):
-                What the event being added asks for.
-
-            opportunity (Opportunity):
-                What the run already records.
-
-        Raises:
-            ValidationError:
-                If the two disagree.
-
-        Returns:
-            None.
-    """
-
-    if (
-        timing.offset_start,
-        timing.offset_end,
-        timing.max_length
-    ) != (
-        opportunity.offset_start,
-        opportunity.offset_end,
-        opportunity.max_length
-    ):
-        raise _refuse(
-            f'This event times need ID {opportunity.need_id} '
-            'differently from the way the run already records it. A '
-            'run records one set of offsets per opportunity, so those '
-            'cannot both be stored. Recollect the run to read the '
-            'data model again.'
-        )
-
-    return None
-
-
 def _opportunities_for(
-        timings: List[RoleTiming],
+        roles: List[EventRole],
         held: Dict[str, Opportunity],
         helpers: Helpers
 ) -> List[Opportunity]:
@@ -244,8 +198,13 @@ def _opportunities_for(
         collected, and reading them again would spend a request to
         learn what is stored.
 
+        A need ID the run holds needs nothing else checked.  The event
+        arriving with its own timing is not a disagreement to refuse:
+        the timing is the role's, so an event added by hand may time a
+        listing differently from the events already in the run (D25).
+
         Args:
-            timings (List[RoleTiming]):
+            roles (List[EventRole]):
                 What the event's roles ask for.
 
             held (Dict[str, Opportunity]):
@@ -255,9 +214,6 @@ def _opportunities_for(
                 What the opportunity reads are sent through.
 
         Raises:
-            ValidationError:
-                If the event times one the run holds differently.
-
             UpstreamError:
                 If an opportunity cannot be read.
 
@@ -266,25 +222,11 @@ def _opportunities_for(
                 One per need ID the run does not hold yet.
     """
 
-    gained = []
-
-    for timing in timings:
-        need_id = timing.role.need_id
-
-        if need_id in held:
-            _agrees(timing=timing, opportunity=held[need_id])
-
-            continue
-
-        gained.append(
-            opportunity_read(
-                helpers=helpers,
-                need_id=need_id,
-                timing=timing
-            )
-        )
-
-    return gained
+    return [
+        opportunity_read(helpers=helpers, need_id=role.need_id)
+        for role in roles
+        if role.need_id not in held
+    ]
 
 
 def _built(
@@ -342,7 +284,7 @@ def _built(
             added_by_hand=True
         ),
         _opportunities_for(
-            timings=role_timings(
+            roles=role_timings(
                 matched=matched,
                 title=uncollected.title
             ),

@@ -253,7 +253,13 @@ class MatchView(ApiModel):
 
 
 class EventRoleView(ApiModel):
-    """ One opportunity an event creates a shift for. """
+    """ One opportunity an event creates a shift for, and how it does.
+
+        The timing is the role's and not the opportunity's: one Amplify
+        listing can be named by categories that time it differently, so
+        two events in a run may send to one listing on different
+        offsets (D25).
+    """
 
     need_id: str = Field(
         description='Amplify need ID the shift is created under.'
@@ -263,9 +269,33 @@ class EventRoleView(ApiModel):
     )
     edited: bool = Field(
         description=(
-            'Whether a person changed the count from the '
-            'opportunity\'s default. Recorded rather than compared '
-            'against the default now, because the default can change.'
+            'Whether a person changed the count from '
+            '\'defaultSlots\'. Recorded rather than compared against '
+            'the default now, because an event collected again can '
+            'arrive with another.'
+        )
+    )
+    offset_start: int = Field(
+        description=(
+            'Minutes added to the event\'s start to reach the '
+            'shift\'s.'
+        )
+    )
+    offset_end: int = Field(
+        description=(
+            'Minutes added to the event\'s end to reach the shift\'s.'
+        )
+    )
+    max_length: int | None = Field(
+        default=None,
+        description=(
+            'Longest shift the opportunity accepts, in minutes, or '
+            'null when it sets no maximum.'
+        )
+    )
+    default_slots: int = Field(
+        description=(
+            'Volunteers the category asked for, before any edit.'
         )
     )
 
@@ -375,7 +405,12 @@ class EventView(ApiModel):
 
 
 class OpportunityView(ApiModel):
-    """ An Amplify opportunity a run creates shifts under. """
+    """ An Amplify opportunity a run creates shifts under.
+
+        What Amplify says about the listing, and nothing else. How a
+        shift is timed under it belongs to the role that creates the
+        shift (D25).
+    """
 
     need_id: str = Field(
         description='Amplify need ID.'
@@ -385,26 +420,6 @@ class OpportunityView(ApiModel):
     )
     url: str = Field(
         description='Public address of the opportunity.'
-    )
-    max_length: int | None = Field(
-        default=None,
-        description=(
-            'Longest shift the opportunity accepts, in minutes, or '
-            'null when it sets no maximum.'
-        )
-    )
-    offset_start: int = Field(
-        description=(
-            'Minutes added to an event\'s start to reach the shift\'s.'
-        )
-    )
-    offset_end: int = Field(
-        description=(
-            'Minutes added to an event\'s end to reach the shift\'s.'
-        )
-    )
-    default_slots: int = Field(
-        description='Volunteers wanted per shift, before any edit.'
     )
 
 
