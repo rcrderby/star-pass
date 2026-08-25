@@ -36,7 +36,17 @@ from typing import Any, Dict, List, Sequence, Tuple
 
 # Imports - Local
 from star_pass._records import (
+    LOG_ADDED,
     MATCH_KIND_FUZZY,
+    OP_NUDGE,
+    OP_REMOVE,
+    OP_RESET_SLOTS,
+    OP_SET_CATEGORY,
+    OP_SET_END,
+    OP_SET_SLOTS,
+    OP_SET_START,
+    OP_UNASSIGN,
+    OP_UNDO,
     REVISION_COLLECTED,
     REVISION_CONTINUED,
     REVISION_RECOLLECTED,
@@ -92,7 +102,7 @@ LOG_HEADERS = (
     'WHEN',
     'REVISION',
     'WHO',
-    'ENTRY'
+    'WHAT'
 )
 
 # What a revision's row shows, in order.
@@ -125,18 +135,52 @@ CURRENT = 'current'
 ADDABLE = 'yes'
 
 # What each kind of revision is called.  Worded here for the reason
-# the two maps below it are: the contract publishes an identifier and
-# the revision it was made from, and each client says it in its own
-# words.  It used to be a sentence the core wrote and stored on the
-# row, which neither client could word and which a change of wording
-# would have left inconsistent between the revisions already recorded
-# and the next one.
+# the maps around it are: the contract publishes an identifier and the
+# revision it was made from, and each client says it in its own words.
+# A sentence the core wrote and stored on the row could be worded by
+# neither client, and rewording it would leave the rows already
+# written saying one thing and the next one saying another.
 REVISION_PHRASES = {
     REVISION_COLLECTED: 'As collected',
     REVISION_RECOLLECTED: 'As recollected',
     REVISION_CONTINUED: 'Continued from revision {number}',
     REVISION_REVERTED: 'Reverted to revision {number}'
 }
+
+# What each change-log entry says.  The contract publishes what was
+# done and the values it carried; the sentence is this client's, and a
+# test holds these keys to the core's own tuple so an action with no
+# wording cannot reach a reader as its identifier.
+#
+# What fills each gap is what this client has to hand: a category and
+# an opportunity are shown by the identifiers the run's own tables
+# list them under, which is how every other column here names them.
+LOG_ACTION_PHRASES = {
+    OP_SET_CATEGORY: 'Set the opportunity for {subject} to {category}.',
+    OP_UNASSIGN: 'Set {subject} back to unassigned.',
+    OP_SET_START: 'Set the shift start of {subject} to {time}.',
+    OP_SET_END: 'Set the shift end of {subject} to {time}.',
+    OP_SET_SLOTS:
+        'Set {slots} volunteers wanted on {subject} for need {needId}.',
+    OP_NUDGE: 'Moved {subject} {minutes} minutes {direction}.',
+    OP_RESET_SLOTS:
+        'Reset the volunteers wanted on {subject} to what the '
+        'opportunity asks for.',
+    OP_REMOVE: 'Removed {subject}.',
+    OP_UNDO: 'Undid the changes to {subject}.',
+    LOG_ADDED: 'Added {subject}, which no configured search returned.'
+}
+
+# How a change-log entry names what it was done to: one event by its
+# title, a selection by how many.  A line listing thirty titles is one
+# nobody reads.
+LOG_SUBJECT_ONE = '"{title}"'
+LOG_SUBJECT_MANY = '{count} events'
+
+# Which way a nudge moved a shift.  The entry records signed minutes,
+# because a size and a direction is a sentence rather than a value.
+LOG_LATER = 'later'
+LOG_EARLIER = 'earlier'
 
 # How each reason an event was left out of a run heads its group.
 # Worded here for the same reason a blocker's is: the contract
@@ -513,6 +557,58 @@ def opportunity_row(
     ]
 
 
+def log_subject(
+        entry: Dict[str, Any]
+) -> str:
+    """ Return what a change log entry was done to.
+
+        Args:
+            entry (Dict[str, Any]):
+                A log entry from an answer.
+
+        Returns:
+            subject (str):
+                The one event's title in quotes, or a count.  An entry
+                carries a title exactly when it named one event, so
+                the title being there is the question to ask.
+    """
+
+    if entry['subject'] is not None:
+        return LOG_SUBJECT_ONE.format(title=entry['subject'])
+
+    return LOG_SUBJECT_MANY.format(count=entry['subjectCount'])
+
+
+def log_words(
+        entry: Dict[str, Any]
+) -> str:
+    """ Return what a change log entry says.
+
+        Args:
+            entry (Dict[str, Any]):
+                A log entry from an answer.
+
+        Returns:
+            words (str):
+                The sentence, or the action itself when nothing words
+                it -- a line with a gap in it is more use than a line
+                that cannot be written.
+    """
+
+    wording = LOG_ACTION_PHRASES.get(entry['action'], entry['action'])
+    minutes = entry['minutes']
+
+    return wording.format(
+        subject=log_subject(entry=entry),
+        category=shown(entry['category']),
+        time=shown(entry['shiftTime']),
+        slots=shown(entry['slots']),
+        needId=shown(entry['needId']),
+        minutes=abs(minutes) if minutes is not None else NOTHING,
+        direction=LOG_LATER if (minutes or 0) > 0 else LOG_EARLIER
+    )
+
+
 def log_row(
         entry: Dict[str, Any]
 ) -> List[str]:
@@ -531,7 +627,7 @@ def log_row(
         entry['loggedAt'],
         str(entry['revision']),
         entry['principalId'],
-        entry['entry']
+        log_words(entry=entry)
     ]
 
 

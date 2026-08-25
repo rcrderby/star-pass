@@ -1,13 +1,20 @@
 /* What has been done to this run, newest first.
  *
- * Server-owned, and that is the point of it: the log used to be built
- * in the page, so it died on reload and no other client could show
- * it.  It arrives with the run, which is why this panel is a reading
- * of an answer rather than a memory.
+ * Server-owned, and that is the point of it: the log arrives with the
+ * run, so it survives a reload and every client shows the same one.
+ * This panel is a reading of an answer rather than a memory.
+ *
+ * **The answer carries what was done, not a sentence.** An entry
+ * names its action and the values that action carried, and the words
+ * below are this client's. So the wording can change without every
+ * entry already recorded still saying the old thing, and a category
+ * is shown by the name this screen calls it rather than by the key
+ * the data model files it under.
  */
 
 import { el, icon } from '../dom.js';
 import { moment } from '../format.js';
+import { filled, phrase } from '../phrases.js';
 
 /* What the panel says when nothing has been done yet. A sentence
  * rather than an empty card, because an empty card reads as a panel
@@ -40,17 +47,68 @@ export function changesNow(run) {
   ).length;
 }
 
+/** Return what an entry was done to.
+ *
+ * One event is named and a selection is counted: a line listing
+ * thirty titles is one nobody reads. An entry carries a title exactly
+ * when it named one event, so the title being there is the question
+ * to ask.
+ *
+ * @param {Object} entry A change log entry.
+ * @returns {string} The title in quotes, or a count.
+ */
+function subjectOf(entry) {
+  if (entry.subject !== null) {
+    return filled('logSubject', 'one', { title: entry.subject });
+  }
+
+  return filled('logSubject', 'many', { count: entry.subjectCount });
+}
+
+/** Return what an entry says.
+ *
+ * The values it carried are shown the way the rest of the screen
+ * shows them: a category by its label and an opportunity by its
+ * Amplify title, both looked up where the table looks them up, and
+ * falling back to the identifier the entry carries when the run holds
+ * no name for it.
+ *
+ * @param {Object} entry A change log entry.
+ * @param {Object} context What the rows are drawn against.
+ * @returns {string} The sentence.
+ */
+function wordsOf(entry, context) {
+  const category = context.categoriesByKey.get(entry.category);
+  const opportunity = context.opportunities.get(entry.needId);
+
+  return filled('logAction', entry.action, {
+    subject: subjectOf(entry),
+    category: category ? category.label : entry.category,
+    opportunity: opportunity
+      ? opportunity.title
+      : filled('logValue', 'unknownOpportunity', { needId: entry.needId }),
+    time: entry.shiftTime,
+    slots: entry.slots,
+    minutes: Math.abs(entry.minutes),
+    direction: phrase('logDirection', entry.minutes > 0 ? 'later' : 'earlier')
+  });
+}
+
 /** Return one entry.
  *
  * @param {Object} entry A change log entry.
+ * @param {Object} context What the rows are drawn against.
  * @param {string} timeZone The run's zone.
  * @returns {HTMLElement} The entry.
  */
-function logEntry(entry, timeZone) {
+function logEntry(entry, context, timeZone) {
   return el(
     'li',
     { class: 'log-entry' },
-    el('span', { class: 'log-entry-words meta', text: entry.entry }),
+    el('span', {
+      class: 'log-entry-words meta',
+      text: wordsOf(entry, context)
+    }),
     el('span', {
       class: 'log-entry-meta muted micro mono',
       text: `${moment(entry.loggedAt, timeZone)} · revision ${entry.revision}`
@@ -61,10 +119,12 @@ function logEntry(entry, timeZone) {
 /** Return the change log panel.
  *
  * @param {Object} state What the screen is showing.
+ * @param {Object} context What the rows are drawn against, read for
+ *     the names an entry's values are shown under.
  * @param {Function} onClose What closing it does.
  * @returns {HTMLElement} The panel.
  */
-export function changeLogPanel(state, onClose) {
+export function changeLogPanel(state, context, onClose) {
   const { run } = state;
   const entries = [...run.log].reverse();
 
@@ -91,7 +151,9 @@ export function changeLogPanel(state, onClose) {
       : el(
         'ol',
         { class: 'log-entries' },
-        entries.map((entry) => logEntry(entry, run.window.timezone))
+        entries.map(
+          (entry) => logEntry(entry, context, run.window.timezone)
+        )
       )
   );
 }

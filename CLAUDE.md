@@ -61,7 +61,12 @@ through the Amplify API. It is run once per month.
 - `app/star_pass/_repository/` — runs, their revisions, the events in
   each revision, what each run's window held and the run left out, the
   titles the data model did not match, the
-  `change_log` of edits made to them, the jobs
+  `change_log` of edits made to them — **what was done and the values
+  it carried, never a sentence** (D27): a wording stored in a column
+  cannot be changed without rewriting every row already holding the
+  old one, so each client words an entry from `LOG_ACTIONS` the way it
+  words a run status, and a test holds each client's map to that
+  tuple. The jobs
   that long operations are watched through, the shifts a send put into
   Amplify, and the reservations made against idempotency keys. The last
   two are separate because they answer different questions — which rows
@@ -181,7 +186,11 @@ through the Amplify API. It is run once per month.
   disagree about their offsets, and a shift running past midnight.
 - `app/star_pass/_editing.py` — one user action's worth of operations
   applied to a run's current revision (`apply`), and the write that
-  stores them (`edit`). Operations apply in order, each seeing what
+  stores them (`edit`). What each operation is called lives in
+  `_records.EDIT_OPERATIONS`, beside the other vocabularies the
+  contract publishes, because three things read it: the operation a
+  request carries, the table here that answers it, and the wordings
+  each client keeps for `change_log`. Operations apply in order, each seeing what
   the one before produced, and **a call is applied whole or not at
   all**: a bulk nudge that would push one event of thirty out of its
   day leaves all thirty alone, because a partly applied action is one

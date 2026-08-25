@@ -23,6 +23,7 @@ import pytest
 from star_pass._adding import add_event
 from star_pass._exceptions import ValidationError
 from star_pass._records import (
+    LOG_ADDED,
     Opportunity,
     UncollectedEvent,
     UNCOLLECTED_ALL_DAY,
@@ -213,12 +214,10 @@ class TestWhatIsPulledIn:
 
         _, entry = add()
 
-        assert MATCHING_TITLE in entry.entry
-        assert 'search' in entry.entry
+        assert entry.action == LOG_ADDED
+        assert entry.subject == MATCHING_TITLE
         assert entry.principal_id == SOMEBODY
-        assert [
-            written.entry for written in change_log.list_all(run_id=run)
-        ] == [entry.entry]
+        assert change_log.list_all(run_id=run) == [entry]
 
     def test_the_record_of_what_was_left_out_is_not_deleted(
         self,

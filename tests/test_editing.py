@@ -29,8 +29,9 @@ from conftest import (
     OTHER_SHIFT_NEED_ID as OTHER_NEED_ID,
     SHIFT_NEED_ID as NEED_ID
 )
-from star_pass._editing import (
-    HANDLERS,
+from star_pass._editing import HANDLERS, Operation
+from star_pass._records import (
+    EDIT_OPERATIONS,
     OP_NUDGE,
     OP_REMOVE,
     OP_RESET_SLOTS,
@@ -39,9 +40,7 @@ from star_pass._editing import (
     OP_SET_SLOTS,
     OP_SET_START,
     OP_UNASSIGN,
-    OP_UNDO,
-    OPERATIONS,
-    Operation
+    OP_UNDO
 )
 from star_pass._exceptions import ValidationError
 
@@ -606,7 +605,7 @@ class TestWhatIsRefused:
 
         message = str(error.value)
         assert 'set_colour' in message
-        for operation in OPERATIONS:
+        for operation in EDIT_OPERATIONS:
             assert operation in message
 
     def test_every_operation_offered_has_something_that_does_it(self):
@@ -615,7 +614,7 @@ class TestWhatIsRefused:
         # to the table is refused as unknown while the message beside
         # the refusal lists it, which is a contradiction nothing else
         # would notice.
-        assert set(HANDLERS) == set(OPERATIONS)
+        assert set(HANDLERS) == set(EDIT_OPERATIONS)
 
     def test_an_operation_naming_no_event_is_refused(self, edit):
         with pytest.raises(ValidationError) as error:
@@ -675,17 +674,28 @@ class TestWhatIsLogged:
 
         assert len(result.entries) == 2
 
+    def test_the_action_is_recorded_and_not_a_sentence(self, edit):
+        # An entry the clients word.  Nothing here reads as English,
+        # which is what lets the wording change without every entry
+        # already written still saying the old thing.
+        result = edit([
+            Operation(op=OP_SET_START, event_ids=('gcal-1',), time='18:45')
+        ])
+
+        assert result.entries[0].action == OP_SET_START
+        assert result.entries[0].shift_time == '18:45'
+
     def test_one_event_is_named(self, edit):
         result = edit([
             Operation(op=OP_SET_START, event_ids=('gcal-1',), time='18:45')
         ])
 
-        assert result.entries[0] == (
-            'Set the shift start of "Wheels of Justice vs Rose City" '
-            'to 18:45.'
-        )
+        assert result.entries[0].subject == 'Wheels of Justice vs Rose City'
+        assert result.entries[0].subject_count == 1
 
-    def test_a_selection_is_counted(self, edit):
+    def test_a_selection_is_counted_and_not_named(self, edit):
+        # A line listing thirty titles is one nobody reads, so a
+        # selection carries how many rather than which.
         events = [
             an_event(id='gcal-1'),
             an_event(id='gcal-2', title='Axles of Evil')
@@ -702,9 +712,41 @@ class TestWhatIsLogged:
             events=events
         )
 
-        assert result.entries[0] == 'Moved 2 events 15 minutes earlier.'
+        assert result.entries[0].subject is None
+        assert result.entries[0].subject_count == 2
 
-    def test_slots_are_logged_against_the_opportunity_title(self, edit):
+    def test_a_nudge_records_signed_minutes(self, edit):
+        # A size and a direction is a sentence; the value is one
+        # number and each client says which way it went.
+        result = edit([
+            Operation(
+                op=OP_NUDGE,
+                event_ids=('gcal-1',),
+                minutes=-15
+            )
+        ])
+
+        assert result.entries[0].minutes == -15
+
+    def test_a_category_is_recorded_as_the_model_names_it(self, edit):
+        # The key, not the label.  What a category is called belongs
+        # to whoever is showing it.
+        result = edit(
+            [
+                Operation(
+                    op=OP_SET_CATEGORY,
+                    event_ids=('gcal-1',),
+                    category='junior_game'
+                )
+            ],
+            categories=two_categories()
+        )
+
+        assert result.entries[0].category == 'junior_game'
+
+    def test_slots_are_recorded_against_the_need_id(self, edit):
+        # The identifier rather than the Amplify title, which a reader
+        # of the run already holds beside it.
         result = edit([
             Operation(
                 op=OP_SET_SLOTS,
@@ -714,4 +756,5 @@ class TestWhatIsLogged:
             )
         ])
 
-        assert '"Adult Games - NSOs"' in result.entries[0]
+        assert result.entries[0].slots == 4
+        assert result.entries[0].need_id == NEED_ID

@@ -390,7 +390,7 @@ export class ReviewScreen {
      * table rather than inside what scrolls sideways. */
     this.panel.replaceChildren(
       this.state.showLog
-        ? changeLogPanel(this.state, handlers.onToggleLog)
+        ? changeLogPanel(this.state, context, handlers.onToggleLog)
         : ''
     );
 

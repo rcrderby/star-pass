@@ -18,7 +18,11 @@ from star_pass._exceptions import UpstreamError, ValidationError
 from star_pass._records import (
     Event,
     EventRole,
+    LogEntry,
     Match,
+    OP_REMOVE,
+    OP_SET_SLOTS,
+    OP_SET_START,
     Opportunity,
     REVISION_COLLECTED,
     RUN_STATUS_COLLECTING
@@ -173,7 +177,7 @@ class TestRuns:
             run_id=run_id,
             revision=1,
             principal_id='static-token',
-            entry='Slots raised to six'
+            recorded=LogEntry(action=OP_SET_SLOTS, slots=6)
         )
 
         assert runs.get(run_id=run_id).revised_at == edited_at
@@ -763,7 +767,7 @@ class TestChangeLog:
             run_id=run_id,
             revision=revision,
             principal_id='static-token',
-            entry='Start moved to 7:45 pm'
+            recorded=LogEntry(action=OP_SET_START, shift_time='19:45')
         )
 
         assert change_log.list_all(run_id=run_id) == [entry]
@@ -777,17 +781,17 @@ class TestChangeLog:
     ) -> None:
         # Entries made in the same second are ordered by identifier,
         # because the timestamp cannot separate them.
-        for text in ('first', 'second', 'third'):
+        for title in ('first', 'second', 'third'):
             change_log.add(
                 run_id=run_id,
                 revision=revision,
                 principal_id='static-token',
-                entry=text
+                recorded=LogEntry(action=OP_REMOVE, subject=title)
             )
 
         listed = change_log.list_all(run_id=run_id)
 
-        assert [item.entry for item in listed] == [
+        assert [item.subject for item in listed] == [
             'first',
             'second',
             'third'
@@ -804,7 +808,7 @@ class TestChangeLog:
             run_id=run_id,
             revision=revision,
             principal_id='static-token',
-            entry='Slots raised to six'
+            recorded=LogEntry(action=OP_SET_SLOTS, slots=6)
         )
 
         assert runs.get(run_id=run_id).revised_at == entry.logged_at
@@ -818,7 +822,7 @@ class TestChangeLog:
                 run_id='no-such-run',
                 revision=1,
                 principal_id='static-token',
-                entry='Start moved'
+                recorded=LogEntry(action=OP_SET_START, shift_time='19:45')
             )
 
     def test_a_run_with_no_entries_has_an_empty_log(
@@ -843,7 +847,7 @@ class TestDeletingARun:
             run_id=run_id,
             revision=revision,
             principal_id='static-token',
-            entry='Collected'
+            recorded=LogEntry(action=OP_REMOVE, subject='Adult Scrimmages')
         )
         runs.delete(run_id=run_id)
 

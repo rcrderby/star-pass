@@ -20,6 +20,7 @@ from fastapi.testclient import TestClient
 
 # Imports - Local
 from star_pass._records import (
+    LOG_ADDED,
     UncollectedEvent,
     UNCOLLECTED_ALL_DAY,
     UNCOLLECTED_EXCLUDED,
@@ -191,7 +192,8 @@ class TestWhatPullingOneInAnswers:
         log = add(run_id=collected).json()['log']
 
         assert len(log) == 1
-        assert MISSED_TITLE in log[0]['entry']
+        assert log[0]['action'] == LOG_ADDED
+        assert log[0]['subject'] == MISSED_TITLE
 
     def test_the_entry_records_who_pulled_it_in(
         self,

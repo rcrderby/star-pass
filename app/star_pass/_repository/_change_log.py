@@ -3,6 +3,7 @@
 
 # Imports - Python Standard Library
 import sqlite3
+from dataclasses import replace
 from typing import List
 
 # Imports - Local
@@ -10,6 +11,22 @@ from .._database import execute, query
 from .._logging import get_logger
 from .._records import LogEntry
 from ._common import insert_statement, Repository, utc_now
+
+# What an entry is written with, in the order its values bind.
+LOG_COLUMNS = (
+    'run_id',
+    'revision',
+    'logged_at',
+    'principal_id',
+    'action',
+    'subject',
+    'subject_count',
+    'category',
+    'shift_time',
+    'minutes',
+    'slots',
+    'need_id'
+)
 
 # Module logger
 logger = get_logger(__name__)
@@ -35,7 +52,14 @@ def _to_log_entry(
         revision=row['revision'],
         logged_at=row['logged_at'],
         principal_id=row['principal_id'],
-        entry=row['entry']
+        action=row['action'],
+        subject=row['subject'],
+        subject_count=row['subject_count'],
+        category=row['category'],
+        shift_time=row['shift_time'],
+        minutes=row['minutes'],
+        slots=row['slots'],
+        need_id=row['need_id']
     )
 
 
@@ -52,9 +76,15 @@ class ChangeLogRepository(Repository):
             run_id: str,
             revision: int,
             principal_id: str,
-            entry: str
+            recorded: LogEntry
     ) -> LogEntry:
         """ Append one entry to a run's change log.
+
+            The entry arrives as a record rather than as a column per
+            value, because which values an action carries is the
+            action's own business: a signature naming all of them
+            would grow every time one is added, and every caller would
+            pass most of them as None.
 
             Args:
                 run_id (str):
@@ -66,8 +96,10 @@ class ChangeLogRepository(Repository):
                 principal_id (str):
                     Who made the change.
 
-                entry (str):
-                    What changed, written for a reader.
+                recorded (LogEntry):
+                    What was done and the values it carried.  Its
+                    identifier, run, revision, time and principal are
+                    ignored: those are this method's to set.
 
             Raises:
                 ValidationError:
@@ -82,31 +114,38 @@ class ChangeLogRepository(Repository):
                     given.
         """
 
-        logged_at = utc_now()
+        stored = replace(
+            recorded,
+            id=0,
+            run_id=run_id,
+            revision=revision,
+            logged_at=utc_now(),
+            principal_id=principal_id
+        )
 
         cursor = execute(
             connection=self._connection,
             statement=insert_statement(
                 table='change_log',
-                columns=(
-                    'run_id',
-                    'revision',
-                    'logged_at',
-                    'principal_id',
-                    'entry'
-                )
+                columns=LOG_COLUMNS
             ),
-            parameters=(run_id, revision, logged_at, principal_id, entry)
+            parameters=(
+                stored.run_id,
+                stored.revision,
+                stored.logged_at,
+                stored.principal_id,
+                stored.action,
+                stored.subject,
+                stored.subject_count,
+                stored.category,
+                stored.shift_time,
+                stored.minutes,
+                stored.slots,
+                stored.need_id
+            )
         )
 
-        return LogEntry(
-            id=cursor.lastrowid or 0,
-            run_id=run_id,
-            revision=revision,
-            logged_at=logged_at,
-            principal_id=principal_id,
-            entry=entry
-        )
+        return replace(stored, id=cursor.lastrowid or 0)
 
     def list_all(
             self,

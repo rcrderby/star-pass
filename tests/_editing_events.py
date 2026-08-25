@@ -30,7 +30,7 @@ from conftest import (
     SHIFT_NEED_ID as NEED_ID
 )
 from star_pass._editing import apply, Operation
-from star_pass._records import Event, EventRole, Match, Opportunity
+from star_pass._records import Event, EventRole, Match
 
 
 def a_role(
@@ -130,18 +130,6 @@ def a_row_under_another_category(**overrides: Any) -> Event:
     )
 
 
-def an_opportunity(
-    need_id: str = NEED_ID,
-    title: str = 'Adult Games - NSOs'
-) -> Opportunity:
-    """ Return the listing an event's role names, as Amplify says it. """
-    return Opportunity(
-        need_id=need_id,
-        title=title,
-        url=f'https://example.test/needs/{need_id}'
-    )
-
-
 def install_model(
     shift_model: Callable[..., None],
     categories: Optional[Dict[str, Any]] = None
@@ -168,7 +156,6 @@ def fixture_edit(shift_model: Callable[..., None]) -> Callable[..., Any]:
     def run(
         operations: List[Operation],
         events: Optional[List[Event]] = None,
-        opportunities: Optional[List[Opportunity]] = None,
         categories: Optional[Dict[str, Any]] = None
     ) -> Any:
         install_model(shift_model=shift_model, categories=categories)
@@ -176,11 +163,6 @@ def fixture_edit(shift_model: Callable[..., None]) -> Callable[..., Any]:
         return apply(
             operations=operations,
             events=events if events is not None else [an_event()],
-            opportunities=(
-                opportunities
-                if opportunities is not None
-                else [an_opportunity()]
-            ),
             calendar=CALENDAR
         )
 

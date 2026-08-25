@@ -260,7 +260,6 @@ class TestShowingARun:
         assert 'OPPORTUNITIES' in shown
         assert 'Adult Scrimmages: Skating Officials' in shown
         assert 'CHANGE LOG' in shown
-        assert 'Nudged Adult Scrimmages by 30 minutes' in shown
 
     def test_a_run_shows_the_job_a_stopped_service_left_behind(
         self,

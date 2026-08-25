@@ -43,6 +43,7 @@ from ._logging import get_logger
 from ._records import (
     Event,
     EventRole,
+    LOG_ADDED,
     LogEntry,
     Opportunity,
     Run,
@@ -56,12 +57,6 @@ from ._repository import (
     UncollectedRepository
 )
 from ._shift_timing import role_timings
-
-# Constants
-# What the change log says about a pulled-in event.  It names the
-# reason as well as the title, because "why is this here" is the
-# question a later reader of the log has about a row no search found.
-ADDED_ENTRY = 'Added "{title}", which no configured search returned.'
 
 # Module logger
 logger = get_logger(__name__)
@@ -393,7 +388,10 @@ def add_event(
             run_id=run_id,
             revision=revision,
             principal_id=principal_id,
-            entry=ADDED_ENTRY.format(title=uncollected.title)
+            recorded=LogEntry(
+                action=LOG_ADDED,
+                subject=uncollected.title
+            )
         )
 
     message = (

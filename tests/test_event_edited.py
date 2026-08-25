@@ -40,7 +40,8 @@ from conftest import (
     SHIFT_CALENDAR as CALENDAR,
     SHIFT_NEED_ID as NEED_ID
 )
-from star_pass._editing import OP_NUDGE, Operation
+from star_pass._editing import Operation
+from star_pass._records import OP_NUDGE
 from star_pass._event_edits import was_edited
 from star_pass._helpers import Helpers
 from star_pass._records import Event

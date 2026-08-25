@@ -86,8 +86,10 @@ from star_pass._records import (  # noqa: E402
     JOB_KIND_COLLECT,
     JOB_KIND_SEND,
     JOB_STATUS_SUCCEEDED,
+    LogEntry,
     Match,
     MATCH_KIND_FUZZY,
+    OP_NUDGE,
     Opportunity,
     RUN_STATUS_UNSENT,
     ShiftIdentity,
@@ -358,7 +360,8 @@ def fixture_populated(
     add_log_entry(
         run_id=edited,
         revision=2,
-        entry='Nudged Adult Scrimmages by 30 minutes'
+        subject='Adult Scrimmages',
+        minutes=30
     )
 
     return edited
@@ -452,14 +455,19 @@ def fixture_add_log_entry(
     def add(
         run_id: str,
         revision: int,
-        entry: str
+        action: str = OP_NUDGE,
+        **values: Any
     ) -> None:
-        """ Append the entry, recorded against the one principal. """
+        """ Append one entry, recorded against the one principal.
+
+            A nudge unless a test says otherwise: most tests of the
+            log want an entry to exist rather than a particular one.
+        """
         change_log.add(
             run_id=run_id,
             revision=revision,
             principal_id=API_PRINCIPAL_ID,
-            entry=entry
+            recorded=LogEntry(action=action, **values)
         )
 
     return add

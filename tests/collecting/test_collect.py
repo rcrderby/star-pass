@@ -762,18 +762,18 @@ class TestCollectingARunAgain:
         add_log_entry(
             run_id=collecting,
             revision=1,
-            entry='Nudged one event'
+            minutes=15
         )
         add_log_entry(
             run_id=collecting,
             revision=1,
-            entry='Nudged another'
+            minutes=-15
         )
         collect_run(items=[an_item()])
         add_log_entry(
             run_id=collecting,
             revision=2,
-            entry='Nudged one more'
+            minutes=30
         )
 
         run, listed = read_run_history(
