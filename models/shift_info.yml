@@ -10,14 +10,12 @@
 ## 607934: Adult Scrimmages - SOs
 ## 628861: Adult Scrimmages - NSOs
 ## 628862: Junior Scrimmages - NSOs
-## 773454: Adult Officiating Practices
-## 868881: Junior Officiating Practices
+## 773454: Officials Practice
 ## 879609: Adult Games - NSOs
 ## 879610: Adult Games - SOs
-## 892230: Adult Officiating Practices Coaches
+## 892230: Coaches: Officials Practice
 ## 905196: Junior Games - NSOs
 ## 905197: Junior Games - SOs
-## 968727: Junior Officiating Practices Coaches
 
 ---
 calendar:
@@ -196,9 +194,16 @@ calendar:
             offset_end: 0
             slots: 20
 
-      adult_practice:
-        description: Adult Officiating Practices
-        group: adults
+      # One category for everybody: officiating practice is no longer
+      # split by group, and both halves now go to the needs this one
+      # names.  'group' is null because the category serves adults and
+      # juniors alike and naming one of them would be untrue.  The
+      # junior aliases are gone with the junior category and nothing
+      # stops matching: a title reading "Junior Officials Practice"
+      # still holds 'officials'.
+      officiating_practice:
+        description: Officials Practice
+        group: null
         initiative: officiating
         type: practice
         aliases: [officials, officiating]
@@ -211,26 +216,6 @@ calendar:
             slots: 20
           - description: Coaches
             id: 892230
-            max_length: null
-            offset_start: 0
-            offset_end: 0
-            slots: 2
-
-      junior_practice:
-        description: Junior Officiating Practices
-        group: juniors
-        initiative: officiating
-        type: practice
-        aliases: ['junior officials', 'junior officiating']
-        need_ids:
-          - description: Attendees
-            id: 868881
-            max_length: null
-            offset_start: 0
-            offset_end: 0
-            slots: 20
-          - description: Coaches
-            id: 968727
             max_length: null
             offset_start: 0
             offset_end: 0
