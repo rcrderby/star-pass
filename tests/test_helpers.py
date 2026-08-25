@@ -140,6 +140,50 @@ class TestSearchShiftInfo:
                 'Officials Practice'
             ),
             ('practices', 'Wreckers Mod. Contact', 'Adult Scrimmages'),
+            # A home team names its own category, so a title that
+            # carries no group word still reaches one.  These are the
+            # titles that reached the review fallback until the teams
+            # were named: a Lofi game says which teams are playing and
+            # never says "Buds".
+            (
+                'events',
+                'Lofi Game: Bleeding Hearts v. Rainbow Bites',
+                'Rose Buds HT Games'
+            ),
+            (
+                'events',
+                'Lofi Game: Bleeding Hearts v. Undead Avengers',
+                'Rose Buds HT Games'
+            ),
+            (
+                'events',
+                'Death Scar Derby Droids v Rainbow Bites',
+                'Rose Buds HT Games'
+            ),
+            (
+                'events',
+                'Bad Apples vs Skaters of Doom',
+                'Rose Petals Games'
+            ),
+            ('events', 'Killer Bees v Bad Apples', 'Rose Petals Games'),
+            (
+                'events',
+                'Heartless Heathers vs High Rollers',
+                'Adult Games'
+            ),
+            (
+                'events',
+                'Break Neck Betties v Guns N Rollers',
+                'Adult Games'
+            ),
+            # The abbreviations, which are how a scheduler writes a
+            # title in a hurry.  Matched as whole tokens, so a short
+            # one cannot be found inside a longer word.
+            ('events', 'UA v DSDD', 'Rose Buds HT Games'),
+            ('events', 'BH vs RBB', 'Rose Buds HT Games'),
+            ('events', 'BA v SOD', 'Rose Petals Games'),
+            ('events', 'KB vs BA', 'Rose Petals Games'),
+            ('events', 'BNB v HR', 'Adult Games'),
         ]
     )
     def test_realistic_event_name_matches(
@@ -233,7 +277,7 @@ class TestMatchShiftInfo:
         # notice, so the assumption is held here rather than worked
         # around at the call site.
         assert isinstance(
-            fuzz.token_set_ratio('Quilting Circle Meetup', 'juniors'),
+            fuzz.token_set_ratio('Quilting Circle Meetup', 'buds'),
             int
         )
 

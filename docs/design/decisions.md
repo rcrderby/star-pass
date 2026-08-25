@@ -721,15 +721,17 @@ need_id)` (`_database.py:109`): that one Amplify listing implies one set of
 offsets per run.
 
 **Why:** The Rose City Rollers data model does not work that way. Need
-905196 ("Junior Games - NSOs") is named by three categories on the `events`
-calendar, with three different timings (`models/shift_info.yml:50-107`);
-need 905197 ("Junior Games - SOs") is named by the same three, the same way.
+905196 ("Junior Games - NSOs") is named by two categories on the `events`
+calendar, with two different timings (`models/shift_info.yml:63-122`); need
+905197 ("Junior Games - SOs") is named by the same two, the same way.
 
-| Category | Aliases | Offsets | Maximum |
-| --- | --- | --- | --- |
-| `junior_game_petals` | petals, ptt | -15 / +30 | 135 |
-| `junior_game_buds` | buds, roses, rtt, ntt | 0 / +75 | 165 |
-| `junior_game_buds_closed` | buds closed scored scrimmage | -30 / +15 | 165 |
+| Category | Offsets | Maximum |
+| --- | --- | --- |
+| `junior_game_petals` | -15 / +30 | 135 |
+| `junior_game_buds` | 0 / +75 | 165 |
+
+Each names its home teams as well as its group, so the aliases are the
+category's to list and are not repeated here.
 
 Any window holding two of them is refused whole by `_require_one_timing`,
 which is why the `events` calendar has never been collected successfully.
@@ -742,13 +744,13 @@ belongs to. Moving the columns there records what the collection worked out
 instead of averaging it into a per-run claim that cannot be true.
 
 `default_slots` goes with the offsets rather than staying behind, because it
-is read off the category the same way. The three categories agree about slot
+is read off the category the same way. The two categories agree about slot
 counts today, so leaving it would work until the first pair that does not,
 and then produce this same bug with a second migration attached.
 
-**Rejected:** making the three timings agree in `shift_info.yml` (they are
+**Rejected:** making the timings agree in `shift_info.yml` (they are
 genuinely different, so this would create shifts at the wrong times); a
-separate Amplify listing per category (volunteers would see three listings
+separate Amplify listing per category (volunteers would see two listings
 where they see one).
 
 **Consequence:** schema version 8, and the review table's offset notes,

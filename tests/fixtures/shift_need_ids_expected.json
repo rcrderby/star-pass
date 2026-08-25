@@ -17,7 +17,133 @@
       "slots": 8
     }
   ],
+  "events|axles": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|ba": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 8
+    }
+  ],
+  "events|bad apples": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 8
+    }
+  ],
   "events|bb": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|bh": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 8
+    }
+  ],
+  "events|bleeding hearts": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 8
+    }
+  ],
+  "events|bnb": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|break neck betties": [
     {
       "description": "NSOs",
       "id": 879609,
@@ -53,25 +179,79 @@
       "slots": 8
     }
   ],
-  "events|buds closed scored scrimmage": [
+  "events|death scar derby droids": [
     {
       "description": "NSOs",
       "id": 905196,
       "max_length": 165,
-      "offset_end": 15,
-      "offset_start": -30,
+      "offset_end": 75,
+      "offset_start": 0,
       "slots": 12
     },
     {
       "description": "SOs",
       "id": 905197,
       "max_length": 165,
-      "offset_end": 15,
-      "offset_start": -30,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 8
+    }
+  ],
+  "events|dsdd": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
       "slots": 8
     }
   ],
   "events|gnr": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|guns n rollers": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 8
+    }
+  ],
+  "events|heartless heathers": [
     {
       "description": "NSOs",
       "id": 879609,
@@ -107,7 +287,7 @@
       "slots": 8
     }
   ],
-  "events|hr": [
+  "events|high rollers": [
     {
       "description": "NSOs",
       "id": 879609,
@@ -125,10 +305,10 @@
       "slots": 8
     }
   ],
-  "events|juniors": [
+  "events|hr": [
     {
       "description": "NSOs",
-      "id": 905196,
+      "id": 879609,
       "max_length": 165,
       "offset_end": 30,
       "offset_start": 15,
@@ -136,7 +316,7 @@
     },
     {
       "description": "SOs",
-      "id": 905197,
+      "id": 879610,
       "max_length": 165,
       "offset_end": 30,
       "offset_start": 15,
@@ -161,6 +341,60 @@
       "slots": 8
     }
   ],
+  "events|kb": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 8
+    }
+  ],
+  "events|killer bees": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 8
+    }
+  ],
+  "events|ntt": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 8
+    }
+  ],
   "events|petals": [
     {
       "description": "NSOs",
@@ -176,6 +410,186 @@
       "max_length": 135,
       "offset_end": 30,
       "offset_start": -15,
+      "slots": 8
+    }
+  ],
+  "events|ptt": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 8
+    }
+  ],
+  "events|rainbow bites": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 8
+    }
+  ],
+  "events|rbb": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 8
+    }
+  ],
+  "events|roses": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 8
+    }
+  ],
+  "events|rtt": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 8
+    }
+  ],
+  "events|skaters of doom": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 8
+    }
+  ],
+  "events|sod": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 135,
+      "offset_end": 30,
+      "offset_start": -15,
+      "slots": 8
+    }
+  ],
+  "events|ua": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 8
+    }
+  ],
+  "events|undead avengers": [
+    {
+      "description": "NSOs",
+      "id": 905196,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 905197,
+      "max_length": 165,
+      "offset_end": 75,
+      "offset_start": 0,
+      "slots": 8
+    }
+  ],
+  "events|wheels": [
+    {
+      "description": "NSOs",
+      "id": 879609,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
+      "slots": 12
+    },
+    {
+      "description": "SOs",
+      "id": 879610,
+      "max_length": 165,
+      "offset_end": 30,
+      "offset_start": 15,
       "slots": 8
     }
   ],
@@ -269,6 +683,24 @@
       "slots": 2
     }
   ],
+  "practices|officiating": [
+    {
+      "description": "Attendees",
+      "id": 773454,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    },
+    {
+      "description": "Coaches",
+      "id": 892230,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 2
+    }
+  ],
   "practices|petals scrimmage": [
     {
       "description": "NSOs",
@@ -288,6 +720,24 @@
     }
   ],
   "practices|woj scrimmage": [
+    {
+      "description": "NSOs",
+      "id": 628861,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    },
+    {
+      "description": "SOs",
+      "id": 607934,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    }
+  ],
+  "practices|wreckers": [
     {
       "description": "NSOs",
       "id": 628861,
