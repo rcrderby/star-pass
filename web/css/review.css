@@ -286,9 +286,18 @@ button.picker-row:hover {
   gap: 14px;
 }
 
+/* Inset exactly as a row is.  Both read the track list above, but a
+ * grid divides its *content* box, so a heading row boxed differently
+ * from the rows under it lays its columns out on a different box -
+ * which is a heading that never sits over the column it names. A row
+ * is a `.row-card`, so what it is inset by is 12px of padding and the
+ * card's 3px stripe; the heading carries the stripe as empty space
+ * rather than adding 3px to the padding, so the two stay the same
+ * measurement rather than one number copied into two places. */
 .table-head {
   align-items: end;
-  padding: 8px 0;
+  border-left: 3px solid transparent;
+  padding: 8px 12px;
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
