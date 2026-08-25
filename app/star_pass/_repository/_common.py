@@ -40,7 +40,8 @@ EVENT_COLUMNS = (
     'match_kind',
     'match_keyword',
     'match_score',
-    'added_by_hand'
+    'added_by_hand',
+    'collected_category'
 )
 EVENT_ROLE_COLUMNS = (
     'run_id',

@@ -20,6 +20,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 # Imports - Local
+from conftest import a_category, a_need
 from star_pass._records import OPERATION_EDIT
 from star_pass._repository import ChangeLogRepository, IdempotencyRepository
 from star_pass_api import _defaults
@@ -47,6 +48,48 @@ def a_nudge(minutes: int = -15) -> Dict[str, Any]:
         'eventIds': ['event-1'],
         'minutes': minutes
     }
+
+
+def a_category_change(
+    category: str = 'junior_scrimmage'
+) -> Dict[str, Any]:
+    """ Return one operation putting the fixture's event elsewhere. """
+    return {
+        'op': 'set_category',
+        'eventIds': ['event-1'],
+        'category': category
+    }
+
+
+@pytest.fixture(name='two_categories')
+def fixture_two_categories(shift_model: Callable[..., None]) -> None:
+    """ Install a model holding the collected category and another.
+
+        A category change needs somewhere to change to, and the model
+        the other tests arrange defines only the one the fixture event
+        was collected under.
+    """
+    shift_model(
+        categories={
+            'scrimmage': a_category(
+                need_ids=[a_need(identifier='905196', slots=4)]
+            ),
+            'junior_scrimmage': a_category(
+                need_ids=[
+                    a_need(
+                        identifier='905197',
+                        slots=6,
+                        offset_start=0,
+                        offset_end=0,
+                        max_length=None
+                    )
+                ]
+            )
+        },
+        calendars=('practices',)
+    )
+
+    return None
 
 
 @pytest.fixture(name='edit')
@@ -126,6 +169,37 @@ class TestWhatAnEditAnswers:
             key=SECOND_ATTEMPT
         )
 
+        assert answer.json()['events'][0]['edited'] is False
+
+    def test_a_changed_category_comes_back_edited(
+        self, edit, collected, two_categories
+    ):
+        # The most common edit on the review screen, and the one the
+        # screen could not offer an undo on while an event held only
+        # the category it is under now.
+        del two_categories
+
+        answer = edit(
+            run_id=collected,
+            operations=[a_category_change()]
+        )
+
+        assert answer.json()['events'][0]['category'] == 'junior_scrimmage'
+        assert answer.json()['events'][0]['edited'] is True
+
+    def test_an_undone_category_comes_back_as_collected(
+        self, edit, collected, two_categories
+    ):
+        del two_categories
+        edit(run_id=collected, operations=[a_category_change()])
+
+        answer = edit(
+            run_id=collected,
+            operations=[{'op': 'undo', 'eventIds': ['event-1']}],
+            key=SECOND_ATTEMPT
+        )
+
+        assert answer.json()['events'][0]['category'] == 'scrimmage'
         assert answer.json()['events'][0]['edited'] is False
 
     def test_the_log_carries_one_entry_per_operation(

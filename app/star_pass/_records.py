@@ -357,8 +357,18 @@ class Event:
                 End time of the shift to create.
 
             category (str, optional):
-                Data model category the title matched, or None when
+                Data model category the event is under, or None when
                 nothing matched, which blocks the run.
+
+            collected_category (str, optional):
+                The category the collection matched, which is what an
+                undo puts the event back under and what says whether
+                its category has been changed.  None where the
+                collection matched nothing, and then the event is put
+                back under the category it is under now: a row given
+                one *because* nothing matched has an assignment worth
+                keeping, and undo would otherwise mean something
+                different on it than on every other row.
 
             match (Match, optional):
                 How the category was reached, or None when the event
@@ -381,6 +391,7 @@ class Event:
     shift_start: str
     shift_end: str
     category: Optional[str] = None
+    collected_category: Optional[str] = None
     match: Optional[Match] = None
     added_by_hand: bool = False
     roles: Tuple[EventRole, ...] = field(default_factory=tuple)

@@ -486,6 +486,31 @@ class TestEvents:
             event_id=event.id
         ) == event
 
+    def test_a_changed_category_reads_back_beside_the_collected_one(
+        self,
+        events: EventRepository,
+        run_id: str,
+        revision: int,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # Both, and separately: what an undo puts the row back to is
+        # stored rather than worked out, so a row under a category
+        # somebody chose has to be able to say which one it came from.
+        event = make_event(
+            category='junior_game',
+            collected_category='adult_game'
+        )
+        events.add(run_id=run_id, revision=revision, event=event)
+
+        stored = events.get(
+            run_id=run_id,
+            revision=revision,
+            event_id=event.id
+        )
+
+        assert stored.category == 'junior_game'
+        assert stored.collected_category == 'adult_game'
+
     def test_a_match_reads_back_whole(
         self,
         events: EventRepository,
@@ -524,6 +549,7 @@ class TestEvents:
 
         assert stored.match is None
         assert stored.category is None
+        assert stored.collected_category is None
 
     def test_an_event_added_by_hand_stays_distinguishable(
         self,

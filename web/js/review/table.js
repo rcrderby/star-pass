@@ -402,8 +402,9 @@ function eventRows(event, context) {
             type: 'button',
             class: 'btn btn-ghost micro',
             disabled: context.busy,
-            title: 'Put the shift times back to the calendar times '
-              + 'and the offsets this opportunity asks for',
+            title: 'Put this row back as it was collected - its '
+              + 'opportunity, its shift times and the volunteers '
+              + 'each opportunity asks for',
             onclick: () => context.onEdit({
               op: 'undo',
               eventIds: [event.id]

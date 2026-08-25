@@ -112,6 +112,7 @@ class TestAnEventServingNoOpportunity:
         event = built(title=UNMATCHED_TITLE)
 
         assert event.category is None
+        assert event.collected_category is None
         assert event.match is None
 
 
@@ -138,6 +139,18 @@ class TestAnEventTheModelMatched:
 
         assert event.category == 'junior_game_petals'
         assert event.match is not None
+
+    def test_it_records_the_category_as_what_the_collection_matched(
+        self,
+        built: Callable[..., Any]
+    ) -> None:
+        # Where an undo puts the row back to, which is the one thing
+        # about a collected event that cannot be worked out again:
+        # the data model can change between the day a run is collected
+        # and the day it is reviewed.
+        event = built()
+
+        assert event.collected_category == 'junior_game_petals'
 
 
 class TestWhoPutItThere:

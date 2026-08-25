@@ -294,5 +294,36 @@ MIGRATIONS = {
                 'ALTER TABLE opportunities DROP COLUMN default_slots'
             )
         )
+    ),
+    9: (
+        # The category the collection matched, which is what an undo
+        # puts the event back under (D26).  An event stored only the
+        # category it is under now, so changing it left nothing
+        # saying what it had been: the change was invisible to
+        # 'was_edited' and there was nothing for an undo to restore.
+        #
+        # No default, and none is needed: the column is nullable
+        # because a collection matches nothing for some titles, and
+        # that is what an event of any age says about itself until
+        # the fill below.
+        Step(
+            table='events',
+            column='collected_category',
+            statement=(
+                'ALTER TABLE events ADD COLUMN collected_category TEXT'
+            )
+        ),
+        # Every event takes the category it is under, which is the
+        # nearest true thing a database can say about rows written
+        # before the column existed: an unedited event is under what
+        # it was collected under, and an edited one has nothing left
+        # that says what that was.  Gated on 'collected_category',
+        # which is asked about before any statement of this version
+        # runs and so is still absent when this is chosen.
+        Step(
+            table='events',
+            column='collected_category',
+            statement='UPDATE events SET collected_category = category'
+        )
     )
 }

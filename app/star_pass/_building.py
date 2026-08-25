@@ -69,7 +69,9 @@ def event_from(
 
         Returns:
             event (Event):
-                The event, with a role per need ID it serves.
+                The event, with a role per need ID it serves, and a
+                record of the category it was matched to -- which is
+                where an undo puts it back (D26).
     """
 
     timings = role_timings(matched=matched, title=title)
@@ -100,6 +102,7 @@ def event_from(
         shift_start=shift_start,
         shift_end=shift_end,
         category=matched.category,
+        collected_category=matched.category,
         match=matched.match,
         added_by_hand=added_by_hand,
         roles=tuple(timings)
