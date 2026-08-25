@@ -38,6 +38,21 @@ RUN python -m pip install --no-cache-dir --upgrade pip
 # Set the PYTHONPATH environment variable
 ENV PYTHONPATH=/app
 
+# The account both targets run as.  Created here so that neither
+# target can be the one that forgets, and given a fixed UID and GID
+# rather than allocated ones, because '/data' is a named volume:
+# Docker copies the image directory's ownership into an empty volume
+# the first time it is mounted, so the number in the image is the
+# number that ends up on the volume, and a number that moved between
+# builds would leave an existing volume unreadable.
+#
+# 'USER' is set at the end of each target instead of here.  The
+# installs below it run as root because that is what writing to
+# site-packages needs, and a stage that ends as root is the thing
+# hadolint's DL3002 is for.
+RUN groupadd --gid 1000 starpass && \
+    useradd --uid 1000 --gid 1000 --no-log-init --create-home starpass
+
 # The image the scheduled Slack sign-up summary runs from, and the way
 # to run that summary by hand without bringing a deployment up.
 #
@@ -64,6 +79,22 @@ COPY /app /app
 # Copy the shift data model, which 'star_pass._defaults' reads at import
 # time from a path relative to the package ('<app>/../models').
 COPY /models /models
+
+# Make the copied tree readable by anything that is not root.  'COPY'
+# carries the build context's own modes into the image, so a checkout
+# whose directories are 0700 -- which is what a working tree inside a
+# synchronised folder can be -- produces an image the account below
+# cannot read, while a fresh clone in continuous integration produces
+# one it can.  Stating the mode here removes the difference.
+#
+# 'a+rX' adds execute to directories and to what already had it, so
+# '__main__.py' keeps its own bit and no module is made executable.
+RUN chmod -R a+rX /app /models
+
+# Nothing here is written to: the summary reads the data model, asks
+# Amplify and posts to Slack.  What the account buys is that the
+# scheduled run holds no more privilege than the post needs.
+USER starpass
 
 # A run that is given no command builds the message and posts nothing:
 # check mode is the default, and the summary is the only thing this
@@ -96,8 +127,32 @@ COPY /models /models
 COPY /web /web
 
 # Create the directory the SQLite database lives in, so a deployment
-# can mount a volume over it.
-RUN mkdir -p /data
+# can mount a volume over it, and give it to the account that writes
+# the database.
+#
+# The ownership is what makes the mount work.  Docker copies an empty
+# named volume's ownership and mode from the directory it is mounted
+# over, so a volume created against this image belongs to 'starpass'
+# from the moment it exists.  It copies nothing onto a volume that
+# already has content, which is why this change belongs to a phase
+# where the volume is empty: an existing volume stays root-owned and
+# has to be chowned by hand or discarded.
+#
+# SQLite writes '-wal' and '-shm' beside the database, so the
+# directory has to be writable and not merely the file.
+#
+# The 'chmod' is here for the reason the Slack target states: 'COPY'
+# carries the build context's directory modes into the image, and a
+# 0700 directory in the checkout is a tree the account cannot read.
+RUN chmod -R a+rX /app /models /web && \
+    mkdir -p /data && \
+    chown starpass:starpass /data
+
+# Everything else in the image stays root-owned and is only read:
+# '/app', '/models' and '/web' are the code, the data model and the
+# page, and a process that cannot rewrite them is one fewer way for a
+# write to become a deployment.
+USER starpass
 
 # Start the bash prompt
 CMD ["/bin/bash"]

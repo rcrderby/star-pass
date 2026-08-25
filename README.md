@@ -337,6 +337,16 @@ Copy `.env.example` to `.env` before the first `docker compose up`.
 Docker creates a directory where the credential file is mounted if the
 file is not there.
 
+Both application containers run as an unprivileged account rather than
+as root, and the database volume is created owned by it. Two things
+follow. The credential file has to be readable by something other than
+its owner -- what `cp .env.example .env` produces is, and a file
+tightened to `0600` is not. And a volume that already holds a database
+keeps the ownership it was created with, because Docker copies the
+image directory's ownership onto an empty volume only: a deployment
+that predates this either discards its volume with `docker compose
+down -v` or changes the ownership by hand.
+
 `runs show` gives one run, the events its current revision holds, the
 Amplify opportunities they are created under, and every change made to
 it. `runs uncollected` gives what the run's window held that did not
