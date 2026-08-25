@@ -117,7 +117,7 @@ class TestSearchShiftInfo:
                 'G1: Petals Exhibition Bout',
                 'Rose Petals Games'
             ),
-            ('practices', 'Officials', 'Adult Officiating Practices'),
+            ('practices', 'Officials', 'Officials Practice'),
             (
                 'practices',
                 'Adult HT Scrimmage: BB/HH',
@@ -127,17 +127,18 @@ class TestSearchShiftInfo:
             ('practices', 'Buds Mixed Scrimmage', 'Junior Scrimmages'),
             # Synthesized titles a human might reasonably use.
             ('events', 'Axles vs. Jet City', 'Adult Games'),
-            (
-                'practices',
-                'Officiating Practice',
-                'Adult Officiating Practices'
-            ),
+            ('practices', 'Officiating Practice', 'Officials Practice'),
             ('events', 'PTT vs Cherry City', 'Rose Petals Games'),
             ('events', 'BB vs. JRD', 'Adult Games'),
+            ('practices', 'Officials Training', 'Officials Practice'),
+            # Officiating practice is one category for everybody now,
+            # so a title still saying "junior" reaches the same one --
+            # by holding 'officials', the alias that outlived the
+            # junior category.
             (
                 'practices',
-                'Officials Training',
-                'Adult Officiating Practices'
+                'Junior Officials Practice',
+                'Officials Practice'
             ),
             ('practices', 'Wreckers Mod. Contact', 'Adult Scrimmages'),
         ]
