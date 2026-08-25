@@ -85,9 +85,11 @@ const NOT_REACHED = (
 const RECHECKING = 'Checking Amplify before sending again';
 
 /* And when that read could not be made. The retry stops here rather
- * than sending a number nobody could work out. */
+ * than sending a number nobody could work out.  What stopped it is
+ * the service's own sentence, for the reason the preview screen
+ * states beside its own lead. */
 const RECHECK_FAILED = (
-  'Amplify did not answer the check for shifts that already exist, so '
+  'The check for shifts that already exist could not be made, so '
   + 'sending again is held back.'
 );
 
@@ -302,13 +304,21 @@ function retryStatus(state) {
         'p',
         { class: 'sending-failed meta', role: 'alert' },
         icon('warning-circle'),
-        el('span', { text: RECHECK_FAILED }),
-        state.failure.reference
-          ? el('span', {
-            class: 'mono micro',
-            text: state.failure.reference
-          })
-          : null
+        el(
+          'span',
+          { class: 'failed-words' },
+          el('span', {
+            text: `${RECHECK_FAILED} ${state.failure.detail}`
+          }),
+          state.failure.reference
+            ? el(
+              'span',
+              { class: 'muted micro failure-reference' },
+              'Reference ',
+              el('span', { class: 'mono', text: state.failure.reference })
+            )
+            : null
+        )
       ),
     state.notice === ''
       ? null

@@ -310,6 +310,7 @@ export class ReviewScreen {
       allShown,
       onSearch: (text) => {
         this.state.search = text;
+        this.focusSearch = true;
         this.redraw();
       },
       onToggleLog: () => {
@@ -392,7 +393,12 @@ export class ReviewScreen {
     );
 
     /* A search field that lost focus on every keystroke would be a
-     * search field nobody could type in. */
+     * search field nobody could type in.  Asked for by the one
+     * handler that redraws while somebody is typing, and answered
+     * once: every other redraw is something a person did elsewhere on
+     * the screen, and moving focus into the search field would take
+     * it off what they pressed and scroll the table back to the top.
+     */
     if (this.focusSearch) {
       const field = this.body.querySelector('.search-field');
 
@@ -402,7 +408,7 @@ export class ReviewScreen {
       }
     }
 
-    this.focusSearch = true;
+    this.focusSearch = false;
   }
 
   /** Draw the Not collected tab, and read it if it has not been read.
@@ -526,11 +532,6 @@ export class ReviewScreen {
 
     /* A refusal is about the tab it happened on. */
     this.state.refusal = null;
-
-    /* Nothing to type into on the second tab, and coming back should
-     * leave focus on the tab somebody pressed rather than move it
-     * into the search field. */
-    this.focusSearch = false;
 
     this.renderHeader();
     this.redraw();

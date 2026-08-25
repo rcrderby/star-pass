@@ -115,10 +115,28 @@
   animation: om-spin 1s linear infinite;
 }
 
+/* Against the first line of the words rather than the middle of them:
+ * the sentence carries the service's own reason and runs to two lines
+ * on a narrow window, and an icon halfway down a paragraph reads as
+ * belonging to neither line. */
 .preview-failed,
 .preview-blocked {
+  align-items: baseline;
   color: var(--color-alert);
   text-wrap: pretty;
+}
+
+/* The sentence and the reference are one item beside the icon, the
+ * shape `refusalNotice` already uses: as separate items they are
+ * separate things to wrap, and a sentence long enough to take the
+ * whole line leaves the icon alone on the one above it. */
+.failed-words {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex: 1;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 /* Given the whole line to itself, under the controls rather than
@@ -374,7 +392,7 @@
 .sending-notice {
   display: flex;
   gap: 8px;
-  align-items: center;
+  align-items: baseline;
   flex-wrap: wrap;
   margin: var(--space-4) 0 0;
   text-wrap: pretty;
