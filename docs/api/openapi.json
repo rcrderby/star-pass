@@ -362,7 +362,7 @@
             "title": "Needid"
           },
           "op": {
-            "description": "What was done. One of: `set_category`, `set_start`, `set_end`, `set_slots`, `nudge`, `reset_slots`, `remove`, `undo`.\n\n`set_start` and `set_end` name the **shift** times, which are what reaches Amplify. An event's calendar times never move: they are what the calendar said, and they are what `undo` works back from.",
+            "description": "What was done. One of: `set_category`, `unassign`, `set_start`, `set_end`, `set_slots`, `nudge`, `reset_slots`, `remove`, `undo`.\n\n`set_start` and `set_end` name the **shift** times, which are what reaches Amplify. An event's calendar times never move: they are what the calendar said, and they are what `undo` works back from.\n\n`unassign` puts a row back to having no opportunity, and is refused for any event whose `mayUnassign` is false - unassigned is where a row starts when the collection matched nothing, not somewhere a matched row can be put. A matched row that should create no shift is `remove`d.",
             "examples": [
               "nudge"
             ],
@@ -555,6 +555,11 @@
             ],
             "description": "How the category was reached, or null when the event was added by hand or matched nothing. Stored as it happened, because the data model can change between the day a run is collected and the day it is read."
           },
+          "mayUnassign": {
+            "description": "Whether this event may be put back to having no opportunity. True where the collection matched no category for it, which is the only row unassigned is a state of: it is where that row began, so returning it there is putting it back rather than breaking it. Answered here rather than worked out by a caller for the same reason `edited` is - the rule is the one the `unassign` operation refuses by, and a control offered where the operation would refuse is a control that fails. A matched row that should create no shift is removed from the run instead.",
+            "title": "Mayunassign",
+            "type": "boolean"
+          },
           "roles": {
             "description": "The opportunities this event creates shifts for.",
             "items": {
@@ -591,7 +596,8 @@
           "addedByHand",
           "edited",
           "roles",
-          "blocking"
+          "blocking",
+          "mayUnassign"
         ],
         "title": "EventView",
         "type": "object"

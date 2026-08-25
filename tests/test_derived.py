@@ -19,6 +19,7 @@ import pytest
 from star_pass._derived import (
     blocks_the_run,
     capping_maximum,
+    may_unassign,
     repeated,
     shift_length
 )
@@ -336,3 +337,35 @@ class TestBlocksTheRun:
         make_event: Callable[..., Event]
     ) -> None:
         assert not blocks_the_run(event=make_event())
+
+
+class TestMayUnassign:
+    def test_a_row_the_collection_matched_nothing_for_may(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # Unassigned is where that row began, so putting it back
+        # there is putting it back.
+        assert may_unassign(
+            event=make_event(category=None, roles=())
+        )
+
+    def test_it_still_may_once_somebody_has_assigned_one(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # The question is what the collection matched, not what the
+        # row is under now.  Asked the other way round, an assigned
+        # row would have no way back.
+        assert may_unassign(
+            event=make_event(category='scrimmage', collected_category=None)
+        )
+
+    def test_a_row_the_collection_matched_may_not(
+        self,
+        make_event: Callable[..., Event]
+    ) -> None:
+        # It has an opportunity to go back to, and unassigning it
+        # would leave a row behind blocking the whole run. Removing
+        # it is what such a row wants.
+        assert not may_unassign(event=make_event())

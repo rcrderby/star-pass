@@ -25,6 +25,7 @@
   "row": {
     "calendarTimes": "RCR Calendar times: {start} to {end}",
     "noOpportunity": "Unable to match to an opportunity",
+    "unassigned": "Unassigned",
     "duplicate": "Identical to \"{title}\" earlier in this run. Repeated rows are dropped, so this one creates nothing.",
     "offsetStart": "Set {minutes} min {direction} calendar start",
     "offsetEnd": "Set {minutes} min {direction} calendar end",

@@ -44,6 +44,7 @@ from ._event_edits import (
     with_slots
 )
 from ._database import transaction
+from ._derived import may_unassign
 from ._exceptions import ValidationError
 from ._helpers import Helpers
 from ._logging import get_logger
@@ -58,6 +59,7 @@ from ._repository import (
 # strings so the contract, the command line and this module cannot
 # drift apart about what an operation is called.
 OP_SET_CATEGORY = 'set_category'
+OP_UNASSIGN = 'unassign'
 OP_SET_START = 'set_start'
 OP_SET_END = 'set_end'
 OP_SET_SLOTS = 'set_slots'
@@ -68,6 +70,7 @@ OP_UNDO = 'undo'
 
 OPERATIONS = (
     OP_SET_CATEGORY,
+    OP_UNASSIGN,
     OP_SET_START,
     OP_SET_END,
     OP_SET_SLOTS,
@@ -242,6 +245,49 @@ def _set_category(
     )
 
 
+def _unassign(
+        operation: Operation,
+        events: Sequence[Event],
+        context: EditContext
+) -> '_Result':
+    """ Put the named events back to having no opportunity.
+
+        Only where the collection matched nothing, which is the row
+        unassigned is a state of.  A row the collection did match is
+        refused: what such a row wants when it should create no shift
+        is to be removed from the revision, and unassigning it would
+        leave a row behind blocking the whole run (D29).
+    """
+
+    del operation
+
+    matched = [event for event in events if not may_unassign(event=event)]
+
+    if matched:
+        message = (
+            f'{_named(matched)} cannot be unassigned, because the '
+            'collection matched an opportunity for it. Unassigned is '
+            'where a row starts when nothing matched, not somewhere a '
+            'row can be put. Remove the event from the run if it '
+            'should create no shift.'
+        )
+        logger.error(message)
+        raise ValidationError(message)
+
+    return _Result(
+        changed={
+            event.id: under_category(
+                event=replace(event, match=None),
+                category=None,
+                calendar=context.calendar,
+                helpers=context.helpers
+            )
+            for event in events
+        },
+        entry=f'Set {_named(events)} back to unassigned.'
+    )
+
+
 def _set_start(
         operation: Operation,
         events: Sequence[Event],
@@ -396,6 +442,7 @@ def _undo(
 # through.
 HANDLERS = {
     OP_SET_CATEGORY: _set_category,
+    OP_UNASSIGN: _unassign,
     OP_SET_START: _set_start,
     OP_SET_END: _set_end,
     OP_SET_SLOTS: _set_slots,

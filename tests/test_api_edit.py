@@ -50,6 +50,11 @@ def a_nudge(minutes: int = -15) -> Dict[str, Any]:
     }
 
 
+def an_unassign(event_id: str = 'event-2') -> Dict[str, Any]:
+    """ Return one operation putting a row back to unassigned. """
+    return {'op': 'unassign', 'eventIds': [event_id]}
+
+
 def a_category_change(
     category: str = 'junior_scrimmage'
 ) -> Dict[str, Any]:
@@ -201,6 +206,59 @@ class TestWhatAnEditAnswers:
 
         assert answer.json()['events'][0]['category'] == 'scrimmage'
         assert answer.json()['events'][0]['edited'] is False
+
+    def test_a_matched_row_is_published_as_not_unassignable(
+        self, edit, collected, matching_model
+    ):
+        # It has an opportunity to go back to, so the chooser draws it
+        # no way to have none.
+        del matching_model
+
+        answer = edit(run_id=collected, operations=[a_nudge()])
+
+        assert answer.json()['events'][0]['mayUnassign'] is False
+
+    def test_a_row_the_collection_matched_nothing_for_may_unassign(
+        self, edit, collected, matching_model, add_second_event
+    ):
+        del matching_model
+        add_second_event(category='scrimmage', collected_category=None)
+
+        answer = edit(run_id=collected, operations=[a_nudge()])
+        rows = {row['id']: row for row in answer.json()['events']}
+
+        assert rows['event-2']['mayUnassign'] is True
+
+    def test_unassigning_leaves_the_row_serving_nothing(
+        self, edit, collected, matching_model, add_second_event
+    ):
+        del matching_model
+        add_second_event(category='scrimmage', collected_category=None)
+
+        answer = edit(run_id=collected, operations=[an_unassign()])
+        rows = {row['id']: row for row in answer.json()['events']}
+
+        assert rows['event-2']['category'] is None
+        assert rows['event-2']['roles'] == []
+        assert rows['event-2']['blocking'] is True
+        assert rows['event-2']['mayUnassign'] is True
+
+    def test_unassigning_a_matched_row_is_a_conflict(
+        self, edit, collected, matching_model
+    ):
+        # The rule the chooser draws by, refused by the service as
+        # well: a client the screen is not cannot do what the screen
+        # forbids.
+        del matching_model
+
+        answer = edit(
+            run_id=collected,
+            operations=[an_unassign(event_id='event-1')]
+        )
+
+        assert answer.status_code == 409
+        assert answer.headers['content-type'] == PROBLEM_MEDIA_TYPE
+        assert 'cannot be unassigned' in answer.json()['detail']
 
     def test_the_log_carries_one_entry_per_operation(
         self, edit, collected
