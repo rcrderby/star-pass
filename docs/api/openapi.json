@@ -2096,6 +2096,45 @@
       }
     },
     "/v1/runs/{run_id}": {
+      "delete": {
+        "description": "Removes the run and everything that hangs off it: its revisions, their events and roles, its opportunities, its change log, its jobs and what the window left out.\n\n**Refused for a run that has sent shifts**, whether all of them or some, because the record of what a send created is the only account of that anything here holds. Refused separately, and with its own reason, while a job is working on the run: that one becomes deletable when the work finishes.\n\nWhat does not go is the run's unmatched-title sightings. What the data model is missing outlives the window that revealed it.",
+        "operationId": "delete_run",
+        "parameters": [
+          {
+            "description": "Identifier the run was created with.",
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "description": "Identifier the run was created with.",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "runs:write"
+            ]
+          }
+        ],
+        "summary": "Delete a run that never sent",
+        "tags": [
+          "runs"
+        ]
+      },
       "get": {
         "description": "The run, the events of its current revision, the Amplify opportunities labelling them, and the log of everything done to it. Read together because a screen showing one shows all of them, and separate reads could disagree.\n\nEach event carries what its stored row does not say: how long the shift is, the maximum that shortened it, whether an earlier event would create the same shift, and whether it blocks the send.",
         "operationId": "get_run",

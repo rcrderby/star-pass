@@ -41,7 +41,7 @@ SLACK_SUMMARY_NEED_IDS = _defaults.SLACK_SUMMARY_NEED_IDS
 # mandatory (unbracketed) and optional (bracketed) for each run mode.
 USAGE = (
     'star-pass runs list [--api-url URL]\n'
-    '       star-pass runs {show,revisions,preview,send} RUN '
+    '       star-pass runs {show,revisions,preview,send,delete} RUN '
     '[--api-url URL]\n'
     '       star-pass runs collect --calendar {events,practices} '
     '--start DATE --last-day DATE\n'

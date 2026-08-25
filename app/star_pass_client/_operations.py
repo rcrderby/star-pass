@@ -94,6 +94,31 @@ class Operations:
             body=body
         )
 
+    def delete_run(
+            self,
+            run_id: str
+    ) -> Any:
+        """ Delete a run that never sent.
+
+            Args:
+                run_id (str):
+                    Value for the path.
+
+            Raises:
+                ApiProblem:
+                    If the service reported a failure.
+
+            Returns:
+                answer (Any):
+                    What the service answered.
+        """
+
+        return self._call(
+            method='DELETE',
+            path='/v1/runs/{run_id}',
+            run_id=run_id
+        )
+
     def edit_events(
             self,
             body: Dict[str, Any],

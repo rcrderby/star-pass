@@ -26,6 +26,7 @@ from fastapi import (
     HTTPException,
     Path,
     Request,
+    Response,
     status
 )
 from starlette.concurrency import run_in_threadpool
@@ -65,6 +66,7 @@ from star_pass_contract import (
     to_run_view,
     to_uncollected_views,
     UncollectedGroupView,
+    why_not_delete,
     why_not_recollect,
     WriteRefusals
 )
@@ -199,6 +201,77 @@ async def get_run(
         raise missing_run(run_id=run_id)
 
     return to_detail_view(detail=detail)
+
+
+@router.delete(
+    '/runs/{run_id}',
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary='Delete a run that never sent',
+    description=(
+        'Removes the run and everything that hangs off it: its '
+        'revisions, their events and roles, its opportunities, its '
+        'change log, its jobs and what the window left out.\n\n'
+        '**Refused for a run that has sent shifts**, whether all of '
+        'them or some, because the record of what a send created is '
+        'the only account of that anything here holds. Refused '
+        'separately, and with its own reason, while a job is working '
+        'on the run: that one becomes deletable when the work '
+        'finishes.\n\n'
+        'What does not go is the run\'s unmatched-title sightings. '
+        'What the data model is missing outlives the window that '
+        'revealed it.'
+    ),
+    response_class=Response
+)
+async def delete_run(
+        run_id: str = Path(
+            description='Identifier the run was created with.'
+        ),
+        principal: Principal = requires(SCOPE_RUNS_WRITE)
+) -> Response:
+    """ Delete a run, if it is one that may go.
+
+        Args:
+            run_id (str):
+                Identifier of the run to delete.
+
+            principal (Principal):
+                The authenticated caller, which the dependency supplies
+                after checking the scope.
+
+        Raises:
+            HTTPException:
+                404 when there is no such run, 409 when the run is not
+                one that may be deleted.
+
+        Returns:
+            response (Response):
+                Nothing, with a 204.
+    """
+
+    del principal
+
+    run = await read(
+        lambda connection: RunRepository(connection=connection).get(
+            run_id=run_id
+        )
+    )
+
+    if run is None:
+        raise missing_run(run_id=run_id)
+
+    refusal = why_not_delete(run=run)
+
+    if refusal is not None:
+        raise conflict(detail=refusal)
+
+    await read(
+        lambda connection: RunRepository(connection=connection).delete(
+            run_id=run_id
+        )
+    )
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get(

@@ -75,6 +75,7 @@ HANDLERS = {
     ('POST', '/v1/credentials/test'): '_credential',
     ('GET', '/v1/unmatched-titles'): '_unmatched_titles',
     ('POST', '/v1/runs'): '_collect',
+    ('DELETE', '/v1/runs/{run_id}'): '_delete',
     ('POST', '/v1/runs/{run_id}/recollect'): '_recollect',
     ('POST', '/v1/runs/{run_id}/send'): '_send',
     ('POST', '/v1/jobs/{job_id}/resume'): '_resume',

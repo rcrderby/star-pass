@@ -474,6 +474,67 @@ def replay(
     return REPLAY_ANSWERED, None
 
 
+def sent_and_kept(
+        run_id: str
+) -> str:
+    """ Return what to say when a run that sent may not be deleted.
+
+        Args:
+            run_id (str):
+                Run the caller asked about.
+
+        Returns:
+            message (str):
+                What to tell them.
+    """
+
+    return (
+        f'Run "{run_id}" sent shifts to Amplify, and the record of what '
+        'it created is the only account of that anything here holds. It '
+        'cannot be deleted. A run that never sent can be.'
+    )
+
+
+def why_not_delete(
+        run: Run
+) -> Optional[str]:
+    """ Return why a run cannot be deleted, if it cannot.
+
+        Two refusals, and they are different answers to the caller: a
+        run something is working on becomes deletable when the work
+        finishes, and a run that has sent never does.
+
+        The send is read off 'sent_at' rather than off the status,
+        because 'mark_sent' writes it for both of the statuses that
+        mean shifts reached Amplify, and reading the timestamp keeps
+        the refusal correct for a status this list has not thought of
+        (D24).
+
+        The job is answered first because it is the temporary one: a
+        caller told the run has sent would stop, and a caller told
+        something is working on it would wait and ask again.
+
+        Args:
+            run (Run):
+                The run the caller asked to delete.
+
+        Returns:
+            reason (str | None):
+                What to tell them, or None when the run may go.
+    """
+
+    if run.active_job_id is not None:
+        return already_working(
+            run_id=run.id,
+            job_id=run.active_job_id
+        )
+
+    if run.sent_at is not None:
+        return sent_and_kept(run_id=run.id)
+
+    return None
+
+
 def why_not_recollect(
         run: Run,
         changed: int,

@@ -752,3 +752,107 @@ class TestConfirmingASend:
 
         assert all(keys)
         assert len(set(keys)) == 2
+
+
+@pytest.fixture(name='asking_to_delete')
+def fixture_asking_to_delete(
+    capsys: pytest.CaptureFixture,
+    cli: Callable[..., int],
+    collected: str
+) -> Callable[[], Tuple[int, str]]:
+    """ Return a way to ask for the collected run to be deleted.
+
+        The arrangement is one thing -- a run that may go -- and what
+        each test varies is the answer given to the question.
+    """
+
+    def ask() -> Tuple[int, str]:
+        """ Ask, and return how it went and what was written. """
+        return cli('runs', 'delete', collected), capsys.readouterr().out
+
+    return ask
+
+
+class TestConfirmingADeletion:
+    def test_what_is_about_to_go_is_restated(
+        self,
+        asking_to_delete: Callable[[], Tuple[int, str]],
+        answering: Callable[[str], None],
+        collected: str
+    ) -> None:
+        # The confirmation's job is to make somebody read it (D11), so
+        # what the run holds is said before the question.  A run
+        # holding nothing and a run holding a month of reviewed events
+        # read the same way in an identifier alone.
+        answering('n')
+
+        _status, shown = asking_to_delete()
+
+        assert collected in shown
+        assert 'Events' in shown
+        assert 'cannot be undone' in shown
+
+    def test_an_answer_of_no_deletes_nothing(
+        self,
+        asking_to_delete: Callable[[], Tuple[int, str]],
+        answering: Callable[[str], None],
+        runs: RunRepository,
+        collected: str
+    ) -> None:
+        answering('n')
+
+        status, shown = asking_to_delete()
+
+        assert status == 0
+        assert 'Nothing was deleted.' in shown
+        assert runs.get(run_id=collected) is not None
+
+    def test_an_answer_of_yes_deletes(
+        self,
+        asking_to_delete: Callable[[], Tuple[int, str]],
+        answering: Callable[[str], None],
+        runs: RunRepository,
+        collected: str
+    ) -> None:
+        answering('y')
+
+        status, shown = asking_to_delete()
+
+        assert status == 0
+        assert 'Deleted.' in shown
+        assert runs.get(run_id=collected) is None
+
+    @pytest.mark.parametrize('answer', ['', 'no', 'later', 'Y E S'])
+    def test_anything_but_yes_deletes_nothing(
+        self,
+        asking_to_delete: Callable[[], Tuple[int, str]],
+        answering: Callable[[str], None],
+        runs: RunRepository,
+        collected: str,
+        answer: str
+    ) -> None:
+        # The safe answer is the one somebody gets by pressing return
+        # without reading, and by pressing anything at all without
+        # meaning it.
+        answering(answer)
+
+        asking_to_delete()
+
+        assert runs.get(run_id=collected) is not None
+
+    def test_no_terminal_to_ask_deletes_nothing(
+        self,
+        asking_to_delete: Callable[[], Tuple[int, str]],
+        runs: RunRepository,
+        collected: str
+    ) -> None:
+        # No answer is not yes, and no flag turns it into one: a gate
+        # with a way around it is a gate somebody eventually goes
+        # around (D11).  The reason names the deletion rather than the
+        # send, so a caller is not sent looking for a send that is not
+        # there.
+        status, shown = asking_to_delete()
+
+        assert status == 1
+        assert 'deletes a run' in shown
+        assert runs.get(run_id=collected) is not None
