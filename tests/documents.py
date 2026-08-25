@@ -105,7 +105,8 @@ def fixture_make_event_document() -> Callable[..., dict]:
             'edited': False,
             'roles': [dict(ROLE_DOCUMENT)],
             'duplicateOf': None,
-            'blocking': False
+            'blocking': False,
+            'mayUnassign': False
         }
         document.update(overrides)
 

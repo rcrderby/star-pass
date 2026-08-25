@@ -402,6 +402,21 @@ class EventView(ApiModel):
             'is invisible until volunteers cannot sign up.'
         )
     )
+    may_unassign: bool = Field(
+        description=(
+            'Whether this event may be put back to having no '
+            'opportunity. True where the collection matched no '
+            'category for it, which is the only row unassigned is a '
+            'state of: it is where that row began, so returning it '
+            'there is putting it back rather than breaking it. '
+            'Answered here rather than worked out by a caller for the '
+            'same reason `edited` is - the rule is the one the '
+            '`unassign` operation refuses by, and a control offered '
+            'where the operation would refuse is a control that '
+            'fails. A matched row that should create no shift is '
+            'removed from the run instead.'
+        )
+    )
 
 
 class OpportunityView(ApiModel):

@@ -46,6 +46,7 @@ from star_pass._models import get_shifts_info
 from star_pass._derived import (
     blocks_the_run,
     capping_maximum,
+    may_unassign,
     repeated,
     shift_length
 )
@@ -344,7 +345,8 @@ def _to_event_view(
             for role in event.roles
         ],
         duplicate_of=repeats.get(event.id),
-        blocking=blocks_the_run(event=event)
+        blocking=blocks_the_run(event=event),
+        may_unassign=may_unassign(event=event)
     )
 
 

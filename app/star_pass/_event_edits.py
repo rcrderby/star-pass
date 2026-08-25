@@ -346,11 +346,10 @@ def as_collected(
         goes back to the collected one, the times and the slots follow
         from it, and the roles stop being marked as edited.
 
-        Where the collection matched nothing, the event is put back
-        under the category it is under now.  A row given one *because*
-        nothing matched has an assignment worth keeping, and throwing
-        it away would make undo mean something different on that row
-        than on every other one.
+        Where the collection matched nothing, that is what it goes
+        back to: unassigned, holding the calendar's own times and no
+        roles, which is a state a person can see and choose their way
+        out of again (D29).
 
         Args:
             event (Event):
@@ -373,11 +372,7 @@ def as_collected(
 
     return under_category(
         event=event,
-        category=(
-            event.category
-            if event.collected_category is None
-            else event.collected_category
-        ),
+        category=event.collected_category,
         calendar=calendar,
         helpers=helpers
     )

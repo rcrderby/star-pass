@@ -770,12 +770,10 @@ matched. `_undo` restores it and `was_edited` compares against it.
 `_set_category` computes the new category's times directly rather than by
 calling `as_collected`.
 
-Where the collection matched nothing, the column is empty and an undo
-leaves the row under the category it is under now. That is the same thing
-the rejection below asks for: an assignment made *because* the title
-matched nothing is worth keeping, and a row that had its category taken
-away by an undo would be a row blocking the run again for the reason
-somebody had just dealt with.
+Where the collection matched nothing the column is empty, and an undo puts
+the row back to unassigned - which D29 makes a state a person can see and
+choose. Undo therefore means "back to collection" on every row, with none
+it means something else on.
 
 **Why:** A category change is, by construction, invisible to both.
 `_editing._set_category` (`_editing.py:212`) builds its result by calling
@@ -797,9 +795,13 @@ a control that puts a selection back as collected has to do that for every
 row in the selection, including the rows whose opportunity was changed.
 
 **Rejected:** re-matching the title through the data model inside
-`as_collected` (no schema change, but an event assigned by hand *because*
-its title matched nothing would have that assignment thrown away, so the
-control would mean different things depending on why the row was edited).
+`as_collected`. No schema change, but it answers with the model as it is
+**now** rather than with what the run did, so a model corrected between
+the day a run was collected and the day it is reviewed would have undo
+move rows to categories the collection never chose, and would report rows
+nobody has touched as edited. A run stores the match it actually made for
+exactly this reason already: `match_shift_info` records the kind and the
+keyword, not just the answer.
 
 **Consequence:** schema version 9.
 
@@ -892,6 +894,63 @@ forbid, or a build step, which `web/` rejects by design).
 **Revisit if:** a screen needs state a path cannot carry, or a login
 appears - a cross-site arrival minting a fresh session stops being
 harmless the moment a session means someone is signed in.
+
+---
+
+
+## D29 - Unassigned is a state, not the absence of one
+
+**Decided:** An event the collection matched no category for is shown as
+**Unassigned**, and a person may put a row back to it. The option is
+offered only on rows the collection matched nothing for; a row that
+matched a category has no way to unassign it, and asking for one is
+refused. Unassigning is its own operation, `unassign`, and the core
+answers whether a row may be unassigned (`may_unassign`) the way it
+already answers whether one may be undone.
+
+**Why:** The state existed and had no name. The row drew a prompt reading
+"Select an opportunity", which is an instruction rather than a state, and
+nothing could return a row to it - so the one edit a reviewer makes on a
+row that matched nothing was the one edit with no way back, and D26's
+undo had to carve out an exception for those rows to avoid stranding
+somebody in a state they could not leave. Naming the state and making it
+choosable removes the exception instead of accommodating it.
+
+**Nothing new is stored, and the data model does not change.** Unassigned
+is the name for the category being absent, which is what the row already
+holds. A category in `shift_info.yml` yielding no need IDs would be a
+special case for every reader that walks a category, and an event stored
+under a category the model no longer defines makes its whole run
+unreadable - `category_named` refuses on the path every read takes, which
+is how the officiating-practice merge broke a run mid-phase. The absence
+is already handled correctly everywhere: `blocks_the_run`, `timings_for`,
+the preview and the send all read it.
+
+**A matched row is refused rather than merely not offered the option.**
+The API is the contract (D1), so a rule the screen keeps and the service
+does not is a rule the system does not have. What a matched row that
+should create no shift wants is **Remove**, which takes it out of the
+revision; unassigning it would leave a row behind that blocks the whole
+run, which is a worse Remove.
+
+**Rejected:** a category in the data model (above); letting `set_category`
+carry no category instead of a separate operation - the field is already
+optional in the request shape, so an omitted category and a deliberate
+one would be the same request, and forgetting the field would silently
+unassign a row rather than being refused; offering Unassigned in the bulk
+toolbar - a selection mixing matched and unmatched rows would be refused
+whole, for a reason the person selecting could not have predicted.
+
+**Consequence:** `unassign` joins `OPERATIONS`, `EventView` publishes
+`mayUnassign`, and the contract is regenerated. No schema change. The
+chooser offers the option where the core says it may, which refines D26's
+companion change: the prompt was drawn on rows whose category is null,
+and the option is drawn on rows whose *collected* category is null, so an
+assigned row keeps its way back.
+
+**Revisit if:** a matched row ever needs to stop creating shifts without
+leaving the revision, which would mean Remove and Unassigned are answering
+different questions after all.
 
 ---
 

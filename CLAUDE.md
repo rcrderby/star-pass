@@ -102,11 +102,14 @@ through the Amplify API. It is run once per month.
   than left to whoever notices: a log that depended on somebody
   remembering would hold what people remembered rather than what
   happened, and the count would measure diligence.
-- `app/star_pass/_derived.py` — the four things the `Event` record
+- `app/star_pass/_derived.py` — the things the `Event` record
   deliberately leaves out, worked out from what it does hold: how long
   the shift is, whether an opportunity's maximum shortened it, whether
-  another event in the revision would create the same shift, and
-  whether the event blocks the run for want of a match. Pure functions
+  another event in the revision would create the same shift, whether
+  the event blocks the run for want of a match, and whether it may be
+  put back to unassigned (`may_unassign`, true only where the
+  collection matched nothing, which is the rule `unassign` refuses by
+  and the rule the chooser draws its option from). Pure functions
   over records, in the core rather than the service, so the CLI shows
   the same figures the web interface does. A run's own figures are
   derived in the repository instead, because they are counts over rows
@@ -204,11 +207,11 @@ through the Amplify API. It is run once per month.
   is false where the undo could not be carried out at all — a category
   the data model no longer holds — because that is the refusal the
   operation itself would raise, and a row said to be editable is a row
-  offered a control that fails. Where the collection matched nothing,
-  an undo leaves the row under the category it is under now: an
-  assignment made *because* nothing matched is worth keeping, and
-  throwing it away would make the control mean something different on
-  that row than on every other one.
+  offered a control that fails. Where the collection matched nothing, an
+  undo puts the row back to **Unassigned**, which is where it began -
+  a state with a name, offered in the chooser on that row and on no
+  other, so landing back in it is putting the row back rather than
+  stranding it (D29).
 - `app/star_pass/_opportunities.py` — reading an Amplify opportunity:
   its title, the shifts it already holds, and the public address it is
   published at. Below every caller, because collection stores the
@@ -774,7 +777,10 @@ The notes below are the ones that are not obvious from the commands.
   among them — its need IDs are empty on purpose, so an event under it
   could not become a shift, and offering it would be offering a choice
   the write refuses. A category configured with no usable need ID is
-  left out for the same reason.
+  left out for the same reason. **Unassigned is not one of them** and
+  must not become one: it is the absence of a category rather than a
+  category, and it is reached by the `unassign` operation, which is
+  refused for any row the collection did match (D29).
 - The job event stream reads the job's status *before* its events.
   The other order loses an event written between the two reads: the
   events read would not hold it, and the status read after it would

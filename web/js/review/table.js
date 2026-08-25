@@ -109,18 +109,28 @@ function offsetNote(which, minutes) {
   });
 }
 
+/* What the chooser's unassigned option carries. Not a category key,
+ * so it cannot collide with one: every key the contract publishes
+ * comes from the data model, and the empty string is what a select
+ * gives for an option with no value of its own. */
+const UNASSIGNED = '';
+
 /** Return the opportunity chooser for one event.
  *
  * The options are the calendar's categories: a run holds only the
  * opportunities its own events reached, and the event that needs this
  * chooser is the one that matched nothing.
  *
- * **The prompt is only offered while it is true.** An event with no
- * category needs a chooser that says so and starts on nothing; an
- * event that has one has nothing to say it, and choosing it would ask
- * the service to set a category of `''` - which is refused, because a
- * calendar defines no category by that name. An option that can only
- * fail is not a choice.
+ * **Unassigned is offered where the row may hold it**, which the
+ * server says (`mayUnassign`): a row the collection matched nothing
+ * for started there and can be put back, and a row it did match
+ * cannot - the service refuses that, and an option whose only outcome
+ * is a refusal is not a choice. A matched row that should create no
+ * shift is removed from the run instead.
+ *
+ * The question is what the **collection** matched, not what the row
+ * holds now, so a row somebody has since assigned an opportunity to
+ * keeps its way back.
  *
  * @param {Object} event The event.
  * @param {Object} context What the rows are drawn against.
@@ -131,17 +141,21 @@ function opportunityChooser(event, context) {
     class: 'input',
     disabled: context.busy,
     'aria-label': `Opportunity for ${event.title}`,
-    onchange: (changed) => context.onEdit({
-      op: 'set_category',
-      eventIds: [event.id],
-      category: changed.target.value
-    })
+    onchange: (changed) => context.onEdit(
+      changed.target.value === UNASSIGNED
+        ? { op: 'unassign', eventIds: [event.id] }
+        : {
+          op: 'set_category',
+          eventIds: [event.id],
+          category: changed.target.value
+        }
+    )
   }, [
-    event.category === null
+    event.mayUnassign
       ? el('option', {
-        value: '',
-        text: 'Select an opportunity',
-        selected: true
+        value: UNASSIGNED,
+        text: phrase('row', 'unassigned'),
+        selected: event.category === null
       })
       : null,
     context.categories.map((category) => el('option', {

@@ -167,13 +167,18 @@ class EventOperationRequest(ApiModel):
 
     op: str = Field(
         description=(
-            'What was done. One of: `set_category`, `set_start`, '
-            '`set_end`, `set_slots`, `nudge`, `reset_slots`, `remove`, '
-            '`undo`.\n\n'
+            'What was done. One of: `set_category`, `unassign`, '
+            '`set_start`, `set_end`, `set_slots`, `nudge`, '
+            '`reset_slots`, `remove`, `undo`.\n\n'
             '`set_start` and `set_end` name the **shift** times, which '
             'are what reaches Amplify. An event\'s calendar times '
             'never move: they are what the calendar said, and they are '
-            'what `undo` works back from.'
+            'what `undo` works back from.\n\n'
+            '`unassign` puts a row back to having no opportunity, and '
+            'is refused for any event whose `mayUnassign` is false - '
+            'unassigned is where a row starts when the collection '
+            'matched nothing, not somewhere a matched row can be put. '
+            'A matched row that should create no shift is `remove`d.'
         ),
         examples=['nudge']
     )

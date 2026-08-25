@@ -264,6 +264,34 @@ def repeated(
     return repeats
 
 
+def may_unassign(
+        event: Event
+) -> bool:
+    """ Return whether an event can be put back to unassigned.
+
+        True where the collection matched no category for the event,
+        which is the only row unassigned is a state of: it is where
+        that row began, so returning it there is putting it back
+        rather than breaking it.
+
+        A row the collection did match has no way back to unassigned
+        and asking for one is refused.  What a matched row that should
+        create no shift wants is to be removed from the revision;
+        unassigning it would leave a row behind blocking the whole run
+        (D29).
+
+        Args:
+            event (Event):
+                The event to examine.
+
+        Returns:
+            allowed (bool):
+                Whether the row may be unassigned.
+    """
+
+    return event.collected_category is None
+
+
 def blocks_the_run(
         event: Event
 ) -> bool:
