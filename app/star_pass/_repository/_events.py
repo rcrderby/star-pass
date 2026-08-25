@@ -83,6 +83,7 @@ def _to_event(
         shift_start=row['shift_start'],
         shift_end=row['shift_end'],
         category=row['category'],
+        collected_category=row['collected_category'],
         match=match,
         added_by_hand=bool(row['added_by_hand']),
         roles=roles
@@ -127,7 +128,8 @@ def _event_values(
         match.kind if match is not None else None,
         match.keyword if match is not None else None,
         match.score if match is not None else None,
-        event.added_by_hand
+        event.added_by_hand,
+        event.collected_category
     )
 
 

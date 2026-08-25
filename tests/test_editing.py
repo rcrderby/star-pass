@@ -11,7 +11,7 @@
 # pylint: disable=missing-function-docstring,missing-class-docstring
 
 # Imports - Python Standard Library
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional
 
 # Imports - Third-Party
 import pytest
@@ -20,6 +20,7 @@ import pytest
 from conftest import (
     a_category,
     a_need,
+    an_event as event_record,
     OTHER_SHIFT_NEED_ID as OTHER_NEED_ID,
     SHIFT_CALENDAR as CALENDAR,
     SHIFT_NEED_ID as NEED_ID
@@ -63,30 +64,60 @@ def a_role(
     )
 
 
-def an_event(
-    *,
-    identifier: str = 'gcal-1',
-    title: str = 'Wheels of Justice vs Rose City',
-    shift_start: str = '19:15',
-    shift_end: str = '21:30',
-    category: Optional[str] = 'adult_game',
-    roles: Optional[Tuple[EventRole, ...]] = None
-) -> Event:
-    # The calendar times are 19:00 to 21:00, so the default offsets
-    # (+15, +30) reproduce the shift times above.  A test that changes
-    # the times can therefore say what an undo must restore.
-    return Event(
-        id=identifier,
-        title=title,
-        date='2026-09-03',
-        calendar_start='19:00',
-        calendar_end='21:00',
-        shift_start=shift_start,
-        shift_end=shift_end,
-        category=category,
-        match=Match(kind='MATCH_KIND_KEYWORD', keyword='wheels'),
-        roles=(a_role(),) if roles is None else roles
-    )
+def an_event(**overrides: Any) -> Event:
+    """ Return the event these tests are written against.
+
+        The day, the hours and the rule about what the collection
+        matched come from the factory beside every other test's
+        events; what is named here is what makes this file's event
+        its own -- a title that matched a keyword, and the category
+        and role the model these tests install asks for.
+
+        The calendar times are 19:00 to 21:00, so the default offsets
+        (+15, +30) reproduce shift times of 19:15 to 21:30.  A test
+        that changes the times can therefore say what an undo must
+        restore.
+    """
+    fields: dict = {
+        'id': 'gcal-1',
+        'title': 'Wheels of Justice vs Rose City',
+        'category': 'adult_game',
+        'match': Match(kind='MATCH_KIND_KEYWORD', keyword='wheels'),
+        'roles': (a_role(),)
+    }
+    fields.update(overrides)
+
+    return event_record(**fields)
+
+
+def two_categories(
+    offset_start: int = 15,
+    offset_end: int = 30,
+    max_length: Optional[int] = 165
+) -> Dict[str, Any]:
+    """ Return a model with the collected category and one more.
+
+        A category change needs somewhere to change to, and every test
+        of one wants the same pair: the category the file's event was
+        collected under, and a second naming a different opportunity.
+        The second's timing is what a test varies, because a category
+        that times the event as the first one does cannot show that
+        the times were worked out again.
+    """
+    return {
+        'adult_game': a_category(need_ids=[a_need()]),
+        'junior_game': a_category(
+            need_ids=[
+                a_need(
+                    identifier=OTHER_NEED_ID,
+                    slots=6,
+                    offset_start=offset_start,
+                    offset_end=offset_end,
+                    max_length=max_length
+                )
+            ]
+        )
+    }
 
 
 def an_opportunity(
@@ -417,12 +448,7 @@ class TestSettingTheCategory:
                     category='junior_game'
                 )
             ],
-            categories={
-                'adult_game': a_category(need_ids=[a_need()]),
-                'junior_game': a_category(
-                    need_ids=[a_need(identifier=OTHER_NEED_ID, slots=6)]
-                )
-            }
+            categories=two_categories()
         )
 
         assert result.events[0].category == 'junior_game'
@@ -442,14 +468,11 @@ class TestSettingTheCategory:
                     category='junior_game'
                 )
             ],
-            categories={
-                'adult_game': a_category(need_ids=[a_need()]),
-                'junior_game': a_category(
-                    need_ids=[
-                        a_need(offset_start=0, offset_end=0, max_length=None)
-                    ]
-                )
-            }
+            categories=two_categories(
+                offset_start=0,
+                offset_end=0,
+                max_length=None
+            )
         )
 
         assert result.events[0].shift_start == '19:00'
@@ -466,13 +489,28 @@ class TestSettingTheCategory:
                     category='junior_game'
                 )
             ],
-            categories={
-                'adult_game': a_category(need_ids=[a_need()]),
-                'junior_game': a_category(need_ids=[a_need()])
-            }
+            categories=two_categories()
         )
 
+        assert an_event().match is not None
         assert result.events[0].match is None
+
+    def test_what_the_collection_matched_is_kept(self, edit):
+        # The one thing a change of category cannot recompute.  Left
+        # as it is, the row can say it was changed and an undo has
+        # somewhere to put it back to.
+        result = edit(
+            [
+                Operation(
+                    op=OP_SET_CATEGORY,
+                    event_ids=('gcal-1',),
+                    category='junior_game'
+                )
+            ],
+            categories=two_categories()
+        )
+
+        assert result.events[0].collected_category == 'adult_game'
 
     def test_a_category_the_calendar_does_not_define_is_refused(self, edit):
         with pytest.raises(ValidationError) as error:
@@ -513,6 +551,75 @@ class TestUndo:
             a_role(need_id=NEED_ID, slots=12, edited=False),
         )
 
+    def test_the_category_goes_back_to_the_collected_one(self, edit):
+        # With the times and the volunteers that category asks for:
+        # putting the row back under it and leaving it timed by the
+        # one somebody chose would be a row collection never produced.
+        chosen = an_event(
+            category='junior_game',
+            collected_category='adult_game',
+            roles=(a_role(need_id=OTHER_NEED_ID, slots=6),),
+            shift_start='19:00',
+            shift_end='21:00'
+        )
+
+        result = edit(
+            [Operation(op=OP_UNDO, event_ids=('gcal-1',))],
+            events=[chosen],
+            categories=two_categories(
+                offset_start=0,
+                offset_end=0,
+                max_length=None
+            )
+        )
+
+        assert result.events[0].category == 'adult_game'
+        assert result.events[0].roles == (a_role(),)
+        assert result.events[0].shift_start == '19:15'
+        assert result.events[0].shift_end == '21:30'
+
+    def test_a_category_change_and_an_undo_in_one_call_come_back(
+        self,
+        edit
+    ):
+        # The round trip, through the operations a reviewer presses
+        # rather than through an event written out by hand.
+        result = edit(
+            [
+                Operation(
+                    op=OP_SET_CATEGORY,
+                    event_ids=('gcal-1',),
+                    category='junior_game'
+                ),
+                Operation(op=OP_UNDO, event_ids=('gcal-1',))
+            ],
+            categories=two_categories()
+        )
+
+        assert result.events[0].category == 'adult_game'
+        assert result.events[0].roles == (a_role(),)
+
+    def test_an_assignment_made_where_nothing_matched_is_kept(self, edit):
+        # A row given a category *because* its title matched nothing
+        # has an assignment worth keeping: there is no collected
+        # category to go back to, and throwing the assignment away
+        # would leave the run blocked by the row somebody just fixed.
+        assigned = an_event(
+            category='adult_game',
+            collected_category=None,
+            shift_start='08:00',
+            shift_end='09:00'
+        )
+
+        result = edit(
+            [Operation(op=OP_UNDO, event_ids=('gcal-1',))],
+            events=[assigned]
+        )
+
+        assert result.events[0].category == 'adult_game'
+        assert result.events[0].shift_start == '19:15'
+        assert result.events[0].shift_end == '21:30'
+
     def test_an_undo_after_an_edit_in_the_same_call_undoes_it(self, edit):
         # Operations are applied in order, each seeing what the one
         # before produced.
@@ -533,9 +640,9 @@ class TestRemoving:
 
     def test_the_others_stay_in_their_order(self, edit):
         events = [
-            an_event(identifier='gcal-1'),
-            an_event(identifier='gcal-2', title='Axles of Evil'),
-            an_event(identifier='gcal-3', title='Break Neck Betties')
+            an_event(id='gcal-1'),
+            an_event(id='gcal-2', title='Axles of Evil'),
+            an_event(id='gcal-3', title='Break Neck Betties')
         ]
 
         result = edit(
@@ -596,8 +703,8 @@ class TestWhatIsRefused:
         # The call is applied whole or not at all: a bulk action that
         # would break one row of thirty leaves all thirty alone.
         events = [
-            an_event(identifier='gcal-1'),
-            an_event(identifier='gcal-2', title='Axles of Evil')
+            an_event(id='gcal-1'),
+            an_event(id='gcal-2', title='Axles of Evil')
         ]
 
         with pytest.raises(ValidationError):
@@ -642,8 +749,8 @@ class TestWhatIsLogged:
 
     def test_a_selection_is_counted(self, edit):
         events = [
-            an_event(identifier='gcal-1'),
-            an_event(identifier='gcal-2', title='Axles of Evil')
+            an_event(id='gcal-1'),
+            an_event(id='gcal-2', title='Axles of Evil')
         ]
 
         result = edit(
@@ -775,6 +882,37 @@ class TestWhetherAnEventHasBeenEdited:
                 roles=(a_role(need_id=OTHER_NEED_ID, slots=12),)
             )
         ) is True
+
+    def test_a_changed_category_is_edited(self, ask_if_edited):
+        # The most common edit on the review screen, and the one that
+        # said nothing about itself while an event held only the
+        # category it is under now.  The times and the volunteers
+        # agree with the category it is under, so nothing but the
+        # collected category can say the row was changed.
+        assert ask_if_edited(
+            an_event(
+                category='junior_game',
+                collected_category='adult_game',
+                roles=(a_role(need_id=OTHER_NEED_ID, slots=6),),
+                shift_start='19:00',
+                shift_end='21:00'
+            ),
+            categories=two_categories(
+                offset_start=0,
+                offset_end=0,
+                max_length=None
+            )
+        ) is True
+
+    def test_a_category_given_where_nothing_matched_is_not_edited(
+        self,
+        ask_if_edited
+    ):
+        # Undo keeps that assignment, so there is nothing it would
+        # change and no undo to offer.
+        assert ask_if_edited(
+            an_event(collected_category=None)
+        ) is False
 
     def test_a_category_the_model_no_longer_holds_is_not_edited(
         self,

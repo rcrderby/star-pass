@@ -189,9 +189,14 @@ through the Amplify API. It is run once per month.
   times; the calendar times never move**: they are what the calendar
   said, so a run can always say what it started from. That is what
   lets an undo recompute the original from the calendar times and the
-  category's offsets rather than storing a copy of it. A maximum does
-  not pull a hand-set end time back in — a maximum shortens what the
-  offsets produced, and a person setting a time has overridden that.
+  offsets of the category the collection matched rather than storing a
+  copy of it. A maximum does not pull a hand-set end time back in — a
+  maximum shortens what the offsets produced, and a person setting a
+  time has overridden that. **The category is the one thing an undo
+  cannot recompute** — the title matched it under a data model that may
+  since have changed — so the event carries it (D26), and
+  `under_category` is what places an event under one, for a reviewer
+  choosing a different opportunity and for the undo alike.
   The same arithmetic answers whether an event *has* been edited
   (`was_edited`), which is the `edited` an event is published with and
   what the review screen offers an undo on: nothing stored says so, and
@@ -199,7 +204,11 @@ through the Amplify API. It is run once per month.
   is false where the undo could not be carried out at all — a category
   the data model no longer holds — because that is the refusal the
   operation itself would raise, and a row said to be editable is a row
-  offered a control that fails.
+  offered a control that fails. Where the collection matched nothing,
+  an undo leaves the row under the category it is under now: an
+  assignment made *because* nothing matched is worth keeping, and
+  throwing it away would make the control mean something different on
+  that row than on every other one.
 - `app/star_pass/_opportunities.py` — reading an Amplify opportunity:
   its title, the shifts it already holds, and the public address it is
   published at. Below every caller, because collection stores the

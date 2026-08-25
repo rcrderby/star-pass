@@ -40,6 +40,7 @@ from ._event_edits import (
     required,
     slots_reset,
     timed,
+    under_category,
     with_slots
 )
 from ._database import transaction
@@ -214,7 +215,12 @@ def _set_category(
         events: Sequence[Event],
         context: EditContext
 ) -> '_Result':
-    """ Put the named events under a category a person chose. """
+    """ Put the named events under a category a person chose.
+
+        What the collection matched is left as it is, so the row can
+        say it was changed and an undo has somewhere to put it back
+        to (D26).
+    """
 
     category = required(
         value=operation.category,
@@ -224,8 +230,9 @@ def _set_category(
 
     return _Result(
         changed={
-            event.id: as_collected(
-                event=replace(event, category=category, match=None),
+            event.id: under_category(
+                event=replace(event, match=None),
+                category=category,
                 calendar=context.calendar,
                 helpers=context.helpers
             )

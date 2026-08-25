@@ -53,7 +53,7 @@ DATABASE_BUSY_TIMEOUT = _defaults.DATABASE_BUSY_TIMEOUT
 # forward.  A later one means the file was written by a newer version
 # of the application, which is a deployment problem rather than
 # something to guess at.
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 # Pragmas applied to every connection.  'foreign_keys' is off by
 # default and is per-connection rather than stored in the file, so
@@ -124,20 +124,21 @@ SCHEMA_STATEMENTS = (
     """,
     """
     CREATE TABLE IF NOT EXISTS events (
-        run_id          TEXT    NOT NULL,
-        revision        INTEGER NOT NULL,
-        id              TEXT    NOT NULL,
-        title           TEXT    NOT NULL,
-        date            TEXT    NOT NULL,
-        calendar_start  TEXT    NOT NULL,
-        calendar_end    TEXT    NOT NULL,
-        shift_start     TEXT    NOT NULL,
-        shift_end       TEXT    NOT NULL,
-        category        TEXT,
-        match_kind      TEXT,
-        match_keyword   TEXT,
-        match_score     INTEGER,
-        added_by_hand   INTEGER NOT NULL,
+        run_id              TEXT    NOT NULL,
+        revision            INTEGER NOT NULL,
+        id                  TEXT    NOT NULL,
+        title               TEXT    NOT NULL,
+        date                TEXT    NOT NULL,
+        calendar_start      TEXT    NOT NULL,
+        calendar_end        TEXT    NOT NULL,
+        shift_start         TEXT    NOT NULL,
+        shift_end           TEXT    NOT NULL,
+        category            TEXT,
+        match_kind          TEXT,
+        match_keyword       TEXT,
+        match_score         INTEGER,
+        added_by_hand       INTEGER NOT NULL,
+        collected_category  TEXT,
         PRIMARY KEY (run_id, revision, id),
         FOREIGN KEY (run_id, revision)
             REFERENCES revisions (run_id, number) ON DELETE CASCADE

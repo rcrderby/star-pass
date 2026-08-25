@@ -770,6 +770,13 @@ matched. `_undo` restores it and `was_edited` compares against it.
 `_set_category` computes the new category's times directly rather than by
 calling `as_collected`.
 
+Where the collection matched nothing, the column is empty and an undo
+leaves the row under the category it is under now. That is the same thing
+the rejection below asks for: an assignment made *because* the title
+matched nothing is worth keeping, and a row that had its category taken
+away by an undo would be a row blocking the run again for the reason
+somebody had just dealt with.
+
 **Why:** A category change is, by construction, invisible to both.
 `_editing._set_category` (`_editing.py:212`) builds its result by calling
 `as_collected` on the event it has just changed, so the result is a fixed

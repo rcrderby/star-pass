@@ -17,7 +17,8 @@ from star_pass._exceptions import (
     UpstreamError,
     ValidationError
 )
-from star_pass._repository import RevisionRepository
+from star_pass._records import Event
+from star_pass._repository import EventRepository, RevisionRepository
 
 # Constants
 EXPECTED_TABLES = {
@@ -50,7 +51,8 @@ EARLIER_VERSIONS = (
     (2, ('idempotency_keys', 'sent_shifts'), ()),
     (3, (), (('jobs', 'held_by'),)),
     (4, ('uncollected_events',), ()),
-    (5, ('unmatched_titles',), ())
+    (5, ('unmatched_titles',), ()),
+    (8, (), (('events', 'collected_category'),))
 )
 
 
@@ -523,3 +525,133 @@ class TestReadingTheOldRevisionLabels:
         connection.close()
 
         assert [row['number'] for row in rows] == [1, 2, 3, 4, 14, 15]
+
+
+# An event as version 8 held one, which is every column of the current
+# table but the one version 9 adds.  The two rows are the two things a
+# collection produces: a title that reached a category, and one that
+# reached nothing and blocks the run until somebody assigns it a
+# category by hand.
+INSERT_EVENT = (
+    'INSERT INTO events (run_id, revision, id, title, date, '
+    'calendar_start, calendar_end, shift_start, shift_end, category, '
+    'added_by_hand) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 0)'
+)
+
+VERSION_EIGHT_EVENTS = (
+    ('gcal-1', 'Adult Scrimmages', 'scrimmage'),
+    ('gcal-2', 'Board Retreat', None)
+)
+
+
+@pytest.fixture(name='uncategorized_database')
+def fixture_uncategorized_database(
+    database_path: Path
+) -> Path:
+    """ Return a database at version 8, holding events with no record
+        of what the collection matched.
+
+        Wound back rather than written out: version 9 only adds a
+        column, so dropping it leaves the table in exactly the shape
+        the migration has to find.
+    """
+    connection = _database.connect(path=database_path)
+
+    insert_run(connection=connection, run_id='run-1')
+    _database.execute(
+        connection=connection,
+        statement=(
+            'INSERT INTO revisions (run_id, number, created_at, kind) '
+            "VALUES ('run-1', 1, '2026-09-01T00:00:00+00:00', "
+            "'collected')"
+        )
+    )
+
+    for identifier, title, category in VERSION_EIGHT_EVENTS:
+        _database.execute(
+            connection=connection,
+            statement=INSERT_EVENT,
+            parameters=(
+                'run-1',
+                identifier,
+                title,
+                '2026-09-03',
+                '19:00',
+                '21:00',
+                '19:15',
+                '21:30',
+                category
+            )
+        )
+
+    _database.execute(
+        connection=connection,
+        statement='ALTER TABLE events DROP COLUMN collected_category'
+    )
+    _database.execute(
+        connection=connection,
+        statement='PRAGMA user_version = 8'
+    )
+    connection.close()
+
+    return database_path
+
+
+class TestFillingInWhatTheCollectionMatched:
+    def test_each_event_takes_the_category_it_is_under(
+        self,
+        uncategorized_database: Path
+    ) -> None:
+        # The nearest true thing a database can say about rows written
+        # before the column existed: an unedited event is under what
+        # it was collected under, and an edited one has nothing left
+        # that says what that was.
+        connection = _database.connect(path=uncategorized_database)
+        rows = _database.query(
+            connection=connection,
+            statement=(
+                'SELECT id, category, collected_category FROM events '
+                'ORDER BY id'
+            )
+        )
+        connection.close()
+
+        assert [
+            (row['id'], row['collected_category']) for row in rows
+        ] == [
+            (identifier, category)
+            for identifier, _title, category in VERSION_EIGHT_EVENTS
+        ]
+
+    def test_an_event_can_still_be_written(
+        self,
+        uncategorized_database: Path
+    ) -> None:
+        # The column is nullable, so nothing about the fill can stop
+        # an insert that names it.
+        connection = _database.connect(path=uncategorized_database)
+
+        EventRepository(connection=connection).add(
+            run_id='run-1',
+            revision=1,
+            event=Event(
+                id='gcal-3',
+                title='Junior Scrimmages',
+                date='2026-09-04',
+                calendar_start='17:00',
+                calendar_end='19:00',
+                shift_start='17:00',
+                shift_end='19:00',
+                category='junior_scrimmage',
+                collected_category='junior_scrimmage'
+            )
+        )
+
+        stored = EventRepository(connection=connection).get(
+            run_id='run-1',
+            revision=1,
+            event_id='gcal-3'
+        )
+        connection.close()
+
+        assert stored.collected_category == 'junior_scrimmage'

@@ -10,8 +10,11 @@
     said, and a run keeps them so it can always say what it started
     from.  The shift times are what reaches Amplify, and they are what
     a reviewer sets, nudges and resets.  That is what lets an undo
-    recompute the original from the calendar times and the category's
-    offsets rather than storing a copy of it.
+    recompute the original from the calendar times and the offsets of
+    the category the collection matched, rather than storing a copy of
+    it.  The category is the one thing an undo cannot recompute -- the
+    title matched it under a data model that may since have changed --
+    so the event carries it (D26).
 """
 
 # Imports - Python Standard Library
@@ -246,6 +249,89 @@ def timings_for(
     )
 
 
+def under_category(
+        event: Event,
+        category: Optional[str],
+        calendar: str,
+        helpers: Helpers
+) -> Event:
+    """ Return an event placed under a category.
+
+        Its times and its roles come from the category rather than
+        from what the event already holds, so putting an event under
+        one is the same arithmetic wherever it is asked for: a
+        reviewer choosing a different opportunity, and an undo putting
+        the row back under the one the collection matched.
+
+        The shift times are recomputed from the calendar times, which
+        never move, so a category change lands on the times collection
+        would have produced for that category rather than on the times
+        the previous one produced.
+
+        Args:
+            event (Event):
+                The event as it stands.
+
+            category (str, optional):
+                The category to place it under.  None leaves it
+                serving nothing, which is what an event the data model
+                matched nothing for holds.
+
+            calendar (str):
+                Calendar the run was collected from.
+
+            helpers (Helpers):
+                Where the data model is read through.
+
+        Raises:
+            ValidationError:
+                If the category is not one the calendar defines, or
+                the event cannot become a correct shift under it.
+
+        Returns:
+            event (Event):
+                The event, under that category.
+    """
+
+    placed = replace(event, category=category)
+
+    timings = timings_for(
+        event=placed,
+        calendar=calendar,
+        helpers=helpers
+    )
+
+    if not timings:
+        return replace(
+            placed,
+            shift_start=placed.calendar_start,
+            shift_end=placed.calendar_end,
+            roles=()
+        )
+
+    start = datetime.strptime(
+        f'{placed.date} {placed.calendar_start}',
+        f'{ISO_DATE_FORMAT} {SIMPLE_TIME_FORMAT}'
+    )
+    end = datetime.strptime(
+        f'{placed.date} {placed.calendar_end}',
+        f'{ISO_DATE_FORMAT} {SIMPLE_TIME_FORMAT}'
+    )
+    shift_start, shift_end = shift_times(
+        start=start,
+        end=end,
+        timings=timings,
+        title=placed.title
+    )
+
+    return replace(
+        placed,
+        shift_start=shift_start,
+        shift_end=shift_end,
+        roles=tuple(timings)
+    )
+
+
 def as_collected(
         event: Event,
         calendar: str,
@@ -253,11 +339,18 @@ def as_collected(
 ) -> Event:
     """ Return an event with its edits undone.
 
-        Recomputed from the calendar times and the category rather than
-        restored from a stored copy: the calendar times never move, so
-        the same rules that produced the event at collection produce it
-        again here.  Slots go back to what the category asks for, and
-        stop being marked as edited.
+        Recomputed from the calendar times and the category the
+        collection matched rather than restored from a stored copy:
+        the calendar times never move, so the same rules that produced
+        the event at collection produce it again here.  The category
+        goes back to the collected one, the times and the slots follow
+        from it, and the roles stop being marked as edited.
+
+        Where the collection matched nothing, the event is put back
+        under the category it is under now.  A row given one *because*
+        nothing matched has an assignment worth keeping, and throwing
+        it away would make undo mean something different on that row
+        than on every other one.
 
         Args:
             event (Event):
@@ -278,40 +371,15 @@ def as_collected(
                 The event as collection would produce it now.
     """
 
-    timings = timings_for(
+    return under_category(
         event=event,
+        category=(
+            event.category
+            if event.collected_category is None
+            else event.collected_category
+        ),
         calendar=calendar,
         helpers=helpers
-    )
-
-    if not timings:
-        return replace(
-            event,
-            shift_start=event.calendar_start,
-            shift_end=event.calendar_end,
-            roles=()
-        )
-
-    start = datetime.strptime(
-        f'{event.date} {event.calendar_start}',
-        f'{ISO_DATE_FORMAT} {SIMPLE_TIME_FORMAT}'
-    )
-    end = datetime.strptime(
-        f'{event.date} {event.calendar_end}',
-        f'{ISO_DATE_FORMAT} {SIMPLE_TIME_FORMAT}'
-    )
-    shift_start, shift_end = shift_times(
-        start=start,
-        end=end,
-        timings=timings,
-        title=event.title
-    )
-
-    return replace(
-        event,
-        shift_start=shift_start,
-        shift_end=shift_end,
-        roles=tuple(timings)
     )
 
 

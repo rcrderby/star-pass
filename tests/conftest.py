@@ -587,37 +587,47 @@ def fixture_working_on(
     return start
 
 
+def an_event(**overrides: Any) -> Event:
+    """ Return an event, replacing any field named in 'overrides'.
+
+        The day and the hours are stated once for every test that
+        needs an event, because a test naming times of its own says
+        nothing more and one that reproduces these says it twice.
+
+        The category the collection matched follows the category
+        unless a test names it, because that is what a collection
+        produces and what leaves a row saying nothing was changed.
+    """
+    fields: dict = {
+        'id': 'event-1',
+        'title': 'Adult Scrimmages',
+        'date': '2026-09-03',
+        'calendar_start': '19:00',
+        'calendar_end': '21:00',
+        'shift_start': '19:15',
+        'shift_end': '21:30',
+        'category': 'scrimmage',
+        'roles': (
+            EventRole(
+                need_id='905196',
+                slots=4,
+                offset_start=15,
+                offset_end=30,
+                max_length=165,
+                default_slots=4
+            ),
+        )
+    }
+    fields.update(overrides)
+    fields.setdefault('collected_category', fields['category'])
+
+    return Event(**fields)
+
+
 @pytest.fixture(name='make_event')
 def fixture_make_event() -> Callable[..., Event]:
     """ Return a factory building an event, with fields overridable. """
-
-    def build(**overrides: Any) -> Event:
-        """ Return an event, replacing any field named in 'overrides'. """
-        fields: dict = {
-            'id': 'event-1',
-            'title': 'Adult Scrimmages',
-            'date': '2026-09-03',
-            'calendar_start': '19:00',
-            'calendar_end': '21:00',
-            'shift_start': '19:15',
-            'shift_end': '21:30',
-            'category': 'scrimmage',
-            'roles': (
-                EventRole(
-                    need_id='905196',
-                    slots=4,
-                    offset_start=15,
-                    offset_end=30,
-                    max_length=165,
-                    default_slots=4
-                ),
-            )
-        }
-        fields.update(overrides)
-
-        return Event(**fields)
-
-    return build
+    return an_event
 
 
 @pytest.fixture(name='matching_model')
