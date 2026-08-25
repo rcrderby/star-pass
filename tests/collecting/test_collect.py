@@ -33,6 +33,7 @@ from star_pass._collect import collect
 from star_pass._exceptions import ValidationError
 from star_pass._reading import changes_in_current, read_run_history
 from star_pass._records import (
+    RUN_STATUS_FAILED,
     MATCH_KIND_KEYWORD,
     REVISION_COLLECTED,
     REVISION_RECOLLECTED,
@@ -605,7 +606,61 @@ class TestWhatStopsTheRun:
         assert revisions.list_all(run_id=collecting) == []
         assert runs.get(
             run_id=collecting
-        ).status == RUN_STATUS_COLLECTING
+        ).status == RUN_STATUS_FAILED
+
+    def test_a_first_collection_that_stopped_can_be_tried_again(
+        self,
+        collect_run: Callable[..., Any],
+        collecting: str,
+        runs: RunRepository
+    ) -> None:
+        # 'failed' is where such a run comes to rest, not somewhere it
+        # is stuck: collecting the window again is how it is recovered
+        # (D31), and nothing about the failed attempt is in the way.
+        with pytest.raises(ValidationError):
+            collect_run(
+                items=[an_item()],
+                categories={
+                    'adult_game': a_category(
+                        need_ids=[
+                            a_need(offset_start=0, offset_end=-180)
+                        ]
+                    )
+                }
+            )
+
+        collect_run(items=[an_item()])
+
+        assert runs.get(run_id=collecting).status == RUN_STATUS_UNSENT
+
+    def test_a_recollection_that_stopped_goes_back_to_its_revision(
+        self,
+        collect_run: Callable[..., Any],
+        collecting: str,
+        runs: RunRepository,
+        revisions: RevisionRepository
+    ) -> None:
+        # What the failed recollection was working over is complete
+        # and still sendable, so putting the run in a failure state
+        # would strand it -- and 'why_not_send' refuses a run that
+        # says it is collecting, so leaving it there made an otherwise
+        # sendable run permanently unsendable (D31).
+        collect_run(items=[an_item()])
+
+        with pytest.raises(ValidationError):
+            collect_run(
+                items=[an_item()],
+                categories={
+                    'adult_game': a_category(
+                        need_ids=[
+                            a_need(offset_start=0, offset_end=-180)
+                        ]
+                    )
+                }
+            )
+
+        assert runs.get(run_id=collecting).status == RUN_STATUS_UNSENT
+        assert len(revisions.list_all(run_id=collecting)) == 1
 
     def test_a_failure_part_way_through_the_write_stores_nothing(
         self,

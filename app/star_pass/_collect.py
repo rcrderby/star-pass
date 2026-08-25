@@ -56,6 +56,7 @@ from ._records import (
     Event,
     Opportunity,
     Run,
+    RUN_STATUS_FAILED,
     RUN_STATUS_UNSENT,
     UncollectedEvent,
     UNCOLLECTED_SEARCH
@@ -621,6 +622,97 @@ def collect(
         logger.error(message)
         raise ValidationError(message)
 
+    # Whatever went wrong, the run must not be left saying it is being
+    # collected (D31).  Broad on purpose: a status corrected only for
+    # the failures somebody thought of is a status that strands the
+    # run on the first one nobody did.  The failure itself is the
+    # caller's to report, so it goes on up.
+    try:
+        return _into(
+            connection=connection,
+            run=run,
+            reporter=reporter,
+            principal_id=principal_id
+        )
+    except BaseException:  # pylint: disable=broad-except
+        runs.set_status(run_id=run.id, status=_after_failing(run=run))
+        raise
+
+
+def _after_failing(
+        run: Run
+) -> str:
+    """ Return the status a run takes when its collection fails.
+
+        The run answers which case this is, because the caller cannot:
+        by the time the work runs, the status has already been set to
+        'collecting', and the one it held before that is gone.
+
+        A run that has never completed a collection has no revision,
+        so there is nothing for it to go back to and 'failed' is where
+        it comes to rest.  A recollection is working over at least one
+        revision, which is still complete and still sendable, so the
+        run goes back to holding it.  'unsent' is not a guess:
+        'why_not_recollect' refuses any run already sent, so that is
+        the only status a recollection can have begun from.
+
+        Args:
+            run (Run):
+                The run as it stood when the collection began.
+
+        Returns:
+            status (str):
+                'failed', or 'unsent' where a revision survives.
+    """
+
+    if run.current_revision == 0:
+        return RUN_STATUS_FAILED
+
+    return RUN_STATUS_UNSENT
+
+
+def _into(
+        connection: sqlite3.Connection,
+        run: Run,
+        reporter: Reporter,
+        principal_id: str
+) -> Run:
+    """ Collect the run's window into it, and return what it holds.
+
+        The body of 'collect', which holds it to one job: correcting
+        the status when this raises.
+
+        Args:
+            connection (sqlite3.Connection):
+                The database to write to.
+
+            run (Run):
+                The run being collected.
+
+            reporter (Reporter):
+                Where progress is described.
+
+            principal_id (str):
+                Who asked for the collection (D13).
+
+        Raises:
+            ValidationError:
+                If an event cannot become a correct shift.
+
+            ConfigurationError:
+                If the run names a calendar the deployment has not
+                configured.
+
+            UpstreamError:
+                If the calendar or an opportunity cannot be read.
+
+        Returns:
+            run (Run):
+                The run as it now stands.
+    """
+
+    runs = RunRepository(connection=connection)
+    run_id = run.id
     timezone = gcal_timezone()
     items, uncollected = _window_contents(
         run=run,

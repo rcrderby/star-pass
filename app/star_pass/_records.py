@@ -36,19 +36,29 @@ from typing import Any, Dict, Optional, Tuple
 # one question D16 says must have only one.
 ShiftIdentity = Tuple[str, str, str, str]
 
-# Statuses a run moves through, in the order it moves through them.
-# 'collecting' is set when the run is created, before any event exists;
-# 'partly_sent' is reachable because a send that fails part way through
-# leaves shifts in Amplify that cannot be taken back.
+# Statuses a run holds.  The first four are the order it moves through
+# them: 'collecting' is set when the run is created, before any event
+# exists, and 'partly_sent' is reachable because a send that fails part
+# way through leaves shifts in Amplify that cannot be taken back.
+#
+# 'failed' is not on that path.  It is where a run whose **first**
+# collection raised comes to rest (D31), and it is terminal only in the
+# sense that nothing moves out of it by itself: collecting the window
+# again is how such a run is recovered, and it may not be sent, because
+# it holds no revision and a send of nothing would still stamp
+# 'sent_at'.  A recollection that fails goes back to 'unsent' instead,
+# because what it was working over is still there.
 RUN_STATUS_COLLECTING = 'collecting'
 RUN_STATUS_UNSENT = 'unsent'
 RUN_STATUS_PARTLY_SENT = 'partly_sent'
 RUN_STATUS_SENT = 'sent'
+RUN_STATUS_FAILED = 'failed'
 RUN_STATUSES = (
     RUN_STATUS_COLLECTING,
     RUN_STATUS_UNSENT,
     RUN_STATUS_PARTLY_SENT,
-    RUN_STATUS_SENT
+    RUN_STATUS_SENT,
+    RUN_STATUS_FAILED
 )
 
 # Kinds of title match, from 'Helpers.search_shift_info': an alias

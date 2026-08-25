@@ -28,6 +28,7 @@ from star_pass._records import (
     JOB_STATUS_INTERRUPTED,
     Run,
     RUN_STATUS_COLLECTING,
+    RUN_STATUS_FAILED,
     RUN_STATUSES_SENT
 )
 from star_pass._send import blocked_message  # noqa: F401
@@ -158,6 +159,27 @@ def has_moved(
     )
 
 
+def collection_failed(
+        run_id: str
+) -> str:
+    """ Return what to say when a run's collection never finished.
+
+        Args:
+            run_id (str):
+                Run the caller asked about.
+
+        Returns:
+            message (str):
+                What to tell them.
+    """
+
+    return (
+        f'Run "{run_id}" holds nothing: its collection failed before it '
+        'stored anything, so there are no shifts to send. Collect its '
+        'window again, or delete the run.'
+    )
+
+
 def still_collecting(
         run_id: str
 ) -> str:
@@ -266,6 +288,14 @@ def why_not_send(
 
     if run.status == RUN_STATUS_COLLECTING:
         return still_collecting(run_id=run.id)
+
+    # Refused rather than allowed to send nothing.  A run whose first
+    # collection failed holds no revision, and a send of nothing would
+    # still stamp 'sent_at' -- which is what D24 refuses a deletion on,
+    # so the run would become permanent litter for having been sent
+    # when there was nothing to send (D31).
+    if run.status == RUN_STATUS_FAILED:
+        return collection_failed(run_id=run.id)
 
     if blocking:
         return blocked_message(blocking=blocking)

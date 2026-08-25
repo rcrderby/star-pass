@@ -20,6 +20,7 @@ const ALERT = 'banner banner-alert';
  * publishes and which each get their own banner. */
 const PARTLY_SENT = 'partly_sent';
 const SENT = 'sent';
+const FAILED = 'failed';
 
 /** Return one banner.
  *
@@ -147,6 +148,21 @@ export function reviewBanners(state, handlers) {
         + 'What it had done by then is worth looking at before '
         + 'anything else is asked of the run.',
       action: seeWhatHappened(handlers.onSeeInterrupted)
+    }));
+  }
+
+  /* A run whose first collection failed holds no revision, so the
+   * table below is empty and says so in the words of a search that
+   * found nothing.  Without this the screen gives no account of
+   * itself at all: the status is drawn in the run picker and nowhere
+   * on the run.  What such a run wants is to be collected again, or
+   * deleted (D31). */
+  if (run.status === FAILED) {
+    banners.push(banner({
+      tone: ALERT,
+      glyph: 'warning-circle',
+      words: 'This run holds nothing: its collection stopped before it '
+        + 'stored anything. Collect its window again to try once more.'
     }));
   }
 
