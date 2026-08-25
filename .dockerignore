@@ -3,5 +3,8 @@
 
 # Bytecode compiled on the host, which is half of what 'app/' weighs
 # and is rewritten by the interpreter in the image anyway.
-__pycache__/
-*.py[cod]
+# Matched against the whole path, so the leading '**/' is what reaches
+# the one inside every package rather than only a directory at the
+# root of the build context.
+**/__pycache__/
+**/*.py[cod]

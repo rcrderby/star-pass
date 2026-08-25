@@ -64,6 +64,30 @@ jobs:
           print('All star_pass modules imported.')
           "
 
+      # Guards the account the image runs as.  A 'USER' line lost to a
+      # rebase reads as nothing at all in a diff of this file, and the
+      # deployment would go back to root without a test failing.
+      - name: Verify the image does not run as root
+        run: |
+          uid="$(docker run --rm star-pass:ci id -u)"
+          if [ "${uid}" = "0" ]; then
+            echo "The image runs as root." >&2
+            exit 1
+          fi
+          echo "Runs as UID ${uid}."
+
+      # Guards what that account can do.  Being non-root is only half
+      # of it: the service has to be able to write the database and the
+      # '-wal' and '-shm' files SQLite puts beside it, which needs the
+      # directory and not merely the file.
+      - name: Verify the database directory is writable
+        run: |
+          docker run --rm star-pass:ci python -c "
+          from star_pass._database import connect
+          connect(path='/data/ci.db').close()
+          print('Wrote the database as a non-root user.')
+          "
+
       # Guards the image contents: importing '_defaults' reads the shift
       # data model, and the CLI resolves the data directories, both from
       # paths outside the package.
@@ -135,6 +159,18 @@ jobs:
               raise SystemExit(f'The Slack image must not carry: {carried}')
           print('None of the API service dependencies is installed.')
           "
+
+      # The same guard as the full image's.  This is the only image
+      # this repository publishes, so what it runs as is what a
+      # scheduled post runs as.
+      - name: Verify the image does not run as root
+        run: |
+          uid="$(docker run --rm star-pass:slack id -u)"
+          if [ "${uid}" = "0" ]; then
+            echo "The image runs as root." >&2
+            exit 1
+          fi
+          echo "Runs as UID ${uid}."
 
       # Guards the entry point, which imports the command line and the
       # contract on the way to the summary.  '--help' exercises that

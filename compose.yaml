@@ -138,7 +138,17 @@ services:
       #
       # Docker creates a DIRECTORY here if '.env' does not exist, so
       # copy '.env.example' to '.env' before the first 'up'.
+      #
+      # The image runs as an unprivileged account, so this file has to
+      # be readable by something other than its owner. What
+      # '.env.example' is copied to inherits the umask and is readable;
+      # a file tightened to 0600 on the host is not, and the service
+      # fails to start with no credential.
       - ./.env:/app/.env:ro
+      # Owned by the account in the image (UID 1000), which is how an
+      # empty named volume is created: Docker takes the ownership of
+      # the directory it is mounted over. A volume that already holds
+      # a database keeps the ownership it was created with.
       - star_pass_data:/data
     healthcheck:
       test:
