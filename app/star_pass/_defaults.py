@@ -237,14 +237,22 @@ GCAL_PRACTICES_CAL_ID = getenv(
         '313938323232323331%40resource.calendar.google.com'
     )
 )
+# 'notes' says whether this calendar's entries carry a description
+# worth keeping with the event (D30).  A property of the calendar
+# rather than of the interface: a client deciding it by the calendar's
+# name would be second-guessing configuration it is handed.  The
+# events calendar puts the door and game times there; the practices
+# calendar carries nothing of the kind.
 GCAL_CALENDARS = {
     'events': {
         'gcal_id': GCAL_EVENTS_CAL_ID,
-        'query_strings': GCAL_EVENTS_QUERY_STRINGS
+        'query_strings': GCAL_EVENTS_QUERY_STRINGS,
+        'notes': True
     },
     'practices': {
         'gcal_id': GCAL_PRACTICES_CAL_ID,
-        'query_strings': GCAL_PRACTICES_QUERY_STRINGS
+        'query_strings': GCAL_PRACTICES_QUERY_STRINGS,
+        'notes': False
     }
 }
 

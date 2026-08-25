@@ -957,6 +957,74 @@ different questions after all.
 ---
 
 
+## D30 - The calendar note is stored as text, and the calendar says whether there is one
+
+**Decided:** An event on a calendar configured to carry notes keeps its
+Google Calendar description, converted to plain text at collection and
+stored with the event. `events` and `uncollected_events` each gain
+`calendar_note`. The review screen draws a control beside the calendar
+times on every row of such a calendar, whether or not the event has a
+note, and says so when it has none. Whether a calendar carries notes is a
+property of the calendar's configuration, published on `CalendarView`.
+
+**Why:** The `events` calendar puts the two times a volunteer needs in the
+description - "G2: Doors at 1 PM, Game at 1:30 PM" - and nothing in the
+interface showed it, so the only way to read it was to open Google
+Calendar beside the review screen.
+
+**Stored as text, never as markup.** The description arrives as HTML about
+as often as not, and its shape is not predictable:
+
+```html
+<br><table><tbody><tr><td>Doors at 6 PM, Game at 7 PM</td></tr></tbody></table>
+```
+
+The conversion runs once, at collection, through the standard library's
+own parser. Block ends become line breaks, entities are unescaped, runs of
+whitespace collapse, and every tag is dropped, so both shapes of the
+example above store the same sentence. Storing text rather than markup is
+what makes the value safe wherever it is read: a client renders it as
+text, and a client that one day rendered it as markup would still have
+nothing to render. The Content Security Policy (D14) is a third line
+behind those two, not the argument.
+
+**The note is truth about the calendar, so an edit never moves it**, in
+the same way and for the same reason that the calendar times never move.
+It is not part of what `as_collected` compares, because a row whose note
+differed from its collected note would be a row the reviewer could not
+have changed.
+
+**A cap of 1000 characters.** A description may hold an agenda, and this
+value crosses the wire on every read of every row of a run. The cap is on
+the stored text, so what a reader sees and what the run holds are the same
+thing.
+
+**The calendar answers whether there is a control, not the browser.** A
+client deciding it by the calendar's name would be a client second-
+guessing configuration it is handed, and the calendars are configured
+rather than fixed. `GCAL_CALENDARS` gains `notes` beside `query_strings`,
+and a calendar without it stores no note and draws no control.
+
+**Rejected:** reading the description live when the control is opened (what
+a run did not collect is stored, never read live, and a note read later
+would describe the calendar as it is now rather than what the run saw);
+storing the HTML and sanitizing in the browser (two sanitizers, one of
+them in the place where getting it wrong executes); naming the `events`
+calendar in `web/` (above).
+
+**Consequence:** schema version 11, one migration adding a nullable column
+to two tables, `EventView` and `UncollectedEventView` publish
+`calendarNote`, `CalendarView` publishes `notes`, and the contract is
+regenerated. An event collected before this version has no note and reads
+as having none until its run is collected again.
+
+**Revisit if:** a second calendar carries notes in a shape the converter
+mangles, or a note ever needs to be edited - it is the calendar's text
+today, and editing it would make it the run's.
+
+---
+
+
 ## Deferred, on purpose
 
 - **An authentication boundary in front of the whole system.** Deferred: single

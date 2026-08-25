@@ -22,11 +22,13 @@ import pytest
 # Imports - Local
 from collecting._arranging import (
     an_item,
+    CALENDAR,
     NEED_ID,
     OTHER_NEED_ID,
     REPEATING_CALENDAR
 )
 from conftest import a_category, a_need
+from star_pass import _defaults
 from star_pass._collect import collect
 from star_pass._exceptions import ValidationError
 from star_pass._reading import changes_in_current, read_run_history
@@ -340,6 +342,70 @@ class TestTheOpportunitiesARunResolves:
         )
 
         assert len(runs.get_opportunities(run_id=collecting)) == 1
+
+
+class TestWhatTheCalendarSaidAboutTheEvent:
+    @pytest.mark.parametrize(
+        'description, expected',
+        [
+            # The events calendar puts the two times a volunteer needs
+            # in the description, and nothing else in the run carries
+            # them.  It arrives as plain text about as often as it
+            # arrives as the one-cell table a calendar editor makes,
+            # and both say the same sentence.
+            (
+                'G2: Doors at 1 PM, Game at 1:30 PM',
+                'G2: Doors at 1 PM, Game at 1:30 PM'
+            ),
+            (
+                '<br><table><tbody><tr><td>Doors at 6 PM, Game at 7 PM'
+                '</td></tr></tbody></table>',
+                'Doors at 6 PM, Game at 7 PM'
+            ),
+            # Nothing written is nothing stored, which is what the
+            # screen has its own words for.
+            (None, None),
+        ]
+    )
+    def test_the_description_is_stored_as_text(
+        self,
+        collect_run: Callable[..., Any],
+        collecting: str,
+        events: EventRepository,
+        description: str,
+        expected: str
+    ) -> None:
+        # Converted once, here, which is what lets every reader show
+        # it without sanitizing it again (D30).
+        collect_run(items=[an_item(description=description)])
+
+        event = events.list_all(run_id=collecting, revision=1)[0]
+
+        assert event.calendar_note == expected
+
+    def test_a_calendar_that_carries_no_notes_stores_none(
+        self,
+        collect_run: Callable[..., Any],
+        collecting: str,
+        events: EventRepository,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The description is there and is still not kept, because
+        # whether a calendar carries notes is the calendar's own
+        # setting (D30).  Asserted on the stored event rather than on
+        # the screen: a note stored and then not drawn would still be
+        # a note this calendar was never meant to hold.
+        monkeypatch.setitem(
+            _defaults.GCAL_CALENDARS[CALENDAR], 'notes', False
+        )
+
+        collect_run(
+            items=[an_item(description='Doors at 6 PM, Game at 7 PM')]
+        )
+
+        event = events.list_all(run_id=collecting, revision=1)[0]
+
+        assert event.calendar_note is None
 
 
 class TestAnEventThatCannotBecomeAShift:

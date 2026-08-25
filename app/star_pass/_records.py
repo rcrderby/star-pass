@@ -378,6 +378,13 @@ class Event:
                 search finding it.  Reverting to the first revision
                 drops these, so they have to be distinguishable.
 
+            calendar_note (str, optional):
+                What the calendar's description said, as text, or None
+                where the calendar carries no notes or this event had
+                none (D30).  Truth about the calendar rather than
+                about the run, so an edit never moves it and it is no
+                part of what an undo compares.
+
             roles (Tuple[EventRole, ...]):
                 The opportunities this event creates shifts for.
     """
@@ -393,6 +400,7 @@ class Event:
     collected_category: Optional[str] = None
     match: Optional[Match] = None
     added_by_hand: bool = False
+    calendar_note: Optional[str] = None
     roles: Tuple[EventRole, ...] = field(default_factory=tuple)
 
 
@@ -520,6 +528,12 @@ class UncollectedEvent:
             calendar_end (str, optional):
                 End time on the calendar, or None for an all-day
                 event.
+
+            calendar_note (str, optional):
+                What the calendar's description said, as text, kept so
+                that an event pulled in by hand carries the note a
+                collected one carries: adding reads this row and never
+                the calendar (D30).
     """
 
     id: str
@@ -528,6 +542,7 @@ class UncollectedEvent:
     date: Optional[str] = None
     calendar_start: Optional[str] = None
     calendar_end: Optional[str] = None
+    calendar_note: Optional[str] = None
 
 
 @dataclass(frozen=True)

@@ -88,6 +88,7 @@ class TestWhatTheWindowHeldAndTheRunLeftOut:
                 'date': '2026-09-11',
                 'calendarStart': '18:00',
                 'calendarEnd': '20:00',
+                'calendarNote': None,
                 'addable': True
             }
         ]

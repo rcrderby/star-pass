@@ -31,12 +31,23 @@ def an_item(
     identifier: str = 'gcal-1',
     summary: str = 'Wheels of Justice vs Rose City',
     start: str = '2026-09-03T19:00:00-07:00',
-    end: str = '2026-09-03T21:00:00-07:00'
+    end: str = '2026-09-03T21:00:00-07:00',
+    description: str | None = None
 ) -> Dict[str, Any]:
-    """ Return one calendar item, as the calendar answers with one. """
-    return {
+    """ Return one calendar item, as the calendar answers with one.
+
+        The description is left out unless a test asks for one,
+        because a calendar item carries the key only when somebody
+        wrote something in it.
+    """
+    item: Dict[str, Any] = {
         'id': identifier,
         'summary': summary,
         'start': {'dateTime': start},
         'end': {'dateTime': end}
     }
+
+    if description is not None:
+        item['description'] = description
+
+    return item

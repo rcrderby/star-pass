@@ -43,7 +43,8 @@ UNCOLLECTED_COLUMNS = (
     'title',
     'date',
     'calendar_start',
-    'calendar_end'
+    'calendar_end',
+    'calendar_note'
 )
 
 
@@ -67,7 +68,8 @@ def _to_uncollected(
         title=row['title'],
         date=row['date'],
         calendar_start=row['calendar_start'],
-        calendar_end=row['calendar_end']
+        calendar_end=row['calendar_end'],
+        calendar_note=row['calendar_note']
     )
 
 
@@ -132,7 +134,8 @@ class UncollectedRepository(Repository):
                         event.title,
                         event.date,
                         event.calendar_start,
-                        event.calendar_end
+                        event.calendar_end,
+                        event.calendar_note
                     )
                     for event in rows
                 ]

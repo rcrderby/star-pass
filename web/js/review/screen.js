@@ -248,6 +248,7 @@ export class ReviewScreen {
 
     return {
       categories,
+      calendarNotes: Boolean(calendar && calendar.notes),
       categoriesByKey: new Map(
         categories.map((each) => [each.key, each])
       ),

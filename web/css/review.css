@@ -396,6 +396,66 @@ button.picker-row:hover {
   color: var(--color-accent-300);
 }
 
+/* — what the calendar said —
+ *
+ * The times and the control that opens the note sit on one line, so
+ * the control reads as belonging to them rather than as a third note
+ * under the title.  It is drawn on every row of a calendar that
+ * carries notes, including the rows with nothing to show (D30).
+ */
+.row-note-line {
+  align-items: center;
+  gap: 4px;
+}
+
+.note-open {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.note-open:hover {
+  color: var(--color-accent-300);
+}
+
+.note-open:focus-visible {
+  outline: 2px solid var(--color-accent-300);
+  outline-offset: 2px;
+}
+
+.note-open .icon {
+  width: 13px;
+  height: 13px;
+  margin-top: 0;
+}
+
+/* A note is the calendar's text and may run to a paragraph, so the
+ * callout scrolls rather than growing past the row it belongs to. */
+.note-callout {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 220px;
+  padding: 4px 6px;
+  overflow-y: auto;
+}
+
+.note-callout-head {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.note-callout-body {
+  white-space: pre-wrap;
+  text-wrap: pretty;
+}
+
 .row-note-alert,
 .row-length-alert {
   color: var(--color-alert);

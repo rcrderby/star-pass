@@ -318,6 +318,20 @@ class EventView(ApiModel):
     calendar_end: str = Field(
         description='End time on the calendar, in the run\'s zone.'
     )
+    calendar_note: str | None = Field(
+        default=None,
+        description=(
+            'What the calendar\'s description said about this event, '
+            'as text, or null where the calendar carries no notes or '
+            'the event had none. Converted from whatever the calendar '
+            'held - a description arrives as HTML about as often as '
+            'not - so what is published is text and holds no markup. '
+            'Capped at 1000 characters. An event collected before '
+            'schema version 11 has none until its run is collected '
+            'again.'
+        ),
+        examples=['Doors at 6 PM, Game at 7 PM']
+    )
     shift_start: str = Field(
         description=(
             'Start time of the shift to create, which is the calendar '
@@ -647,6 +661,16 @@ class UncollectedEventView(ApiModel):
         default=None,
         description='End time on the calendar, or null for an all-day event.'
     )
+    calendar_note: str | None = Field(
+        default=None,
+        description=(
+            'What the calendar\'s description said about this event, '
+            'as text, or null where the calendar carries no notes or '
+            'the event had none. Kept so that an event pulled in from '
+            'here carries the note a collected one carries.'
+        ),
+        examples=['Doors at 6 PM, Game at 7 PM']
+    )
     addable: bool = Field(
         description=(
             'Whether this event may be pulled into the run. The '
@@ -762,6 +786,19 @@ class CalendarView(ApiModel):
             'returned.'
         ),
         examples=[['officials', 'scrimmage']]
+    )
+    notes: bool = Field(
+        description=(
+            'Whether entries on this calendar carry a description '
+            'worth keeping with the event. Where it is true, an '
+            'event of a run collected from this calendar publishes '
+            '"calendarNote", which is null when that event had no '
+            'description; where it is false, nothing is stored and '
+            'the field is null on every event. A client showing the '
+            'note reads this rather than testing the calendar\'s '
+            'name.'
+        ),
+        examples=[True]
     )
     categories: List[CategoryView] = Field(
         description=(

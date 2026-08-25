@@ -53,7 +53,7 @@ DATABASE_BUSY_TIMEOUT = _defaults.DATABASE_BUSY_TIMEOUT
 # forward.  A later one means the file was written by a newer version
 # of the application, which is a deployment problem rather than
 # something to guess at.
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 # Pragmas applied to every connection.  'foreign_keys' is off by
 # default and is per-connection rather than stored in the file, so
@@ -139,6 +139,7 @@ SCHEMA_STATEMENTS = (
         match_score         INTEGER,
         added_by_hand       INTEGER NOT NULL,
         collected_category  TEXT,
+        calendar_note       TEXT,
         PRIMARY KEY (run_id, revision, id),
         FOREIGN KEY (run_id, revision)
             REFERENCES revisions (run_id, number) ON DELETE CASCADE
@@ -180,6 +181,7 @@ SCHEMA_STATEMENTS = (
         date            TEXT,
         calendar_start  TEXT,
         calendar_end    TEXT,
+        calendar_note   TEXT,
         PRIMARY KEY (run_id, id)
     )
     """,

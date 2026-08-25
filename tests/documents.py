@@ -95,6 +95,7 @@ def fixture_make_event_document() -> Callable[..., dict]:
             'date': '2026-09-03',
             'calendarStart': '19:00',
             'calendarEnd': '21:00',
+            'calendarNote': None,
             'shiftStart': '19:15',
             'shiftEnd': '21:30',
             'lengthMinutes': 135,
