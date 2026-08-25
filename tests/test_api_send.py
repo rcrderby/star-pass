@@ -22,6 +22,7 @@ from star_pass._records import (
     JOB_KIND_SEND,
     JOB_STATUS_RUNNING,
     RUN_STATUS_COLLECTING,
+    RUN_STATUS_FAILED,
     RUN_STATUS_UNSENT
 )
 from star_pass._records import Event
@@ -211,6 +212,25 @@ class TestWhatIsRefused:
 
         assert response.status_code == 409
         assert 'collected' in response.json()['detail']
+        assert asked == []
+
+    def test_a_run_whose_collection_failed_is_refused(
+        self,
+        sending: Callable[..., Any],
+        runs: RunRepository,
+        collected: str
+    ) -> None:
+        # Such a run holds no revision and so no shifts, and a send of
+        # nothing would still stamp 'sent_at' -- which is what a
+        # deletion is refused on (D24), so the run would be permanent
+        # litter for having been sent when there was nothing to send
+        # (D31).  Nothing is asked of Amplify.
+        runs.set_status(run_id=collected, status=RUN_STATUS_FAILED)
+
+        response, asked = sending(collected)
+
+        assert response.status_code == 409
+        assert 'failed' in response.json()['detail']
         assert asked == []
 
     def test_a_blocked_event_stops_the_send(

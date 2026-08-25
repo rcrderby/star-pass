@@ -1025,6 +1025,63 @@ today, and editing it would make it the run's.
 ---
 
 
+## D31 - A collection that fails leaves a state somebody can act on
+
+**Decided:** A collection that raises no longer leaves its run saying it is
+being collected. A run whose **first** collection failed is `failed`, a new
+terminal status. A run whose **recollection** failed goes back to `unsent`,
+which is the only status it could have held. A `failed` run may be
+collected again, which is how it is recovered, and may not be sent.
+
+**Why:** `set_status` was reached only inside the transaction that stores a
+successful collection, so anything raising before it - the calendar
+unreachable, a window that cannot be resolved, an opportunity that cannot be
+read - left the run in `collecting` for ever. Retention does not sweep runs,
+so before D24 nothing could remove one either.
+
+**The two cases are not the same state, and the plan's "a terminal state"
+is right for only one of them.** A recollection that fails has done no harm
+to what the run already holds: its previous revision is complete and
+sendable. Putting that run into a failure state would strand work that is
+still good. Worse, `why_not_send` refuses a run whose status is
+`collecting`, so today a failed recollection makes an otherwise sendable run
+**permanently unsendable**.
+
+**Which case it is, is answered by the run and not by the caller.** A run
+that has never completed a collection has no revision, so
+`current_revision` is 0; a recollection is working over at least one. The
+caller cannot answer it - by the time the work runs, the status has already
+been set to `collecting` - and threading the previous status through the
+job would be a second copy of something the run already says.
+
+**`unsent` is not a guess.** `why_not_recollect` refuses any run in
+`RUN_STATUSES_SENT`, so `unsent` is the only status a recollection can begin
+from.
+
+**A failed run is refused a send.** It holds no revision and so no shifts,
+and a send of nothing would still stamp `sent_at` - which under D24 makes
+the run undeletable for ever. The refusal is the core's, not the screen's
+(D1).
+
+**Rejected:** reusing `unsent` for both (a first collection that failed
+would be indistinguishable from one that legitimately collected an empty
+window, and the run's own status is the only place that distinction can
+live); leaving the first case in `collecting` (the state it is being fixed
+for); a `failed` column beside the status rather than a status (two fields
+answering "what is this run" is the shape D22, D23 and D27 each removed).
+
+**Consequence:** `failed` joins `RUN_STATUSES`, which is no longer a
+sequence a run walks in order. Each client words it, bound to the core's
+tuple by the tests that already hold the others. No schema change: the
+column is text and already holds any status the core names.
+
+**Revisit if:** a collection ever fails part way through having written a
+revision, which would make "has a revision" the wrong question. It cannot
+today - the revision and the events are written in one transaction.
+
+---
+
+
 ## Deferred, on purpose
 
 - **An authentication boundary in front of the whole system.** Deferred: single

@@ -1307,7 +1307,7 @@
             "title": "Sentat"
           },
           "status": {
-            "description": "Where the run is: collecting, unsent, partly_sent, sent.",
+            "description": "Where the run is: collecting, unsent, partly_sent, sent, failed.",
             "title": "Status",
             "type": "string"
           },
@@ -1401,7 +1401,7 @@
             "title": "Sentat"
           },
           "status": {
-            "description": "Where the run is: collecting, unsent, partly_sent, sent.",
+            "description": "Where the run is: collecting, unsent, partly_sent, sent, failed.",
             "title": "Status",
             "type": "string"
           },

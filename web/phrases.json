@@ -3,7 +3,8 @@
     "collecting": "Collecting",
     "unsent": "Not sent",
     "partly_sent": "Partly sent",
-    "sent": "Sent"
+    "sent": "Sent",
+    "failed": "Collection failed"
   },
   "step": {
     "read_calendar": "Reading the calendar",
