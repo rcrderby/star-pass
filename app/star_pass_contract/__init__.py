@@ -48,6 +48,8 @@ from ._messages import (
     send_in_flight,
     shift_count_moved,
     still_collecting,
+    sent_and_kept,
+    why_not_delete,
     why_not_recollect,
     why_not_resume,
     why_not_send
@@ -181,6 +183,8 @@ __all__ = [
     'to_uncollected_views',
     'to_unmatched_title_views',
     'to_unmatched_view',
+    'sent_and_kept',
+    'why_not_delete',
     'why_not_recollect',
     'why_not_resume',
     'why_not_send'

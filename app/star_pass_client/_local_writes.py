@@ -61,6 +61,7 @@ from star_pass_contract import (
     sendable,
     SendRequest,
     to_job_view,
+    why_not_delete,
     why_not_recollect
 )
 from ._client import ApiProblem
@@ -291,6 +292,46 @@ class LocalWrites:
 
         except ValueError as error:
             raise self._refused(detail=str(error)) from error
+
+        return None
+
+    def _delete(
+            self,
+            run_id: str
+    ) -> None:
+        """ Delete a run, here and now.
+
+            The same two refusals the service makes, for the same
+            reasons, because housekeeping has to work with no server
+            running (D2, D24).
+
+            Args:
+                run_id (str):
+                    Run to delete.
+
+            Raises:
+                ApiProblem:
+                    If there is no such run, or it is not one that may
+                    be deleted.
+
+            Returns:
+                None:
+                    Nothing, which is what a 204 carries.
+        """
+
+        with self._writing() as connection:
+            runs = RunRepository(connection=connection)
+            run = runs.get(run_id=run_id)
+
+            if run is None:
+                raise self._missing(detail=no_such_run(run_id=run_id))
+
+            refusal = why_not_delete(run=run)
+
+            if refusal is not None:
+                raise self._conflicted(detail=refusal)
+
+            runs.delete(run_id=run_id)
 
         return None
 

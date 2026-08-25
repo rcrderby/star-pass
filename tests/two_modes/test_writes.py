@@ -13,6 +13,11 @@
 """
 
 # pylint: disable=missing-function-docstring,missing-class-docstring
+# A test asking both modes about an arranged run takes the two clients,
+# the arrangement and the repositories that set it up, and pytest passes
+# a fixture by naming it.  The same disable four other test modules
+# carry, for the same reason.
+# pylint: disable=too-many-arguments,too-many-positional-arguments
 
 # Imports - Python Standard Library
 import sqlite3
@@ -592,3 +597,129 @@ class TestResumingInEitherMode:
 
         assert local.status == remote.status == 409
         assert local.detail == remote.detail
+
+
+class TestDeletingInEitherMode:
+    def test_a_deletion_answers_with_nothing_in_both(
+        self,
+        both: Callable[..., Tuple[Any, Any]],
+        collecting_service: None,
+        collected_in_both: Tuple[str, str],
+        runs: RunRepository
+    ) -> None:
+        # A deletion has nothing to report beyond having happened, so
+        # the service answers 204 and the local half answers the same
+        # nothing.  A client handling one mode has handled both.
+        del collecting_service
+        local_run, remote_run = collected_in_both
+
+        local, remote = both.asked(
+            operation='delete_run',
+            local={'run_id': local_run},
+            remote={'run_id': remote_run}
+        )
+
+        assert local is None and remote is None
+        assert runs.get(run_id=local_run) is None
+        assert runs.get(run_id=remote_run) is None
+
+    def test_a_run_neither_mode_has_fails_the_same(
+        self,
+        local_client: LocalClient,
+        remote_client: Client,
+        problem_from: Callable[..., ApiProblem]
+    ) -> None:
+        local = problem_from(
+            local_client, 'delete_run', run_id='no-such-run'
+        )
+        remote = problem_from(
+            remote_client, 'delete_run', run_id='no-such-run'
+        )
+
+        assert local.status == remote.status == 404
+        assert local.detail == remote.detail
+
+    def test_a_sent_run_fails_the_same(
+        self,
+        both_refuse: Callable[..., int],
+        collecting_service: None,
+        collected_in_both: Tuple[str, str],
+        runs: RunRepository
+    ) -> None:
+        # Read off 'sent_at' rather than off the status, because
+        # 'mark_sent' writes it for both of the statuses that mean
+        # shifts reached Amplify (D24).
+        del collecting_service
+
+        for run_id in collected_in_both:
+            runs.mark_sent(run_id=run_id, status=RUN_STATUS_SENT)
+
+        assert both_refuse(
+            collected=collected_in_both,
+            operation='delete_run'
+        ) == 409
+
+    def test_a_run_with_a_job_in_hand_fails_the_same(
+        self,
+        local_client: LocalClient,
+        remote_client: Client,
+        problem_from: Callable[..., ApiProblem],
+        collecting_service: None,
+        collected_in_both: Tuple[str, str],
+        jobs: JobRepository
+    ) -> None:
+        # A different answer from the one above, and a temporary one:
+        # such a run becomes deletable when the work finishes.
+        #
+        # Asked directly rather than through 'both_refuse', which
+        # compares the wordings with the run identifiers taken out.
+        # This refusal names the job as well, and each mode has a job
+        # of its own, so what is compared here is that each names its
+        # own.
+        del collecting_service
+        local_run, remote_run = collected_in_both
+        held = {
+            run_id: jobs.create(
+                run_id=run_id,
+                kind=JOB_KIND_SEND,
+                principal_id=API_PRINCIPAL_ID
+            ).id
+            for run_id in collected_in_both
+        }
+
+        local = problem_from(
+            local_client, 'delete_run', run_id=local_run
+        )
+        remote = problem_from(
+            remote_client, 'delete_run', run_id=remote_run
+        )
+
+        assert local.status == remote.status == 409
+        assert held[local_run] in local.detail
+        assert held[remote_run] in remote.detail
+
+    def test_a_sent_run_is_refused_for_the_send_and_not_a_job(
+        self,
+        local_client: LocalClient,
+        problem_from: Callable[..., ApiProblem],
+        collecting_service: None,
+        collected_in_both: Tuple[str, str],
+        runs: RunRepository
+    ) -> None:
+        # D24 asks for the two refusals separately on purpose: a
+        # caller told something is working on the run would wait and
+        # ask again, and a caller told the run has sent would stop.
+        # The test above shows the job refusal names its job; this
+        # shows the send refusal is the other answer and not that one.
+        del collecting_service
+        sent_run, _ = collected_in_both
+
+        runs.mark_sent(run_id=sent_run, status=RUN_STATUS_SENT)
+
+        refusal = problem_from(
+            local_client, 'delete_run', run_id=sent_run
+        )
+
+        assert refusal.status == 409
+        assert 'sent' in refusal.detail
+        assert 'working on it' not in refusal.detail

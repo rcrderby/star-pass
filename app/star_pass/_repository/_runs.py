@@ -563,8 +563,8 @@ class RunRepository(Repository):
     ) -> None:
         """ Delete a run and everything belonging to it.
 
-            Used by the retention policy, which is the only thing that
-            removes a run: a caller cannot ask for one to be deleted.
+            Used by the retention policy and by a caller asking for
+            one to go (D24).
 
             A run that sent shifts is not deletable.  The record of
             what a send created is never purged (D12), and its
@@ -573,6 +573,13 @@ class RunRepository(Repository):
             policy therefore chooses among runs that sent nothing; the
             alternative is a policy that quietly decides how long
             duplicate safety lasts.
+
+            That refusal is the database's and is the last line: a
+            caller is answered before it by 'why_not_delete', which
+            says which of the two reasons it is.  What does not go
+            with the run is its unmatched-title sightings, which name
+            it and declare no foreign key, because what the data model
+            is missing outlives the window that revealed it.
 
             Args:
                 run_id (str):

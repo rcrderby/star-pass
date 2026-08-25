@@ -53,6 +53,7 @@ from ._render import (
     after,
     revisions_table,
     run_detail,
+    deleted_text,
     runs_table,
     uncollected_text
 )
@@ -280,6 +281,14 @@ COMMANDS = (
         ),
         operation='list_uncollected',
         render=uncollected_text,
+        argument='run_id'
+    ),
+    Command(
+        group='runs',
+        word='delete',
+        summary='Delete a run that never sent shifts to Amplify.',
+        operation='delete_run',
+        render=deleted_text,
         argument='run_id'
     ),
     Command(

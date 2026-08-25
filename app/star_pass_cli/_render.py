@@ -784,6 +784,34 @@ def revision_row(
     ]
 
 
+def deleted_text(
+        answer: None
+) -> str:
+    """ Return what to say when a run has been deleted.
+
+        The operation answers with no body, because a deletion has
+        nothing to report beyond having happened, so what is written
+        is this client's own words rather than anything the service
+        worded.
+
+        Args:
+            answer (None):
+                What the operation answered, which is nothing.
+
+        Returns:
+            text (str):
+                A line saying the run is gone.
+    """
+
+    del answer
+
+    return (
+        'Deleted. Its revisions, events, opportunities, change log and '
+        'jobs went with it; the titles its window did not match did '
+        'not.'
+    )
+
+
 def revisions_table(
         answer: Sequence[Dict[str, Any]]
 ) -> str:

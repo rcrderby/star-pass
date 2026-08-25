@@ -29,6 +29,11 @@ from ._stream import events, StreamEvent
 # What the service returns when something went wrong (RFC 9457).
 PROBLEM_MEDIA_TYPE = 'application/problem+json'
 
+# The answer with no body.  Named rather than written as a number at
+# the one place it is read, because what it means there is "there is
+# nothing to decode" and not "the status was 204".
+NO_CONTENT = 204
+
 # How long to wait for a response.  Set rather than left unbounded: a
 # client that waits for ever on a service that has stopped answering
 # looks identical to one doing careful work.  The stream reads use
@@ -226,7 +231,8 @@ class Client(OperationCaller, Operations):
 
             Returns:
                 answer (Any):
-                    The decoded response body.
+                    The decoded response body, or None where there is
+                    no body to decode.
         """
 
         response = self._session.request(
@@ -241,6 +247,13 @@ class Client(OperationCaller, Operations):
         )
 
         self._raise_for_problem(response=response)
+
+        # A no-content answer has no body to decode, and asking for one
+        # raises rather than returning nothing.  The operation that
+        # gives one is the deletion, which has nothing to say beyond
+        # having happened (D24).
+        if response.status_code == NO_CONTENT:
+            return None
 
         return response.json()
 
