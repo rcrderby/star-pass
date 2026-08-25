@@ -4,7 +4,7 @@ One entry per decision, with why, what was rejected, and **what would make us
 revisit it**. Append new entries; don't rewrite old ones — supersede them.
 
 Companion to `api-and-security-plan.md` (the plan these decisions produced).
-Last updated: 2026-08-19.
+Last updated: 2026-08-24.
 
 ---
 
@@ -657,6 +657,234 @@ schema version (it is the wording that is small — the stored copy is not).
 **Revisit if:** never for the direction, but a kind that needs to carry
 more than one number would mean `sourceRevision` should be a mapping, which
 is the same trigger D22 records.
+
+---
+
+
+## D24 - A run that never sent may be deleted
+
+**Decided:** `DELETE /v1/runs/{id}` removes a run and everything that hangs
+off it. It is refused when `runs.sent_at` is set, and refused separately,
+with its own reason, when the run has a job in hand. `runs delete` joins the
+command line beside it, because housekeeping has to work with no server
+running (D2).
+
+**Supersedes:** plan section 5's "Run/revision deletion - retention policy
+does this, not a caller." Revision deletion stays where it was: a superseded
+revision is swept by retention (D20) and no caller names one.
+
+**Why:** What section 5 was protecting is the evidence that shifts reached
+Amplify. A run that never sent has no such evidence to destroy. What it does
+have is the ability to become permanent litter - a failed collection leaves
+a run behind, retention sweeps by age rather than by state, and nothing
+else can remove one. The runs list becomes the page's home in the same
+release, which puts that litter on the first screen there is.
+
+One condition covers both statuses that mean shifts were written, because
+`mark_sent` (`_repository/_runs.py:432`) sets `sent_at` for `sent` and for
+`partly_sent` alike. Reading the timestamp rather than the status is also
+what keeps the refusal correct for a status this list has not thought of.
+
+A job in hand is refused separately because it is a different answer to the
+caller: a running send or collection finishes, and the run can be deleted
+afterwards. A run that has sent never becomes deletable.
+
+**Consequence:** deleting a run does not delete its unmatched-title
+sightings. `unmatched_titles.run_id` names the run that saw a title and
+declares no foreign key (`_database.py:295`), so no cascade reaches it. That
+is deliberate and stays: what the data model is missing outlives the window
+that revealed it.
+
+**Rejected:** leaving every run to retention (a run created today survives
+the retention window, so a failed collection sits on the home screen for
+months); a soft delete or an archive flag (a second state for every list to
+filter, carried for a run that holds nothing worth keeping).
+
+**Revisit if:** a run that never sent acquires something worth keeping after
+it is gone, or an authentication boundary makes "who deleted this" a
+question the change log has to answer.
+
+---
+
+
+## D25 - Shift timing belongs to the event's role, not to the run's opportunity
+
+**Decided:** `offset_start`, `offset_end`, `max_length` and `default_slots`
+move from `opportunities` to `event_roles`, which is already keyed
+`(run_id, revision, event_id, need_id)` (`_database.py:145`). What remains
+on `opportunities` is what Amplify says about the listing: `need_id`,
+`title`, `url`. Both conflict checks go - `_collect._require_one_timing`
+(`_collect.py:391`) and `_adding._agrees` (`_adding.py:188`).
+
+**Supersedes:** the assumption behind `opportunities`' key, `(run_id,
+need_id)` (`_database.py:109`): that one Amplify listing implies one set of
+offsets per run.
+
+**Why:** The Rose City Rollers data model does not work that way. Need
+905196 ("Junior Games - NSOs") is named by three categories on the `events`
+calendar, with three different timings (`models/shift_info.yml:50-107`);
+need 905197 ("Junior Games - SOs") is named by the same three, the same way.
+
+| Category | Aliases | Offsets | Maximum |
+| --- | --- | --- | --- |
+| `junior_game_petals` | petals, ptt | -15 / +30 | 135 |
+| `junior_game_buds` | buds, roses, rtt, ntt | 0 / +75 | 165 |
+| `junior_game_buds_closed` | buds closed scored scrimmage | -30 / +15 | 165 |
+
+Any window holding two of them is refused whole by `_require_one_timing`,
+which is why the `events` calendar has never been collected successfully.
+The refusal is correct given the schema; the schema is what is wrong.
+
+A role is where the timing was decided in the first place: `role_timings`
+reads it off the category the event matched (`_event_edits.py:271`), and
+`event_roles` is the row that already knows which event and which need it
+belongs to. Moving the columns there records what the collection worked out
+instead of averaging it into a per-run claim that cannot be true.
+
+`default_slots` goes with the offsets rather than staying behind, because it
+is read off the category the same way. The three categories agree about slot
+counts today, so leaving it would work until the first pair that does not,
+and then produce this same bug with a second migration attached.
+
+**Rejected:** making the three timings agree in `shift_info.yml` (they are
+genuinely different, so this would create shifts at the wrong times); a
+separate Amplify listing per category (volunteers would see three listings
+where they see one).
+
+**Consequence:** schema version 8, and the review table's offset notes,
+`_derived.maximum` (`_derived.py:208`), `_building`, `_event_edits` and
+`_repository/_runs` all read the timing from the role. The contract is
+regenerated.
+
+**Revisit if:** two events of the same category in one window need different
+timings, which would mean the timing belongs to neither the listing nor the
+category but to the event alone.
+
+---
+
+
+## D26 - The event remembers what collection matched it to
+
+**Decided:** `events` gains a column holding the category the collection
+matched. `_undo` restores it and `was_edited` compares against it.
+`_set_category` computes the new category's times directly rather than by
+calling `as_collected`.
+
+**Why:** A category change is, by construction, invisible to both.
+`_editing._set_category` (`_editing.py:212`) builds its result by calling
+`as_collected` on the event it has just changed, so the result is a fixed
+point of `as_collected`. `was_edited` (`_event_edits.py:546`) asks whether
+`as_collected(event) != event`, so for a category change it is
+**necessarily** false - not sometimes, always - and the row is offered no
+undo. And `_undo` (`_editing.py:363`) is `as_collected(event)` as well,
+reading the event's *current* category through `timings_for`
+(`_event_edits.py:268`), so even if the control were offered it could not
+restore the collected category.
+
+Changing an opportunity is the most common edit on the review screen, and it
+is the one edit that can be neither seen nor taken back.
+
+Storing what the collection matched makes undo mean "back to collection"
+uniformly, for every operation. That is also what makes a bulk undo honest:
+a control that puts a selection back as collected has to do that for every
+row in the selection, including the rows whose opportunity was changed.
+
+**Rejected:** re-matching the title through the data model inside
+`as_collected` (no schema change, but an event assigned by hand *because*
+its title matched nothing would have that assignment thrown away, so the
+control would mean different things depending on why the row was edited).
+
+**Consequence:** schema version 9.
+
+**Revisit if:** an operation appears that a person should not be able to
+undo, which would make "back to collection" the wrong thing for undo to
+mean.
+
+---
+
+
+## D27 - The change log publishes data, not sentences
+
+**Decided:** A change-log entry stores the operation it recorded and the
+values that operation carried. Each client words it, beside
+`_render.REVISION_PHRASES` and `web/phrases.json`, bound to the core's tuple
+by a test the way the others are.
+
+**Supersedes:** `change_log.entry` (`_database.py:180`), the full English
+sentence `_editing.py` writes into a column.
+
+**Why:** D22 established this rule for the job stream and D23 for revisions.
+The change log survived both, and it is D23's case again rather than D22's:
+the English is not merely returned, it is **stored**. Changing the wording
+would leave every entry already recorded saying the old thing beside a new
+one saying the new, in the same list, with no way to reconcile them short of
+rewriting rows. A sentence returned by a service is a wording mistake; a
+sentence written into a row is a wording mistake with a migration attached.
+
+The sentence is also already wrong in the one place a stored sentence cannot
+be corrected: it carries a raw internal key. `Set the category of "X" to
+"junior_scrimmage"` (`_editing.py:234`), where the screen everywhere else
+calls that category "Junior Scrimmages".
+
+**Consequence:** schema version 10, and no migration that reads the stored
+sentences back. D23's could, because four fixed sentences map onto four
+kinds; these are interpolated with event names, times and categories, and
+recovering the fields would be a migration written against English. The
+change lands against an empty database instead.
+
+**Rejected:** keeping the sentence and publishing the values beside it (two
+ways to say one thing, and the stored copy stays wrong); parsing the stored
+sentences into fields (a migration that runs against prose, for data that is
+being discarded anyway).
+
+**Revisit if:** an operation needs to record something that is not one of
+its own values - which would mean the entry carries context, not just what
+was asked for.
+
+---
+
+
+## D28 - The page has addressable URLs
+
+**Decided:** The page routes with the History API, over `/`, `/runs`,
+`/runs/{id}`, `/runs/{id}/uncollected`, `/runs/{id}/preview` and
+`/settings`. The BFF answers those paths, and only those, with `index.html`;
+anything else that is not a real file still 404s. A test binds the page's
+route table to the BFF's fallback list, the way `tests/test_web_phrases.py`
+binds `phrases.json` to the core.
+
+**Extends:** D19, which says the page is served by the front-end container
+at its root and says nothing about the paths below it.
+
+**Why:** The page has no router. Every screen is drawn into one `<main>` and
+nothing is addressable, so a reload always returns to whatever `listRuns()`
+implies, Back leaves the application entirely, and remembering scroll
+position per run and view is not merely unbuilt but impossible. Once the
+runs list is home, a reload during a twenty-eight-event review drops the
+reviewer back to the list - a regression introduced by that change, and one
+that has to be answered in the same work.
+
+**The fallback enumerates, and does not catch all.** `web/` is mounted
+through `StaticFiles(html=True)` at `/` (`star_pass_bff/_app.py:94`), which
+returns 404 for any path that is not a real file. A blanket catch-all would
+answer a mistyped module path with `index.html` and a 200, turning the loud
+404 that `tests/test_web_page.py` exists to catch into a screen that
+silently never draws. Enumerating costs one list; the test holds the two
+lists together.
+
+**Note:** the session cookie is `SameSite=Strict` (D18). A run link the
+operator types or bookmarks sends it normally; one followed from another
+site arrives without it and the front end mints a fresh session. Harmless
+while there is no login, and written down here rather than rediscovered.
+
+**Rejected:** hash routing (no server change and immune to the catch-all
+hazard, but the fragment never reaches the server and it is the legacy
+pattern); a routing library (it would need a CDN, which the CSP and D14
+forbid, or a build step, which `web/` rejects by design).
+
+**Revisit if:** a screen needs state a path cannot carry, or a login
+appears - a cross-site arrival minting a fresh session stops being
+harmless the moment a session means someone is signed in.
 
 ---
 
