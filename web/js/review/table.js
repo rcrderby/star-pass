@@ -115,6 +115,13 @@ function offsetNote(which, minutes) {
  * opportunities its own events reached, and the event that needs this
  * chooser is the one that matched nothing.
  *
+ * **The prompt is only offered while it is true.** An event with no
+ * category needs a chooser that says so and starts on nothing; an
+ * event that has one has nothing to say it, and choosing it would ask
+ * the service to set a category of `''` - which is refused, because a
+ * calendar defines no category by that name. An option that can only
+ * fail is not a choice.
+ *
  * @param {Object} event The event.
  * @param {Object} context What the rows are drawn against.
  * @returns {HTMLElement} The chooser.
@@ -130,11 +137,13 @@ function opportunityChooser(event, context) {
       category: changed.target.value
     })
   }, [
-    el('option', {
-      value: '',
-      text: 'Select an opportunity',
-      selected: event.category === null
-    }),
+    event.category === null
+      ? el('option', {
+        value: '',
+        text: 'Select an opportunity',
+        selected: true
+      })
+      : null,
     context.categories.map((category) => el('option', {
       value: category.key,
       text: category.label,
