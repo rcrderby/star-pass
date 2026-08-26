@@ -184,9 +184,12 @@ class PreviewView(ApiModel):
     rows: List[PreviewRowView] = Field(
         description=(
             'One per opportunity the revision asks for a shift under, '
-            'by need ID. An opportunity the run resolved but asks '
-            'nothing of has no row; one whose shifts Amplify already '
-            'holds keeps its row and says so.'
+            'by title, and by need ID where Amplify gave no title or '
+            'two share one. Ordered by what a client draws rather '
+            'than by the need ID, which is on no screen. An '
+            'opportunity the run resolved but asks nothing of has no '
+            'row; one whose shifts Amplify already holds keeps its '
+            'row and says so.'
         )
     )
     skipped: List[SkippedShiftView] = Field(

@@ -385,6 +385,48 @@ def _row(
     )
 
 
+def _ordered(rows: Iterable[PreviewRow]) -> Tuple[PreviewRow, ...]:
+    """ Return the rows in the order a reader reads them.
+
+        By the title, and not by the need ID the split that produced
+        them is keyed on.  The need ID is on no screen: each client
+        draws the title and falls back to the need ID only where
+        Amplify gave none, so a table ordered by the ID looks to a
+        reader like a table in no order at all.
+
+        The same fallback orders them, so the sort agrees with what is
+        drawn rather than sorting on a value the row is not showing.
+        Folded, because every capital sorts before every lower case
+        letter unfolded, and a column holding "Zebra Duty" above
+        "adult warmup" is a column with two alphabets in it.
+        Two opportunities Amplify gave one title come back in need ID
+        order, and nothing here says so: the sort is stable and what
+        it is handed is the split, which is keyed by need ID and
+        already in it. A tiebreak spelling that out was written and
+        removed - it changed no answer, and mutating it away broke no
+        test, which is the definition of a line that is not there.
+
+        The rows the *skipped* list is grouped by are left alone: that
+        order is published as by need ID and is a different answer to a
+        different question.
+
+        Args:
+            rows (Iterable[PreviewRow]):
+                The rows, in whatever order they were built.
+
+        Returns:
+            ordered (Tuple[PreviewRow, ...]):
+                Them, by title.
+    """
+
+    return tuple(
+        sorted(
+            rows,
+            key=lambda row: (row.title or row.need_id).casefold()
+        )
+    )
+
+
 def _skipped(
         shifts: Iterable[PlannedShift]
 ) -> Tuple[SkippedShift, ...]:
@@ -581,7 +623,7 @@ def preview(
         already_in_amplify=len(skipping),
         repeated_rows=asked.repeated_rows,
         blocking_events=asked.blocking_events,
-        rows=tuple(
+        rows=_ordered(
             _row(
                 need_id=need_id,
                 opportunity=opportunities.get(need_id),
