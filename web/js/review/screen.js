@@ -35,7 +35,7 @@ import { el, fill, icon } from '../dom.js';
 import { anyPopoverOpen, closeAnyPopover } from '../popover.js';
 import { changeLogPanel, changesNow } from './changelog.js';
 import { refusalNotice } from '../refusal.js';
-import { reviewBanners } from './banners.js';
+import { reviewBanners, RUN_FAILED } from './banners.js';
 import { reviewHeader } from './header.js';
 import { reviewTable } from './table.js';
 import { selectionToolbar } from './selection.js';
@@ -63,9 +63,21 @@ const WIDER_THAN_WINDOW = (
   + 'slots.'
 );
 
-/* What the body says when a filter or a search has hidden everything. */
+/* What the body says when a filter or a search has hidden every row
+ * the run holds. */
 const NOTHING_MATCHES = (
   'No event in this run matches what you are looking for.'
+);
+
+/* And when it holds none to hide. Two ways to arrive: a collection
+ * that matched nothing in its window, and a run every row of which
+ * was removed by hand. Both are told the same thing, because telling
+ * them apart would mean this screen holding an opinion about which
+ * happened, and the controls that answer either -- Not collected,
+ * the revision picker, Collect again -- are already on screen. */
+const HOLDS_NOTHING = (
+  'This run holds no events. What its collection left out is under '
+  + 'Not collected.'
 );
 
 /* What the select-all control is called. It says "shown" because that
@@ -118,6 +130,32 @@ function showing(events, state) {
 
     return wanted === '' || event.title.toLowerCase().includes(wanted);
   });
+}
+
+/** Return what stands in for the table when no row is drawn.
+ *
+ * Three states reach an empty table and one sentence was answering
+ * all three. A run whose rows a search or a filter is hiding is the
+ * one that sentence was written for. A run holding no rows at all is
+ * told so instead of being told its search found nothing, which is
+ * what it read with an empty search box. And a run whose collection
+ * failed is told nothing here at all: the banner above it already
+ * accounts for the same absence, in words that contradict a search
+ * miss rather than repeat it.
+ *
+ * @param {Object} state What the screen is showing.
+ * @returns {HTMLElement|string} The line, or nothing to draw.
+ */
+function insteadOfTable(state) {
+  if (state.events.length > 0) {
+    return el('p', { class: 'muted meta', text: NOTHING_MATCHES });
+  }
+
+  if (state.run.status === RUN_FAILED) {
+    return '';
+  }
+
+  return el('p', { class: 'muted meta', text: HOLDS_NOTHING });
 }
 
 /** Return the toolbar above the table.
@@ -434,7 +472,7 @@ export class ReviewScreen {
         el('span', { text: WIDER_THAN_WINDOW })
       ),
       shown.length === 0
-        ? el('p', { class: 'muted meta', text: NOTHING_MATCHES })
+        ? insteadOfTable(this.state)
         : el(
           'div',
           { class: 'table-scroll' },
