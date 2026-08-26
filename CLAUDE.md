@@ -11,6 +11,26 @@ reads events from Google Calendars, matches each event to an Amplify
 "need" via a keyword data model, and creates the corresponding shifts
 through the Amplify API. It is run once per month.
 
+## Where to start
+
+This file is the map of the code. It is not the only thing to read, and
+it is not the first:
+
+| Read | For |
+| --- | --- |
+| `README.md` | What the application is and how to get it running. Shortest, and the only one written for somebody who has not seen the code |
+| `docs/architecture.md` | The deployment and a run, in two pictures. Quicker than assembling the same shape out of `compose.yaml` and the Caddyfile |
+| `docs/design/decisions.md` | **D1 to D31.** Why the system is shaped as it is. These are decided, not suggestions - where this file and that one differ, that one governs. It is the one current file in `docs/design/`; everything else there is the received handoff, kept as delivered, which is why its own reading order stops at D23 and why the directory is excluded from linting |
+| This file | Where each module lives and the invariant it holds |
+| `docs/cli.md`, `docs/deployment.md`, `docs/slack-summary.md` | How each part is run |
+
+Two things worth knowing before the layout below makes sense. **The API
+is the contract, not the command line** (D1): a `star_pass` core holds
+the domain logic, a FastAPI service is the only remote surface, and the
+command line and the web page are both clients of it. And **runs,
+revisions and the `change_log` live in SQLite**, which is what makes a
+send idempotent and an edit undoable.
+
 ## Repository layout
 
 - `app/` is the Python import root. Modules import as
@@ -513,6 +533,13 @@ through the Amplify API. It is run once per month.
   volume are attached to the API service alone. HSTS is not enabled:
   it ships as an example file imported by a glob, to be turned on once
   the domain is settled and not before.
+- `README.md` — what the application is, what it can do, and four
+  steps to a running deployment. It links out rather than explaining:
+  `docs/cli.md` is every command word, `docs/slack-summary.md` is the
+  Slack sign-up summary, and `docs/deployment.md` is the two
+  processes, the two networks, TLS and the addresses the page serves.
+  A change to how something is run belongs in one of those three, not
+  back in `README.md`.
 - `docs/api/openapi.json` — the generated OpenAPI 3.1 contract,
   written by `scripts/generate_contract.py`, which also writes the
   client generated from it.
@@ -616,6 +643,10 @@ through the Amplify API. It is run once per month.
 
 ## Running the workflow
 
+The shape of a month, for orientation. Every flag, every refusal and
+what each command displays is in `docs/cli.md`, and the summary is in
+`docs/slack-summary.md`; this is the order they go in.
+
 ```bash
 # 1. Collect a calendar window into a run. --last-day is the last day
 #    covered, not the day after it.
@@ -623,24 +654,16 @@ through the Amplify API. It is run once per month.
     --calendar events --start 2026-09-01 --last-day 2026-09-30
 
 # 2. Read what sending it would create, then send it. The send asks
-#    first (D11) and refuses where there is no terminal to answer from.
+#    first (D11).
 ./app/__main__.py runs preview <run_id>
 ./app/__main__.py runs send <run_id>
 
-# 3. Delete a run that never sent. Asks first, restating what goes
-#    (D11), and is refused on a run that has sent or one something is
-#    working on (D24).
+# 3. Delete a run that never sent (D11, D24).
 ./app/__main__.py runs delete <run_id>
 
-# 4. Post a Slack sign-up summary (-C true is a dry run). The one run
-#    mode flag left: the API deliberately publishes no summary, so
-#    nothing replaces it.
-#    -d/--days sets the window, counting today as day one; the default
-#    is 1 (today only). Nothing in the window means nothing is posted.
-#    -N repeats, comma-separates, or takes - to read IDs from stdin;
-#    omitting it falls back to SLACK_SUMMARY_NEED_IDS.
+# 4. Post a Slack sign-up summary. The one run mode flag left: the API
+#    deliberately publishes no summary, so nothing replaces it.
 ./app/__main__.py -s -N <need_id> -C true
-./app/__main__.py -s -N <need_id>,<need_id> -d 2 -C true
 ```
 
 ## Development
@@ -660,6 +683,9 @@ The notes below are the ones that are not obvious from the commands.
   Constructing `GCALData` sends no request on its own.
 - A test that asserts a failure should assert the logged message as
   well as the exit, so an error stays actionable.
+- Test files start `test_*` methods, so add
+  `# pylint: disable=missing-function-docstring,missing-class-docstring`
+  at the top of new test modules.
 
 ### Linting
 
@@ -671,11 +697,6 @@ The notes below are the ones that are not obvious from the commands.
   the Python linters pass.
 - Bandit is a separate workflow and scans the whole repository,
   including `tests/`.
-
-- flake8 enforces a 79-character line limit; pylint allows 100.
-- Test files start `test_*` methods, so add
-  `# pylint: disable=missing-function-docstring,missing-class-docstring`
-  at the top of new test modules.
 
 ## Secrets and safety
 
@@ -724,9 +745,13 @@ The notes below are the ones that are not obvious from the commands.
   `events` points at `revisions` with a cascade, so the copy, drop
   and rename that is the portable answer elsewhere would delete every
   event in the database.
-- A SQLite connection belongs to the thread that opened it, so
+- **A SQLite connection belongs to the thread that opened it**, so
   anything working on another thread is given a way to open one, not a
-  connection to share. `JobRunner` opens one per job and closes it.
+  connection to share. Two things follow from the one rule: `JobRunner`
+  opens one per job and closes it, and the service never holds one
+  across a request - a synchronous dependency and the endpoint using it
+  can run on different threads, so the work goes to `_storage.read`,
+  which opens, uses and closes a connection inside a single call.
 - A job that fails records the reason only when it came from one of
   the core's own exceptions, which are written for a person and
   already redacted. Anything else records a fixed sentence and the
@@ -759,15 +784,19 @@ The notes below are the ones that are not obvious from the commands.
   given, because an internal failure can carry a credential, a
   volunteer's name, or an upstream body holding either. A 4xx does
   carry its reason: the caller is the one who can act on it.
-- The window crosses the wire with an exclusive `end` and is *spoken
-  about* by the last day it covers. **The answer carries both**: `end`
-  is authoritative and stays unconverted everywhere it is stored, sent
-  or compared, and `lastDay` beside it is the same window said the way
-  a reader means it, worked out once in `star_pass_contract/_views`.
-  Published rather than left to each client because every client that
-  shows a window has to say it that way, and one subtraction per
-  client is a client that can disagree with the server about which
-  days a run covers. The **other** direction stays in
+- The window crosses the wire as a `start` and an exclusive `end` -
+  the pair the repository stores - and is *spoken about* by the last
+  day it covers. **The answer carries both**: `end` is authoritative
+  and stays unconverted everywhere it is stored, sent or compared, and
+  `lastDay` beside it is the same window said the way a reader means
+  it, worked out once in `star_pass_contract/_views`. Published rather
+  than left to each client because every client that shows a window
+  has to say it that way, and one subtraction per client is a client
+  that can disagree with the server about which days a run covers, so
+  a client displays `lastDay` and never subtracts a day of its own.
+  The zone travels with the pair and the server's is authoritative: a
+  client never works a window out in the zone of whoever is looking at
+  it (D16). The **other** direction stays in
   `star_pass_cli/_render.py`: `after` takes the day `runs collect
   --last-day` was given and hands the contract the day after, because
   that is a request, and no request takes an inclusive day.
@@ -798,14 +827,6 @@ The notes below are the ones that are not obvious from the commands.
   answer *contains* is decided once, in `star_pass_contract._views`,
   because the command line client shows the same answers from the same
   database and two copies of that conversion would drift (D2).
-- A run's window crosses the wire as a `start` and an **exclusive**
-  `end`, the pair the repository stores, plus the zone they are read
-  in. The server's zone is authoritative: a client displays those
-  dates and never works a window out in the zone of whoever is looking
-  at it (D16). It carries an inclusive `lastDay` as well, added when
-  the web interface became a second client having to say it that way;
-  a client displays that field and does not subtract a day of its
-  own.
 - **`GET /v1/config` publishes the categories each calendar offers**,
   because that is the list a `set_category` edit may name and no
   reading of a run produces it: a run holds the opportunities its own
@@ -822,11 +843,6 @@ The notes below are the ones that are not obvious from the commands.
   The other order loses an event written between the two reads: the
   events read would not hold it, and the status read after it would
   end the stream.
-- The service never holds a connection across a request: a connection
-  belongs to the thread that opened it, and a synchronous dependency
-  and the endpoint using it can run on different threads. Pass the
-  work to `_storage.read` instead, which opens, uses and closes one
-  inside a single call.
 - **How often something may be asked for is the service's to decide**,
   not the core's: `_limiting.py` holds the count, in memory, because
   what it protects is this process's own upstream requests and a count
