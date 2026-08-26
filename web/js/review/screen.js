@@ -128,6 +128,10 @@ function showing(events, state) {
       return false;
     }
 
+    if (state.filters.repeated && event.duplicateOf === null) {
+      return false;
+    }
+
     return wanted === '' || event.title.toLowerCase().includes(wanted);
   });
 }
@@ -281,7 +285,7 @@ export class ReviewScreen {
       events: run.events,
       view,
       search: '',
-      filters: { blocking: false, fuzzy: false },
+      filters: { blocking: false, fuzzy: false, repeated: false },
       collapsed: new Set(),
       selection: new Set(),
       showLog: false,
@@ -418,6 +422,10 @@ export class ReviewScreen {
       },
       onToggleFuzzy: () => {
         this.state.filters.fuzzy = !this.state.filters.fuzzy;
+        this.redraw();
+      },
+      onToggleRepeated: () => {
+        this.state.filters.repeated = !this.state.filters.repeated;
         this.redraw();
       },
       onToggleAll: () => {

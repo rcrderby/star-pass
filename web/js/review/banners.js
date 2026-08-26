@@ -161,7 +161,8 @@ export function reviewBanners(state, handlers) {
       tone: SECONDARY,
       glyph: 'copy',
       words: `${repeated.length} of these shifts would repeat another `
-        + 'row in this run. They will be created once.'
+        + 'row in this run. They will be created once.',
+      action: showOnlyThese(filters.repeated, handlers.onToggleRepeated)
     }));
   }
 
