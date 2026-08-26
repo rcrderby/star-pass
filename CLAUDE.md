@@ -321,7 +321,7 @@ through the Amplify API. It is run once per month.
   warning and uses the `default` category, whose need IDs are empty. An
   empty need ID cannot become a shift, so the event is collected and
   named as unmatched, and stops the **send** rather than being dropped.
-  See the "Unmatched event titles" section of `README.md` for the
+  See the "Unmatched event titles" section of `docs/cli.md` for the
   operator workflow.
 - `app/star_pass_api/` — the remote surface over the core: the
   application factory (`create_app`), the service's own `_defaults.py`,
