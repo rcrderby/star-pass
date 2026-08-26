@@ -16,11 +16,14 @@ const ACCENT = 'banner banner-accent';
 const SECONDARY = 'banner banner-secondary';
 const ALERT = 'banner banner-alert';
 
-/* The two statuses that mean shifts reached Amplify, which the run
- * publishes and which each get their own banner. */
+/* Statuses the run publishes that each get their own banner. The
+ * first two mean shifts reached Amplify. 'RUN_FAILED' is exported
+ * because the table's empty line keys on it too: a run whose
+ * collection failed is accounted for here, and saying it a second
+ * time down there in different words reads as two problems. */
 const PARTLY_SENT = 'partly_sent';
 const SENT = 'sent';
-const FAILED = 'failed';
+export const RUN_FAILED = 'failed';
 
 /** Return one banner.
  *
@@ -119,7 +122,7 @@ export function reviewBanners(state, handlers) {
    * itself at all: the status is drawn in the run picker and nowhere
    * on the run.  What such a run wants is to be collected again, or
    * deleted (D31). */
-  if (run.status === FAILED) {
+  if (run.status === RUN_FAILED) {
     banners.push(banner({
       tone: ALERT,
       glyph: 'warning-circle',
