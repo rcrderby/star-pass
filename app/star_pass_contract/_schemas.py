@@ -227,6 +227,21 @@ class RunView(ApiModel):
             'carried out is not something to offer to resume.'
         )
     )
+    may_delete: bool = Field(
+        description=(
+            'Whether this run may be deleted. False while something '
+            'is working on it, and false for ever once its shifts '
+            'reached Amplify, because the record of what it created '
+            'is the only account of that anything here holds (D24). '
+            'Answered here for the same reason `mayUnassign` is on an '
+            'event: it is the rule the delete operation refuses by, '
+            'and a caller working it out again would be a second '
+            'opinion about what the operation will accept -- one that '
+            'agrees until the rule changes and then disagrees '
+            'quietly. Why it is false is not published: a caller that '
+            'asks anyway is told by the refusal itself.'
+        )
+    )
 
 
 class MatchView(ApiModel):

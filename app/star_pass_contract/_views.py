@@ -66,6 +66,7 @@ from star_pass._records import (
     UNCOLLECTED_SEARCH,
     UnmatchedTitle
 )
+from ._messages import why_not_delete
 from ._requests import EditRequest
 from ._preview_schemas import (
     BlockerView,
@@ -269,7 +270,13 @@ def to_run_view(
             uncollected=run.uncollected_count
         ),
         active_job_id=run.active_job_id,
-        interrupted_job_id=run.interrupted_job_id
+        interrupted_job_id=run.interrupted_job_id,
+
+        # The same function the operation refuses by, asked as a
+        # question rather than restated as one. A predicate written
+        # beside it would be a second copy of the rule, which is the
+        # thing publishing this is meant to prevent.
+        may_delete=why_not_delete(run=run) is None
     )
 
 

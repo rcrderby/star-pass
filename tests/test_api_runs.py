@@ -27,7 +27,8 @@ from star_pass._records import (
     Match,
     OP_NUDGE,
     OP_REMOVE,
-    OP_SET_SLOTS
+    OP_SET_SLOTS,
+    RUN_STATUS_SENT
 )
 from star_pass._repository import (
     ChangeLogRepository,
@@ -605,6 +606,90 @@ class TestWhatIsShownBesideARun:
         assert read_run(run_id)['log'] == []
 
 
+class TestWhetherARunMayBeDeleted:
+    """ The answer the list draws its delete control from (D24). """
+
+    def test_a_run_that_never_sent_may_go(
+        self,
+        running_client: TestClient,
+        collected: str
+    ) -> None:
+        del collected
+
+        assert running_client.get(RUNS_PATH).json()[0]['mayDelete'] is True
+
+    def test_a_sent_run_may_not(
+        self,
+        running_client: TestClient,
+        runs: RunRepository,
+        collected: str
+    ) -> None:
+        # Read off 'sent_at' rather than off the status, because
+        # 'mark_sent' writes it for both of the statuses that mean
+        # shifts reached Amplify (D24).
+        runs.mark_sent(run_id=collected, status=RUN_STATUS_SENT)
+
+        assert running_client.get(RUNS_PATH).json()[0]['mayDelete'] is False
+
+    def test_a_run_with_a_job_in_hand_may_not(
+        self,
+        running_client: TestClient,
+        run_id: str,
+        job_id: str
+    ) -> None:
+        # The temporary refusal: this run becomes deletable when the
+        # work finishes, which is why the control goes rather than
+        # being drawn and refused.
+        del run_id, job_id
+
+        assert running_client.get(RUNS_PATH).json()[0]['mayDelete'] is False
+
+    def test_one_run_answers_it_the_way_the_list_does(
+        self,
+        running_client: TestClient,
+        runs: RunRepository,
+        collected: str
+    ) -> None:
+        # Both are the same statement. A screen that opened a run from
+        # the list and drew a delete there would otherwise disagree
+        # with the list it came from.
+        runs.mark_sent(run_id=collected, status=RUN_STATUS_SENT)
+
+        assert running_client.get(
+            run_path(run_id=collected)
+        ).json()['mayDelete'] is False
+
+    def test_it_is_the_rule_the_operation_refuses_by(
+        self,
+        running_client: TestClient,
+        runs: RunRepository,
+        collected: str,
+        other_run_id: str
+    ) -> None:
+        # What publishing it is for: a caller that draws its control
+        # from this field never offers one the operation would refuse,
+        # and never withholds one it would accept.
+        #
+        # Two runs rather than one asked twice, because the answer
+        # this is checking against is a deletion, and a run that has
+        # been deleted cannot be asked a second question.
+        runs.mark_sent(run_id=collected, status=RUN_STATUS_SENT)
+
+        answered = {
+            run['id']: run['mayDelete']
+            for run in running_client.get(RUNS_PATH).json()
+        }
+
+        assert set(answered) == {collected, other_run_id}
+
+        for run_id, may_delete in answered.items():
+            refused = running_client.delete(
+                run_path(run_id=run_id)
+            ).status_code == 409
+
+            assert may_delete is not refused, run_id
+
+
 class TestWhatTheSpecificationSays:
     def test_both_endpoints_declare_the_scope_they_need(
         self,
@@ -630,8 +715,10 @@ class TestWhatTheSpecificationSays:
         assert 'collectedAt' in properties
         assert 'activeJobId' in properties
         assert 'interruptedJobId' in properties
+        assert 'mayDelete' in properties
         assert 'collected_at' not in properties
         assert 'interrupted_job_id' not in properties
+        assert 'may_delete' not in properties
 
     def test_the_detail_shape_carries_what_a_run_alone_does_not(
         self,

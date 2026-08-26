@@ -43,6 +43,23 @@
   background: color-mix(in srgb, var(--color-accent) 22%, transparent);
 }
 
+/* The one button that destroys something. Its own colour, because
+ * the two things it is used for -- a deletion here, nothing else yet
+ * -- are the ones where reading the label matters more than reaching
+ * the button quickly. */
+.btn-danger {
+  border-color: var(--color-alert);
+  color: var(--color-alert);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-alert) 12%, transparent);
+}
+
+.btn-danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--color-alert) 22%, transparent);
+}
+
 .btn-secondary {
   border-color: var(--color-divider);
 }

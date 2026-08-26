@@ -48,11 +48,13 @@ import {
   RUN,
   RUN_PREVIEW,
   RUN_UNCOLLECTED,
+  RUNS,
   Router,
   SETTINGS,
   pathFor
 } from './router.js';
-import { emptyState, failureState } from './screens.js';
+import { RunsScreen } from './runs/screen.js';
+import { failureState } from './screens.js';
 import {
   ReviewScreen,
   SHIFTS_VIEW,
@@ -99,7 +101,7 @@ async function start() {
    * was, which is now a thing a path can say. Home until somebody has
    * been anywhere, which is what a page opened straight on '/settings'
    * gets. */
-  let cameFrom = pathFor(HOME);
+  let cameFrom = pathFor(RUNS);
 
   /** Put a screen on, letting go of the one before it.
    *
@@ -213,7 +215,10 @@ async function start() {
     show(
       new CollectingScreen(
         { job, config, calendar },
-        { onOpenRun: (runId) => router.go(pathFor(RUN, runId)) }
+        {
+          onOpenRun: (runId) => router.go(pathFor(RUN, runId)),
+          onLeave: () => router.go(pathFor(RUNS))
+        }
       ),
       job.runId
     );
@@ -312,16 +317,44 @@ async function start() {
     );
   }
 
-  /** Draw the run a path named, or the newest when it named none.
+  /** Draw the runs list.
+   *
+   * Home, and the one screen that is a reading of every run rather
+   * than of one. The empty state is drawn inside it rather than in
+   * place of it: a page with no runs is still on the runs list, and
+   * the address should say so.
+   *
+   * @param {Array<Object>} runs Every run the service holds.
+   * @param {boolean} [missing] Whether an address named a run the
+   *     service does not hold.
+   * @returns {Promise<void>} When it is on screen.
+   */
+  async function showList(runs, missing = false) {
+    /* Read here rather than inside the drawer: the drawer is opened
+     * from three places and a screen that fetched on open would be
+     * one that appears empty and then fills in. */
+    const config = await getConfig();
+
+    show(new RunsScreen(
+      { runs, missing },
+      {
+        onOpenRun: (runId) => router.go(pathFor(RUN, runId)),
+        onCollectNew: () => collect(config),
+        onChanged: () => router.go(pathFor(RUNS)),
+        pathForRun: (runId) => pathFor(RUN, runId)
+      }
+    ));
+  }
+
+  /** Draw the run a path named, or the list when it named none.
    *
    * The run list is read every time rather than kept: a send changes
-   * the run's status, and the picker on the review screen shows that
-   * status for every run it lists.
+   * the run's status, and both the list and the picker on the review
+   * screen show that status for every run.
    *
-   * An address naming a run the service does not hold draws the
-   * newest and says so, rather than leaving the address claiming a
-   * run nobody is looking at. What it should do is refuse on the runs
-   * list, which is a screen this does not have yet.
+   * An address naming a run the service does not hold is refused on
+   * the list rather than answered with a different run: a bookmark to
+   * a deleted run is a question, and the answer is that it is gone.
    *
    * @param {string} name Which address was asked for.
    * @param {string} [runId] The run it named, where it named one.
@@ -330,14 +363,24 @@ async function start() {
   async function showRuns(name, runId = '') {
     const runs = await listRuns();
 
-    if (runs.length === 0) {
-      /* Read here rather than inside the drawer: the drawer is opened
-       * from three places and a screen that fetched on open would be
-       * one that appears empty and then fills in. */
-      const config = await getConfig();
+    if (name === HOME) {
+      await openHome(runs);
 
-      router.say(pathFor(HOME));
-      show({ element: emptyState(() => collect(config)) });
+      return;
+    }
+
+    /* Every other address is over a run, and there are none. The
+     * list says so, at its own address rather than at the one that
+     * named a run that cannot exist -- and it refuses the run that
+     * was asked for, because "there is no run with that identifier"
+     * is the answer to that question whether or not there are others
+     * to show underneath it. */
+    if (name === RUNS || runs.length === 0) {
+      if (name !== RUNS) {
+        router.say(pathFor(RUNS));
+      }
+
+      await showList(runs, name !== RUNS);
 
       return;
     }
@@ -348,8 +391,33 @@ async function start() {
       return;
     }
 
-    router.say(pathFor(RUN, runs[0].id));
-    await openRun(runs, runs[0].id, RUN);
+    router.say(pathFor(RUNS));
+    await showList(runs, true);
+  }
+
+  /** Draw what the root resolves to.
+   *
+   * The list, unless something is working on a run -- in which case
+   * that run, because a run being worked on opens on the work and a
+   * job somebody walked away from is the thing they came back for.
+   * The newest such run, so that the answer does not depend on the
+   * order two of them started in.
+   *
+   * @param {Array<Object>} runs Every run the service holds.
+   * @returns {Promise<void>} When it is on screen.
+   */
+  async function openHome(runs) {
+    const working = runs.find((run) => run.activeJobId !== null);
+
+    if (working === undefined) {
+      router.say(pathFor(RUNS));
+      await showList(runs);
+
+      return;
+    }
+
+    router.say(pathFor(RUN, working.id));
+    await openRun(runs, working.id, RUN);
   }
 
   /** Show the settings, over whatever was being looked at.
@@ -380,8 +448,8 @@ async function start() {
        * rest, so arriving here means the page pushed something its
        * own table does not know. Draw home and say so, rather than
        * leaving an address nothing can return to. */
-      router.say(pathFor(HOME));
-      await showRuns(HOME);
+      router.say(pathFor(RUNS));
+      await showRuns(RUNS);
 
       return;
     }

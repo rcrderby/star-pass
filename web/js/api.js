@@ -568,6 +568,28 @@ export function recollectRun(runId, expectedChangeCount, options = {}) {
   });
 }
 
+/** Delete a run and everything it holds.
+ *
+ * Refused when the run has sent, and separately while something is
+ * working on it (D24). Whether it may go at all is the run's own
+ * `mayDelete`, so a caller draws its control from the answer rather
+ * than working the rule out; asking anyway is answered by the
+ * refusal, which carries its own reason.
+ *
+ * Answers with nothing: a deletion has nothing to report beyond
+ * having happened.
+ *
+ * @param {string} runId Which run.
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<null>} When it is gone.
+ */
+export function deleteRun(runId, options = {}) {
+  return ask(`/runs/${encodeURIComponent(runId)}`, {
+    ...options,
+    method: 'DELETE'
+  });
+}
+
 /** Return what sending this run's current revision would create.
  *
  * **This request is the duplicate check.** Every opportunity the

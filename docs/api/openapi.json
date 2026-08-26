@@ -1281,6 +1281,11 @@
             "title": "Log",
             "type": "array"
           },
+          "mayDelete": {
+            "description": "Whether this run may be deleted. False while something is working on it, and false for ever once its shifts reached Amplify, because the record of what it created is the only account of that anything here holds (D24). Answered here for the same reason `mayUnassign` is on an event: it is the rule the delete operation refuses by, and a caller working it out again would be a second opinion about what the operation will accept -- one that agrees until the rule changes and then disagrees quietly. Why it is false is not published: a caller that asks anyway is told by the refusal itself.",
+            "title": "Maydelete",
+            "type": "boolean"
+          },
           "opportunities": {
             "description": "Amplify titles for every need ID this run touches, resolved while the run was collected and stored with it. Every review row is labelled with one, so they are not a lookup deferred to preview time.",
             "items": {
@@ -1325,6 +1330,7 @@
           "revisedAt",
           "currentRevision",
           "counts",
+          "mayDelete",
           "events",
           "opportunities",
           "log"
@@ -1383,6 +1389,11 @@
             "description": "Identifier of the job this run last ran, when the service stopped while it was in hand, and null otherwise. Resuming one is a deliberate act and never automatic (D10), which means a caller has to be able to name it -- and an interrupted job is finished, so it is never the \"activeJobId\". Only the run's most recent job is reported here: a send that a later one has since carried out is not something to offer to resume.",
             "title": "Interruptedjobid"
           },
+          "mayDelete": {
+            "description": "Whether this run may be deleted. False while something is working on it, and false for ever once its shifts reached Amplify, because the record of what it created is the only account of that anything here holds (D24). Answered here for the same reason `mayUnassign` is on an event: it is the rule the delete operation refuses by, and a caller working it out again would be a second opinion about what the operation will accept -- one that agrees until the rule changes and then disagrees quietly. Why it is false is not published: a caller that asks anyway is told by the refusal itself.",
+            "title": "Maydelete",
+            "type": "boolean"
+          },
           "revisedAt": {
             "description": "When it last changed, as an ISO-8601 UTC time. The time it was collected, for a run nothing has changed yet.",
             "title": "Revisedat",
@@ -1418,7 +1429,8 @@
           "collectedAt",
           "revisedAt",
           "currentRevision",
-          "counts"
+          "counts",
+          "mayDelete"
         ],
         "title": "RunView",
         "type": "object"
