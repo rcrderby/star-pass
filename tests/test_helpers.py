@@ -389,6 +389,30 @@ class TestRedactSecrets:
         text = 'the token was rejected'
         assert helpers.redact_secrets(text) == text
 
+    @pytest.mark.parametrize(
+        'text, expected',
+        [
+            ("?q=officials&key=')", "?q=officials&key=REDACTED')"),
+            ('?key=', '?key=REDACTED'),
+            (
+                "{'Authorization': 'Bearer '}",
+                "{'Authorization': 'Bearer REDACTED'}"
+            ),
+            ('?api_key=&x=1', '?api_key=REDACTED&x=1'),
+            ('?access_token= ', '?access_token=REDACTED '),
+        ]
+    )
+    def test_a_parameter_carrying_nothing_is_redacted_too(
+        self, helpers, text, expected
+    ):
+        # An unset credential is still a fact about the deployment,
+        # and a label that redacts only sometimes teaches a reader
+        # that what they can see was not worth hiding. Found by the
+        # operator, on the collecting screen, with 'GCAL_TOKEN'
+        # pointed at nothing; the bearer case was found by mutating
+        # the query-parameter fix and watching nothing fail.
+        assert helpers.redact_secrets(text) == expected
+
 
 def _send_and_expect_upstream_error(
     helpers, monkeypatch, caplog, raise_conn_error

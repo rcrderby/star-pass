@@ -298,6 +298,15 @@
   color: var(--color-alert);
 }
 
+/* The service's own sentence, which can carry a request URL: one
+ * unbroken token far wider than the card, with no space in it for
+ * `text-wrap` to break at. Broken anywhere rather than left to run
+ * out past the edge of the box that is supposed to contain it. */
+.collect-failure-words > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .collect-failure-words > .icon {
   flex: none;
   margin-top: 1px;
