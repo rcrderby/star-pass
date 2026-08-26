@@ -68,6 +68,11 @@ const NOTHING_MATCHES = (
   'No event in this run matches what you are looking for.'
 );
 
+/* What the select-all control is called. It says "shown" because that
+ * is what it acts on: a select-all that reached past a search would
+ * check rows nobody could see, and the search is on screen beside it. */
+const SELECT_ALL = 'Select all shown';
+
 /* Which tab is showing. The names the header's control reports, and
  * the names a path is routed to: each tab is one of the run's two
  * addresses (D28), so what the header says and what the address says
@@ -137,14 +142,34 @@ function toolbar(state, shown, handlers) {
   return el(
     'div',
     { class: 'toolbar card elev-sm' },
-    el('button', {
-      type: 'button',
-      class: handlers.allShown ? 'checkbox checkbox-on' : 'checkbox',
-      role: 'checkbox',
-      'aria-checked': String(handlers.allShown),
-      'aria-label': 'Select every event shown',
-      onclick: handlers.onToggleAll
-    }),
+    el(
+      'button',
+      {
+        type: 'button',
+        class: 'select-all',
+        role: 'checkbox',
+        'aria-checked': String(handlers.allShown),
+
+        /* Refused while an edit is in flight, because that edit
+         * rewrites the selection when it answers, dropping whatever
+         * it removed: two writers, so this one waits.  The search
+         * beside it writes only its own text and stays usable
+         * throughout.  Refused again with nothing on screen, where
+         * the label would be offering rows that are not there --
+         * which the square it replaces could not say either way. */
+        disabled: state.busy || shown === 0,
+        onclick: handlers.onToggleAll
+      },
+
+      /* The box is drawn by the control's own label rather than
+       * beside it: the text is the accessible name, so the square
+       * says nothing a screen reader has to be told twice. */
+      el('span', {
+        class: handlers.allShown ? 'checkbox checkbox-on' : 'checkbox',
+        'aria-hidden': 'true'
+      }),
+      el('span', { text: SELECT_ALL })
+    ),
     el(
       'span',
       { class: 'search-wrap' },
@@ -329,6 +354,15 @@ export class ReviewScreen {
     const allShown = shown.length > 0
       && shown.every((event) => this.state.selection.has(event.id));
 
+    /* How much of the selection a filter or a search is hiding. A
+     * bulk operation names every selected event, shown or not, which
+     * is what makes "select all, search, uncheck, Remove" work -- and
+     * what makes a count of rows nobody can see worth saying out
+     * loud beside a control that removes them. */
+    const hidden = chosen.length - shown.filter(
+      (event) => this.state.selection.has(event.id)
+    ).length;
+
     const handlers = {
       allShown,
       onSearch: (text) => {
@@ -385,9 +419,10 @@ export class ReviewScreen {
       this.state.refusal === null
         ? ''
         : refusalNotice(this.state.refusal),
+      toolbar(this.state, shown.length, handlers),
       this.state.selection.size > 0
-        ? selectionToolbar(this.state, context.categories, bulk)
-        : toolbar(this.state, shown.length, handlers),
+        ? selectionToolbar(this.state, context.categories, bulk, hidden)
+        : '',
       el('p', {
         class: 'table-hint muted note',
         text: anyOffset ? TIMES_OFFSET : TIMES_MATCH
