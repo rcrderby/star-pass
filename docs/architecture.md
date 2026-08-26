@@ -5,8 +5,10 @@ and what a run does across it. Between them they show the shape the
 security argument rests on, which is otherwise spread across
 `compose.yaml`, `deploy/caddy/Caddyfile` and half a dozen decisions.
 
-Both are generated. Edit the boxes, the networks and the arrows in
-`scripts/generate_architecture.py`, then:
+Both are generated. The boxes, the networks, the arrows and the
+coordinates each sits at are in `scripts/generate_architecture.py`, and
+how one is drawn is in `scripts/_drawing.py` beside it. Edit whichever
+answers the question, then:
 
 ```bash
 python scripts/generate_architecture.py
