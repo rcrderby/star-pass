@@ -16,10 +16,19 @@ import { ConfirmDialog } from '../confirm.js';
 import { counted, windowText } from '../format.js';
 import { el } from '../dom.js';
 
-/* Said last, above the buttons, in the alert colour. */
+/* Said last, above the buttons, in the alert colour, and said here
+ * alone: the preview carried the same warning under its own controls,
+ * where nothing was about to happen. A sentence about the thing that
+ * cannot be undone, on the screen where it still can be, is one a
+ * reader learns to pass over -- and this is the dialog it was the
+ * whole reason for.
+ *
+ * It names what is created and where it has to be undone, rather than
+ * saying there is no undo and leaving the reader to work out what
+ * that means for them. */
 const NO_UNDO = (
-  'Amplify has no undo. Removing any of these afterwards has to be '
-  + 'done in Amplify by hand.'
+  'This creates volunteer shifts in Amplify. They can only be changed '
+  + 'or removed afterwards in the Amplify administrative portal.'
 );
 
 /* Why the number can be trusted even though the screen behind this
