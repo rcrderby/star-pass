@@ -139,13 +139,6 @@
   min-width: 0;
 }
 
-/* Given the whole line to itself, under the controls rather than
- * beside them: it is the sentence somebody should be reading as they
- * decide, not a note on a button. */
-.preview-warning {
-  flex-basis: 100%;
-}
-
 /* — the checks card — */
 
 .card-kicker {

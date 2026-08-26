@@ -31,13 +31,6 @@ const HEADERS = ['Opportunity', 'New shifts', 'Slots', 'Dates'];
  * already holds every shift for looks like. */
 const NOTHING_LEFT = 'nothing left to create';
 
-/* Said under the table, always, and last: it is the whole reason the
- * confirmation exists. */
-const NO_UNDO = (
-  'Amplify has no undo. Shifts created here have to be removed in '
-  + 'Amplify by hand.'
-);
-
 /* While the preview is being read, and when it could not be.  The
  * lead says what this screen knows -- the check did not happen, so
  * nothing will be sent -- and what stopped it is the service's own
@@ -358,10 +351,16 @@ export function previewActions(state, handlers) {
         disabled: preview === null || willCreate === 0 || reason !== '',
         onclick: handlers.onConfirm
       },
-      icon('paper-plane-tilt'),
-      willCreate === 0
-        ? 'Send to Amplify'
-        : `Send ${counted(willCreate, 'shift')} to Amplify`
+
+      /* It opens the confirmation, and the confirmation is what
+       * sends. A button saying "Send 12 shifts to Amplify" over a
+       * screen whose whole job is to be read first is a button
+       * claiming to be the last one, and the count belongs to the
+       * step that acts on it -- which is where the number in the
+       * title, the number in the button and the number the request
+       * carries all have to be the same one. */
+      icon('magnifying-glass'),
+      'Review this send'
     ),
     el(
       'button',
@@ -417,7 +416,6 @@ export function previewActions(state, handlers) {
         { class: 'preview-blocked meta' },
         icon('warning-circle'),
         el('span', { text: reason })
-      ),
-    el('span', { class: 'preview-warning muted meta', text: NO_UNDO })
+      )
   );
 }
