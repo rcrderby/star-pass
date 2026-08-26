@@ -13,7 +13,7 @@ uvicorn==0.52.4
 # The front end's connection to the API service. Async, and it passes
 # an event stream through as it arrives rather than at the end, which
 # is what watching a job needs.
-httpx2==2.10.0
+httpx2==2.12.0
 
 # JSON Schema validation
 jsonschema==4.26.0

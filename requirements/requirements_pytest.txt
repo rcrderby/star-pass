@@ -14,6 +14,6 @@ slack_sdk==3.43.0
 # Python testing
 # The Starlette test client uses httpx2; with httpx instead it
 # still works and warns on every request.
-httpx2==2.10.0
+httpx2==2.12.0
 pytest==9.1.1
 pytest-cov==7.1.0
