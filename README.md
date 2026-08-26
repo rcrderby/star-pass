@@ -276,6 +276,30 @@ refused by the browser, and the deployment is meant to work on a
 tailnet with no route out — where it would never arrive at all. Both
 are redistributable and their licences are beside them.
 
+**Every screen has an address** (D28). The page opens on the runs
+list, and a run, what it left out and its preview each have a path:
+
+| Path | What it draws |
+| --- | --- |
+| `/`, `/runs` | Every run, with its window, counts and status |
+| `/runs/{id}` | One run's shifts to create |
+| `/runs/{id}/uncollected` | What that run's window left out |
+| `/runs/{id}/preview` | What sending it would create |
+| `/settings` | What the service resolved at start up |
+
+So a run can be reloaded, bookmarked, or opened in a second tab, and
+Back goes to the runs list rather than out of the application. The
+frontend answers those paths, and only those, with the page: anything
+else that is not a file is still a 404, because a blanket fallback
+would answer a mistyped module path with the page and a 200, and the
+screen would silently never draw.
+
+A run being worked on opens on the work, so `/` goes to that run while
+a collection or a send is running. The session cookie is
+`SameSite=Strict`, so a run link followed from another site arrives
+without it and the frontend mints a fresh session — harmless while
+there is no login.
+
 ### Running both behind Caddy
 
 ```bash
@@ -452,6 +476,24 @@ now, so any editing done since it was collected is left behind:
 `runs revisions` reports against the current revision. A number that no
 longer matches is refused, which is what stops a run that has moved on
 being replaced from a stale reading of it.
+
+### Deleting a run
+
+```bash
+./app/__main__.py runs delete <run_id>
+```
+
+Asks first, restating the run and what it holds, and takes the run's
+revisions, events, opportunities, `change_log` rows and jobs with it.
+The titles its window did not match stay: what the shift data model is
+missing outlives the run that found it.
+
+**A run that has sent cannot be deleted** (D24). The record of what it
+created is the only account of that anything here holds. A run
+something is working on is refused too, with a different reason: that
+one becomes deletable when the work finishes. The runs list draws its
+delete control from the run's own answer, so a run that may not go is
+offered nothing rather than offered something that fails.
 
 ### Sending a run
 

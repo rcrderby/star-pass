@@ -349,7 +349,14 @@ through the Amplify API. It is run once per month.
   requests on and streams what the API streams, and `_configuration.py`
   refuses to start half-configured. Run it with
   `uvicorn --factory star_pass_bff:create_app`. It serves `web/` at
-  its root, and refuses to start when there is no page there.
+  its root, and refuses to start when there is no page there. It also
+  answers the page's own paths with the page (D28) — `SCREEN_PATHS` in
+  `_defaults.py`, registered between the proxy and the mount, because
+  the mount would answer `/settings` with a 404 before they were
+  reached. **Enumerated, never a catch-all**: a blanket fallback would
+  hand a browser the page where it asked for a module, at a 200, and
+  turn the loud 404 that `tests/test_web_page.py` exists to catch into
+  a screen that silently never draws.
 - `web/` — what the frontend serves at `/`. It lives here and not in
   the design project because it can work from no other origin: the
   token a write carries is a cookie the page reads, the session cookie
@@ -487,7 +494,12 @@ through the Amplify API. It is run once per month.
   different question: every path the page names and every module a
   module imports is a URL a browser fetches, so a misspelled one is a
   screen with no styles or one that never draws, and nothing else in
-  the repository would notice.
+  the repository would notice. `tests/test_web_routes.py` is the
+  third: it holds the route table in `js/router.js` to the frontend's
+  `SCREEN_PATHS`, because a path one of them knows and the other does
+  not is a screen that works until somebody reloads it — and it tests
+  the refusals as well as the answers, since a test that only proved
+  the screens are served would pass on the catch-all D28 rejects.
   **Nothing sets a `style` attribute from a script** — the policy
   refuses one, so a size worked out while the page runs is a custom
   property the CSS reads, which is how the send's progress bar is
@@ -604,7 +616,12 @@ through the Amplify API. It is run once per month.
 ./app/__main__.py runs preview <run_id>
 ./app/__main__.py runs send <run_id>
 
-# 3. Post a Slack sign-up summary (-C true is a dry run). The one run
+# 3. Delete a run that never sent. Asks first, restating what goes
+#    (D11), and is refused on a run that has sent or one something is
+#    working on (D24).
+./app/__main__.py runs delete <run_id>
+
+# 4. Post a Slack sign-up summary (-C true is a dry run). The one run
 #    mode flag left: the API deliberately publishes no summary, so
 #    nothing replaces it.
 #    -d/--days sets the window, counting today as day one; the default
