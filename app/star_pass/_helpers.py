@@ -662,9 +662,18 @@ class Helpers:
     # the substitution shows what was redacted.
     _SECRET_PATTERNS = (
         # Query parameters: '?key=', '&api_key=', 'access_token=', ...
-        re.compile(r'(?i)((?:api_|access_|auth_)?(?:key|token)=)[^&\s\'"]+'),
-        # Authorization header values
-        re.compile(r'(?i)(bearer\s+)[^\s\'"]+'),
+        #
+        # The value repeats zero or more times, not one or more, so
+        # that a parameter carrying nothing is redacted too.  A URL
+        # ending '&key=' says the credential is empty, which is a fact
+        # about the deployment and not one a screen should publish --
+        # and a label that redacts only sometimes teaches a reader
+        # that what they can see was not worth hiding.
+        re.compile(r'(?i)((?:api_|access_|auth_)?(?:key|token)=)[^&\s\'"]*'),
+        # Authorization header values, zero or more for the reason
+        # the parameter above is: an unset credential still says what
+        # the deployment is carrying.
+        re.compile(r'(?i)(bearer\s+)[^\s\'"]*'),
         # Slack tokens, which carry their own recognizable prefix and so
         # can leak without an adjacent label
         re.compile(r'(xox[abprs]-)[A-Za-z0-9-]+'),
