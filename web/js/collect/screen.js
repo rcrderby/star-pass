@@ -54,11 +54,14 @@ const INTERRUPTED = 'interrupted';
 
 /* Under the heading, while it works and afterwards. Says the two
  * things somebody watching needs: that nothing is being sent, and
- * that they may go away. */
+ * that they may go away.  "while it works" is exact: a run whose job
+ * has finished opens on the run rather than back here, which is what
+ * a run being worked on opening on the work means once there is no
+ * work. */
 const LEDE = (
   'Nothing is sent to Amplify by a collection. You can leave this '
-  + 'page and come back to it, and when it finishes the new run opens '
-  + 'for review.'
+  + 'page and come back to it while it works, and it stops here when '
+  + 'it finishes rather than moving you on.'
 );
 
 /* Beside the run identifier. The identifier is the service's, which
@@ -69,6 +72,17 @@ const MINTED = 'the service assigned this id, and it stays with the run';
 const LEAVING_IS_SAFE = (
   'Leaving does not stop it. The collection is listed under Runs '
   + 'while it works, and opening it comes back here.'
+);
+
+/* Said beside the button a finished collection offers.  The screen
+ * stops here rather than opening the run itself: what a collection
+ * reports is worth reading -- which steps ran, how long each took,
+ * and the identifier the run keeps -- and a screen that replaced
+ * itself the moment the last step finished gave a reader no chance to.
+ * Going on is one press, and it is theirs. */
+const COLLECTED = (
+  'The run is ready to review. It is listed under Runs, and this page '
+  + 'can be left without losing it.'
 );
 
 /* Said under a failure. A collection writes its events in one
@@ -292,7 +306,9 @@ export class CollectingScreen {
     this.state.interrupted = ending.status === INTERRUPTED;
 
     if (ending.status === SUCCEEDED) {
-      this.handlers.onOpenRun(this.state.job.runId);
+      /* Drawn, not left.  'draw' answers a finished collection with
+       * 'collectedActions', which is where the run is opened from. */
+      this.draw();
 
       return;
     }
@@ -470,12 +486,35 @@ export class CollectingScreen {
     );
   }
 
+  /** Return what a finished collection offers.
+   *
+   * @returns {HTMLElement} The actions.
+   */
+  collectedActions() {
+    return el(
+      'div',
+      { class: 'collect-actions' },
+      el(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-primary',
+          onclick: () => this.handlers.onOpenRun(this.state.job.runId)
+        },
+        icon('arrow-right'),
+        'Review this run'
+      ),
+      el('span', { class: 'muted meta', text: COLLECTED })
+    );
+  }
+
   /** Draw the screen.
    *
    * @returns {void}
    */
   draw() {
     const { running, failure, lost, steps } = this.state;
+    const collected = !running && failure === null;
 
     fill(
       this.element,
@@ -492,7 +531,8 @@ export class CollectingScreen {
         : null,
       stepList(steps),
       failure === null ? null : this.failureCard(),
-      running ? this.runningActions() : null
+      running ? this.runningActions() : null,
+      collected ? this.collectedActions() : null
     );
   }
 }
