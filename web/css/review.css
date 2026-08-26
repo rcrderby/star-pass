@@ -391,6 +391,17 @@ button.picker-row:hover {
   padding: 10px 12px;
 }
 
+/* A repeat carries the edge its own banner carries, so the two read
+ * as one piece of news rather than a colour on a row and a sentence
+ * above it. Not the alert colour: a row repeating another is a thing
+ * to be told about and nothing is wrong with it.
+ *
+ * Before the blocking rule below and not after it. A row can be both,
+ * and the one that stops the run being sent is the one worth seeing. */
+.event-row-repeat {
+  border-left-color: var(--color-accent-600);
+}
+
 .event-row-blocking {
   border-left-color: var(--color-alert);
 }

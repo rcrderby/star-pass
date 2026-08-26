@@ -332,12 +332,24 @@ function eventRows(event, context) {
   const capped = event.cappedAt !== null;
   const endsFirst = event.lengthMinutes <= 0;
 
+  /* Built rather than chosen, because a row can be both: a repeat
+   * that also has no opportunity to create a shift under carries the
+   * two marks, and the stylesheet decides which edge is drawn by
+   * putting the alert one last. */
+  const marks = ['row-card', 'event-row'];
+
+  if (event.duplicateOf !== null) {
+    marks.push('event-row-repeat');
+  }
+
+  if (event.blocking) {
+    marks.push('event-row-blocking');
+  }
+
   const main = el(
     'div',
     {
-      class: event.blocking
-        ? 'row-card event-row event-row-blocking'
-        : 'row-card event-row',
+      class: marks.join(' '),
       role: 'row'
     },
     el(
