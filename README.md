@@ -261,6 +261,55 @@ whichever is missing. It also refuses to start with no page to serve:
 it exists to give a browser one and to carry its session, so a proxy
 with nothing behind it would be reachable and unusable.
 
+### Reading the API specification
+
+The service describes itself at three paths, and **none of them is
+reachable from outside a deployment**. The Caddyfile calls Caddy "the
+only process in this deployment with a published port" and passes
+everything to the frontend; the API publishes no port and sits on a
+network a browser never touches (D5, D6, D17). That is deliberate, and
+these paths are not a reason to change it.
+
+| Path | What it serves |
+| --- | --- |
+| `/docs` | Swagger UI |
+| `/redoc` | ReDoc |
+| `/v1/openapi.json` | The specification itself |
+
+**The specification is also a file in this repository**, at
+`docs/api/openapi.json`, written by `scripts/generate_contract.py` and
+regenerated whenever a route, model, scope or version changes. It is
+the same document the running service serves, which is what makes the
+next command worth knowing: it needs no deployment, no port and no
+credential.
+
+```bash
+docker run --rm -p 8080:8080 \
+  -e SWAGGER_JSON=/spec/openapi.json \
+  -v "$PWD/docs/api:/spec:ro" \
+  swaggerapi/swagger-ui
+```
+
+Then open `http://localhost:8080`. Swagger UI ships inside that image,
+so nothing is fetched from anywhere once it has been pulled, and what
+it renders is the committed contract rather than a copy that could
+have drifted from it.
+
+To reach the running service's own pages instead, run the API outside
+the deployment and visit them on its port:
+
+```bash
+uvicorn --factory star_pass_api:create_app --port 8000
+```
+
+**`/docs` and `/redoc` fetch Swagger UI and ReDoc from a content
+delivery network**, which is FastAPI's default and the one place this
+application reaches another origin. On a machine with no route out
+they render as an empty page. Vendoring those assets the way
+`web/assets/` vendors Inter and Phosphor is worth doing and is not
+done; until it is, the container above is the offline way to read the
+same specification.
+
 ### The page it serves
 
 `web/` is the interface, and there is **no build step**: the ES
