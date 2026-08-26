@@ -712,6 +712,23 @@ button.picker-row:hover {
 
 /* — the time picker — */
 
+/* The same idea as the chooser's caret, for the field that opens the
+ * list below: room reserved on the right, and a glyph standing in it
+ * that the pointer passes straight through to the field. */
+.time-field > .input {
+  padding-right: 26px;
+}
+
+.time-field > .icon {
+  position: absolute;
+  top: 50%;
+  right: 9px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--color-text) 45%, transparent);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 .time-option {
   display: block;
   width: 100%;

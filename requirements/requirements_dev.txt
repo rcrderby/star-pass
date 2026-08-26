@@ -17,12 +17,15 @@ requests==2.34.2
 # JSON Schema validation
 jsonschema==4.26.0
 
-# Pandas data structures
-
 # Python formatting
 autopep8==2.3.2
 flake8==7.3.0
 pylint==4.0.7
+
+# The pre-push gate. '.pre-commit-config.yaml' runs gitleaks over what
+# is about to be committed, and without this the dev container has the
+# configuration and not the thing that reads it.
+pre-commit==4.6.2
 
 # Python fuzzy string matching
 python-Levenshtein==0.27.4

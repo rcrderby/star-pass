@@ -132,6 +132,27 @@ select.input {
   appearance: none;
 }
 
+/* 'appearance: none' above drops the native arrow, and the padding
+ * beside it is the room that arrow stood in. 'chooser' puts one back
+ * from the sprite; without it every select on these screens is a
+ * bordered box with 26 pixels of nothing on its right, reading as a
+ * text field that refuses to be typed in. */
+.chooser {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-width: 0;
+}
+
+.chooser > .icon {
+  position: absolute;
+  right: 9px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--color-text) 45%, transparent);
+  pointer-events: none;
+}
+
 /* — segmented control — */
 
 .seg {
