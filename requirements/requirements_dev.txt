@@ -3,7 +3,7 @@ fastapi==0.141.1
 uvicorn==0.52.3
 
 # .env file support
-python_dotenv==1.2.2
+python_dotenv==1.2.3
 
 # Data formats
 pyyaml==6.0.3
