@@ -1,8 +1,14 @@
 /* What you can do to several rows at once.
  *
- * It replaces the ordinary toolbar rather than sitting beside it,
- * because while rows are selected the useful controls are these and
- * the search is not one of them.
+ * It sits under the ordinary toolbar rather than in place of it, so
+ * the search stays reachable while rows are selected: narrowing the
+ * table to find the few rows to spare, and unchecking them, is how a
+ * selection of everything becomes a selection of most things.
+ *
+ * That is also why the count says how many selected rows are **not**
+ * on screen.  Every control here acts on the whole selection, and a
+ * search that hides two thirds of it would otherwise leave a Remove
+ * button standing over three rows and taking away thirty.
  *
  * Every control here sends **one** operation naming every selected
  * event.  That is what the contract asks for and what makes a bulk
@@ -21,9 +27,11 @@ const NUDGE_MINUTES = 15;
  * @param {Object} state What the screen is showing.
  * @param {Array<Object>} categories What an event may be put under.
  * @param {Object} handlers What each control does.
+ * @param {number} hidden How many selected events a filter or a
+ *     search is keeping off screen.
  * @returns {HTMLElement} The toolbar.
  */
-export function selectionToolbar(state, categories, handlers) {
+export function selectionToolbar(state, categories, handlers, hidden = 0) {
   const chosen = state.selection.size;
   const busy = state.busy;
 
@@ -60,6 +68,12 @@ export function selectionToolbar(state, categories, handlers) {
       class: 'selection-count',
       text: `${chosen} selected`
     }),
+    hidden > 0
+      ? el('span', {
+        class: 'selection-hidden muted meta',
+        text: `· ${hidden} not shown`
+      })
+      : null,
     chooser,
     el(
       'button',

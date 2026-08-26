@@ -223,6 +223,32 @@ button.picker-row:hover {
   padding: 12px 14px;
 }
 
+/* The select-all control is a checkbox that carries its own label:
+ * 16px of border says nothing about what it acts on, and what it acts
+ * on -- the rows shown, not the run -- is the part worth reading now
+ * that a search can be narrowing them. */
+.select-all {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Its hover reaches the box inside it, so that rule sits with
+ * '.checkbox' below rather than here: the descendant selector is the
+ * more specific of the two and has to come after the one it beats. */
+
+.select-all:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .search-wrap {
   position: relative;
   display: flex;
@@ -496,6 +522,13 @@ button.picker-row:hover {
   box-shadow: inset 0 0 0 2px var(--color-surface);
 }
 
+/* The toolbar's box is inside its label rather than beside it, so the
+ * pointer is over the label for most of the control's width and the
+ * box would otherwise light up only on the 16px of itself. */
+.select-all:hover:not(:disabled) .checkbox {
+  border-color: var(--color-accent);
+}
+
 /* — the role sub-rows — */
 
 .event-details {
@@ -611,15 +644,26 @@ button.picker-row:hover {
 
 /* — the selection toolbar — */
 
+/* It stands under the ordinary toolbar, which is another card of the
+ * same shape, so it is marked down the edge: two identical bands
+ * stacked would leave which one belongs to the selection to be worked
+ * out from its contents. */
 .toolbar-selection {
   flex-wrap: wrap;
   gap: 10px;
+  border-left: 2px solid var(--color-accent);
 }
 
 .selection-count {
   font-family: var(--font-heading);
   font-size: 13px;
   font-weight: var(--font-heading-weight);
+}
+
+/* Sits against the count rather than after a gap: the two are one
+ * sentence about the same selection. */
+.selection-hidden {
+  margin-left: -4px;
 }
 
 .toolbar-selection .input {
