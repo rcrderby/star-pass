@@ -9,7 +9,7 @@
 
 import { changesNow } from './changelog.js';
 import { el, icon } from '../dom.js';
-import { moment, windowText } from '../format.js';
+import { counted, moment, windowText } from '../format.js';
 import { Popover } from '../popover.js';
 import { filled, phrase } from '../phrases.js';
 
@@ -37,18 +37,28 @@ const ABOUT_REVISIONS = (
 
 /** Return the sentence under the run label.
  *
- * @param {Object} run The run being reviewed.
+ * Counted off the rows the run is holding rather than off
+ * 'run.counts', which is a second copy of the same two numbers and
+ * was the one that could disagree: it arrives with the read and no
+ * edit rewrites it, so removing a row left the line still counting
+ * it. The picker's other runs keep using 'counts', which is all
+ * they have -- the runs list carries no events.
+ *
+ * @param {Object} run The run being reviewed, with its events.
  * @returns {string} What it says.
  */
-function metaText(run) {
+export function metaText(run) {
   const when = moment(run.collectedAt, run.window.timezone);
-  const events = run.counts.events;
-  const shifts = run.counts.shifts;
+  const events = run.events.length;
+  const shifts = run.events.reduce(
+    (total, event) => total + event.roles.length,
+    0
+  );
 
   return (
     `Collected ${when}, changes save as you make them`
-    + ` · ${events} event${events === 1 ? '' : 's'}`
-    + ` · ${shifts} shift${shifts === 1 ? '' : 's'}`
+    + ` · ${counted(events, 'event')}`
+    + ` · ${counted(shifts, 'shift')}`
   );
 }
 
@@ -57,9 +67,13 @@ function metaText(run) {
  * @param {Object} run A run, as the contract lists it.
  * @param {boolean} current Whether it is the one being reviewed.
  * @param {Function} onOpen What choosing it does.
+ * @param {number} events How many it holds. Passed rather than read
+ *     off 'run.counts', because the line for the run being reviewed
+ *     has to agree with the line above it: that one counts the rows
+ *     on screen, and an edit moves it.
  * @returns {HTMLElement} The line.
  */
-function runLine(run, current, onOpen) {
+function runLine(run, current, onOpen, events) {
   return el(
     'button',
     {
@@ -77,7 +91,7 @@ function runLine(run, current, onOpen) {
       el('span', {
         class: 'picker-row-meta muted micro',
         text: `${moment(run.collectedAt, run.window.timezone)}`
-          + ` · ${run.counts.events} events`
+          + ` · ${counted(events, 'event')}`
       })
     ),
     el('span', {
@@ -201,9 +215,16 @@ function runPicker(state, onOpenRun, onCollectNew) {
     width: 340,
     contents: () => [
       el('span', { class: 'popover-heading muted', text: 'Runs' }),
-      runs.map(
-        (each) => runLine(each, each.id === run.id, onOpenRun)
-      ),
+      runs.map((each) => {
+        const current = each.id === run.id;
+
+        return runLine(
+          each,
+          current,
+          onOpenRun,
+          current ? run.events.length : each.counts.events
+        );
+      }),
       el('div', { class: 'popover-rule' }),
       newRunLine(onCollectNew)
     ]

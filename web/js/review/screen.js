@@ -36,7 +36,7 @@ import { anyPopoverOpen, closeAnyPopover } from '../popover.js';
 import { changeLogPanel, changesNow } from './changelog.js';
 import { refusalNotice } from '../refusal.js';
 import { reviewBanners, RUN_FAILED } from './banners.js';
-import { reviewHeader } from './header.js';
+import { metaText, reviewHeader } from './header.js';
 import { reviewTable } from './table.js';
 import { selectionToolbar } from './selection.js';
 import { notedKey, uncollectedView } from './uncollected.js';
@@ -615,6 +615,25 @@ export class ReviewScreen {
     this.headerElement = header;
   }
 
+  /** Put the line under the run label back in step with the rows.
+   *
+   * It counts the current revision, and an edit changes what that
+   * revision holds, so the two part company the moment one is made.
+   * Only the line is rewritten: rebuilding the header would take an
+   * open popover with it, which is why 'redraw' leaves the header
+   * alone and why 'renderHeader' is called by the two paths that
+   * close one first.
+   *
+   * @returns {void}
+   */
+  renderMeta() {
+    const line = this.headerElement.querySelector('.run-meta');
+
+    if (line !== null) {
+      line.textContent = metaText(this.state.run);
+    }
+  }
+
   /** Show one of the two tabs.
    *
    * The header is rebuilt for this and for nothing else: which tab is
@@ -711,6 +730,7 @@ export class ReviewScreen {
       this.refused(error, NOT_CHANGED);
     } finally {
       this.state.busy = false;
+      this.renderMeta();
       this.redraw();
     }
   }
@@ -943,6 +963,7 @@ export class ReviewScreen {
       this.refused(error, NOT_CHANGED);
     } finally {
       this.state.busy = false;
+      this.renderMeta();
       this.redraw();
     }
   }
