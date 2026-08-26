@@ -137,13 +137,38 @@ const REFUSED = 'The credential could not be tested.';
  * the header carrying the answer, which is a sentence for a program;
  * the answer itself arrives as a number of seconds, and this is the
  * screen that has it. */
-const TOO_OFTEN = 'It has been asked for too often, and nothing was sent '
+const TOO_OFTEN = 'It has been requested too often, and nothing was sent '
   + 'to Amplify.';
-const COME_BACK = 'Try again in {seconds} seconds.';
+
+/* Said only where there is no number to count down from.  When there
+ * is one, the wait is on the button instead: a sentence and a control
+ * counting the same seconds down together are two things to read, and
+ * the one worth watching is the one that becomes usable. */
 const COME_BACK_SOON = 'Try again shortly.';
+
+/* What the button says while it is waiting, in place of 'Test'. */
+const COME_BACK = 'Try again in {seconds}s';
 
 /* Where the version is shown, and what it is called. */
 const VERSION_LABEL = 'Running star-pass';
+
+/** Return how many whole seconds the caller still has to wait.
+ *
+ * Worked out from a deadline each time it is asked rather than
+ * decremented on a tick: a background tab has its timers throttled,
+ * and a counter that lost ticks would still be counting down when the
+ * service had long since stopped refusing.
+ *
+ * @param {Object} state What the screen is showing.
+ * @returns {number} Seconds left, and never below zero.
+ */
+function secondsLeft(state) {
+  if (state.waitUntil === 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.ceil((state.waitUntil - Date.now()) / 1000));
+}
 
 /** Return one section of the screen.
  *
@@ -240,12 +265,12 @@ function maskedValue(state) {
  * @param {ApiError} refusal What came back instead of an answer.
  * @returns {HTMLElement} The line.
  */
-function refusalLine(refusal) {
-  const wait = refusal.retryAfter > 0
-    ? COME_BACK.replace('{seconds}', String(refusal.retryAfter))
-    : COME_BACK_SOON;
+function refusalLine(refusal, waiting) {
+  /* A refusal with seconds on it has them on the button, which is
+   * counting them down.  One without still has to say that waiting is
+   * what to do about it. */
   const said = refusal.isTooOften
-    ? `${TOO_OFTEN} ${wait}`
+    ? `${TOO_OFTEN}${waiting ? '' : ` ${COME_BACK_SOON}`}`
     : refusal.detail;
 
   return el(
@@ -260,6 +285,65 @@ function refusalLine(refusal) {
         el('span', { class: 'mono', text: refusal.reference })
       )
       : null
+  );
+}
+
+/** Return the button that asks, and says why it cannot be pressed.
+ *
+ * Disabled while a test is in the air and again while the service is
+ * still refusing, because a control that can be pressed to be told
+ * "not yet" is one that teaches a reader to press it and wait.
+ *
+ * @param {Object} state What the screen is showing.
+ * @param {Function} onTest What pressing it does.
+ * @returns {HTMLElement} The button.
+ */
+function testButton(state, onTest) {
+  const waiting = secondsLeft(state);
+  const classes = ['btn', 'btn-secondary', 'settings-test'];
+
+  if (state.testing) {
+    classes.push('settings-checking');
+  }
+
+  if (state.testing) {
+    return el(
+      'button',
+      {
+        type: 'button',
+        class: classes.join(' '),
+        disabled: true,
+        onclick: onTest
+      },
+      icon('circle-notch'),
+      TESTING
+    );
+  }
+
+  if (waiting > 0) {
+    return el(
+      'button',
+      {
+        type: 'button',
+        class: classes.join(' '),
+        disabled: true,
+        onclick: onTest
+      },
+      icon('clock'),
+      COME_BACK.replace('{seconds}', String(waiting))
+    );
+  }
+
+  return el(
+    'button',
+    {
+      type: 'button',
+      class: classes.join(' '),
+      disabled: false,
+      onclick: onTest
+    },
+    icon('plugs-connected'),
+    TEST
   );
 }
 
@@ -286,19 +370,7 @@ function credentialCard(state, onTest) {
         icon(status.glyph),
         el('span', { text: status.words })
       ),
-      el(
-        'button',
-        {
-          type: 'button',
-          class: state.testing
-            ? 'btn btn-secondary settings-test settings-checking'
-            : 'btn btn-secondary settings-test',
-          disabled: state.testing,
-          onclick: onTest
-        },
-        icon(state.testing ? 'circle-notch' : 'plugs-connected'),
-        state.testing ? TESTING : TEST
-      )
+      testButton(state, onTest)
     ),
     el('span', { class: 'muted note', text: CREDENTIAL_NEED }),
     el('span', { class: 'muted micro', text: TEST_NOTE }),
@@ -314,7 +386,9 @@ function credentialCard(state, onTest) {
     /* Nothing reached Amplify at all: too many attempts, or the
      * service could not answer. A 4xx carries the reason, and at 500
      * and above only the reference is real. */
-    state.refusal === null ? null : refusalLine(state.refusal)
+    state.refusal === null
+      ? null
+      : refusalLine(state.refusal, secondsLeft(state) > 0)
   );
 }
 
@@ -367,8 +441,15 @@ export class SettingsScreen {
       failure: null,
       credential: null,
       testing: false,
-      refusal: null
+      refusal: null,
+      /* When the service will take another test, as a timestamp.
+       * Zero when nothing is waiting. */
+      waitUntil: 0
     };
+
+    /* The tick that redraws the countdown, and nothing while there is
+     * no countdown to redraw. */
+    this.ticking = null;
 
     this.element = el('div', { class: 'screen settings' });
     this.draw();
@@ -428,17 +509,72 @@ export class SettingsScreen {
   async test() {
     this.state.testing = true;
     this.state.refusal = null;
+    this.stopTicking();
+    this.state.waitUntil = 0;
     this.draw();
 
     try {
       this.state.credential = await testCredential();
     } catch (error) {
-      this.state.refusal = this.asApiError(error);
+      const refusal = this.asApiError(error);
+
+      this.state.refusal = refusal;
       this.state.credential = null;
+
+      if (refusal.isTooOften && refusal.retryAfter > 0) {
+        this.state.waitUntil = Date.now() + (refusal.retryAfter * 1000);
+        this.startTicking();
+      }
     } finally {
       this.state.testing = false;
       this.draw();
     }
+  }
+
+  /** Redraw once a second until there is nothing left to wait for.
+   *
+   * @returns {void}
+   */
+  startTicking() {
+    this.stopTicking();
+
+    this.ticking = setInterval(
+      () => {
+        /* The last tick is the one that puts the button back, so the
+         * timer is let go of before the draw rather than after: a
+         * draw that threw would otherwise leave it running against a
+         * screen nothing is redrawing. */
+        if (secondsLeft(this.state) === 0) {
+          this.stopTicking();
+        }
+
+        this.draw();
+      },
+      1000
+    );
+  }
+
+  /** Let go of the tick.
+   *
+   * @returns {void}
+   */
+  stopTicking() {
+    if (this.ticking !== null) {
+      clearInterval(this.ticking);
+      this.ticking = null;
+    }
+  }
+
+  /** Let go of anything still running when the screen goes.
+   *
+   * Called by the shell as it puts another screen on.  Without it a
+   * countdown left behind would go on redrawing an element no longer
+   * in the page, once a second, for as long as the tab is open.
+   *
+   * @returns {void}
+   */
+  release() {
+    this.stopTicking();
   }
 
   /** Set how much the page moves, and show which is chosen.
