@@ -670,6 +670,30 @@ button.picker-row:hover {
   width: 220px;
 }
 
+/* The three slots controls read as one thing and wrap as one: a
+ * number and its noun stranded on the line below the opportunity
+ * they belong to would be a number about nothing. */
+.slots-group {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Both after the rule above, which they narrow. The opportunity a
+ * bulk slots names is the second chooser on this bar and the bar is
+ * full: at the design's own width the row fits on one line by eight
+ * pixels without this. Enough to tell two roles of one category
+ * apart, which is where the names differ. */
+.toolbar-selection .slots-role {
+  width: 190px;
+}
+
+.toolbar-selection .slots-field {
+  width: 58px;
+  text-align: center;
+}
+
 .selection-clear {
   margin-left: auto;
 }

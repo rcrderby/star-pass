@@ -38,7 +38,7 @@ import { refusalNotice } from '../refusal.js';
 import { reviewBanners, RUN_FAILED } from './banners.js';
 import { metaText, reviewHeader } from './header.js';
 import { reviewTable } from './table.js';
-import { selectionToolbar } from './selection.js';
+import { selectionToolbar, undoable } from './selection.js';
 import { notedKey, uncollectedView } from './uncollected.js';
 
 /* What the hint above the table says. Which one depends on whether
@@ -443,8 +443,18 @@ export class ReviewScreen {
       onNudge: (minutes) => this.edit([
         { op: 'nudge', eventIds: chosen, minutes }
       ]),
+      onSetSlots: (needId, slots) => this.edit([
+        { op: 'set_slots', eventIds: chosen, needId, slots }
+      ]),
       onResetSlots: () => this.edit([
         { op: 'reset_slots', eventIds: chosen }
+      ]),
+
+      /* Named rather than the whole selection: an undo of a row that
+       * was never edited changes nothing and would still be listed in
+       * the entry the change log gets. */
+      onUndo: () => this.edit([
+        { op: 'undo', eventIds: undoable(this.state) }
       ]),
       onRemove: () => this.edit([
         { op: 'remove', eventIds: chosen }
@@ -459,7 +469,7 @@ export class ReviewScreen {
         : refusalNotice(this.state.refusal),
       toolbar(this.state, shown.length, handlers),
       this.state.selection.size > 0
-        ? selectionToolbar(this.state, context.categories, bulk, hidden)
+        ? selectionToolbar(this.state, context, bulk, hidden)
         : '',
       el('p', {
         class: 'table-hint muted note',
