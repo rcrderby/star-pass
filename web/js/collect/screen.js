@@ -152,6 +152,10 @@ export class CollectingScreen {
    *     when this screen started the collection and therefore knows.
    *     A screen picking a job up reads it from the run.
    * @param {Object} handlers Where the screen's exits go.
+   * @param {Function} handlers.onLeave Called to leave the collection
+   *     running and go to the runs list. Not the run: this run is
+   *     the one being worked on, and a run being worked on opens on
+   *     the work -- so going to it would come straight back here.
    * @param {Function} handlers.onOpenRun Called with the run to open,
    *     when the collection is over or somebody leaves it running.
    */
@@ -458,7 +462,7 @@ export class CollectingScreen {
         {
           type: 'button',
           class: 'btn btn-secondary',
-          onclick: () => this.handlers.onOpenRun(this.state.job.runId)
+          onclick: () => this.handlers.onLeave()
         },
         'Leave this running'
       ),

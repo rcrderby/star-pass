@@ -98,6 +98,25 @@ export function windowText(window) {
   return `${shortDay(window.start)} – ${shortDay(window.lastDay, true)}`;
 }
 
+/** Return a count with its noun, singular where it should be.
+ *
+ * Here rather than beside the first screen that needed one: the runs
+ * list counts events and shifts, and the send counts shifts and
+ * opportunities, and a run reading `1 shifts` on one screen and
+ * `1 shift` on the other would be two copies of one rule.
+ *
+ * @param {number} count How many.
+ * @param {string} noun What of, singular.
+ * @param {string} [plural] The plural, when it is not the noun and an
+ *     `s`.
+ * @returns {string} Such as `1 shift` or `3 opportunities`.
+ */
+export function counted(count, noun, plural = null) {
+  const many = plural === null ? `${noun}s` : plural;
+
+  return `${count} ${count === 1 ? noun : many}`;
+}
+
 /** Return a length in minutes as the table shows it.
  *
  * @param {number} minutes How long the shift lasts.

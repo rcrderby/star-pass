@@ -20,7 +20,7 @@
  */
 
 import { el, icon } from '../dom.js';
-import { shortDay } from '../format.js';
+import { counted, shortDay } from '../format.js';
 import { phrase } from '../phrases.js';
 
 /* The columns, in the order the design gives them. */
@@ -57,20 +57,6 @@ const NOTHING_TO_SEND = (
   'Every shift in this run is already in Amplify. There is nothing '
   + 'left to send.'
 );
-
-/** Return a count with its noun, singular where it should be.
- *
- * @param {number} count How many.
- * @param {string} noun What of, singular.
- * @param {string} [plural] The plural, when it is not the noun and an
- *     `s`.
- * @returns {string} Such as `1 shift` or `3 opportunities`.
- */
-export function counted(count, noun, plural = null) {
-  const many = plural === null ? `${noun}s` : plural;
-
-  return `${count} ${count === 1 ? noun : many}`;
-}
 
 /** Return the days a row's new shifts fall on.
  *

@@ -36,7 +36,7 @@ import {
 import { el, icon } from '../dom.js';
 import { phrase } from '../phrases.js';
 import { watchJob } from '../watching.js';
-import { ConfirmDialog } from './confirm.js';
+import { sendDialog } from './confirm.js';
 import {
   checksCard,
   previewActions,
@@ -195,14 +195,14 @@ export class SendingScreen {
    * @returns {void}
    */
   confirm() {
-    const dialog = new ConfirmDialog(
+    const dialog = sendDialog(
       { run: this.state.run, preview: this.state.preview },
       {
         /* Which write it gates is the only thing that differs. All
          * three ways a run reaches Amplify come through here (D11):
          * the first send, a retry after a refusal, and a resume after
          * the service stopped. */
-        onSend: () => (
+        onConfirm: () => (
           this.state.interrupted
             ? this.resumeSend()
             : this.send(this.state.preview.totals.willCreate)

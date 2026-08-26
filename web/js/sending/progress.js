@@ -23,7 +23,7 @@
  */
 
 import { el, icon } from '../dom.js';
-import { counted } from './preview.js';
+import { counted } from '../format.js';
 
 /* Where a row can be. `waiting` is the absence of news about it,
  * which is why a reattached screen can show one without ever having

@@ -34,7 +34,8 @@ import {
 import { el, fill, icon } from '../dom.js';
 import { anyPopoverOpen, closeAnyPopover } from '../popover.js';
 import { changeLogPanel, changesNow } from './changelog.js';
-import { refusalNotice, reviewBanners } from './banners.js';
+import { refusalNotice } from '../refusal.js';
+import { reviewBanners } from './banners.js';
 import { reviewHeader } from './header.js';
 import { reviewTable } from './table.js';
 import { selectionToolbar } from './selection.js';
