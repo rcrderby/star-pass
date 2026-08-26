@@ -316,6 +316,22 @@ export class CollectDrawer {
    * a moment ago: a preset still showing would be describing a window
    * that is no longer the one in the fields.
    *
+   * A first day set past the last carries the last with it, rather
+   * than leaving the panel refusing a window nobody meant to ask for
+   * -- picking a month by its first day is the ordinary way in, and
+   * the last day still holding the previous month's is not a mistake
+   * worth a refusal.  **Only the first day moves the other.** A last
+   * day set before the first is a reader naming the day they want the
+   * window to end on, and moving the first to suit it would discard
+   * what they just typed.
+   *
+   * **An emptied field is not a day to count from.** A date input
+   * reports an empty string for a cleared or half-typed value, and
+   * 'dayAfter' of one is an invalid date that throws rather than
+   * returning a day.  So the window is left as the reader has it, the
+   * panel refuses as it already did, and nothing is worked out from a
+   * date that is not there.
+   *
    * @param {string} which `first` or `last`.
    * @param {string} value The date typed.
    * @returns {void}
@@ -323,6 +339,11 @@ export class CollectDrawer {
   setDay(which, value) {
     this.state[which] = value;
     this.state.preset = CUSTOM;
+
+    if (which === 'first' && value !== '' && !this.valid()) {
+      this.state.last = dayAfter(this.state.first);
+    }
+
     this.draw();
   }
 
