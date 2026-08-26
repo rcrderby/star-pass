@@ -8,7 +8,7 @@
 
 # API service
 fastapi==0.141.1
-uvicorn==0.52.3
+uvicorn==0.52.4
 
 # The front end's connection to the API service. Async, and it passes
 # an event stream through as it arrives rather than at the end, which
