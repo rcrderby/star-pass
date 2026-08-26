@@ -259,6 +259,104 @@ class TestTheRowsAPreviewGroups:
 
         assert rows[0].title == 'Adult Scrimmages: Skating Officials'
 
+    def test_rows_come_back_in_the_order_a_reader_reads_them(
+        self,
+        make_event: Callable[..., Event],
+        make_opportunity: Callable[..., Opportunity]
+    ) -> None:
+        # The two orders disagree for the real pair: 607934 sorts
+        # before 628861, and "Non-Skating Officials" sorts before
+        # "Skating Officials".  A row order taken from the need ID
+        # would come back the other way round.
+        skating = make_opportunity(
+            need_id='607934',
+            title='Adult Scrimmages: Skating Officials'
+        )
+        non_skating = make_opportunity(
+            need_id='628861',
+            title='Adult Scrimmages: Non-Skating Officials'
+        )
+
+        rows = preview(
+            events=[
+                make_event(
+                    roles=(
+                        EventRole(need_id='607934', slots=4),
+                        EventRole(need_id='628861', slots=6)
+                    )
+                )
+            ],
+            opportunities={
+                skating.need_id: skating,
+                non_skating.need_id: non_skating
+            },
+            existing=set()
+        ).rows
+
+        assert [row.title for row in rows] == [
+            'Adult Scrimmages: Non-Skating Officials',
+            'Adult Scrimmages: Skating Officials'
+        ]
+
+    def test_a_row_with_no_title_is_ordered_by_its_need_id(
+        self,
+        make_event: Callable[..., Event],
+        make_opportunity: Callable[..., Opportunity]
+    ) -> None:
+        # The need ID stands in for the title a client would draw, and
+        # the title here is chosen to sort *before* it: an untitled row
+        # ordered as an empty string would come first instead, which is
+        # what every other pairing of a number and a word would hide.
+        titled = make_opportunity(
+            need_id='628861',
+            title='2026 Playoffs: Non-Skating Officials'
+        )
+
+        rows = preview(
+            events=[
+                make_event(
+                    roles=(
+                        EventRole(need_id='607934', slots=4),
+                        EventRole(need_id='628861', slots=6)
+                    )
+                )
+            ],
+            opportunities={titled.need_id: titled},
+            existing=set()
+        ).rows
+
+        assert [row.need_id for row in rows] == ['628861', '607934']
+        assert rows[1].title is None
+
+    def test_two_titles_are_ordered_regardless_of_their_capitals(
+        self,
+        make_event: Callable[..., Event],
+        make_opportunity: Callable[..., Opportunity]
+    ) -> None:
+        # Unfolded, every capital sorts before every lower case letter,
+        # so "Zebra" would come before "adult" and a reader scanning
+        # the column would find two alphabets in it.
+        upper = make_opportunity(need_id='607934', title='Zebra Duty')
+        lower = make_opportunity(need_id='628861', title='adult warmup')
+
+        rows = preview(
+            events=[
+                make_event(
+                    roles=(
+                        EventRole(need_id='607934', slots=4),
+                        EventRole(need_id='628861', slots=6)
+                    )
+                )
+            ],
+            opportunities={
+                upper.need_id: upper,
+                lower.need_id: lower
+            },
+            existing=set()
+        ).rows
+
+        assert [row.title for row in rows] == ['adult warmup', 'Zebra Duty']
+
     def test_an_unresolved_opportunity_has_no_title(
         self,
         make_event: Callable[..., Event]
