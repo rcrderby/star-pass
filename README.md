@@ -13,6 +13,10 @@
 
 This tool automates bulk operations on the Galaxy Digital Amplify volunteer management platform.
 
+[`docs/architecture.md`](docs/architecture.md) draws what the
+deployment is made of and what a run does across it, which is the
+quickest way to see the shape of the thing before reading any of it.
+
 ## Capabilities
 
 - Collect practice, scrimmage, and game activities from Google Calendars.
@@ -356,7 +360,9 @@ docker compose up
 ```
 
 One command, three containers, and the arrangement the plan has
-assumed since D5 and D17. Caddy is the only one with a published port:
+assumed since D5 and D17. It is drawn in
+[`docs/architecture.md`](docs/architecture.md). Caddy is the only one
+with a published port:
 it terminates TLS, redirects plain HTTP to it, and passes the request
 to the frontend. Neither application service is reachable from outside
 the host.
