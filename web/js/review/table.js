@@ -15,7 +15,7 @@
  */
 
 import { el, icon } from '../dom.js';
-import { lengthText, dayHeading } from '../format.js';
+import { counted, lengthText, dayHeading } from '../format.js';
 import { filled, phrase } from '../phrases.js';
 import { Popover } from '../popover.js';
 import { timeField } from './timepicker.js';
@@ -511,6 +511,17 @@ function dayGroup(day, events, context) {
     0
   );
   const collapsed = context.collapsed.has(day);
+
+  /* Said only while the group is folded shut. Open, the ticks are on
+   * screen and counting them again would be noise; shut, a selection
+   * reaches in and nothing else on the page says so -- the toolbar's
+   * own "N not shown" counts what a filter or a search is hiding, and
+   * a folded group is neither. Select-all reaches in here too, so
+   * this can be arrived at without ticking anything a person saw. */
+  const chosen = collapsed
+    ? events.filter((event) => context.selection.has(event.id)).length
+    : 0;
+
   const body = el(
     'div',
     { class: 'day-body' },
@@ -533,8 +544,9 @@ function dayGroup(day, events, context) {
     el('span', { class: 'day-heading-name', text: dayHeading(day) }),
     el('span', {
       class: 'day-heading-count muted micro',
-      text: `${events.length} event${events.length === 1 ? '' : 's'},`
-        + ` ${shifts} shift${shifts === 1 ? '' : 's'}`
+      text: `${counted(events.length, 'event')},`
+        + ` ${counted(shifts, 'shift')}`
+        + (chosen > 0 ? `, ${chosen} selected` : '')
     })
   );
 
