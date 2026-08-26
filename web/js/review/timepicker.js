@@ -11,7 +11,7 @@
  * the list a convenience rather than the only way in.
  */
 
-import { el } from '../dom.js';
+import { el, icon } from '../dom.js';
 import { closeAnyPopover, Popover } from '../popover.js';
 
 /* The grain, in minutes, and what a day holds at that grain. */
@@ -233,6 +233,14 @@ export function timeField({ value, label, busy, onChoose }) {
       showTime(popover.panel, field.value);
     });
   }
+
+  /* The field opens a list on focus and said nothing about it: a
+   * bordered box holding a time reads as a box to type a time into,
+   * which it also is. The glyph is what says there is a list behind
+   * it. Inside the anchor, which is already positioned, and taking
+   * no pointer events so the field underneath keeps the click. */
+  popover.element.classList.add('time-field');
+  popover.element.append(icon('clock'));
 
   return popover.element;
 }

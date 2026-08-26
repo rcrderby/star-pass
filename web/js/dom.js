@@ -122,6 +122,25 @@ export function icon(name, label = null) {
   return svg;
 }
 
+/** Return a chooser: a select, with the caret that says it is one.
+ *
+ * 'select.input' asks for 'appearance: none', which takes the
+ * native arrow with it, and reserves the room the arrow stood in.
+ * Nothing put anything back, so every chooser on these screens read
+ * as a text field that happened to refuse typing.
+ *
+ * Drawn from the sprite rather than as a background image, so there
+ * is one caret in this application and not two that can come to
+ * disagree. It takes no pointer events: the click belongs to the
+ * select underneath, which is what opens the list.
+ *
+ * @param {HTMLElement} select The select to dress.
+ * @returns {HTMLElement} It, wrapped with its caret.
+ */
+export function chooser(select) {
+  return el('span', { class: 'chooser' }, select, icon('caret-down'));
+}
+
 /** Replace everything inside an element with something else.
  *
  * The whole of how a region is redrawn. Building the replacement

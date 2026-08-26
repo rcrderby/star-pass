@@ -14,7 +14,7 @@
  * changed.
  */
 
-import { el, icon } from '../dom.js';
+import { chooser, el, icon } from '../dom.js';
 import { counted, lengthText, dayHeading } from '../format.js';
 import { filled, phrase } from '../phrases.js';
 import { Popover } from '../popover.js';
@@ -186,7 +186,7 @@ const UNASSIGNED = '';
  * @returns {HTMLElement} The chooser.
  */
 function opportunityChooser(event, context) {
-  return el('select', {
+  return chooser(el('select', {
     class: 'input',
     disabled: context.busy,
     'aria-label': `Opportunity for ${event.title}`,
@@ -212,7 +212,7 @@ function opportunityChooser(event, context) {
       text: category.label,
       selected: category.key === event.category
     }))
-  ]);
+  ]));
 }
 
 /** Return one role sub-row: an opportunity this event creates under.

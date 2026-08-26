@@ -16,7 +16,7 @@
  * change log gets one entry rather than thirty.
  */
 
-import { el, icon } from '../dom.js';
+import { chooser, el, icon } from '../dom.js';
 
 /* How far the two nudges move a shift. The design's wording names the
  * number, so the two agree by construction. */
@@ -145,7 +145,7 @@ function slotsControls(shared, opportunities, busy, onSetSlots) {
   return el(
     'span',
     { class: 'slots-group' },
-    role,
+    chooser(role),
     wanted,
     el('span', { class: 'muted micro', text: 'slots' })
   );
@@ -169,7 +169,7 @@ export function selectionToolbar(state, context, handlers, hidden = 0) {
   const shared = sharedRoles(selected(state));
   const undoing = undoable(state).length;
 
-  const chooser = el(
+  const categoryChooser = el(
     'select',
     {
       class: 'input',
@@ -208,7 +208,7 @@ export function selectionToolbar(state, context, handlers, hidden = 0) {
         text: `· ${hidden} not shown`
       })
       : null,
-    chooser,
+    chooser(categoryChooser),
     el(
       'button',
       {
