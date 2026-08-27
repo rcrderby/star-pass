@@ -49,6 +49,10 @@ TARGET = REPOSITORY_ROOT / '.env'
 # beside this script holds the three to each other.
 MINIMUM_LENGTH = 32
 
+# What the shell reports for a command an interrupt ended: 128 plus
+# the signal, and SIGINT is 2.
+INTERRUPTED = 130
+
 # How many bytes of randomness a generated value carries.  Its text is
 # longer than the minimum above, which is the point: nothing generated
 # here can fail the check the services make.
@@ -337,5 +341,33 @@ def main() -> int:
     return 0
 
 
+def run() -> int:
+    """ Run it, and answer a Ctrl+C the way a command should.
+
+        A prompt is the whole middle of this script, so Ctrl+C is a
+        thing somebody does here rather than an accident: they meant
+        to stop, and a traceback tells them a program broke instead.
+        Nothing is written on the way out, because every value is
+        gathered before the single write -- so what to say is that
+        it stopped, and the file is as it was.
+
+        Returns:
+            code (int):
+                What to exit with.  130 is the shell's own answer for
+                a command ended by an interrupt.
+    """
+
+    try:
+        return main()
+
+    except KeyboardInterrupt:
+        print(
+            f'\nStopped. {TARGET.name} was not written.',
+            file=sys.stderr
+        )
+
+        return INTERRUPTED
+
+
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(run())

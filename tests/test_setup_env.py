@@ -357,6 +357,44 @@ class TestWhatIsWritten:
         assert values[SIGNS_SESSIONS] == LONG_ENOUGH
         assert str(setup.MINIMUM_LENGTH) in capsys.readouterr().err
 
+    def test_an_interrupt_is_answered_rather_than_raised(
+        self, setup, placed, capsys, monkeypatch
+    ):
+        # A prompt is the whole middle of this script, so Ctrl+C is
+        # something somebody does on purpose here.  It used to reach
+        # the shell as a traceback, which reads as the script having
+        # broken rather than having been stopped.
+        def interrupted(prompt):
+            raise KeyboardInterrupt
+
+        monkeypatch.setattr(setup, 'ask', interrupted)
+
+        # The number, not the constant: comparing the constant with
+        # itself would pass whatever it was set to, and what makes
+        # this one right is the shell's own convention for a command
+        # an interrupt ended.
+        assert setup.run() == 130
+        assert setup.INTERRUPTED == 130
+        assert not placed.is_file()
+
+        said = capsys.readouterr().err
+
+        assert 'Stopped' in said
+        assert placed.name in said
+        assert 'Traceback' not in said
+
+    def test_what_it_answers_when_nothing_interrupts_it(
+        self, setup, placed, capsys, monkeypatch
+    ):
+        # The wrapper has to still be the way the work happens, not a
+        # handler wrapped around nothing: a 'run' that swallowed the
+        # call would pass the test above and write no file ever.
+        monkeypatch.setattr(setup, 'ask', lambda prompt: LONG_ENOUGH)
+
+        assert setup.run() == 0
+        assert placed.is_file()
+        assert 'Stopped' not in capsys.readouterr().err
+
     def test_a_missing_template_is_said_rather_than_raised(
         self, setup, placed, capsys, monkeypatch
     ):
