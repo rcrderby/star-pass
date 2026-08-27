@@ -25,7 +25,7 @@
 import { counted } from '../format.js';
 import { deleteRun, listRuns } from '../api.js';
 import { deleteDialog } from './confirm.js';
-import { el, fill, icon } from '../dom.js';
+import { el, fill, icon, plainClick } from '../dom.js';
 import { emptyState } from '../screens.js';
 import { refusalNotice } from '../refusal.js';
 import { collectedAt, runLabel, runStatusTag } from './summary.js';
@@ -186,17 +186,7 @@ export class RunsScreen {
           class: 'runs-row-open',
           href: this.handlers.pathForRun(run.id),
           onclick: (event) => {
-            /* A plain click stays in the page; everything else is
-             * the browser's -- a middle click, a modifier, a "open
-             * in a new tab" -- and taking those over would be taking
-             * away what giving the row an address bought. */
-            if (
-              event.metaKey
-              || event.ctrlKey
-              || event.shiftKey
-              || event.altKey
-              || event.button !== 0
-            ) {
+            if (!plainClick(event)) {
               return;
             }
 

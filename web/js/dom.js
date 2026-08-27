@@ -85,6 +85,25 @@ export function append(parent, children) {
   return parent;
 }
 
+/** Return whether a click on a link is the page's to answer.
+ *
+ * A plain click stays in the page; everything else is the browser's
+ * -- a middle click, a modifier, "open in a new tab" -- and taking
+ * those over would take away what giving the thing an address bought.
+ *
+ * @param {MouseEvent} event The click.
+ * @returns {boolean} Whether the page answers it.
+ */
+export function plainClick(event) {
+  return !(
+    event.metaKey
+    || event.ctrlKey
+    || event.shiftKey
+    || event.altKey
+    || event.button !== 0
+  );
+}
+
 /** Return one icon from the sprite.
  *
  * Decorative by default: the icons on these screens sit beside the

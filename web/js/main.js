@@ -81,7 +81,11 @@ async function start() {
   const main = document.createElement('main');
 
   main.className = 'main';
-  fill(root, shell(appearance, () => router.go(pathFor(SETTINGS))), main);
+  fill(root, shell(appearance, {
+    onSettings: () => router.go(pathFor(SETTINGS)),
+    homePath: pathFor(RUNS),
+    onHome: () => router.go(pathFor(RUNS))
+  }), main);
 
   /* The screen currently drawn, so that leaving one lets go of
    * whatever it was holding open. Only the sending screen has
