@@ -13,6 +13,10 @@
 
 import { el } from './dom.js';
 
+/* How close to the window's edge a panel is allowed to sit, so that
+ * one pulled back inside it does not sit flush against it. */
+const EDGE = 8;
+
 /* The popover showing now, so that opening another closes it. */
 let open = null;
 
@@ -116,11 +120,68 @@ export class Popover {
     /* Set through the CSSOM rather than a style attribute, which the
      * Content Security Policy refuses. */
     this.panel.style.setProperty('width', `${this.width}px`);
-    this.panel.style.setProperty('top', `${this.top}px`);
 
     this.element.append(this.panel);
+    this.place();
     this.trigger.setAttribute('aria-expanded', 'true');
+
+    /* Where a fixed panel belongs is a fact about the drawn layout,
+     * and the layout moves under it: the table scrolls sideways, the
+     * page scrolls down, the run header is sticky and travels. Scroll
+     * is listened for in the capture phase because it does not
+     * bubble, and a scroll inside the table is the one that moves
+     * this furthest. */
+    this.follow = () => this.place();
+    document.addEventListener('scroll', this.follow, true);
+    window.addEventListener('resize', this.follow);
+
     open = this;
+  }
+
+  /** Put the panel where its anchor is.
+   *
+   * The geometry an absolutely positioned panel got for nothing:
+   * 'top' is how far below the anchor's own top edge it sits, and
+   * 'left' is the anchor's left edge, both read from the anchor
+   * rather than stated.
+   *
+   * Two things a clipped panel never had to answer, because the
+   * container cut it off before the window could: a panel wider than
+   * the room to its right, and a panel taller than the room below it.
+   * The first is pulled back inside the window, the second opens
+   * upwards where there is room above and not below.
+   *
+   * @returns {void}
+   */
+  place() {
+    if (this.panel === null) {
+      return;
+    }
+
+    /* The panel's own size is read from the layout rather than from
+     * its drawn box: it animates in from 'translateY(-5px)
+     * scale(0.98)', and a rectangle measured while that is running
+     * is a couple of per cent short -- which would decide the flip
+     * and the clamp below on a size the panel is about to stop
+     * having. The anchor is not animated, so its box is its box. */
+    const anchor = this.element.getBoundingClientRect();
+    const width = this.panel.offsetWidth;
+    const height = this.panel.offsetHeight;
+    const below = anchor.top + this.top;
+    const above = anchor.top - height - EDGE;
+    const room = below + height <= window.innerHeight - EDGE;
+
+    this.panel.style.setProperty(
+      'left',
+      `${Math.max(
+        EDGE,
+        Math.min(anchor.left, window.innerWidth - width - EDGE)
+      )}px`
+    );
+    this.panel.style.setProperty(
+      'top',
+      `${room || above < EDGE ? below : above}px`
+    );
   }
 
   /** Take it off the page.
@@ -132,6 +193,8 @@ export class Popover {
    */
   close() {
     if (this.panel !== null) {
+      document.removeEventListener('scroll', this.follow, true);
+      window.removeEventListener('resize', this.follow);
       this.panel.remove();
       this.panel = null;
       this.trigger.setAttribute('aria-expanded', 'false');

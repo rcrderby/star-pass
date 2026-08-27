@@ -275,10 +275,22 @@ select.input {
   flex: none;
 }
 
+/* Fixed rather than absolute, and placed by measurement.
+ *
+ * An absolute panel is laid out against its anchor, which puts it
+ * inside whatever clips that anchor -- and every popover on the
+ * review screen sits inside '.table-scroll', which asks for
+ * 'overflow-x: auto'.  A box that is not visible on one axis is not
+ * visible on the other either, whatever the other says, so the panel
+ * was cut off at the container's edge.  With many rows the container
+ * is tall enough to hide that; with one row it is not.
+ *
+ * Fixed takes it out of every clipping box on the way up, and the
+ * position it loses is given back in 'place'.  'left' and 'top' are
+ * both set there. */
 .popover {
-  position: absolute;
+  position: fixed;
   z-index: 40;
-  left: 0;
   padding: 6px;
   border-radius: var(--radius-md);
   background: var(--color-surface);
