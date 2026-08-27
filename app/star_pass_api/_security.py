@@ -220,8 +220,13 @@ async def get_principal(
 
     # 'compare_digest' rather than '==': a comparison that stops at the
     # first wrong character reports, in how long it took, how much of
-    # the token was right.
-    if not compare_digest(credentials.credentials, api_token()):
+    # the token was right.  Encoded first because the str form refuses
+    # operands holding non-ASCII characters, and Starlette decodes a
+    # header latin-1, so any byte above 0x7F reaches here as one.
+    presented = credentials.credentials.encode('utf-8')
+    expected = api_token().encode('utf-8')
+
+    if not compare_digest(presented, expected):
         raise _unauthenticated(
             reason='The bearer token is not valid.'
         )

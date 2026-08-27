@@ -22,10 +22,11 @@ from typing import Any, Callable, Dict, Iterator, List, Tuple
 import httpx2
 import pytest
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 # Imports - Local
 from star_pass_bff import _defaults, create_app
-from star_pass_bff._sessions import csrf_token
+from star_pass_bff._sessions import carries_our_token, csrf_token
 
 # Constants
 RUNS_PATH = f'{_defaults.API_PREFIX}/v1/runs'
@@ -409,6 +410,32 @@ class TestWhatMakesAWriteOurs:
 
         assert answer.status_code == 403
 
+    def test_a_write_carrying_a_non_ascii_token_is_refused(
+        self
+    ) -> None:
+        # Asked of the check directly, because httpx encodes a header
+        # value as ASCII and so cannot send the byte this is about.
+        # Starlette decodes one latin-1, so it arrives as a character
+        # the comparison has to answer for rather than raise on.
+        carried = carries_our_token(
+            request=_carrying('t\u00f6k\u00e9n'.encode('latin-1')),
+            session='a-session'
+        )
+
+        assert carried is False
+
+    def test_asked_directly_this_session_token_is_ours(
+        self
+    ) -> None:
+        # Holds the test above to something: without this, a check
+        # that refused everything would pass it.
+        carried = carries_our_token(
+            request=_carrying(csrf_token(session='a-session').encode()),
+            session='a-session'
+        )
+
+        assert carried is True
+
     def test_a_write_from_a_browser_with_no_session_is_refused(
         self,
         browser: Callable[..., Any]
@@ -545,6 +572,16 @@ class TestWhatIsServedAtTheRoot:
         assert answer.headers['content-type'].startswith(
             'application/problem+json'
         )
+
+
+def _carrying(token: bytes) -> Request:
+    """ Return a request whose CSRF header holds exactly these bytes. """
+    return Request({
+        'type': 'http',
+        'method': 'POST',
+        'path': RUNS_PATH,
+        'headers': [(_defaults.CSRF_HEADER.lower().encode(), token)]
+    })
 
 
 def _refuse(request: httpx2.Request) -> httpx2.Response:
