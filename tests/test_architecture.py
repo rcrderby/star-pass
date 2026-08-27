@@ -18,15 +18,15 @@
 # Imports - Python Standard Library
 import json
 import re
-import sys
-from importlib import util
 from pathlib import Path
-from types import ModuleType
 from typing import Set
 
 # Imports - Third-Party
 import pytest
 import yaml
+
+# Imports - Local
+from _scripts import loaded_script
 
 # Constants
 REPOSITORY_ROOT = Path(__file__).parent.parent
@@ -43,36 +43,6 @@ CONTRACT_FILE = REPOSITORY_ROOT / 'docs' / 'api' / 'openapi.json'
 # what lets both be right.
 ADDRESS = re.compile(r'/v1/[\w\-{}/]+')
 PARAMETER = re.compile(r'{[^}]*}')
-
-
-def _loaded(name: str, path: Path) -> ModuleType:
-    """ Load one of the two modules in 'scripts' from its path.
-
-        They live there rather than in a package because the directory
-        holds commands to run, and nothing else imports them.  Each is
-        registered under its own name as it is loaded, which is what
-        lets the generator's own 'import _drawing' find the module
-        this already has rather than a second copy of it - and is why
-        the drawing module has to be loaded first.
-
-        Args:
-            name (str):
-                What to register the module as.
-
-            path (Path):
-                The file to load it from.
-
-        Returns:
-            module (ModuleType):
-                The module, imported.
-    """
-
-    specification = util.spec_from_file_location(name, path)
-    module = util.module_from_spec(specification)
-    sys.modules[name] = module
-    specification.loader.exec_module(module)
-
-    return module
 
 
 def _shapes(addresses: Set[str]) -> Set[str]:
@@ -94,8 +64,8 @@ def _shapes(addresses: Set[str]) -> Set[str]:
     }
 
 
-DRAWING = _loaded('_drawing', DRAWING_MODULE)
-ARCHITECTURE = _loaded('generate_architecture', GENERATOR)
+DRAWING = loaded_script('_drawing', DRAWING_MODULE)
+ARCHITECTURE = loaded_script('generate_architecture', GENERATOR)
 
 # Thirty characters, which the generator estimates at 226 across when
 # it is a heading and 191 when it is a line beneath one.  The two
