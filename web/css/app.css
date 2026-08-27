@@ -28,6 +28,16 @@
   font-family: var(--font-heading);
   font-size: 18px;
   font-weight: var(--font-heading-weight);
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The way home reads as the name of the application rather than as a
+ * link, the way a run's row does, so it says what it is on hover
+ * instead of wearing the link colour all the time. */
+.nav-brand:hover {
+  color: inherit;
+  text-decoration: underline;
 }
 
 .nav-brand .icon {

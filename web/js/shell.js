@@ -5,7 +5,7 @@
  * which is what the three buttons need to show which one is chosen.
  */
 
-import { el, icon } from './dom.js';
+import { el, icon, plainClick } from './dom.js';
 import { AUTO, DAY, NIGHT } from './theme.js';
 
 /* What each theme button is: its value, its icon, the word beside it
@@ -50,16 +50,33 @@ function themeControl(appearance) {
 /** Return the top bar, and keep its theme control current.
  *
  * @param {Appearance} appearance The page's theme setting.
- * @param {Function} onSettings What opening Settings does.
+ * @param {Object} handlers Where the bar leads.
+ * @param {Function} handlers.onSettings What opening Settings does.
+ * @param {string} handlers.homePath The address of the runs list,
+ *     which is home. Real, so the brand can be opened in a tab and
+ *     read by the browser as somewhere to go.
+ * @param {Function} handlers.onHome What going home does in the page.
  * @returns {HTMLElement} The bar.
  */
-export function shell(appearance, onSettings) {
+export function shell(appearance, { onSettings, homePath, onHome }) {
   const bar = el(
     'header',
     { class: 'nav' },
     el(
-      'span',
-      { class: 'nav-brand' },
+      'a',
+      {
+        class: 'nav-brand',
+        href: homePath,
+        title: 'The runs list',
+        onclick: (event) => {
+          if (!plainClick(event)) {
+            return;
+          }
+
+          event.preventDefault();
+          onHome();
+        }
+      },
       icon('asterisk'),
       'Star Pass',
       el('span', { class: 'nav-brand-where muted', text: '/ Create Shifts' })
