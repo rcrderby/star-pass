@@ -226,11 +226,37 @@ async function start() {
 
   /** Open the drawer over whatever is on screen.
    *
+   * **A recollection reads the run first, by identifier.** What the
+   * drawer says a recollection would discard, and the number it sends
+   * to prove it, both come from the run's change log -- so a run
+   * captured when the screen was drawn describes the run as it was
+   * before every edit and revert made since.  The service refuses
+   * that number, correctly, and the operator is told to read the run
+   * again by a screen with no way to do it.
+   *
+   * Read here rather than at the moment of sending, which would defeat
+   * the guard: 'expectedChangeCount' exists so that what is discarded
+   * is what somebody was shown and agreed to, and a number gathered
+   * as the request left would always agree with itself.
+   *
    * @param {Object} config What the deployment was configured with.
-   * @param {Object} [run] The run being replaced, for a recollection.
-   * @returns {void}
+   * @param {string} [runId] The run being replaced, for a
+   *     recollection.
+   * @returns {Promise<void>} When the drawer is on screen.
    */
-  function collect(config, run = null) {
+  async function collect(config, runId = '') {
+    let run = null;
+
+    if (runId !== '') {
+      try {
+        run = await getRun(runId);
+      } catch (error) {
+        failed(error);
+
+        return;
+      }
+    }
+
     const drawer = new CollectDrawer(
       { config, run },
       {
@@ -239,6 +265,7 @@ async function start() {
             ? collectRun(asked.calendar, asked.window)
             : recollectRun(run.id, asked.expectedChangeCount)
         ),
+        onReread: () => getRun(runId),
         onStarted: (job, calendar) => watchCollection(job, config, calendar)
       }
     );
@@ -309,7 +336,7 @@ async function start() {
           )),
           onSeeInterrupted: () => seeInterrupted(run, config),
           onCollectNew: () => collect(config),
-          onCollectAgain: () => collect(config, run),
+          onCollectAgain: () => collect(config, run.id),
           onPreview: () => router.go(pathFor(RUN_PREVIEW, runId))
         }
       ),
