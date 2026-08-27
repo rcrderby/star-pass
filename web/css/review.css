@@ -285,7 +285,10 @@ button.picker-row:hover {
 /* — toolbar — */
 
 .toolbar {
-  flex-direction: row;
+  /* Its controls keep their own width now that none of them breaks a
+   * label, so the row is what gives way when there is not enough of
+   * it to go round. */
+  flex-flow: row wrap;
   gap: 14px;
   align-items: center;
   margin: 10px 0;
