@@ -129,6 +129,15 @@ docker compose exec api python /app/__main__.py config credential
 
 ## Development
 
+The repository carries a development container, which is the shortest
+way to an environment with the tooling already in it: open the
+repository in Visual Studio Code and reopen it in the container
+(`.devcontainer/devcontainer.json`, built from `Dockerfile.dev`). It is
+for working on the code, and is not how the application is deployed -
+`docs/deployment.md` is that.
+
+Without it:
+
 ```bash
 python -m venv .venv
 . .venv/bin/activate
