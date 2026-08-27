@@ -375,3 +375,57 @@ class TestStartupConfiguration:
         )
 
         assert create_app()
+
+    def test_a_missing_amplify_credential_stops_the_service_starting(
+        self,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Checked at startup for the reason the service's own token
+        # is.  Without it the service starts, answers, and fails
+        # inside a job: a collect after minting a run, and a send
+        # partway through, which leaves it 'partly_sent'.
+        monkeypatch.delenv('AMPLIFY_TOKEN', raising=False)
+
+        with pytest.raises(ConfigurationError) as error:
+            create_app()
+
+        assert 'AMPLIFY_TOKEN' in str(error.value)
+
+    def test_a_missing_calendar_credential_stops_the_service_starting(
+        self,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv('GCAL_TOKEN', raising=False)
+
+        with pytest.raises(ConfigurationError) as error:
+            create_app()
+
+        assert 'GCAL_TOKEN' in str(error.value)
+
+    def test_the_refusal_names_every_missing_credential(
+        self,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # One restart per missing value is one more than is needed,
+        # and the operator is reading .env either way.
+        monkeypatch.delenv('AMPLIFY_TOKEN', raising=False)
+        monkeypatch.delenv('GCAL_TOKEN', raising=False)
+
+        with pytest.raises(ConfigurationError) as error:
+            create_app()
+
+        assert 'AMPLIFY_TOKEN' in str(error.value)
+        assert 'GCAL_TOKEN' in str(error.value)
+
+    def test_a_credential_set_to_nothing_is_no_credential(
+        self,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # What a copied .env.example with the placeholder stripped
+        # leaves behind.
+        monkeypatch.setenv('AMPLIFY_TOKEN', '')
+
+        with pytest.raises(ConfigurationError) as error:
+            create_app()
+
+        assert 'AMPLIFY_TOKEN' in str(error.value)

@@ -30,6 +30,7 @@ from fastapi.routing import APIRoute
 
 # Imports - Local
 from star_pass._defaults import RETENTION_SWEEP_HOURS
+from star_pass._helpers import require_env_vars
 from star_pass._job_runner import JobRunner
 from star_pass._logging import get_logger
 from star_pass._repository import JobRepository
@@ -203,8 +204,9 @@ def create_app() -> FastAPI:
         Raises:
             ConfigurationError:
                 If the service is not configured to authenticate
-                anyone.  Raised here rather than at the first request,
-                so a deployment missing its token fails at startup
+                anyone, or holds no credential for the services it
+                calls.  Raised here rather than at the first request,
+                so a deployment missing a value fails at startup
                 instead of when someone tries to use it.
 
         Returns:
@@ -214,6 +216,14 @@ def create_app() -> FastAPI:
     """
 
     check_configuration()
+
+    # The upstream credentials, checked beside the service's own and
+    # through the core's gate rather than '_security', which decides
+    # who is calling and holds nothing about who is being called.
+    # Without this the service starts, answers, and fails inside a
+    # job: a collect after minting a run, and a send partway through,
+    # leaving it 'partly_sent'.
+    require_env_vars('AMPLIFY_TOKEN', 'GCAL_TOKEN')
 
     api = FastAPI(
         lifespan=lifespan,
