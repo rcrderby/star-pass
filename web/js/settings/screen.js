@@ -546,6 +546,20 @@ export class SettingsScreen {
          * screen nothing is redrawing. */
         if (secondsLeft(this.state) === 0) {
           this.stopTicking();
+
+          /* And the refusal goes with the wait it was counting. What
+           * it said was that the test had been asked for too often,
+           * which stopped being true at this tick; leaving it up
+           * would append "Try again shortly" at the moment trying
+           * again became possible, which is advice about a state
+           * that has just ended. The card goes back to saying the
+           * credential has not been checked, which is what happened.
+           *
+           * Only ever the too-often refusal: nothing else sets a
+           * deadline, and the button is disabled for its whole
+           * length, so no other refusal can arrive while it runs. */
+          this.state.refusal = null;
+          this.state.waitUntil = 0;
         }
 
         this.draw();
