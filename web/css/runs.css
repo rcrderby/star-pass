@@ -95,14 +95,23 @@
   align-items: center;
 }
 
-/* The delete control, which is only drawn on a run that may go. */
+/* Both controls in this corner take an icon's room, so a row draws
+ * them the same size whichever of them it has. */
 .runs-row-side .btn-icon {
   width: 32px;
   height: 32px;
+}
+
+/* The delete control alone is the alert colour, stated on the control
+ * rather than on "an icon button in this corner".  That was true of
+ * the only one there when it was written, and stopped being true when
+ * the run id joined it -- which drew a circled i in the colour that
+ * means a run cannot be sent. */
+.runs-row-side .runs-row-delete {
   color: var(--color-alert);
 }
 
-.runs-row-side .btn-icon:hover:not(:disabled) {
+.runs-row-side .runs-row-delete:hover:not(:disabled) {
   background: color-mix(in srgb, var(--color-alert) 12%, transparent);
 }
 
