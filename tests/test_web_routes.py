@@ -126,6 +126,81 @@ class TestWhatTheFrontEndAnswers:
         # name, and the page's own matching says the same.
         assert browser.get('/runs/a-run/preview/extra').status_code == 404
 
+    def test_every_screen_answers_its_trailing_slash_form(
+        self,
+        browser: TestClient
+    ) -> None:
+        # Deleting the run identifier out of '/runs/<id>' leaves
+        # '/runs/', which is not an enumerated path -- so the mount
+        # answered it, found no file of that name and returned a
+        # refusal document as raw JSON.  Every screen had it.
+        for path in _defaults.SCREEN_PATHS:
+            if path == '/':
+                continue
+
+            asked = path.replace('{run_id}', 'a-run')
+            answer = browser.get(f'{asked}/', follow_redirects=False)
+
+            assert answer.status_code == 307, path
+            assert answer.headers['location'].endswith(asked), path
+
+    def test_the_slash_lands_on_the_page(
+        self,
+        browser: TestClient
+    ) -> None:
+        # The redirect is worth nothing if what it points at is not
+        # the screen.
+        answer = browser.get('/runs/')
+
+        assert answer.status_code == 200
+        assert answer.headers['content-type'].startswith('text/html')
+        assert str(answer.url).endswith('/runs')
+
+    def test_the_slash_keeps_what_came_after_it(
+        self,
+        browser: TestClient
+    ) -> None:
+        # The address is rebuilt from the request rather than from the
+        # path the route was registered with, which carries the
+        # parameter's name where an identifier goes -- so this is what
+        # says the rebuilt one is the whole address.
+        answer = browser.get(
+            '/runs/a-run/preview/?revision=2',
+            follow_redirects=False
+        )
+
+        assert answer.headers['location'].endswith(
+            '/runs/a-run/preview?revision=2'
+        )
+
+    def test_a_slash_is_not_a_way_past_the_enumeration(
+        self,
+        browser: TestClient
+    ) -> None:
+        # The redirect is registered per screen, not as a rule about
+        # trailing slashes: a rule would answer anything one segment
+        # deeper than a screen, which is the catch-all D28 refuses.
+        for path in ('/nope/', '/js/', '/runs/a-run/preview/extra/'):
+            assert browser.get(
+                path,
+                follow_redirects=False
+            ).status_code == 404, path
+
+    def test_the_root_is_given_no_redirect(self) -> None:
+        # Its trailing-slash form is '//', which is not an address of
+        # anything: the root already answers the root.  Asked of the
+        # route table rather than of a request, because a request for
+        # '//' is answered by the mount whether the route is there or
+        # not -- so the arrangement is the only thing that can say
+        # this, and a test of the answer passes either way.
+        registered = [
+            getattr(route, 'path', '')
+            for route in create_app().routes
+        ]
+
+        assert '/' in registered
+        assert '//' not in registered
+
     def test_a_module_that_is_there_is_still_served_as_one(
         self,
         browser: TestClient
