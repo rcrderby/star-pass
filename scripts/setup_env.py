@@ -158,6 +158,36 @@ def short(name: str, value: str) -> Optional[str]:
     return None
 
 
+def without_the_template_block(lines: List[str]) -> List[str]:
+    """ Return the template without the part that describes itself.
+
+        The template opens by saying that it is one and how the script
+        turns it into '.env'.  Copied through, that leaves the written
+        file calling itself a template and telling its reader how to
+        create the file they already have.
+
+        The block is the lines before the first blank one, which is
+        what the template is arranged to make true: what follows the
+        blank line is the head of the file this writes.
+
+        Args:
+            lines (list):
+                The template, as lines.
+
+        Returns:
+            lines (list):
+                What to write from.
+    """
+
+    for position, line in enumerate(lines):
+        if not line.strip():
+            return lines[position + 1:]
+
+    # A template that is one block and nothing else has no head to
+    # keep, and dropping all of it would write an empty file.
+    return lines
+
+
 def written(lines: List[str], values: Dict[str, str]) -> List[str]:
     """ Return the file with each value written where it belongs.
 
@@ -264,6 +294,16 @@ def main() -> int:
 
     source = TARGET if TARGET.is_file() else TEMPLATE
     lines = source.read_text(encoding='utf-8').splitlines(keepends=True)
+
+    # Only when reading the template.  Its first block says what a
+    # template is and how to turn one into '.env', which is true of
+    # the file being read and false of the file being written -- but
+    # an existing '.env' is its own source here, and its first block
+    # is the head this already gave it.  Dropping that would take a
+    # line off the file every time somebody filled in one more value.
+    if source is TEMPLATE:
+        lines = without_the_template_block(lines)
+
     settings = already_set(lines)
 
     missing = {}

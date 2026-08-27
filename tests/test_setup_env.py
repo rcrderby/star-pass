@@ -42,6 +42,14 @@ GCAL = 'GCAL_TOKEN'
 LONG_ENOUGH = 'a' * 40
 TOO_SHORT = 'a' * 8
 
+# What the template says about being a template, which is the block
+# the script leaves behind.
+TEMPLATE_BLOCK = (
+    '# star-pass environment configuration template.\n'
+    '#\n'
+    '# The script writes .env from this file.\n'
+)
+
 
 @pytest.fixture(name='setup')
 def _setup() -> ModuleType:
@@ -50,14 +58,22 @@ def _setup() -> ModuleType:
 
 @pytest.fixture(name='template')
 def _template(tmp_path: Path) -> Path:
-    """ A template with the shape the real one has: two placeholders
-        for the credentials, and the two generated names commented
-        out under the comments that explain them.
+    """ A template with the shape the real one has: a first block
+        describing the template itself, then two placeholders for the
+        credentials, and the two generated names commented out under
+        the comments that explain them.
+
+        The first block matters to what is tested here rather than
+        being scenery -- it is the part the script drops -- so a
+        fixture without one could not tell a script that drops it
+        from a script that does not.
     """
 
     template = tmp_path / '.env.example'
     template.write_text(
-        '# Required: API credentials\n'
+        TEMPLATE_BLOCK
+        + '\n'
+        + '# Required: API credentials\n'
         'AMPLIFY_TOKEN=your-amplify-api-token\n'
         'GCAL_TOKEN=your-google-calendar-api-key\n'
         '\n'
@@ -226,6 +242,70 @@ class TestWhatReachesTheScreen:
         assert placed.is_file()
         assert f'{SIGNS_REQUESTS}: generated' in shown
         assert f'{AMPLIFY}: set' in shown
+
+
+class TestTheTemplateDescribesItselfAndNotWhatItWrites:
+    def test_the_block_is_dropped(
+        self, setup, placed, monkeypatch
+    ):
+        # Copied through, it left the written file calling itself a
+        # template and telling its reader how to create the file they
+        # already had.
+        monkeypatch.setattr(setup, 'ask', lambda prompt: LONG_ENOUGH)
+        setup.main()
+
+        written = placed.read_text(encoding='utf-8')
+
+        assert 'template' not in written
+        assert 'The script writes .env from this file.' not in written
+
+        # The blank line that ended the block goes with it. Keeping it
+        # would open the written file with an empty line, which is the
+        # off-by-one this drop has.
+        assert written.startswith('# Required: API credentials')
+
+    def test_what_follows_the_block_is_kept(
+        self, setup, placed, monkeypatch
+    ):
+        # The other half, and the one that says the drop stops where
+        # it should: a rule that took the whole file would pass the
+        # test above.
+        monkeypatch.setattr(setup, 'ask', lambda prompt: LONG_ENOUGH)
+        setup.main()
+
+        written = placed.read_text(encoding='utf-8')
+
+        assert '# Required: API credentials' in written
+        assert '# The token every request to the API service carries.' \
+            in written
+        assert f'{AMPLIFY}={LONG_ENOUGH}' in written
+
+    def test_a_file_it_already_wrote_keeps_its_head(
+        self, setup, placed, monkeypatch
+    ):
+        # An existing '.env' is its own source, and its first block is
+        # the head this already gave it. Dropping that would take a
+        # block off the file every time somebody filled in one more
+        # value.
+        monkeypatch.setattr(setup, 'ask', lambda prompt: LONG_ENOUGH)
+        setup.main()
+
+        first = placed.read_text(encoding='utf-8')
+
+        placed.write_text(
+            first.replace(f'{GCAL}={LONG_ENOUGH}', f'{GCAL}='),
+            encoding='utf-8'
+        )
+        setup.main()
+
+        assert placed.read_text(encoding='utf-8') == first
+
+    def test_a_template_of_one_block_is_left_alone(self, setup):
+        # Dropping all of it would write an empty file, which is worse
+        # than writing a header nobody wanted.
+        only = ['# all of it\n', '# and no more\n']
+
+        assert setup.without_the_template_block(only) == only
 
 
 class TestWhatIsWritten:
