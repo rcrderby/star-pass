@@ -138,7 +138,13 @@ async function start() {
     fill(main, failureState(
       error instanceof ApiError
         ? error
-        : new ApiError({ status: 0, detail: String(error.message || error) })
+        : new ApiError({ status: 0, detail: String(error.message || error) }),
+      undefined,
+
+      /* The address is still the one that failed, so drawing it again
+       * is asking again. A retry that fails lands back here, because
+       * the router's own callback catches into this function. */
+      () => router.draw()
     ));
   }
 

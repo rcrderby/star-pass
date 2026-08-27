@@ -88,11 +88,18 @@ export function emptyState(onCollect) {
  * page that could not list the runs and a settings screen that could
  * not read the settings are the same shape and not the same sentence.
  *
+ * A caller that can ask again passes what asking again does, and gets
+ * a control for it. Without one this screen is the end of the road:
+ * a page whose first read failed has nothing else on it, so the only
+ * way on was a reload.
+ *
  * @param {ApiError} error What went wrong.
  * @param {string} [heading] What could not be read.
+ * @param {Function} [onRetry] What asking again does, when the caller
+ *     can ask again.
  * @returns {HTMLElement} The screen.
  */
-export function failureState(error, heading = NO_RUNS) {
+export function failureState(error, heading = NO_RUNS, onRetry = null) {
   return el(
     'section',
     { class: 'failure', role: 'alert' },
@@ -105,6 +112,18 @@ export function failureState(error, heading = NO_RUNS) {
         'Reference ',
         el('span', { class: 'mono', text: error.reference })
       )
-      : null
+      : null,
+    onRetry === null
+      ? null
+      : el(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-primary self-start',
+          onclick: onRetry
+        },
+        icon('arrow-clockwise'),
+        'Try again'
+      )
   );
 }
