@@ -219,7 +219,7 @@ export class RunsScreen {
               'button',
               {
                 type: 'button',
-                class: 'btn btn-icon btn-ghost',
+                class: 'btn btn-icon btn-ghost runs-row-delete',
                 disabled: this.state.busy,
                 'aria-label': `${DELETE_LABEL} ${runLabel(run)}`,
                 title: DELETE_LABEL,
