@@ -7,10 +7,10 @@
     "failed": "Collection failed"
   },
   "step": {
-    "read_calendar": "Reading the calendar",
+    "read_calendar": "Reading calendar events",
     "filter_events": "Filtering events",
-    "match_events": "Matching titles to opportunities",
-    "read_opportunities": "Reading the Amplify opportunities",
+    "match_events": "Matching event titles to opportunity titles",
+    "read_opportunities": "Reading existing Amplify opportunities",
     "store_events": "Storing the collected events",
     "read_opportunity": "Reading what opportunity {subject} already holds"
   },
