@@ -51,43 +51,35 @@ records why.
 
 ## Getting started
 
-Four steps to a running deployment. No development container is needed:
+Three steps to a running deployment. No development container is needed:
 this is the deployment, not the development environment.
 
-### 1. Clone the repository and create `.env`
+### 1. Clone the repository and write `.env`
 
 ```bash
 git clone https://github.com/rcrderby/star-pass.git
 cd star-pass
-cp .env.example .env
+python3 scripts/setup_env.py
 ```
 
-Put your `AMPLIFY_TOKEN` and `GCAL_TOKEN` into `.env`. Every other
+The script writes `.env` from `.env.example`. It **generates** the two
+values this deployment signs with, `STAR_PASS_API_TOKEN` and
+`STAR_PASS_SESSION_SECRET` - the API authenticates the frontend with the
+first, and the frontend signs your browser session with the second and
+derives that session's CSRF token from it. **Both services refuse to
+start without them**, which is a hard stop rather than a subtle failure.
+
+It then asks for your `AMPLIFY_TOKEN` and your `GCAL_TOKEN`, without
+echoing what you type and without printing either back. Every other
 setting has a working default; `.env.example` documents all of them.
 
-### 2. Generate the two service secrets
-
-**The API and the frontend both refuse to start without these**, so this
-is a hard stop rather than a subtle failure. Generate them rather than
-typing them: neither is ever entered anywhere, and both must be at least
-32 characters.
-
-```bash
-python3 -c "import secrets; print('STAR_PASS_API_TOKEN=' + secrets.token_urlsafe(32))" >> .env
-```
-
-```bash
-python3 -c "import secrets; print('STAR_PASS_SESSION_SECRET=' + secrets.token_urlsafe(32))" >> .env
-```
-
-The API authenticates the frontend with the first. The frontend signs
-your browser session with the second, and derives that session's CSRF
-token from it.
+Run it again whenever a value is missing: it refuses to overwrite one
+already set, and writes the file readable by you alone.
 
 `.env` holds live credentials and is git-ignored. Keep it out of any
 directory that synchronises off the machine.
 
-### 3. Build and start
+### 2. Build and start
 
 ```bash
 docker compose build
@@ -102,7 +94,7 @@ order, each waiting for the one below it to report healthy:
 docker compose ps
 ```
 
-### 4. Open it
+### 3. Open it
 
 Open **`https://localhost`**.
 
