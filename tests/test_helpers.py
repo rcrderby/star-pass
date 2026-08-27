@@ -234,6 +234,41 @@ class TestMatchShiftInfo:
         assert matched.match.keyword in ('wheels', 'woj', 'justice')
         assert matched.match.score is None
 
+    def test_the_buds_home_team_scrimmage_matches_on_its_alias(
+        self, helpers
+    ):
+        # The title reaches Junior Scrimmages either way: without the
+        # alias the fallback scores it against 'buds ntt scrimmage',
+        # which is another Buds team's scrimmage and clears the
+        # threshold on the two words they share.  What the alias buys
+        # is the title arriving as a keyword match rather than as a
+        # guess somebody has to look at on the review screen, so the
+        # kind is what this asserts.
+        matched = helpers.match_shift_info(
+            gcal_name='practices',
+            need_name='Buds HT Scrimmage'
+        )
+
+        assert matched.need_details['description'] == 'Junior Scrimmages'
+        assert matched.match.kind == MATCH_KIND_KEYWORD
+        assert matched.match.keyword == 'buds ht scrimmage'
+
+    def test_the_longest_alias_in_a_title_is_the_one_that_wins(
+        self, helpers
+    ):
+        # 'Wreckers Scrimmage' carries two aliases of the same
+        # category, one inside the other, and which of them is
+        # recorded is the rule that keeps a short alias from taking a
+        # title a longer one describes better.  Both answer Adult
+        # Scrimmages, so the category cannot show which won and the
+        # alias recorded is what says it.
+        matched = helpers.match_shift_info(
+            gcal_name='practices',
+            need_name='Wreckers Scrimmage'
+        )
+
+        assert matched.match.keyword == 'wreckers scrimmage'
+
     def test_a_fuzzy_match_records_a_score_and_no_alias(
         self, monkeypatch, helpers
     ):
