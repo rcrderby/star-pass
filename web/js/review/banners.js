@@ -14,6 +14,7 @@ import { el, icon } from '../dom.js';
  * as the one thing stopping the send. */
 const ACCENT = 'banner banner-accent';
 const SECONDARY = 'banner banner-secondary';
+const NOTICE = 'banner banner-notice';
 const ALERT = 'banner banner-alert';
 
 /* Statuses the run publishes that each get their own banner. The
@@ -172,7 +173,7 @@ export function reviewBanners(state, handlers) {
 
   if (repeated.length > 0) {
     banners.push(banner({
-      tone: SECONDARY,
+      tone: NOTICE,
       glyph: 'copy',
       words: `${repeated.length} of these shifts would repeat another `
         + 'row in this run. They will be created once.',

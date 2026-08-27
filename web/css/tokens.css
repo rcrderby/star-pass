@@ -81,6 +81,13 @@
   --color-alert-fill: #4d2e35;
   --color-alert-text: #ffe6e8;
 
+  /* What a repeat is drawn in: the third semantic colour, between
+   * neutral and alert. A row repeating another is a thing to be told
+   * about and nothing is wrong with it, so it is neither the accent
+   * every other secondary thing wears nor the colour that means the
+   * run cannot be sent. */
+  --color-notice: #dfb87e;
+
   /* Inter throughout, at 400 to 600 and never heavier. */
   --font-heading: "Inter", system-ui, sans-serif;
   --font-heading-weight: 500;
@@ -125,6 +132,7 @@
   --color-alert: #a3384a;
   --color-alert-fill: #f7dfe2;
   --color-alert-text: #6e2130;
+  --color-notice: #7d5211;
   --color-divider: color-mix(in srgb, #292b31 14%, transparent);
   --shadow-sm: 0 0 0 1px #cfd3e5;
   --shadow-md: 0 0 0 1px #e4e7f5, 0 6px 18px rgb(41 43 49 / 10%);

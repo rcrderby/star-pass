@@ -124,7 +124,7 @@ function duplicateNote(event, byId) {
 
   return el(
     'span',
-    { class: 'row-note row-note-accent micro' },
+    { class: 'row-note row-note-notice micro' },
     icon('copy'),
     el('span', {
       text: filled('row', 'duplicate', {

@@ -224,6 +224,18 @@ button.picker-row:hover {
   background: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 
+/* A repeat's banner, in the repeat colour, so the sentence and the
+ * edge on the rows it counts are one piece of news. */
+.banner-notice {
+  border-left-color: var(--color-notice);
+  background: color-mix(in srgb, var(--color-notice) 12%, transparent);
+}
+
+.banner-notice > .icon,
+.banner-notice > .banner-words {
+  color: var(--color-notice);
+}
+
 .banner-alert {
   border-left-color: var(--color-alert);
   background: color-mix(in srgb, var(--color-alert) 12%, transparent);
@@ -426,7 +438,7 @@ button.picker-row:hover {
  * Before the blocking rule below and not after it. A row can be both,
  * and the one that stops the run being sent is the one worth seeing. */
 .event-row-repeat {
-  border-left-color: var(--color-accent-600);
+  border-left-color: var(--color-notice);
 }
 
 .event-row-blocking {
@@ -458,6 +470,14 @@ button.picker-row:hover {
 
 .row-note-accent {
   color: var(--color-accent-300);
+}
+
+/* The row's own line about what it repeats, in the repeat colour: the
+ * edge, the banner and this are the same news said three times, and
+ * the offset notes beside it are not, which is why they keep the
+ * accent they share with everything else secondary. */
+.row-note-notice {
+  color: var(--color-notice);
 }
 
 /* — what the calendar said —
