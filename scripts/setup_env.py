@@ -334,9 +334,14 @@ def main() -> int:
         ''.join(written(lines, values)),
         encoding='utf-8'
     )
-    os.chmod(TARGET, stat.S_IRUSR | stat.S_IWUSR)
+    # The group bit is what the API container reads the file through:
+    # a bind mount keeps the host file's mode, and the image runs as
+    # UID 1000.  A group rather than everyone, because on a host where
+    # each account has a group of its own the two are the same thing,
+    # and where they are not this is still the smaller claim.
+    os.chmod(TARGET, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP)
 
-    print(f'Wrote {TARGET.name}, readable by you alone.')
+    print(f'Wrote {TARGET.name}, readable by you and your group.')
 
     return 0
 
