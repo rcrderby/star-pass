@@ -18,7 +18,7 @@ import { chooser, el, icon } from '../dom.js';
 import { counted, lengthText, dayHeading } from '../format.js';
 import { filled, phrase } from '../phrases.js';
 import { Popover } from '../popover.js';
-import { timeField } from './timepicker.js';
+import { endFollowing, timeField } from './timepicker.js';
 
 /* How many columns the grid has. Stated for assistive technology,
  * which cannot count them from a grid the way it can from a table. */
@@ -405,11 +405,29 @@ function eventRows(event, context) {
         value: event.shiftStart,
         label: `Shift start for ${event.title}`,
         busy: context.busy,
-        onChoose: (time) => context.onEdit({
-          op: 'set_start',
-          eventIds: [event.id],
-          time
-        })
+        onChoose: (time) => {
+          const started = { op: 'set_start', eventIds: [event.id], time };
+          const landing = endFollowing(
+            event.shiftStart,
+            event.shiftEnd,
+            time
+          );
+
+          /* The end moves first. The operations are applied in the
+           * order they arrive, each seeing what the one before it
+           * produced, and a shift that ends no later than it starts
+           * is refused wherever it appears -- so moving the start
+           * first would be refused on the way to a pair that is
+           * fine. */
+          context.onEdit(
+            landing === null
+              ? started
+              : [
+                { op: 'set_end', eventIds: [event.id], time: landing },
+                started
+              ]
+          );
+        }
       }),
       offsetNote('offsetStart', context.offsetOf(event).start)
     ),

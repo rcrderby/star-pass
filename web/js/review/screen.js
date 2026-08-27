@@ -373,7 +373,12 @@ export class ReviewScreen {
       busy: this.state.busy,
       onToggleDay: (day) => this.toggleDay(day),
       onToggleSelected: (eventId) => this.toggleSelected(eventId),
-      onEdit: (operation) => this.edit([operation]),
+      /* One operation or several, applied as one action: a start
+       * that carries its end takes two, and one action is what makes
+       * them succeed or fail together, under one key. The change log
+       * still records each of them, because each is a thing that was
+       * done to the row. */
+      onEdit: (operation) => this.edit([].concat(operation)),
 
       /* The role's own, not the run's opportunity: one Amplify
        * listing can be named by categories that time it differently,
