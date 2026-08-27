@@ -238,11 +238,11 @@ export function selectionToolbar(state, context, handlers, hidden = 0) {
         type: 'button',
         class: 'btn btn-secondary',
         disabled: busy,
-        title: 'Put every role back to what its opportunity asks for',
+        title: 'Put every role back to the slots its category asked for',
         onclick: handlers.onResetSlots
       },
       icon('arrow-counter-clockwise'),
-      'Usual slots'
+      'Default slots'
     ),
     el(
       'button',
