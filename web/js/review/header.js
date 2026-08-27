@@ -10,6 +10,7 @@
 import { changesNow } from './changelog.js';
 import { el, icon } from '../dom.js';
 import { counted, moment, windowText } from '../format.js';
+import { copyText } from '../clipboard.js';
 import { Popover } from '../popover.js';
 import { filled, phrase } from '../phrases.js';
 
@@ -21,6 +22,16 @@ const UNCOLLECTED_TAB = 'Not collected';
 const NEW_RUN = 'Collect a new run';
 
 /* What the revision picker's two actions say. */
+/* Over the identifier the callout shows. The run has an id because
+ * the service minted one, and it is what names the run to the command
+ * line and in a service's log -- which is the whole reason for
+ * showing it, and why the callout says where it came from. */
+const RUN_ID_IS = 'The service assigned this id, and it stays with the run.';
+
+/* On the control beside it, before and after it has been pressed. */
+const COPY = 'Copy';
+const COPIED = 'Copied';
+
 const SEAL = 'Save a revision now';
 const REVERT = 'Revert';
 
@@ -74,30 +85,88 @@ export function metaText(run) {
  * @returns {HTMLElement} The line.
  */
 function runLine(run, current, onOpen, events) {
-  return el(
+  const identifier = el('span', { class: 'mono run-id-value', text: run.id });
+
+  const copy = el(
     'button',
     {
       type: 'button',
-      class: current ? 'picker-row picker-row-current' : 'picker-row',
-      onclick: () => onOpen(run.id)
+      class: 'btn btn-ghost',
+      onclick: async () => {
+        const went = await copyText(run.id);
+
+        copy.replaceChildren(
+          icon(went ? 'check' : 'copy'),
+          went ? COPIED : COPY
+        );
+      }
     },
+    icon('copy'),
+    COPY
+  );
+
+  const callout = el(
+    'div',
+    { class: 'run-id-callout', hidden: true },
+    el('span', { class: 'muted micro', text: RUN_ID_IS }),
+    el('span', { class: 'run-id-line' }, identifier, copy)
+  );
+
+  const info = el(
+    'button',
+    {
+      type: 'button',
+      class: 'btn btn-ghost picker-row-action run-id-open',
+      'aria-label': `Run id for ${run.calendar} ${windowText(run.window)}`,
+      'aria-expanded': 'false',
+      title: 'The run id',
+      onclick: () => {
+        const opening = callout.hidden;
+
+        callout.hidden = !opening;
+        info.setAttribute('aria-expanded', String(opening));
+      }
+    },
+    icon('info')
+  );
+
+  /* The row is a container holding controls rather than one control,
+   * because it now holds two: the way into the run, and the way to
+   * what the run is called. The revision picker's rows are already
+   * built this way, and the CSS states what a row looks like apart
+   * from what a button adds to it. */
+  return el(
+    'div',
+    { class: 'picker-row-group' },
     el(
-      'span',
-      { class: 'picker-row-main' },
+      'div',
+      {
+        class: current ? 'picker-row picker-row-current' : 'picker-row'
+      },
+      el(
+        'button',
+        {
+          type: 'button',
+          class: 'picker-row-main picker-row-open',
+          onclick: () => onOpen(run.id)
+        },
+        el('span', {
+          class: 'picker-row-label picker-row-calendar',
+          text: `${run.calendar} · ${windowText(run.window)}`
+        }),
+        el('span', {
+          class: 'picker-row-meta muted micro',
+          text: `${moment(run.collectedAt, run.window.timezone)}`
+            + ` · ${counted(events, 'event')}`
+        })
+      ),
+      info,
       el('span', {
-        class: 'picker-row-label picker-row-calendar',
-        text: `${run.calendar} · ${windowText(run.window)}`
-      }),
-      el('span', {
-        class: 'picker-row-meta muted micro',
-        text: `${moment(run.collectedAt, run.window.timezone)}`
-          + ` · ${counted(events, 'event')}`
+        class: run.sentAt ? 'tag tag-neutral' : 'tag tag-outline',
+        text: phrase('runStatus', run.status)
       })
     ),
-    el('span', {
-      class: run.sentAt ? 'tag tag-neutral' : 'tag tag-outline',
-      text: phrase('runStatus', run.status)
-    })
+    callout
   );
 }
 
@@ -212,7 +281,7 @@ function runPicker(state, onOpenRun, onCollectNew) {
 
   return new Popover({
     trigger,
-    width: 340,
+    width: 380,
     contents: () => [
       el('span', { class: 'popover-heading muted', text: 'Runs' }),
       runs.map((each) => {
