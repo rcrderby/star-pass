@@ -136,7 +136,10 @@ def carries_our_token(
 
         Compared in constant time, for the reason a credential is: a
         comparison that stops at the first wrong character reports, in
-        how long it took, how much of the value was right.
+        how long it took, how much of the value was right.  As bytes,
+        because the str form refuses operands holding non-ASCII
+        characters, and Starlette decodes a header latin-1, so any byte
+        above 0x7F reaches here as one.
 
         Args:
             request (Request):
@@ -155,7 +158,10 @@ def carries_our_token(
     if not presented:
         return False
 
-    return compare_digest(presented, csrf_token(session=session))
+    return compare_digest(
+        presented.encode('utf-8'),
+        csrf_token(session=session).encode('utf-8')
+    )
 
 
 def _set_cookie(

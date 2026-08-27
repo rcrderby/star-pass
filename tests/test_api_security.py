@@ -4,7 +4,8 @@
 # pylint: disable=missing-function-docstring,missing-class-docstring
 
 # Imports - Python Standard Library
-from typing import Callable
+import asyncio
+from typing import Any, Callable, Dict, List
 
 # Imports - Third-Party
 import pytest
@@ -27,6 +28,72 @@ from star_pass_api._security import (
 # Constants
 VERSION_PATH = f'{_defaults.API_VERSION_PREFIX}/version'
 HEALTH_PATH = f'{_defaults.API_VERSION_PREFIX}/health'
+
+
+def status_for_authorization(
+    api: FastAPI,
+    value: bytes
+) -> int:
+    """ Return the status one raw 'Authorization' header is answered
+        with.
+
+        Driven against the ASGI application rather than through the
+        test client, because httpx encodes a header value as ASCII and
+        so cannot send the byte these tests are about.  An exception
+        out of the application propagates here rather than becoming a
+        response, which is the failure being held against.
+
+        Args:
+            api (FastAPI):
+                The service to ask.
+
+            value (bytes):
+                The header value, exactly as it arrives on the wire.
+
+        Returns:
+            status (int):
+                The status of the response that was started.
+    """
+
+    sent: List[Dict[str, Any]] = []
+
+    async def receive() -> Dict[str, Any]:
+        """ Answer with an empty body. """
+        return {'type': 'http.request', 'body': b'', 'more_body': False}
+
+    async def send(message: Dict[str, Any]) -> None:
+        """ Record what the application sends. """
+        sent.append(message)
+
+    asyncio.run(
+        api(
+            {
+                'type': 'http',
+                'asgi': {'version': '3.0', 'spec_version': '2.3'},
+                'http_version': '1.1',
+                'method': 'GET',
+                'scheme': 'http',
+                'path': VERSION_PATH,
+                'raw_path': VERSION_PATH.encode(),
+                'query_string': b'',
+                'root_path': '',
+                'client': ('198.51.100.1', 1),
+                'server': ('testserver', 80),
+                'headers': [
+                    (b'host', b'testserver'),
+                    (b'authorization', value)
+                ]
+            },
+            receive,
+            send
+        )
+    )
+
+    return next(
+        message['status']
+        for message in sent
+        if message['type'] == 'http.response.start'
+    )
 
 
 @pytest.fixture(name='scoped_client')
@@ -128,6 +195,37 @@ class TestAnUnidentifiedCaller:
         )
 
         assert wrong not in response.text
+
+    def test_a_non_ascii_token_is_refused(
+        self,
+        api: FastAPI
+    ) -> None:
+        # Starlette decodes a header latin-1, so a byte above 0x7F
+        # reaches the comparison as a character.  It is a credential
+        # nobody configured and belongs on the refusal path, not on
+        # the one that answers 500 and logs a traceback.
+        status = status_for_authorization(
+            api=api,
+            value='Bearer t\u00f6k\u00e9n-not-the-configured-value'.encode(
+                'latin-1'
+            )
+        )
+
+        assert status == 401
+
+    def test_the_raw_driver_lets_a_valid_token_through(
+        self,
+        api: FastAPI,
+        api_credential: str
+    ) -> None:
+        # Holds the test above to something: without this, a driver
+        # that refused everything would pass it.
+        status = status_for_authorization(
+            api=api,
+            value=f'Bearer {api_credential}'.encode('latin-1')
+        )
+
+        assert status == 200
 
 
 class TestAnIdentifiedCaller:
