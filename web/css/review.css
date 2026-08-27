@@ -284,6 +284,13 @@ button.picker-row:hover {
   text-wrap: pretty;
 }
 
+/* A hint that is not true right now is not drawn.  The `display` above
+ * outranks the browser's own rule for the `hidden` attribute, so
+ * anything given a display of its own has to say this for itself. */
+.table-hint[hidden] {
+  display: none;
+}
+
 /* — the table — */
 
 .table-scroll {
