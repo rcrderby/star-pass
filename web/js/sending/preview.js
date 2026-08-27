@@ -24,7 +24,7 @@ import { counted, shortDay } from '../format.js';
 import { phrase } from '../phrases.js';
 
 /* The columns, in the order the design gives them. */
-const HEADERS = ['Opportunity', 'New shifts', 'Slots', 'Dates'];
+const HEADERS = ['Opportunity', 'New shifts', 'Dates'];
 
 /* What the row's date cell says when a send would create nothing
  * under this opportunity, which is what an opportunity Amplify
@@ -106,7 +106,6 @@ function previewRow(row) {
       )
     ),
     el('td', { class: 'mono', text: String(row.willCreate) }),
-    el('td', { class: 'mono', text: String(row.slots) }),
     el('td', { class: 'mono muted', text: datesText(row) })
   );
 }
