@@ -85,6 +85,9 @@ const HOLDS_NOTHING = (
  * check rows nobody could see, and the search is on screen beside it. */
 const SELECT_ALL = 'Select all shown';
 
+/* On the control that puts the table back to the whole run. */
+const CLEAR_FILTERS = 'Clear filters';
+
 /* Which tab is showing. The names the header's control reports, and
  * the names a path is routed to: each tab is one of the run's two
  * addresses (D28), so what the header says and what the address says
@@ -106,6 +109,23 @@ const READING = 'Reading what this run left out';
 
 /* Offered when that read did not arrive. */
 const TRY_AGAIN = 'Try again';
+
+/** Return whether anything is narrowing the table.
+ *
+ * **A search counts.** Clearing takes the search box with the
+ * filters, so a control that read the filters alone would be refused
+ * in exactly the state it is most wanted in: a search matching
+ * nothing, an empty table, and nothing else on screen to press.
+ *
+ * @param {Object} state What the screen is showing.
+ * @returns {boolean} Whether anything is.
+ */
+function narrowed(state) {
+  return (
+    state.search.trim() !== ''
+    || Object.keys(FILTER_SELECTS).some((name) => state.filters[name])
+  );
+}
 
 /** Return the events a filter and a search leave showing.
  *
@@ -247,6 +267,21 @@ function toolbar(state, shown, handlers) {
     el(
       'span',
       { class: 'toolbar-right' },
+
+      /* Always drawn, and refused while there is nothing to clear:
+       * a control that came and went would move the two beside it
+       * every time a filter was pressed. */
+      el(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-ghost',
+          disabled: !narrowed(state),
+          onclick: handlers.onClearFilters
+        },
+        icon('x'),
+        CLEAR_FILTERS
+      ),
       el(
         'span',
         { class: 'tag tag-neutral' },
@@ -461,6 +496,17 @@ export class ReviewScreen {
       },
       onToggleLog: () => {
         this.state.showLog = !this.state.showLog;
+        this.redraw();
+      },
+      onClearFilters: () => {
+        /* Every filter the table knows about rather than three named
+         * ones, so that a filter added later is cleared by this
+         * without anybody remembering to come back here. */
+        for (const name of Object.keys(FILTER_SELECTS)) {
+          this.state.filters[name] = false;
+        }
+
+        this.state.search = '';
         this.redraw();
       },
       onToggleBlocking: () => {

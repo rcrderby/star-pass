@@ -77,7 +77,13 @@ function showOnlyThese(on, onToggle) {
       onclick: onToggle
     },
     icon('funnel'),
-    on ? 'Showing only these' : 'Show only these'
+    on ? 'Showing only these' : 'Show only these',
+
+    /* A cross on the trailing edge once the filter is on, because
+     * this control is the only way back out and "Showing only these"
+     * does not say that pressing it stops. The funnel stays: what the
+     * control is about does not change when it is pressed. */
+    on ? icon('x') : null
   );
 }
 

@@ -12,6 +12,11 @@
   gap: 6px;
   align-items: center;
   justify-content: center;
+
+  /* A label of two words breaks across two lines the moment the row
+   * it sits in runs short of width, which makes the control twice as
+   * tall as the ones beside it. The row wraps instead. */
+  white-space: nowrap;
   padding: var(--space-2) calc(var(--space-3) * 1.2);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
