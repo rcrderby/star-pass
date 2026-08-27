@@ -328,6 +328,13 @@ export class ReviewScreen {
 
     this.draw();
 
+    /* The table's room changes without anything being redrawn - a
+     * window resized, the change log panel opening beside it - so the
+     * width hint is measured again whenever the body's size changes
+     * as well as after every draw. */
+    this.sizes = new ResizeObserver(() => this.measureTableWidth());
+    this.sizes.observe(this.body);
+
     /* Opening straight onto the second tab reads it, the way pressing
      * it does. 'setView' does that read on the way in and is not
      * called for the tab the screen opens on. */
@@ -510,7 +517,7 @@ export class ReviewScreen {
       }),
       el(
         'p',
-        { class: 'table-hint muted note' },
+        { class: 'table-hint table-hint-width muted note', hidden: true },
         icon('arrows-horizontal'),
         el('span', { text: WIDER_THAN_WINDOW })
       ),
@@ -548,6 +555,33 @@ export class ReviewScreen {
     }
 
     this.focusSearch = false;
+    this.measureTableWidth();
+  }
+
+  /** Say the table is wider than the window only while it is.
+   *
+   * Whether it overflows is a fact about the drawn layout rather than
+   * about the state, so nothing knows the answer until the rows are
+   * on the screen: the table states a minimum width and what it has
+   * to spend is whatever the window, the page's padding and the
+   * change log panel leave it. A search that matches nothing draws no
+   * table at all, and a sentence about scrolling sideways over
+   * nothing is the same fault said louder.
+   *
+   * @returns {void}
+   */
+  measureTableWidth() {
+    const hint = this.body.querySelector('.table-hint-width');
+
+    if (hint === null) {
+      return;
+    }
+
+    const scroll = this.body.querySelector('.table-scroll');
+
+    hint.hidden = (
+      scroll === null || scroll.scrollWidth <= scroll.clientWidth
+    );
   }
 
   /** Draw the Not collected tab, and read it if it has not been read.
