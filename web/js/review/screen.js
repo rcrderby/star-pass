@@ -35,7 +35,7 @@ import { el, fill, icon } from '../dom.js';
 import { anyPopoverOpen, closeAnyPopover } from '../popover.js';
 import { changeLogPanel, changesNow } from './changelog.js';
 import { refusalNotice } from '../refusal.js';
-import { reviewBanners, RUN_FAILED } from './banners.js';
+import { FILTER_SELECTS, reviewBanners, RUN_FAILED } from './banners.js';
 import { metaText, reviewHeader } from './header.js';
 import { reviewTable } from './table.js';
 import { selectionToolbar, undoable } from './selection.js';
@@ -117,23 +117,43 @@ function showing(events, state) {
   const wanted = state.search.trim().toLowerCase();
 
   return events.filter((event) => {
-    if (state.filters.blocking && !event.blocking) {
-      return false;
-    }
+    const hidden = Object.keys(FILTER_SELECTS).some(
+      (name) => state.filters[name] && !FILTER_SELECTS[name](event)
+    );
 
-    if (
-      state.filters.fuzzy
-      && (event.match === null || event.match.kind !== 'fuzzy')
-    ) {
-      return false;
-    }
-
-    if (state.filters.repeated && event.duplicateOf === null) {
+    if (hidden) {
       return false;
     }
 
     return wanted === '' || event.title.toLowerCase().includes(wanted);
   });
+}
+
+/** Let go of any filter with nothing left to select.
+ *
+ * **A filter's own banner is the only control that turns it off**, and
+ * a banner is drawn only while it has something to count.  So an
+ * operation that empties a filter's population -- giving every
+ * blocking row an opportunity, removing every row a filter is showing
+ * -- took away the control while leaving the filter on, and the table
+ * then hid everything with no way back but a reload.
+ *
+ * Turning the filter off is the answer rather than drawing a banner
+ * that counts nothing: a filter selecting no rows is not narrowing
+ * anything, and one that still has rows always leaves at least one on
+ * screen, so nobody can reach an empty table by filtering alone.  That
+ * is also what makes the empty table's sentence true again -- with
+ * this, only a search can empty it.
+ *
+ * @param {Object} state What the screen is showing.
+ * @returns {void}
+ */
+function releaseEmptyFilters(state) {
+  for (const name of Object.keys(FILTER_SELECTS)) {
+    if (state.filters[name] && !state.events.some(FILTER_SELECTS[name])) {
+      state.filters[name] = false;
+    }
+  }
 }
 
 /** Return what stands in for the table when no row is drawn.
@@ -384,6 +404,11 @@ export class ReviewScreen {
    * @returns {void}
    */
   drawShifts() {
+    /* Before anything is worked out from the filters, because a
+     * filter with nothing left to select has no control to turn it
+     * off and would otherwise hide the whole table. */
+    releaseEmptyFilters(this.state);
+
     const context = this.context();
     const shown = showing(this.state.events, this.state);
     const anyOffset = this.state.events.some(
