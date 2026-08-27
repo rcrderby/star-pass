@@ -647,6 +647,24 @@
       "slots": 20
     }
   ],
+  "practices|buds ht scrimmage": [
+    {
+      "description": "NSOs",
+      "id": 628862,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    },
+    {
+      "description": "SOs",
+      "id": 607810,
+      "max_length": null,
+      "offset_end": 0,
+      "offset_start": 0,
+      "slots": 20
+    }
+  ],
   "practices|buds ntt scrimmage": [
     {
       "description": "NSOs",
