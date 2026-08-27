@@ -26,6 +26,7 @@ import { counted } from '../format.js';
 import { deleteRun, listRuns } from '../api.js';
 import { deleteDialog } from './confirm.js';
 import { el, fill, icon, plainClick } from '../dom.js';
+import { runIdCallout } from '../runid.js';
 import { emptyState } from '../screens.js';
 import { refusalNotice } from '../refusal.js';
 import { collectedAt, runLabel, runStatusTag } from './summary.js';
@@ -177,45 +178,59 @@ export class RunsScreen {
    * @returns {HTMLElement} The row.
    */
   row(run) {
+    const { info, callout } = runIdCallout(run, runLabel(run));
+
+    /* A group holding the row and what opens under it, the way the
+     * run picker's rows are built: the callout wants the width of
+     * the whole row rather than the corner its control sits in. */
     return el(
       'div',
-      { class: 'row-card runs-row' },
+      { class: 'runs-row-group' },
       el(
-        'a',
-        {
-          class: 'runs-row-open',
-          href: this.handlers.pathForRun(run.id),
-          onclick: (event) => {
-            if (!plainClick(event)) {
-              return;
-            }
+        'div',
+        { class: 'row-card runs-row' },
+        el(
+          'a',
+          {
+            class: 'runs-row-open',
+            href: this.handlers.pathForRun(run.id),
+            onclick: (event) => {
+              if (!plainClick(event)) {
+                return;
+              }
 
-            event.preventDefault();
-            this.handlers.onOpenRun(run.id);
-          }
-        },
-        el('span', { class: 'runs-row-label', text: runLabel(run) }),
-        el('span', { class: 'runs-row-meta muted micro', text: metaText(run) })
+              event.preventDefault();
+              this.handlers.onOpenRun(run.id);
+            }
+          },
+          el('span', { class: 'runs-row-label', text: runLabel(run) }),
+          el('span', {
+            class: 'runs-row-meta muted micro',
+            text: metaText(run)
+          })
+        ),
+        el(
+          'span',
+          { class: 'runs-row-side' },
+          info,
+          runStatusTag(run),
+          run.mayDelete
+            ? el(
+              'button',
+              {
+                type: 'button',
+                class: 'btn btn-icon btn-ghost',
+                disabled: this.state.busy,
+                'aria-label': `${DELETE_LABEL} ${runLabel(run)}`,
+                title: DELETE_LABEL,
+                onclick: () => this.confirmDelete(run)
+              },
+              icon('trash')
+            )
+            : null
+        )
       ),
-      el(
-        'span',
-        { class: 'runs-row-side' },
-        runStatusTag(run),
-        run.mayDelete
-          ? el(
-            'button',
-            {
-              type: 'button',
-              class: 'btn btn-icon btn-ghost',
-              disabled: this.state.busy,
-              'aria-label': `${DELETE_LABEL} ${runLabel(run)}`,
-              title: DELETE_LABEL,
-              onclick: () => this.confirmDelete(run)
-            },
-            icon('trash')
-          )
-          : null
-      )
+      callout
     );
   }
 

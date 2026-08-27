@@ -306,6 +306,63 @@ select.input {
   text-transform: uppercase;
 }
 
+/* — a run's identifier, and what opens it —
+ *
+ * Offered on the run picker's rows and on the runs list, from one
+ * module, so what it says and how it closes cannot come to differ
+ * between the two.  The callout opens inside its row rather than over
+ * the page, which is why it is not a '.popover': an identifier is
+ * something to read and copy, and a row that grows says which run it
+ * belongs to without an arrow having to. */
+
+.run-id-callout {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 10px 6px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+/* The display above outranks the browser's own rule for the `hidden`
+ * attribute, so a closed callout has to say this for itself -- the
+ * same thing `.table-hint` says, for the same reason. */
+.run-id-callout[hidden] {
+  display: none;
+}
+
+/* In the corner, over the label rather than beside it: the label and
+ * the identifier both start at the left edge, and a control in the
+ * flow would push one of them off it. */
+.run-id-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.run-id-line {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.run-id-value {
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+
+/* Above an identifier, wherever one is shown with a name: here and on
+ * the collecting screen.  Stated once because two screens draw the
+ * same label, and jscpd reports the second copy of it. */
+.run-id-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 /* — a panel over a scrim —
  *
  * The backdrop both the send confirmation and the collect drawer are

@@ -170,34 +170,6 @@ button.picker-row {
   background: color-mix(in srgb, var(--color-text) 7%, transparent);
 }
 
-.run-id-callout {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 0 10px 6px;
-  padding: 8px 10px;
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--color-text) 5%, transparent);
-}
-
-/* The display above outranks the browser's own rule for the `hidden`
- * attribute, so a closed callout has to say this for itself -- the
- * same thing `.table-hint` says, for the same reason. */
-.run-id-callout[hidden] {
-  display: none;
-}
-
-.run-id-line {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.run-id-value {
-  font-size: 11.5px;
-  overflow-wrap: anywhere;
-}
 
 button.picker-row:hover {
   background: color-mix(in srgb, var(--color-text) 7%, transparent);

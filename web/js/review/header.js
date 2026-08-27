@@ -9,8 +9,8 @@
 
 import { changesNow } from './changelog.js';
 import { el, icon } from '../dom.js';
+import { runIdCallout } from '../runid.js';
 import { counted, moment, windowText } from '../format.js';
-import { copyText } from '../clipboard.js';
 import { Popover } from '../popover.js';
 import { filled, phrase } from '../phrases.js';
 
@@ -26,11 +26,8 @@ const NEW_RUN = 'Collect a new run';
  * the service minted one, and it is what names the run to the command
  * line and in a service's log -- which is the whole reason for
  * showing it, and why the callout says where it came from. */
-const RUN_ID_IS = 'The service assigned this id, and it stays with the run.';
 
 /* On the control beside it, before and after it has been pressed. */
-const COPY = 'Copy';
-const COPIED = 'Copied';
 
 const SEAL = 'Save a revision now';
 const REVERT = 'Revert';
@@ -85,49 +82,9 @@ export function metaText(run) {
  * @returns {HTMLElement} The line.
  */
 function runLine(run, current, onOpen, events) {
-  const identifier = el('span', { class: 'mono run-id-value', text: run.id });
-
-  const copy = el(
-    'button',
-    {
-      type: 'button',
-      class: 'btn btn-ghost',
-      onclick: async () => {
-        const went = await copyText(run.id);
-
-        copy.replaceChildren(
-          icon(went ? 'check' : 'copy'),
-          went ? COPIED : COPY
-        );
-      }
-    },
-    icon('copy'),
-    COPY
-  );
-
-  const callout = el(
-    'div',
-    { class: 'run-id-callout', hidden: true },
-    el('span', { class: 'muted micro', text: RUN_ID_IS }),
-    el('span', { class: 'run-id-line' }, identifier, copy)
-  );
-
-  const info = el(
-    'button',
-    {
-      type: 'button',
-      class: 'btn btn-ghost picker-row-action run-id-open',
-      'aria-label': `Run id for ${run.calendar} ${windowText(run.window)}`,
-      'aria-expanded': 'false',
-      title: 'The run id',
-      onclick: () => {
-        const opening = callout.hidden;
-
-        callout.hidden = !opening;
-        info.setAttribute('aria-expanded', String(opening));
-      }
-    },
-    icon('info')
+  const { info, callout } = runIdCallout(
+    run,
+    `${run.calendar} ${windowText(run.window)}`
   );
 
   /* The row is a container holding controls rather than one control,
