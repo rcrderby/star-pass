@@ -328,12 +328,22 @@ export class ReviewScreen {
 
     this.draw();
 
-    /* The table's room changes without anything being redrawn - a
-     * window resized, the change log panel opening beside it - so the
-     * width hint is measured again whenever the body's size changes
-     * as well as after every draw. */
-    this.sizes = new ResizeObserver(() => this.measureTableWidth());
+    /* Two things are facts about the drawn layout rather than about
+     * the state, and both change without anything being redrawn - a
+     * window resized, the change log panel opening beside the table,
+     * the meta line wrapping onto a second row. So both are measured
+     * again whenever either part changes size, as well as after the
+     * draw that produced them. */
+    this.sizes = new ResizeObserver(() => this.measure());
+    this.sizes.observe(this.element);
     this.sizes.observe(this.body);
+
+    /* And once the caller has put this on the page, which is the
+     * first moment there is a layout to read. A frame is asked for
+     * rather than the observer waited on: the observer answers when
+     * the page next paints, and the offsets should be right in the
+     * frame that paints rather than the one after it. */
+    requestAnimationFrame(() => this.measure());
 
     /* Opening straight onto the second tab reads it, the way pressing
      * it does. 'setView' does that read on the way in and is not
@@ -563,6 +573,60 @@ export class ReviewScreen {
     this.measureTableWidth();
   }
 
+  /** Measure what the drawn layout decides, and put it on the screen.
+   *
+   * @returns {void}
+   */
+  measure() {
+    this.measureTableWidth();
+    this.measureHeaderTravel();
+  }
+
+  /** Say how far the header may scroll before its actions stay put.
+   *
+   * The actions sit on the header's last row, so what scrolls away is
+   * everything above where that row begins, and what stays is the
+   * rest. Published as two custom properties, because both answers
+   * are measurements and CSS has no way to ask for one: the header
+   * is pulled up by the first, and the change log panel starts below
+   * the second, so the panel's heading and its close button do not
+   * spend a long review underneath the strip that stays.
+   *
+   * Set on the screen rather than on the header, because the panel is
+   * the header's sibling and inherits from what holds them both.
+   *
+   * @returns {void}
+   */
+  measureHeaderTravel() {
+    const header = this.headerElement;
+
+    if (header === undefined || header === null) {
+      return;
+    }
+
+    const stays = header.querySelector('.run-header-actions');
+    const box = header.getBoundingClientRect();
+
+    /* A screen built but not yet put on the page measures zero for
+     * everything, and zero is a real answer here -- it would say the
+     * header does not scroll away at all. Leave the property unset
+     * and let the observer answer once there is a layout to read. */
+    if (stays === null || box.height === 0) {
+      return;
+    }
+
+    const away = Math.max(
+      0,
+      Math.round(stays.getBoundingClientRect().top - box.top)
+    );
+
+    this.element.style.setProperty('--run-header-away', `${away}px`);
+    this.element.style.setProperty(
+      '--run-header-strip',
+      `${Math.max(0, Math.round(box.height) - away)}px`
+    );
+  }
+
   /** Say the table is wider than the window only while it is.
    *
    * Whether it overflows is a fact about the drawn layout rather than
@@ -695,6 +759,7 @@ export class ReviewScreen {
 
     this.headerElement.replaceWith(header);
     this.headerElement = header;
+    this.measureHeaderTravel();
   }
 
   /** Put the line under the run label back in step with the rows.
