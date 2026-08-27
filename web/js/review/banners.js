@@ -25,6 +25,22 @@ const PARTLY_SENT = 'partly_sent';
 const SENT = 'sent';
 export const RUN_FAILED = 'failed';
 
+/* What each filter selects, keyed by the name the screen holds it
+ * under.
+ *
+ * **Stated once, and read by both sides.** A banner counts the rows a
+ * filter would leave, and the filter hides the rows it would not, so
+ * the two are the same fact in opposite polarity -- and they were
+ * written out separately, here and in the screen's own 'showing'.
+ * That is what let a filter go on hiding rows after its banner had
+ * stopped being drawn: nothing tied the count that decides whether
+ * the control exists to the test that decides what is shown. */
+export const FILTER_SELECTS = {
+  blocking: (event) => event.blocking,
+  fuzzy: (event) => event.match !== null && event.match.kind === 'fuzzy',
+  repeated: (event) => event.duplicateOf !== null
+};
+
 /** Return one banner.
  *
  * @param {Object} options What it says and how it looks.
@@ -88,11 +104,9 @@ function seeWhatHappened(onSee) {
  */
 export function reviewBanners(state, handlers) {
   const { run, events, filters } = state;
-  const blocking = events.filter((event) => event.blocking);
-  const fuzzy = events.filter(
-    (event) => event.match !== null && event.match.kind === 'fuzzy'
-  );
-  const repeated = events.filter((event) => event.duplicateOf !== null);
+  const blocking = events.filter(FILTER_SELECTS.blocking);
+  const fuzzy = events.filter(FILTER_SELECTS.fuzzy);
+  const repeated = events.filter(FILTER_SELECTS.repeated);
   const banners = [];
 
   /* First, and in the alert colour, because it is the one thing here
