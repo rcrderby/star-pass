@@ -21,6 +21,10 @@ const IN_A_DAY = 24 * 60;
 /* The design's width for the list. */
 const WIDTH = 132;
 
+/* The last time of day a shift can hold.  A shift cannot leave its
+ * day: the service parses a time of day to 23:59 at the latest. */
+const LAST_MINUTE = IN_A_DAY - 1;
+
 /** Return a count of minutes as a clock reads it.
  *
  * @param {number} minutes Minutes since midnight.
@@ -105,6 +109,44 @@ function showTime(panel, clock) {
 
   panel.scrollTop = option.offsetTop
     - ((panel.clientHeight - option.offsetHeight) / 2);
+}
+
+/** Return where a shift's end goes when its start is moved onto it.
+ *
+ * A start set onto or past its end takes the end with it, so the
+ * length nobody touched survives: 19:00 to 20:00, with the start set
+ * to 20:00, becomes 20:00 to 21:00. Where the start still falls
+ * before the end there is nothing to do, and the end stays where the
+ * reader put it.
+ *
+ * **A shift cannot leave its day.** Where preserving the length would
+ * carry the end past 23:59, the end is not moved and this answers
+ * nothing: the start is then sent on its own and the service refuses
+ * it in the words it already uses. Clamping to 23:59 instead would
+ * silently change the length, which is the thing this exists to keep.
+ *
+ * @param {string} shiftStart The start as it stands, `HH:MM`.
+ * @param {string} shiftEnd The end as it stands.
+ * @param {string} chosen The start that was chosen.
+ * @returns {string|null} Where the end goes, or null when it does not
+ *     move.
+ */
+export function endFollowing(shiftStart, shiftEnd, chosen) {
+  const started = asMinutes(shiftStart);
+  const ended = asMinutes(shiftEnd);
+  const moving = asMinutes(chosen);
+
+  if (started === null || ended === null || moving === null) {
+    return null;
+  }
+
+  if (moving < ended) {
+    return null;
+  }
+
+  const landing = moving + (ended - started);
+
+  return landing > LAST_MINUTE ? null : asClock(landing);
 }
 
 /** Return a shift time field, and the list that opens beside it.
