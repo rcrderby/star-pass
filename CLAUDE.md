@@ -20,9 +20,11 @@ it is not the first:
 | --- | --- |
 | `README.md` | What the application is and how to get it running. Shortest, and the only one written for somebody who has not seen the code |
 | `docs/architecture.md` | The deployment and a run, in two pictures. Quicker than assembling the same shape out of `compose.yaml` and the Caddyfile |
+| `docs/deployment.md` | The two processes, the two networks, TLS, the addresses the page serves, and reading the API specification |
+| `docs/cli.md` | Every command line word: collecting, reviewing, previewing, sending, watching a job, retention, and the unmatched-title log |
+| `docs/slack-summary.md` | The Slack sign-up summary, its window, its wording, and running it from its own container |
+| `CLAUDE.md` (this file) | Where each module lives and the invariant it holds |
 | `docs/design/decisions.md` | **D1 to D31.** Why the system is shaped as it is. These are decided, not suggestions - where this file and that one differ, that one governs. It is the one current file in `docs/design/`; everything else there is the received handoff, kept as delivered, which is why its own reading order stops at D23 and why the directory is excluded from linting |
-| This file | Where each module lives and the invariant it holds |
-| `docs/cli.md`, `docs/deployment.md`, `docs/slack-summary.md` | How each part is run |
 
 Two things worth knowing before the layout below makes sense. **The API
 is the contract, not the command line** (D1): a `star_pass` core holds
