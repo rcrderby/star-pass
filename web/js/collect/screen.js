@@ -362,7 +362,7 @@ export class CollectingScreen {
     return el(
       'div',
       { class: 'collect-run' },
-      el('span', { class: 'muted collect-run-label', text: 'Run id' }),
+      el('span', { class: 'muted run-id-label', text: 'Run id' }),
       el('span', { class: 'mono collect-run-id', text: this.state.job.runId })
     );
   }

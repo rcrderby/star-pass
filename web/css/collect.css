@@ -204,12 +204,6 @@
   text-transform: capitalize;
 }
 
-.collect-run-label {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .collect-run-id {
   font-size: 12.5px;
   color: var(--color-accent-300);

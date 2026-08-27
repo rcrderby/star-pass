@@ -41,6 +41,14 @@
   gap: 8px;
 }
 
+/* The row and the callout that opens under it, stacked, so the
+ * callout is as wide as the row rather than as wide as the corner
+ * its control sits in. */
+.runs-row-group {
+  display: flex;
+  flex-direction: column;
+}
+
 .runs-row {
   display: flex;
   gap: 14px;
