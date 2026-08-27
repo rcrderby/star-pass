@@ -30,7 +30,6 @@
 
 import { ApiError, getRun, recollectRun } from '../api.js';
 import { el, fill, icon } from '../dom.js';
-import { moment } from '../format.js';
 import { watchJob } from '../watching.js';
 import {
   DONE,
@@ -52,37 +51,16 @@ export const COLLECT_JOBS = [COLLECT_JOB, RECOLLECT_JOB];
 const SUCCEEDED = 'succeeded';
 const INTERRUPTED = 'interrupted';
 
-/* Under the heading, while it works and afterwards. Says the two
- * things somebody watching needs: that nothing is being sent, and
- * that they may go away.  "while it works" is exact: a run whose job
- * has finished opens on the run rather than back here, which is what
- * a run being worked on opening on the work means once there is no
- * work. */
-const LEDE = (
-  'Nothing is sent to Amplify by a collection. You can leave this '
-  + 'page and come back to it while it works, and it stops here when '
-  + 'it finishes rather than moving you on.'
-);
-
-/* Beside the run identifier. The identifier is the service's, which
- * is the point of showing it. */
-const MINTED = 'the service assigned this id, and it stays with the run';
+/* Under the heading, while it works and afterwards. The one thing
+ * somebody watching a collection needs to know about it, said in the
+ * words a reader uses. That leaving is safe is said beside the
+ * buttons, which is where somebody about to leave is looking. */
+const LEDE = 'This action sends no data to Amplify.';
 
 /* Said beside the buttons while it runs. */
 const LEAVING_IS_SAFE = (
   'Leaving does not stop it. The collection is listed under Runs '
   + 'while it works, and opening it comes back here.'
-);
-
-/* Said beside the button a finished collection offers.  The screen
- * stops here rather than opening the run itself: what a collection
- * reports is worth reading -- which steps ran, how long each took,
- * and the identifier the run keeps -- and a screen that replaced
- * itself the moment the last step finished gave a reader no chance to.
- * Going on is one press, and it is theirs. */
-const COLLECTED = (
-  'The run is ready to review. It is listed under Runs, and this page '
-  + 'can be left without losing it.'
 );
 
 /* Said under a failure. A collection writes its events in one
@@ -139,17 +117,24 @@ function asDetail(error) {
  * @returns {string} The heading.
  */
 function heading(state) {
-  if (state.running) {
-    return `Collecting from the ${state.calendar} calendar`;
+  if (state.running || state.failure === null) {
+    /* The calendar is named by its key, which is how every screen has
+     * it, and drawn as a name by the CSS rather than by rewriting the
+     * value -- the same way the run picker and the review header do
+     * it. Only the name is capitalised, which is why it is a span of
+     * its own rather than a transform on the whole line. */
+    return [
+      state.running ? 'Collecting from the ' : 'Collected from the ',
+      el('span', { class: 'collect-calendar', text: state.calendar }),
+      ' calendar'
+    ];
   }
 
-  if (state.failure === null) {
-    return `Collected from the ${state.calendar} calendar`;
-  }
-
-  return state.interrupted
-    ? 'The collection was interrupted'
-    : 'The collection stopped';
+  return [
+    state.interrupted
+      ? 'The collection was interrupted'
+      : 'The collection stopped'
+  ];
 }
 
 /**
@@ -160,8 +145,6 @@ export class CollectingScreen {
    *
    * @param {Object} what What is being collected.
    * @param {Object} what.job The job doing it.
-   * @param {Object} what.config The deployment's configuration, whose
-   *     zone the job's times are shown in.
    * @param {string} [what.calendar] Which calendar is being read,
    *     when this screen started the collection and therefore knows.
    *     A screen picking a job up reads it from the run.
@@ -173,9 +156,8 @@ export class CollectingScreen {
    * @param {Function} handlers.onOpenRun Called with the run to open,
    *     when the collection is over or somebody leaves it running.
    */
-  constructor({ job, config, calendar = '' }, handlers) {
+  constructor({ job, calendar = '' }, handlers) {
     this.handlers = handlers;
-    this.config = config;
 
     this.state = {
       job,
@@ -387,18 +369,11 @@ export class CollectingScreen {
    * @returns {HTMLElement} The strip.
    */
   runStrip() {
-    const { job } = this.state;
-    const started = job.startedAt || job.createdAt;
-
     return el(
       'div',
       { class: 'collect-run' },
-      el('span', { class: 'muted collect-run-label', text: 'Run' }),
-      el('span', { class: 'mono collect-run-id', text: job.runId }),
-      el('span', {
-        class: 'muted micro',
-        text: `Started ${moment(started, this.config.timezone)} · ${MINTED}`
-      })
+      el('span', { class: 'muted collect-run-label', text: 'Run id' }),
+      el('span', { class: 'mono collect-run-id', text: this.state.job.runId })
     );
   }
 
@@ -503,8 +478,7 @@ export class CollectingScreen {
         },
         icon('arrow-right'),
         'Review this run'
-      ),
-      el('span', { class: 'muted meta', text: COLLECTED })
+      )
     );
   }
 
@@ -518,7 +492,7 @@ export class CollectingScreen {
 
     fill(
       this.element,
-      el('h1', { class: 'screen-title', text: heading(this.state) }),
+      el('h1', { class: 'screen-title' }, heading(this.state)),
       el('p', { class: 'muted collect-lede', text: LEDE }),
       this.runStrip(),
       lost

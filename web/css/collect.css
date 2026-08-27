@@ -198,6 +198,12 @@
   flex-wrap: wrap;
 }
 
+/* The calendar is named by its key everywhere, and drawn as a name
+ * here the way the run picker and the review header draw it. */
+.collect-calendar {
+  text-transform: capitalize;
+}
+
 .collect-run-label {
   font-size: 11px;
   letter-spacing: 0.08em;
