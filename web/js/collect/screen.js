@@ -29,6 +29,7 @@
  */
 
 import { ApiError, getRun, recollectRun } from '../api.js';
+import { copyText } from '../clipboard.js';
 import { el, fill, icon } from '../dom.js';
 import { moment } from '../format.js';
 import { watchJob } from '../watching.js';
@@ -359,13 +360,8 @@ export class CollectingScreen {
    * @returns {Promise<void>} When it has been copied.
    */
   async copy(reference) {
-    try {
-      await navigator.clipboard.writeText(reference);
+    if (await copyText(reference)) {
       this.state.copied = reference;
-    } catch (error) {
-      /* Refused, which a browser is allowed to do. The reference is
-       * on screen either way, which is what it is for. */
-      console.error(error);
     }
 
     this.draw();
