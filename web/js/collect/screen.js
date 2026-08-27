@@ -58,12 +58,6 @@ const INTERRUPTED = 'interrupted';
  * buttons, which is where somebody about to leave is looking. */
 const LEDE = 'This action sends no data to Amplify.';
 
-/* Said beside the buttons while it runs. */
-const LEAVING_IS_SAFE = (
-  'Leaving does not stop it. The collection is listed under Runs '
-  + 'while it works, and opening it comes back here.'
-);
-
 /* Said under a failure. A collection writes its events in one
  * transaction at the end, so a run whose collection failed holds
  * nothing rather than holding half a window. */
@@ -452,8 +446,7 @@ export class CollectingScreen {
           onclick: () => this.handlers.onLeave()
         },
         'Leave this running'
-      ),
-      el('span', { class: 'muted meta', text: LEAVING_IS_SAFE })
+      )
     );
   }
 
