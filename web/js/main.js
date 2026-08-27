@@ -181,10 +181,9 @@ async function start() {
    * from the banner it was reached by.
    *
    * @param {Object} run The run, which names the job.
-   * @param {Object} config What the deployment was configured with.
    * @returns {Promise<void>} When it is on screen.
    */
-  async function seeInterrupted(run, config) {
+  async function seeInterrupted(run) {
     try {
       const job = await getJob(run.interruptedJobId);
 
@@ -200,7 +199,7 @@ async function start() {
         return;
       }
 
-      watchCollection(job, config, run.calendar);
+      watchCollection(job, run.calendar);
     } catch (error) {
       failed(error);
     }
@@ -215,16 +214,15 @@ async function start() {
    * here, so there is nothing to go back to.
    *
    * @param {Object} job The job doing it.
-   * @param {Object} config What the deployment was configured with.
    * @param {string} [calendar] Which calendar it reads, when known.
    * @returns {void}
    */
-  function watchCollection(job, config, calendar = '') {
+  function watchCollection(job, calendar = '') {
     router.say(pathFor(RUN, job.runId));
 
     show(
       new CollectingScreen(
-        { job, config, calendar },
+        { job, calendar },
         {
           onOpenRun: (runId) => router.go(pathFor(RUN, runId)),
           onLeave: () => router.go(pathFor(RUNS))
@@ -276,7 +274,7 @@ async function start() {
             : recollectRun(run.id, asked.expectedChangeCount)
         ),
         onReread: () => getRun(runId),
-        onStarted: (job, calendar) => watchCollection(job, config, calendar)
+        onStarted: (job, calendar) => watchCollection(job, calendar)
       }
     );
 
@@ -318,7 +316,7 @@ async function start() {
     }
 
     if (job !== null && COLLECT_JOBS.includes(job.kind)) {
-      watchCollection(job, config, run.calendar);
+      watchCollection(job, run.calendar);
 
       return;
     }
@@ -344,7 +342,7 @@ async function start() {
             view === UNCOLLECTED_VIEW ? RUN_UNCOLLECTED : RUN,
             runId
           )),
-          onSeeInterrupted: () => seeInterrupted(run, config),
+          onSeeInterrupted: () => seeInterrupted(run),
           onCollectNew: () => collect(config),
           onCollectAgain: () => collect(config, run.id),
           onPreview: () => router.go(pathFor(RUN_PREVIEW, runId))

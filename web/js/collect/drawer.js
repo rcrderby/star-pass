@@ -64,10 +64,13 @@ const LEDE = 'Builds a fresh list to review. Nothing is sent to Amplify.';
  * the control is a choice rather than a set of checkboxes. */
 const ONE_CALENDAR = 'One calendar per collection.';
 
-/* Said when the two dates are the wrong way round, which is the only
- * thing this screen refuses on its own -- and it refuses by
- * disabling, because there is nothing to send. */
-const BACKWARDS = 'The last day cannot come before the first day.';
+/* Said when one of the two dates is missing, which is the only thing
+ * this screen refuses on its own -- and it refuses by disabling,
+ * because there is nothing to send. Dates the wrong way round are no
+ * longer refused: setting either one carries the last day to where
+ * the window works, so a reader is never held up by an order they
+ * can see is wrong. */
+const DAYS_NEEDED = 'A first day and a last day are both needed.';
 
 /* Under the resolved window. Says why the panel shows a day nobody
  * typed. */
@@ -316,21 +319,21 @@ export class CollectDrawer {
    * a moment ago: a preset still showing would be describing a window
    * that is no longer the one in the fields.
    *
-   * A first day set past the last carries the last with it, rather
-   * than leaving the panel refusing a window nobody meant to ask for
-   * -- picking a month by its first day is the ordinary way in, and
-   * the last day still holding the previous month's is not a mistake
-   * worth a refusal.  **Only the first day moves the other.** A last
-   * day set before the first is a reader naming the day they want the
-   * window to end on, and moving the first to suit it would discard
-   * what they just typed.
+   * Either date set so that the window reads backwards carries the
+   * last day to the day after the first, rather than leaving the
+   * panel refusing a window nobody meant to ask for -- picking a
+   * month by its first day is the ordinary way in, and the last day
+   * still holding the previous month's is not a mistake worth a
+   * refusal.  **The last day is the one that moves, whichever was
+   * typed**: it is the end of the window a first day begins, so a
+   * last day typed before that beginning is the one of the pair that
+   * cannot be meant.
    *
    * **An emptied field is not a day to count from.** A date input
    * reports an empty string for a cleared or half-typed value, and
    * 'dayAfter' of one is an invalid date that throws rather than
-   * returning a day.  So the window is left as the reader has it, the
-   * panel refuses as it already did, and nothing is worked out from a
-   * date that is not there.
+   * returning a day.  So the window is left as the reader has it and
+   * the panel says a day is missing, which is what is wrong with it.
    *
    * @param {string} which `first` or `last`.
    * @param {string} value The date typed.
@@ -340,7 +343,21 @@ export class CollectDrawer {
     this.state[which] = value;
     this.state.preset = CUSTOM;
 
-    if (which === 'first' && value !== '' && !this.valid()) {
+    /* Either date set so that the window reads backwards carries the
+     * last day to the day after the first, rather than refusing and
+     * waiting for the reader to work out which of the two to change.
+     * The last day is the one that moves in both directions: it is
+     * the end of the window a first day begins, and a last day typed
+     * before that beginning is the one of the pair that cannot be
+     * meant.
+     *
+     * Both dates have to be there to work one out. A blank field is
+     * not a window read backwards, and the panel says so instead. */
+    if (
+      this.state.first !== ''
+      && this.state.last !== ''
+      && !this.valid()
+    ) {
       this.state.last = dayAfter(this.state.first);
     }
 
@@ -539,7 +556,7 @@ export class CollectDrawer {
           'span',
           { class: 'drawer-bad', role: 'alert' },
           icon('warning-circle'),
-          el('span', { text: BACKWARDS })
+          el('span', { text: DAYS_NEEDED })
         ),
       this.valid()
         ? el(
