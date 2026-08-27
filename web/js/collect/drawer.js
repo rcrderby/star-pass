@@ -385,7 +385,41 @@ export class CollectDrawer {
        * front of somebody who can change it. */
       this.state.busy = false;
       this.state.failure = error;
+
+      /* A recollection refused reads the run again, so that the count
+       * this drawer shows -- and the one it would send next -- is
+       * what the run holds now.  Without it the refusal is one a
+       * reader cannot act on: it says the run has been edited since
+       * the number was read, and pressing the button again sends the
+       * same stale number and is refused identically, for as long as
+       * anybody keeps pressing.
+       *
+       * Read, not retried.  What is discarded has to be what somebody
+       * was shown and agreed to, so the corrected number is put in
+       * front of them and the second press is theirs. */
+      await this.reread();
+
       this.draw();
+    }
+  }
+
+  /** Read the run again, where there is one and a way to.
+   *
+   * Failure is left alone deliberately: the refusal already on screen
+   * is the more useful of the two, and a drawer reporting that it
+   * could not re-read would be answering a question nobody asked.
+   *
+   * @returns {Promise<void>} When it has been read, or has not.
+   */
+  async reread() {
+    if (this.run === null || this.handlers.onReread === undefined) {
+      return;
+    }
+
+    try {
+      this.run = await this.handlers.onReread();
+    } catch (error) {
+      console.error(error);
     }
   }
 
