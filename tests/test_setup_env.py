@@ -163,7 +163,7 @@ class TestCopyingTheTemplateByHand:
         for name in (SIGNS_REQUESTS, SIGNS_SESSIONS, AMPLIFY, GCAL):
             assert not values.get(name), name
 
-    def test_the_template_still_mentions_every_name(self, setup):
+    def test_the_template_still_mentions_every_name(self) -> None:
         # Commented out, not deleted: the script writes each value on
         # the line that mentions it, so the comment above goes on
         # describing the value below.
