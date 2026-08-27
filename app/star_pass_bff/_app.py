@@ -29,8 +29,8 @@ from typing import AsyncIterator, Awaitable, Callable
 
 # Imports - Third-Party
 import httpx2
-from fastapi import FastAPI, Request, Response
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request, Response, status
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 # Imports - Local
@@ -98,6 +98,79 @@ def _answer_the_screens_with_the_page(
             # an operation a client calls.
             include_in_schema=False
         )
+
+        _send_the_slashed_form_to_this_one(api=api, path=path)
+
+
+def _send_the_slashed_form_to_this_one(
+        api: FastAPI,
+        path: str
+) -> None:
+    """ Send a screen's trailing-slash address to the screen (D28).
+
+        A person who deletes the run identifier out of
+        '/runs/<id>' is left holding '/runs/', and that is not one of
+        the enumerated paths -- so the mount at the root answered it,
+        found no file of that name, and returned a refusal document as
+        raw JSON where a screen was meant to be.  Every screen had it,
+        not only that one.
+
+        **The framework's own answer never ran.**  A router redirects
+        a trailing slash to the path without one, but only where
+        nothing else matches first, and the mount matches everything
+        under the root.  This is that redirect, registered explicitly
+        so that it happens before the mount is reached, which is the
+        same reason the screens themselves are registered here.
+
+        Registered per screen rather than as a rule about slashes:
+        enumerating is what stops a mistyped module path being
+        answered with the page at a 200, and a catch-all for anything
+        ending in a slash would give that back for every address one
+        segment deeper than a screen.
+
+        Temporary rather than permanent, which is what a router's own
+        redirect answers with: the two addresses are the same screen
+        today, and a permanent one is cached by the browser past any
+        chance to change its mind.
+
+        Args:
+            api (FastAPI):
+                The application to add it to.
+
+            path (str):
+                The screen's own path.
+
+        Returns:
+            None.
+    """
+
+    # The root's slashed form is the root, and a route answering
+    # itself with a redirect to itself is a loop.
+    if path == '/':
+        return
+
+    async def to_the_screen(request: Request) -> RedirectResponse:
+        """ Answer with the address without the slash. """
+
+        # Rebuilt from the request rather than from 'path', which
+        # carries the parameter's name where a run identifier goes,
+        # and through the address's own 'replace' rather than by
+        # editing its text, so that whatever followed the path -- the
+        # revision a preview was opened at, for one -- is still there
+        # when the screen draws.
+        return RedirectResponse(
+            url=str(
+                request.url.replace(path=request.url.path.rstrip('/'))
+            ),
+            status_code=status.HTTP_307_TEMPORARY_REDIRECT
+        )
+
+    api.add_api_route(
+        path=f'{path}/',
+        endpoint=to_the_screen,
+        methods=['GET'],
+        include_in_schema=False
+    )
 
 
 def create_app() -> FastAPI:
