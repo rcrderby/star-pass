@@ -54,14 +54,32 @@ def amplify_headers() -> Dict[str, str]:
         Args:
             None.
 
+        Raises:
+            ConfigurationError:
+                When AMPLIFY_TOKEN is unset or empty.  Interpolating
+                what is missing sends 'Bearer None', which Amplify
+                refuses with a status that says nothing about the
+                cause, mid-job and after a run has been minted.
+
         Returns:
             headers (Dict[str, str]):
                 The base headers plus the bearer credential.
     """
 
+    credential = getenv('AMPLIFY_TOKEN')
+
+    if not credential:
+        message = (
+            'AMPLIFY_TOKEN is not set, so a request to Amplify would '
+            'carry no credential.  Add the value to the .env file at '
+            'the repository root (see .env.example).'
+        )
+        logger.error(message)
+        raise ConfigurationError(message)
+
     headers = dict(_defaults.BASE_HEADERS)
     headers.update(
-        {'Authorization': f'Bearer {getenv("AMPLIFY_TOKEN")}'}
+        {'Authorization': f'Bearer {credential}'}
     )
 
     return headers
@@ -906,7 +924,7 @@ def require_env_vars(
 
     if missing:
         message = (
-            f'{", ".join(missing)} must be set to run this command.  '
+            f'{", ".join(missing)} must be set.  '
             'Add the value(s) to the .env file at the repository root '
             '(see .env.example).'
         )

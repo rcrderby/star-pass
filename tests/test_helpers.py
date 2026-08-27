@@ -25,6 +25,41 @@ from star_pass._exceptions import ConfigurationError, UpstreamError
 from star_pass._records import MATCH_KIND_FUZZY, MATCH_KIND_KEYWORD
 
 
+class TestAmplifyHeaders:
+    def test_the_credential_is_carried(
+        self,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv('AMPLIFY_TOKEN', 'a-credential')
+
+        headers = _helpers.amplify_headers()
+
+        assert headers['Authorization'] == 'Bearer a-credential'
+
+    def test_a_missing_credential_is_refused(
+        self,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Interpolating what is missing sends 'Bearer None', which
+        # Amplify refuses with a status that says nothing about the
+        # cause.  Refused here so the reason names the variable.
+        monkeypatch.delenv('AMPLIFY_TOKEN', raising=False)
+
+        with pytest.raises(ConfigurationError) as error:
+            _helpers.amplify_headers()
+
+        assert 'AMPLIFY_TOKEN' in str(error.value)
+
+    def test_a_credential_set_to_nothing_is_refused(
+        self,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv('AMPLIFY_TOKEN', '')
+
+        with pytest.raises(ConfigurationError):
+            _helpers.amplify_headers()
+
+
 class TestConvertToBool:
     @pytest.mark.parametrize(
         'value, expected',
