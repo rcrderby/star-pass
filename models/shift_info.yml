@@ -174,7 +174,7 @@ calendar:
         group: juniors
         initiative: officiating
         type: scrimmage
-        aliases: ['petals scrimmage', 'buds ntt scrimmage']
+        aliases: ['petals scrimmage', 'buds ntt scrimmage', 'buds ht scrimmage']
         need_ids:
           - description: NSOs
             id: 628862
