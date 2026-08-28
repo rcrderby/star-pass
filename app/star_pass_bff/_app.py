@@ -36,6 +36,7 @@ from fastapi.staticfiles import StaticFiles
 # Imports - Local
 from . import _defaults
 from ._configuration import check_configuration
+from ._headers import add_security_headers
 from ._problems import add_problem_handlers
 from ._proxy import router as proxy_router
 from ._sessions import session_of, started
@@ -201,6 +202,7 @@ def create_app() -> FastAPI:
     )
 
     add_problem_handlers(api=api)
+    add_security_headers(api=api)
     api.include_router(proxy_router)
     _answer_the_screens_with_the_page(api=api)
     api.mount(

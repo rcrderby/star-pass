@@ -30,11 +30,17 @@
 	# Host through unchanged, and the only Host that reaches the
 	# frontend is one written above.
 	header {
+		# The same three headers the front end sets on every
+		# answer, repeated here so the proxy reinforces the policy
+		# rather than providing it.  'app/star_pass_bff/_headers.py'
+		# holds the other copy, and a test holds the two to each
+		# other, because two copies that can drift will.
+		#
 		# The page loads no third-party script, style, font or
 		# image, and talks to no origin but its own.  No
 		# 'unsafe-inline': the script and the stylesheet are files,
 		# which is what lets this be strict rather than decorative.
-		Content-Security-Policy "default-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "same-origin"
 		# Caddy names itself in every answer otherwise, which tells a
