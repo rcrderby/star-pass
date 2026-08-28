@@ -633,3 +633,39 @@ class TestBuildSession:
 
         assert 'POST' not in retry.allowed_methods
         assert 'GET' in retry.allowed_methods
+
+
+class TestEveryRequestsFailureIsCaught:
+    @pytest.mark.parametrize(
+        'raised',
+        [
+            _helpers.exceptions.ConnectionError,
+            _helpers.exceptions.ConnectTimeout,
+            _helpers.exceptions.HTTPError,
+            _helpers.exceptions.ReadTimeout,
+            _helpers.exceptions.Timeout,
+            _helpers.exceptions.TooManyRedirects,
+            _helpers.exceptions.RequestException,
+            _helpers.exceptions.ChunkedEncodingError
+        ]
+    )
+    def test_it_becomes_an_upstream_error(self, raised, monkeypatch):
+        # Every one of these is a 'RequestException', which is what
+        # the single 'except' catches.
+        session = Mock()
+        session.request.side_effect = raised('nope')
+        monkeypatch.setattr(
+            _helpers.Helpers, '_build_session', lambda self: session
+        )
+
+        with pytest.raises(UpstreamError):
+            _helpers.Helpers().send_api_request(
+                api_request_data={
+                    'method': 'GET',
+                    'url': 'https://example.test/x',
+                    'headers': {},
+                    'json': None,
+                    'timeout': 1
+                },
+                display_request_status=False
+            )

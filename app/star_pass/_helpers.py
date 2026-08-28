@@ -810,22 +810,12 @@ class Helpers:
         session = self._build_session()
         try:
             response = session.request(**api_request_data)
-        # Handle TCP Connection Errors
-        except (
-            exceptions.ConnectionError,
-            exceptions.ConnectTimeout,
-            exceptions.HTTPError,
-            exceptions.ReadTimeout,
-            exceptions.Timeout,
-            exceptions.TooManyRedirects,
-            exceptions.RequestException
-        ) as error:
-            # Redact any secrets before logging.  'repr' captures the
-            # error type and message without the fragile assumptions of
-            # digging into nested exception args -- the previous approach
-            # assumed a '>: ' delimiter and raised IndexError on read
-            # timeouts.  The repr may include the request URL with its
-            # 'key' query parameter, hence the redaction.
+        # Every failure 'requests' raises: the rest are subclasses.
+        except exceptions.RequestException as error:
+            # 'repr' captures the error type and message without
+            # digging into nested exception args.  It may include the
+            # request URL with its 'key' query parameter, so it is
+            # redacted before it is logged.
             detail = self.redact_secrets(repr(error))
             message = f'An HTTP error occurred: {detail}'
             logger.error(message)

@@ -189,13 +189,21 @@ def _get_env_list(
         Returns:
             List[str]:
                 The comma-separated values as a list of stripped
-                strings, or 'default' when the variable is unset.
+                strings, or 'default' when the variable is unset.  A
+                variable set to nothing names no values, which is what
+                an unset GitHub repository variable produces.
     """
 
     raw_value = getenv(var_name)
+
     if raw_value is None:
         return default
-    return [item.strip() for item in raw_value.split(',')]
+
+    return [
+        stripped
+        for stripped in (item.strip() for item in raw_value.split(','))
+        if stripped
+    ]
 
 
 # Path relative to this file
@@ -340,7 +348,7 @@ GCAL_PRACTICES_CAL_ID = getenv(
     'GCAL_PRACTICES_CAL_ID',
     (
         f'{GCAL_ID_PREFIX}'
-        '313938323232323331%40resource.calendar.google.com'
+        '313938323232323331@resource.calendar.google.com'
     )
 )
 # 'notes' says whether this calendar's entries carry a description

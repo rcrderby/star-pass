@@ -6,6 +6,7 @@
 """
 # pylint: disable=missing-function-docstring,missing-class-docstring
 # pylint: disable=redefined-outer-name
+# pylint: disable=protected-access
 
 # Imports - Python Standard Library
 import importlib
@@ -186,3 +187,37 @@ class TestEveryNumericSettingGoesThroughThem:
         )
 
         assert by_hand == []
+
+
+class TestAListSetting:
+    def test_a_variable_set_to_nothing_names_no_values(
+        self, monkeypatch
+    ):
+        # What an unset GitHub repository variable produces.
+        monkeypatch.setenv('STAR_PASS_A_LIST', '')
+
+        assert _defaults._get_env_list('STAR_PASS_A_LIST', ['x']) == []
+
+    def test_an_unset_variable_takes_the_default(self, monkeypatch):
+        monkeypatch.delenv('STAR_PASS_A_LIST', raising=False)
+
+        assert _defaults._get_env_list('STAR_PASS_A_LIST', ['x']) == ['x']
+
+    def test_blanks_between_values_are_dropped(self, monkeypatch):
+        monkeypatch.setenv('STAR_PASS_A_LIST', 'a, ,b,')
+
+        assert _defaults._get_env_list(
+            'STAR_PASS_A_LIST', []
+        ) == ['a', 'b']
+
+
+class TestTheCalendarDefaults:
+    def test_they_are_written_the_same_way(self):
+        # Both reach Google, so a pair that disagreed would read as
+        # one of them being a mistake.
+        for calendar in (
+            _defaults.GCAL_EVENTS_CAL_ID,
+            _defaults.GCAL_PRACTICES_CAL_ID
+        ):
+            assert '@' in calendar
+            assert '%40' not in calendar
