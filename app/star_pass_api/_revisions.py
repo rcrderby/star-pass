@@ -51,7 +51,7 @@ from ._security import (
     SCOPE_RUNS_READ,
     SCOPE_RUNS_WRITE
 )
-from ._storage import read
+from ._storage import in_the_database
 
 router = APIRouter(tags=[_defaults.API_TAG_RUNS])
 
@@ -101,7 +101,7 @@ async def list_revisions(
 
     del principal
 
-    history = await read(
+    history = await in_the_database(
         lambda connection: read_run_history(
             connection=connection,
             run_id=run_id
@@ -182,7 +182,7 @@ async def seal_revision(
     """
 
     return RevisionView.model_validate(
-        await read(
+        await in_the_database(
             lambda connection: sealed(
                 connection=connection,
                 run_id=run_id,
@@ -272,7 +272,7 @@ async def revert_revision(
     """
 
     return RunDetailView.model_validate(
-        await read(
+        await in_the_database(
             lambda connection: reverted(
                 connection=connection,
                 run_id=run_id,

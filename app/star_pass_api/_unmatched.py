@@ -49,7 +49,7 @@ from ._security import (
     SCOPE_CONFIG_READ,
     SCOPE_RUNS_WRITE
 )
-from ._storage import read
+from ._storage import in_the_database
 
 router = APIRouter(tags=[_defaults.API_TAG_SERVICE])
 
@@ -91,7 +91,7 @@ async def list_unmatched_titles(
     del principal
 
     return to_unmatched_title_views(
-        unmatched=await read(
+        unmatched=await in_the_database(
             lambda connection: UnmatchedTitleRepository(
                 connection=connection
             ).list_all()
@@ -151,7 +151,7 @@ async def record_unmatched_title(
     calendar = checked_calendar(calendar=seen.calendar)
 
     return to_unmatched_view(
-        unmatched=await read(
+        unmatched=await in_the_database(
             lambda connection: UnmatchedTitleRepository(
                 connection=connection
             ).record(

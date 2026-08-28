@@ -52,7 +52,7 @@ from . import _defaults
 from ._problems import conflict, unprocessable
 from ._runs import missing_run
 from ._security import Principal, requires, SCOPE_RUNS_WRITE
-from ._storage import read
+from ._storage import in_the_database
 
 router = APIRouter(tags=[_defaults.API_TAG_RUNS])
 
@@ -140,7 +140,7 @@ async def edit_events(
     """
 
     return EditView.model_validate(
-        await read(
+        await in_the_database(
             lambda connection: edited(
                 connection=connection,
                 run_id=run_id,
@@ -291,7 +291,7 @@ async def add_event(
                 The revision as it now is, and what was logged.
     """
 
-    return await read(
+    return await in_the_database(
         lambda connection: _pulled_in(
             connection=connection,
             run_id=run_id,
