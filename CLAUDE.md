@@ -752,8 +752,9 @@ The notes below are the ones that are not obvious from the commands.
   connection to share. Two things follow from the one rule: `JobRunner`
   opens one per job and closes it, and the service never holds one
   across a request - a synchronous dependency and the endpoint using it
-  can run on different threads, so the work goes to `_storage.read`,
-  which opens, uses and closes a connection inside a single call.
+  can run on different threads, so the work goes to
+  `_storage.in_the_database`, which opens, uses and closes a
+  connection inside a single call.
 - A job that fails records the reason only when it came from one of
   the core's own exceptions, which are written for a person and
   already redacted. Anything else records a fixed sentence and the
