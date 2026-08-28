@@ -8,8 +8,11 @@
 # from drifting apart (D17), and serves the page over HTTPS with
 # Caddy's internal certificate authority (D14).
 #
-# Copy '.env.example' to '.env' first. Compose reads it for the values
-# interpolated below, and the API service reads it as a file.
+# Run 'python3 scripts/setup_env.py' first. It writes '.env', which
+# Compose reads for the values interpolated below and the API service
+# reads as a file. A plain copy of '.env.example' leaves every
+# credential unset and the two generated values commented out, so 'up'
+# stops on the first of them.
 
 services:
   # The only service with a published port, and the only one holding a
@@ -137,13 +140,10 @@ services:
       # 'docker inspect' and '/proc/<pid>/environ'.
       #
       # Docker creates a DIRECTORY here if '.env' does not exist, so
-      # copy '.env.example' to '.env' before the first 'up'.
+      # run 'python3 scripts/setup_env.py' before the first 'up'.
       #
-      # The image runs as an unprivileged account, so this file has to
-      # be readable by something other than its owner. What
-      # '.env.example' is copied to inherits the umask and is readable;
-      # a file tightened to 0600 on the host is not, and the service
-      # fails to start with no credential.
+      # Read through the supplementary group set below rather than by
+      # being readable to everyone.
       - ./.env:/app/.env:ro
       # Owned by the account in the image (UID 1000), which is how an
       # empty named volume is created: Docker takes the ownership of
@@ -162,6 +162,18 @@ services:
       timeout: 5s
       retries: 6
       start_period: 15s
+    # What lets the container read '.env'. A bind mount carries the
+    # host file's mode and ownership unchanged, and the image runs as
+    # UID 1000, which is not the operator's account. 'setup_env.py'
+    # writes the file 0640, and this is the group that makes its group
+    # bit mean something.
+    #
+    # 1000 is right where the host account is the first one on the
+    # machine, which is the common case. Set STAR_PASS_ENV_GID to the
+    # output of 'id -g' where it is not. A GID absent from the image's
+    # own '/etc/group' is fine; only the number is compared.
+    group_add:
+      - "${STAR_PASS_ENV_GID:-1000}"
     networks:
       - backend
     security_opt:

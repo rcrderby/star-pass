@@ -74,7 +74,19 @@ echoing what you type and without printing either back. Every other
 setting has a working default; `.env.example` documents all of them.
 
 Run it again whenever a value is missing: it refuses to overwrite one
-already set, and writes the file readable by you alone.
+already set, and writes the file readable by you and your group.
+
+The group matters: the API container bind-mounts `.env`, which keeps
+the host file's mode, and the image runs as UID 1000. Where your
+account is not the first on the machine, set `STAR_PASS_ENV_GID` to
+the output of `id -g` so the container is in the group that can read
+it. A file private to its owner alone cannot be read there, and making
+it readable to everyone would give away the thing keeping it a file.
+
+Copying `.env.example` by hand is not a substitute. Every credential
+in it is commented out, so a copy starts the service with none and
+stops it at the first one, which is the loud failure rather than the
+plausible one.
 
 `.env` holds live credentials and is git-ignored. Keep it out of any
 directory that synchronises off the machine.

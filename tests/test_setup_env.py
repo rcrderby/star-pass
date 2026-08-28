@@ -4,7 +4,8 @@
     Three properties are worth a test, and they are the three the
     instructions this script replaces could not offer: it refuses to
     overwrite a value already set, it never lets a value reach the
-    screen, and what it writes is readable by its owner alone.  The
+    screen, and what it writes is readable by its owner and their
+    group and by nobody else.  The
     fourth is arithmetic the services do at startup - a generated
     value has to clear the length they refuse to start under - and the
     number lives in three files, so a test holds them to each other.
@@ -19,6 +20,7 @@ from types import ModuleType
 
 # Imports - Third-Party
 import pytest
+from dotenv import dotenv_values
 
 # Imports - Local
 from _scripts import loaded_script
@@ -28,6 +30,7 @@ from star_pass_bff import _defaults as bff_defaults
 # Constants
 REPOSITORY_ROOT = Path(__file__).parent.parent
 SCRIPT = REPOSITORY_ROOT / 'scripts' / 'setup_env.py'
+TEMPLATE = REPOSITORY_ROOT / '.env.example'
 
 # The four names the script fills in, bound rather than written
 # where they are used: bandit reads a name holding TOKEN or SECRET
@@ -143,6 +146,50 @@ class TestWhatCountsAsAlreadySet:
         settings = setup.already_set(['AMPLIFY_TOKEN=abc123\n'])
 
         assert settings == {AMPLIFY: 'abc123'}
+
+
+class TestCopyingTheTemplateByHand:
+    def test_a_plain_copy_gives_the_application_no_credential(
+        self
+    ) -> None:
+        # 'cp .env.example .env' is a thing people do, and the two
+        # readers of the result disagree about a placeholder.  The
+        # script treats one as unset; the application does not --
+        # 'getenv' hands back the placeholder text, which is truthy,
+        # so the service starts and spends it.  Read here the way the
+        # application reads it.
+        values = dotenv_values(TEMPLATE)
+
+        for name in (SIGNS_REQUESTS, SIGNS_SESSIONS, AMPLIFY, GCAL):
+            assert not values.get(name), name
+
+    def test_the_template_still_mentions_every_name(self) -> None:
+        # Commented out, not deleted: the script writes each value on
+        # the line that mentions it, so the comment above goes on
+        # describing the value below.
+        text = TEMPLATE.read_text(encoding='utf-8')
+
+        for name in (SIGNS_REQUESTS, SIGNS_SESSIONS, AMPLIFY, GCAL):
+            assert f'{name}=' in text
+
+    def test_the_script_fills_a_copy_in(self, setup, tmp_path,
+                                        monkeypatch):
+        # Holds the two above to something: the names are commented
+        # out and the script still finds and sets all four.
+        target = tmp_path / '.env'
+        monkeypatch.setattr(setup, 'TEMPLATE', TEMPLATE)
+        monkeypatch.setattr(setup, 'TARGET', target)
+        monkeypatch.setattr(setup, 'ask', lambda prompt: 'typed')
+
+        setup.main()
+
+        written = setup.already_set(
+            target.read_text(encoding='utf-8').splitlines(keepends=True)
+        )
+
+        assert set(written) >= {
+            SIGNS_REQUESTS, SIGNS_SESSIONS, AMPLIFY, GCAL
+        }
 
 
 class TestItRefusesToOverwrite:
@@ -309,15 +356,31 @@ class TestTheTemplateDescribesItselfAndNotWhatItWrites:
 
 
 class TestWhatIsWritten:
-    def test_the_file_is_readable_by_its_owner_alone(
+    def test_the_file_is_readable_by_its_owner_and_group(
         self, setup, placed, monkeypatch
     ):
+        # The group bit is what the API container reads it through, a
+        # bind mount keeping the host file's mode and the image
+        # running as UID 1000.
         monkeypatch.setattr(setup, 'ask', lambda prompt: 'typed')
         setup.main()
 
         mode = stat.S_IMODE(placed.stat().st_mode)
 
-        assert mode == stat.S_IRUSR | stat.S_IWUSR
+        assert mode == stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP
+
+    def test_the_file_is_not_readable_by_everyone(
+        self, setup, placed, monkeypatch
+    ):
+        # The group is the smaller claim, and the whole reason the
+        # credential is a file rather than the environment.
+        monkeypatch.setattr(setup, 'ask', lambda prompt: 'typed')
+        setup.main()
+
+        mode = stat.S_IMODE(placed.stat().st_mode)
+
+        assert not mode & stat.S_IROTH
+        assert not mode & stat.S_IWOTH
 
     def test_a_value_is_written_where_its_comment_explains_it(
         self, setup, placed, monkeypatch
