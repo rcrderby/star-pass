@@ -449,11 +449,7 @@ class TestHowMuchAWriteMayCarry:
     ) -> None:
         client, _api = loaded()
 
-        answer = client.post(
-            RUNS_PATH,
-            headers=writing(client=client),
-            content=b'x' * (MAX_BODY_BYTES // 2)
-        )
+        answer = _writing_body(client, b'x' * (MAX_BODY_BYTES // 2))
 
         assert answer.status_code == 200
         assert len(asked[-1].content) == MAX_BODY_BYTES // 2
@@ -466,11 +462,7 @@ class TestHowMuchAWriteMayCarry:
         client, _api = loaded()
         before = len(asked)
 
-        answer = client.post(
-            RUNS_PATH,
-            headers=writing(client=client),
-            content=b'x' * (MAX_BODY_BYTES + 1)
-        )
+        answer = _writing_body(client, b'x' * (MAX_BODY_BYTES + 1))
 
         assert answer.status_code == 413
         # Refused here, so nothing was spent on it upstream.
@@ -481,21 +473,12 @@ class TestHowMuchAWriteMayCarry:
         asked: List[httpx2.Request],
         loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        # A chunked body declares no length, so the declared check
-        # never fires and the count as it arrives is the only bound.
+        # A chunked body declares no length, so the count as it
+        # arrives is the only bound.
         client, _api = loaded()
         before = len(asked)
 
-        def chunks() -> Iterator[bytes]:
-            """ Send more than the limit, a piece at a time. """
-            for _ in range((MAX_BODY_BYTES // 8192) + 2):
-                yield b'x' * 8192
-
-        answer = client.post(
-            RUNS_PATH,
-            headers=writing(client=client),
-            content=chunks()
-        )
+        answer = _writing_body(client, _chunks())
 
         assert answer.status_code == 413
         assert len(asked) == before
@@ -713,6 +696,24 @@ def _carrying(token: bytes) -> Request:
         'path': RUNS_PATH,
         'headers': [(_defaults.CSRF_HEADER.lower().encode(), token)]
     })
+
+
+def _chunks() -> Iterator[bytes]:
+    """ Send more than the limit, a piece at a time. """
+    for _ in range((MAX_BODY_BYTES // 8192) + 2):
+        yield b'x' * 8192
+
+
+def _writing_body(
+    client: TestClient,
+    content: Any
+) -> Any:
+    """ Return the answer to one write from this page. """
+    return client.post(
+        RUNS_PATH,
+        headers=writing(client=client),
+        content=content
+    )
 
 
 def _refuse(request: httpx2.Request) -> httpx2.Response:
