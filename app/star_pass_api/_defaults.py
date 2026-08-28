@@ -12,6 +12,10 @@ from os import getenv
 
 # Imports - Local
 from __version__ import __version__
+# The core's rather than a second copy: these describe how a setting
+# is read, which is the same question in both packages.  The front end
+# cannot share them, because it must not import the core (D17).
+from star_pass._defaults import float_env, int_env
 
 # The token every request is authenticated against.  From the
 # environment and never a file or a command line flag: a flag is
@@ -69,22 +73,18 @@ API_OPENAPI_PATH = f'{API_VERSION_PREFIX}/openapi.json'
 # one operation at a time for one person watching it, and a
 # notification channel between a worker thread and a request would be
 # a moving part with nothing to gain against half a second.
-JOB_EVENT_POLL_SECONDS = float(
-    getenv(
-        'STAR_PASS_JOB_EVENT_POLL_SECONDS',
-        '0.5'
-    )
+JOB_EVENT_POLL_SECONDS = float_env(
+    'STAR_PASS_JOB_EVENT_POLL_SECONDS',
+    '0.5'
 )
 
 # How long the stream stays silent before sending a comment to keep
 # the connection open.  A job can be quiet for minutes -- reading a
 # calendar, waiting on Amplify -- and an idle connection is what a
 # proxy in front of the service closes.
-JOB_EVENT_HEARTBEAT_SECONDS = float(
-    getenv(
-        'STAR_PASS_JOB_EVENT_HEARTBEAT_SECONDS',
-        '15'
-    )
+JOB_EVENT_HEARTBEAT_SECONDS = float_env(
+    'STAR_PASS_JOB_EVENT_HEARTBEAT_SECONDS',
+    '15'
 )
 
 # How often one caller may test the credential, and over how long.
@@ -93,17 +93,13 @@ JOB_EVENT_HEARTBEAT_SECONDS = float(
 # request on Amplify (D8, plan section 8).  Low, because a person
 # clicking a button in Settings needs a handful and nothing needs
 # more.
-CREDENTIAL_TEST_ATTEMPTS = int(
-    getenv(
-        'STAR_PASS_CREDENTIAL_TEST_ATTEMPTS',
-        '5'
-    )
+CREDENTIAL_TEST_ATTEMPTS = int_env(
+    'STAR_PASS_CREDENTIAL_TEST_ATTEMPTS',
+    '5'
 )
-CREDENTIAL_TEST_WINDOW_SECONDS = float(
-    getenv(
-        'STAR_PASS_CREDENTIAL_TEST_WINDOW_SECONDS',
-        '60'
-    )
+CREDENTIAL_TEST_WINDOW_SECONDS = float_env(
+    'STAR_PASS_CREDENTIAL_TEST_WINDOW_SECONDS',
+    '60'
 )
 
 # Tags, so the generated documentation groups endpoints by what they

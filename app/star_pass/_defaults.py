@@ -4,10 +4,13 @@
 # Imports - Python Standard Library
 from os import getenv
 from pathlib import Path
-from typing import List
+from typing import Any, Callable, List
 
 # Imports - Third-Party
 from dotenv import load_dotenv
+
+# Imports - Local
+from ._exceptions import ConfigurationError
 
 
 # Environment
@@ -53,6 +56,121 @@ SIMPLE_TIME_FORMAT = '%H:%M'
 # Data file management
 # 'FILE_ENCODING' and 'ENV_FILE_PATH' are defined with the .env load
 # above, which is the first thing this module does.
+
+
+def _number(
+        var_name: str,
+        default: str,
+        kind: Callable[[str], Any],
+        description: str
+) -> Any:
+    """ Return a numeric setting, or say which one is unusable.
+
+        Args:
+            var_name (str):
+                Name of the environment variable to read.
+
+            default (str):
+                What to read when it is unset, written as it would be
+                in the environment so a default goes through the same
+                conversion a supplied value does.
+
+            kind (Callable):
+                'int' or 'float'.
+
+            description (str):
+                What that kind is called in the refusal.
+
+        Raises:
+            ConfigurationError:
+                When the value cannot be read as that kind.
+
+        Returns:
+            value (Any):
+                The number.
+    """
+
+    raw = getenv(var_name, default)
+
+    try:
+        return kind(raw)
+
+    except (TypeError, ValueError) as error:
+        raise ConfigurationError(
+            f'{var_name} must be {description}, and is {raw!r}. It is '
+            'read from the environment or the .env file at the '
+            'repository root (see .env.example).'
+        ) from error
+
+
+def int_env(
+        var_name: str,
+        default: str
+) -> int:
+    """ Return a whole-number setting, or say which one is unusable.
+
+        Configuration arrives from the environment, which makes it
+        untrusted input and worth the treatment data already gets.
+        'HTTP_TIMEOUT=1O' with a letter O is a typo somebody makes
+        once; left to 'int' it ends the import with a message naming
+        neither the variable nor the value.  'Helpers.convert_to_bool'
+        refuses an unrecognised boolean for the same reason, so that a
+        typo can never silently send live API requests.
+
+        Args:
+            var_name (str):
+                Name of the environment variable to read.
+
+            default (str):
+                What to read when it is unset.
+
+        Raises:
+            ConfigurationError:
+                When the value is not a whole number.
+
+        Returns:
+            value (int):
+                The number.
+    """
+
+    return _number(
+        var_name=var_name,
+        default=default,
+        kind=int,
+        description='a whole number'
+    )
+
+
+def float_env(
+        var_name: str,
+        default: str
+) -> float:
+    """ Return a numeric setting, or say which one is unusable.
+
+        'int_env' above says why.
+
+        Args:
+            var_name (str):
+                Name of the environment variable to read.
+
+            default (str):
+                What to read when it is unset.
+
+        Raises:
+            ConfigurationError:
+                When the value is not a number.
+
+        Returns:
+            value (float):
+                The number.
+    """
+
+    return _number(
+        var_name=var_name,
+        default=default,
+        kind=float,
+        description='a number'
+    )
 
 
 def _get_env_list(
@@ -116,22 +234,18 @@ DATABASE_FILE = Path(
 # one writer, so a second worker would add contention without adding
 # throughput.  A job asked for while another runs waits its turn as a
 # queued job, which is a state a caller can see, rather than failing.
-JOB_WORKERS = int(
-    getenv(
-        'STAR_PASS_JOB_WORKERS',
-        '1'
-    )
+JOB_WORKERS = int_env(
+    'STAR_PASS_JOB_WORKERS',
+    '1'
 )
 
 # Seconds a statement waits for another connection to release its lock
 # before giving up.  SQLite takes one writer at a time, so a wait is
 # ordinary rather than a fault; failing immediately would turn two
 # overlapping requests into an error the caller has to retry.
-DATABASE_BUSY_TIMEOUT = float(
-    getenv(
-        'STAR_PASS_DATABASE_BUSY_TIMEOUT',
-        '5'
-    )
+DATABASE_BUSY_TIMEOUT = float_env(
+    'STAR_PASS_DATABASE_BUSY_TIMEOUT',
+    '5'
 )
 
 # HTTP request configuration
@@ -147,27 +261,21 @@ BASE_GCAL_URL = getenv(
     'BASE_GCAL_URL',
     'https://www.googleapis.com/calendar/v3/calendars'
 )
-HTTP_TIMEOUT = int(
-    getenv(
-        'HTTP_TIMEOUT',
-        '10'
-    )
+HTTP_TIMEOUT = int_env(
+    'HTTP_TIMEOUT',
+    '10'
 )
 
 # HTTP retry configuration
 # Total retry attempts for transient failures.
-HTTP_RETRY_TOTAL = int(
-    getenv(
-        'HTTP_RETRY_TOTAL',
-        '3'
-    )
+HTTP_RETRY_TOTAL = int_env(
+    'HTTP_RETRY_TOTAL',
+    '3'
 )
 # Exponential backoff factor between retries, in seconds.
-HTTP_RETRY_BACKOFF_FACTOR = float(
-    getenv(
-        'HTTP_RETRY_BACKOFF_FACTOR',
-        '0.5'
-    )
+HTTP_RETRY_BACKOFF_FACTOR = float_env(
+    'HTTP_RETRY_BACKOFF_FACTOR',
+    '0.5'
 )
 # Response status codes that trigger a retry (idempotent methods only;
 # see Helpers._build_session).  urllib3 never retries a POST body-write
@@ -183,11 +291,9 @@ LOG_LEVEL = getenv(
 # Fuzzy match confidence threshold (0-100).  When no alias appears
 # literally in an event title, the fuzzy fallback must score at least
 # this high to assign a category; otherwise the title is sent to review.
-FUZZY_MATCH_THRESHOLD = int(
-    getenv(
-        'FUZZY_MATCH_THRESHOLD',
-        '80'
-    )
+FUZZY_MATCH_THRESHOLD = int_env(
+    'FUZZY_MATCH_THRESHOLD',
+    '80'
 )
 
 # Google Calendar values
@@ -328,21 +434,17 @@ SLACK_SUMMARY_NEED_IDS = _get_env_list(
 # Number of calendar days a sign-up summary covers, counting today as
 # day one: 1 is today only, 2 adds tomorrow, and so on.  The summary
 # replaces a same-day call for volunteers, so the default is today.
-SLACK_SUMMARY_DAYS = int(
-    getenv(
-        'SLACK_SUMMARY_DAYS',
-        '1'
-    )
+SLACK_SUMMARY_DAYS = int_env(
+    'SLACK_SUMMARY_DAYS',
+    '1'
 )
 # Days between today and the first day a sign-up summary covers: 0
 # starts today, 1 starts tomorrow.  A post made ahead of the shifts it
 # covers uses this to leave out the day it is sent, so a Friday notice
 # about the weekend lists Saturday and Sunday only.
-SLACK_SUMMARY_START_IN_DAYS = int(
-    getenv(
-        'SLACK_SUMMARY_START_IN_DAYS',
-        '0'
-    )
+SLACK_SUMMARY_START_IN_DAYS = int_env(
+    'SLACK_SUMMARY_START_IN_DAYS',
+    '0'
 )
 
 # Amplify responses (sign-ups)
@@ -353,11 +455,9 @@ AMPLIFY_NEED_DETAIL_URL = getenv(
 )
 # Extended timeout (seconds) for a responses page.  Response reads are
 # slower than a need read, so the default HTTP_TIMEOUT is too short.
-AMPLIFY_RESPONSES_TIMEOUT = int(
-    getenv(
-        'AMPLIFY_RESPONSES_TIMEOUT',
-        '90'
-    )
+AMPLIFY_RESPONSES_TIMEOUT = int_env(
+    'AMPLIFY_RESPONSES_TIMEOUT',
+    '90'
 )
 # Look-back window (days) for the 'since_created' filter on the responses
 # read.  The Amplify API has no server-side filter for a need or for a
@@ -370,35 +470,27 @@ AMPLIFY_RESPONSES_TIMEOUT = int(
 # for an upcoming shift is always recent.  Widen this value if sign-ups
 # might be created further ahead than the window; 'AmplifyResponses'
 # logs the observed margin on every run and warns when it gets thin.
-AMPLIFY_RESPONSES_SINCE_DAYS = int(
-    getenv(
-        'AMPLIFY_RESPONSES_SINCE_DAYS',
-        '90'
-    )
+AMPLIFY_RESPONSES_SINCE_DAYS = int_env(
+    'AMPLIFY_RESPONSES_SINCE_DAYS',
+    '90'
 )
 # Results per page for the responses read (the API maximum is 150).
-AMPLIFY_RESPONSES_PER_PAGE = int(
-    getenv(
-        'AMPLIFY_RESPONSES_PER_PAGE',
-        '150'
-    )
+AMPLIFY_RESPONSES_PER_PAGE = int_env(
+    'AMPLIFY_RESPONSES_PER_PAGE',
+    '150'
 )
 # Safety cap on the number of response pages read in one run.
-AMPLIFY_RESPONSES_MAX_PAGES = int(
-    getenv(
-        'AMPLIFY_RESPONSES_MAX_PAGES',
-        '80'
-    )
+AMPLIFY_RESPONSES_MAX_PAGES = int_env(
+    'AMPLIFY_RESPONSES_MAX_PAGES',
+    '80'
 )
 # Datetime format the API expects for the 'since_created' parameter.
 AMPLIFY_RESPONSES_SINCE_FORMAT = '%Y-%m-%d %H:%M'
 # Warn when the oldest counted sign-up was created fewer than this many
 # days after the 'since_created' cutoff (a thin margin risks undercount).
-AMPLIFY_RESPONSES_MARGIN_WARN_DAYS = int(
-    getenv(
-        'AMPLIFY_RESPONSES_MARGIN_WARN_DAYS',
-        '7'
-    )
+AMPLIFY_RESPONSES_MARGIN_WARN_DAYS = int_env(
+    'AMPLIFY_RESPONSES_MARGIN_WARN_DAYS',
+    '7'
 )
 
 # Amplify Shift lookup data model
@@ -430,11 +522,9 @@ SHIFTS_INFO_FILE = Path.joinpath(
 # would have no evidence left under a shorter window.  The job row
 # itself stays -- that a send ran on a date and how it ended is not
 # what the window is protecting.
-RETENTION_JOB_LOG_DAYS = int(
-    getenv(
-        'STAR_PASS_RETENTION_JOB_LOG_DAYS',
-        '90'
-    )
+RETENTION_JOB_LOG_DAYS = int_env(
+    'STAR_PASS_RETENTION_JOB_LOG_DAYS',
+    '90'
 )
 
 # Revisions a run no longer needs.  The first revision and the current
@@ -448,11 +538,9 @@ RETENTION_JOB_LOG_DAYS = int(
 # reachable now -- a caller can list them and go back to any -- so
 # there is no moment at which one is superseded, and a window is what
 # replaces that (D20).
-RETENTION_REVISION_DAYS = int(
-    getenv(
-        'STAR_PASS_RETENTION_REVISION_DAYS',
-        '90'
-    )
+RETENTION_REVISION_DAYS = int_env(
+    'STAR_PASS_RETENTION_REVISION_DAYS',
+    '90'
 )
 
 # Titles the data model did not match.  Much longer than the rest, and
@@ -463,20 +551,16 @@ RETENTION_REVISION_DAYS = int(
 # repeats annually -- anything shorter would forget a title between
 # one season and the next, which is exactly when the count is worth
 # reading.
-RETENTION_UNMATCHED_TITLE_DAYS = int(
-    getenv(
-        'STAR_PASS_RETENTION_UNMATCHED_TITLE_DAYS',
-        '365'
-    )
+RETENTION_UNMATCHED_TITLE_DAYS = int_env(
+    'STAR_PASS_RETENTION_UNMATCHED_TITLE_DAYS',
+    '365'
 )
 
 # How often the service sweeps.  Once a day: every window above is
 # measured in months, so nothing is gained by looking more often, and
 # a sweep is a write against the database the service is answering
 # from.
-RETENTION_SWEEP_HOURS = float(
-    getenv(
-        'STAR_PASS_RETENTION_SWEEP_HOURS',
-        '24'
-    )
+RETENTION_SWEEP_HOURS = float_env(
+    'STAR_PASS_RETENTION_SWEEP_HOURS',
+    '24'
 )
