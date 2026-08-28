@@ -115,12 +115,21 @@ def fixture_browser(
 @pytest.fixture(name='loaded')
 def fixture_loaded(
     browser: Callable[..., Any]
-) -> Tuple[TestClient, Any]:
-    """ Return a browser that has already been given a session. """
-    client, api = browser()
-    client.get(f'{RUNS_PATH}')
+) -> Callable[..., Tuple[TestClient, Any]]:
+    """ Return a way to open a browser that has loaded the page.
 
-    return client, api
+        Loading the page is what gives it a session.  The page rather
+        than an API path, so nothing the proxy records is priming.
+    """
+
+    def opened(**answers: Any) -> Tuple[TestClient, Any]:
+        """ Return a client with a session, and the stub behind it. """
+        client, api = browser(**answers)
+        client.get('/')
+
+        return client, api
+
+    return opened
 
 
 def writing(
@@ -190,9 +199,9 @@ class TestWhatTheBrowserIsGiven:
 
     def test_a_browser_that_has_one_is_not_given_another(
         self,
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = loaded
+        client, _api = loaded()
         first = client.cookies[_defaults.SESSION_COOKIE]
 
         client.get(RUNS_PATH)
@@ -201,9 +210,9 @@ class TestWhatTheBrowserIsGiven:
 
     def test_the_token_is_this_session_s(
         self,
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = loaded
+        client, _api = loaded()
 
         assert client.cookies[_defaults.CSRF_COOKIE] == csrf_token(
             session=client.cookies[_defaults.SESSION_COOKIE]
@@ -214,9 +223,9 @@ class TestWhatReachesTheApi:
     def test_the_path_below_the_prefix(
         self,
         asked: List[httpx2.Request],
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = loaded
+        client, _api = loaded()
 
         client.get(f'{RUNS_PATH}/r-1')
 
@@ -225,9 +234,9 @@ class TestWhatReachesTheApi:
     def test_the_query_it_was_asked_with(
         self,
         asked: List[httpx2.Request],
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = loaded
+        client, _api = loaded()
 
         client.get(f'{RUNS_PATH}?limit=5')
 
@@ -236,9 +245,9 @@ class TestWhatReachesTheApi:
     def test_the_credential_this_service_holds(
         self,
         asked: List[httpx2.Request],
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = loaded
+        client, _api = loaded()
 
         client.get(RUNS_PATH)
 
@@ -249,11 +258,11 @@ class TestWhatReachesTheApi:
     def test_not_a_credential_the_browser_supplied(
         self,
         asked: List[httpx2.Request],
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
         # A page that could choose what the API is asked with would be
         # a page worth attacking for it.
-        client, _api = loaded
+        client, _api = loaded()
 
         client.get(RUNS_PATH, headers={'Authorization': 'Bearer made-up'})
 
@@ -264,9 +273,9 @@ class TestWhatReachesTheApi:
     def test_not_the_browser_s_cookies(
         self,
         asked: List[httpx2.Request],
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = loaded
+        client, _api = loaded()
 
         client.get(RUNS_PATH)
 
@@ -275,11 +284,11 @@ class TestWhatReachesTheApi:
     def test_the_idempotency_key_a_write_carries(
         self,
         asked: List[httpx2.Request],
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
         # The contract requires one on the keyed writes, so a proxy
         # that dropped it would make them unreachable.
-        client, _api = loaded
+        client, _api = loaded()
 
         client.post(
             f'{RUNS_PATH}/r-1/revisions',
@@ -292,27 +301,27 @@ class TestWhatReachesTheApi:
 class TestWhatComesBack:
     def test_the_status_the_api_answered(
         self,
-        browser: Callable[..., Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = browser(status_code=404)
+        client, _api = loaded(status_code=404)
 
         assert client.get(RUNS_PATH).status_code == 404
 
     def test_the_body_the_api_answered(
         self,
-        browser: Callable[..., Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = browser()
+        client, _api = loaded()
 
         assert client.get(RUNS_PATH).json() == ANSWER
 
     def test_a_problem_document_keeps_its_media_type(
         self,
-        browser: Callable[..., Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
         # A client that handles failures by media type would stop
         # recognising them otherwise.
-        client, _api = browser(
+        client, _api = loaded(
             status_code=409,
             headers={'content-type': 'application/problem+json'}
         )
@@ -323,9 +332,9 @@ class TestWhatComesBack:
 
     def test_a_rate_limited_answer_still_says_when_to_come_back(
         self,
-        browser: Callable[..., Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = browser(
+        client, _api = loaded(
             status_code=429,
             headers={'retry-after': '30'}
         )
@@ -334,11 +343,11 @@ class TestWhatComesBack:
 
     def test_an_event_stream_is_passed_on_as_one(
         self,
-        browser: Callable[..., Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
         # A job somebody is watching, rather than silence and then a
         # dump at the end.
-        client, _api = browser(
+        client, _api = loaded(
             content=STREAM_BODY,
             headers={'content-type': 'text/event-stream'}
         )
@@ -354,9 +363,9 @@ class TestWhatComesBack:
 
     def test_an_api_that_cannot_be_reached_is_a_bad_gateway(
         self,
-        browser: Callable[..., Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, api = browser()
+        client, api = loaded()
         api.state.api = httpx2.AsyncClient(
             transport=httpx2.MockTransport(_refuse),
             base_url=_defaults.API_URL
@@ -370,13 +379,74 @@ class TestWhatComesBack:
         assert _defaults.API_URL not in answer.text
 
 
+class TestWhatMakesAReadOurs:
+    def test_a_read_without_a_session_is_refused(
+        self,
+        asked: List[httpx2.Request],
+        browser: Callable[..., Any]
+    ) -> None:
+        # Without a session, a read carries the service's credential
+        # and no check, so network reach alone would read the database.
+        client, _api = browser()
+        before = len(asked)
+
+        answer = client.get(RUNS_PATH)
+
+        assert answer.status_code == 403
+        assert 'no star-pass session' in answer.json()['detail']
+        # Refused here, so nothing was spent on it upstream.
+        assert len(asked) == before
+
+    def test_a_read_with_a_session_goes_through(
+        self,
+        asked: List[httpx2.Request],
+        loaded: Callable[..., Tuple[TestClient, Any]]
+    ) -> None:
+        client, _api = loaded()
+
+        answer = client.get(RUNS_PATH)
+
+        assert answer.status_code == 200
+        assert asked[-1].method == 'GET'
+
+    def test_loading_the_page_is_all_a_browser_has_to_do(
+        self,
+        loaded: Callable[..., Tuple[TestClient, Any]]
+    ) -> None:
+        # The page is what mints the session.
+        client, _api = loaded()
+
+        assert client.get(RUNS_PATH).status_code == 200
+
+    def test_a_read_needs_no_token_in_a_header(
+        self,
+        loaded: Callable[..., Tuple[TestClient, Any]]
+    ) -> None:
+        # The token is a write concern.
+        client, _api = loaded()
+        client.cookies.delete(_defaults.CSRF_COOKIE)
+
+        assert client.get(RUNS_PATH).status_code == 200
+
+    def test_a_refused_read_still_hands_back_a_session(
+        self,
+        browser: Callable[..., Any]
+    ) -> None:
+        # So the refusal's advice, reload the page, works.
+        client, _api = browser()
+
+        client.get(RUNS_PATH)
+
+        assert client.cookies[_defaults.SESSION_COOKIE]
+
+
 class TestWhatMakesAWriteOurs:
     def test_a_write_from_the_page_goes_through(
         self,
         asked: List[httpx2.Request],
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = loaded
+        client, _api = loaded()
 
         answer = client.post(RUNS_PATH, headers=writing(client=client))
 
@@ -386,9 +456,9 @@ class TestWhatMakesAWriteOurs:
     def test_a_write_without_the_token_is_refused(
         self,
         asked: List[httpx2.Request],
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = loaded
+        client, _api = loaded()
         before = len(asked)
 
         answer = client.post(RUNS_PATH)
@@ -399,9 +469,9 @@ class TestWhatMakesAWriteOurs:
 
     def test_a_write_carrying_the_wrong_token_is_refused(
         self,
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = loaded
+        client, _api = loaded()
 
         answer = client.post(
             RUNS_PATH,
@@ -449,9 +519,9 @@ class TestWhatMakesAWriteOurs:
 
     def test_a_write_another_site_says_it_sent_is_refused(
         self,
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = loaded
+        client, _api = loaded()
 
         answer = client.post(
             RUNS_PATH,
@@ -465,11 +535,11 @@ class TestWhatMakesAWriteOurs:
 
     def test_a_write_the_browser_says_is_cross_site_is_refused(
         self,
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
         # The browser's own account of where a request came from,
         # which is the one an attacker cannot rewrite.
-        client, _api = loaded
+        client, _api = loaded()
 
         answer = client.post(
             RUNS_PATH,
@@ -483,9 +553,9 @@ class TestWhatMakesAWriteOurs:
 
     def test_a_refusal_says_what_to_do_about_it(
         self,
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
-        client, _api = loaded
+        client, _api = loaded()
 
         answer = client.post(RUNS_PATH)
 
@@ -496,11 +566,11 @@ class TestWhatMakesAWriteOurs:
 
     def test_a_read_needs_none_of_it(
         self,
-        loaded: Tuple[TestClient, Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
         # Reading changes nothing, and a token on every read would be
         # a token in every link.
-        client, _api = loaded
+        client, _api = loaded()
 
         assert client.get(RUNS_PATH).status_code == 200
 
@@ -545,13 +615,13 @@ class TestWhatIsServedAtTheRoot:
     def test_the_proxy_is_reached_before_the_page_is(
         self,
         asked: List[httpx2.Request],
-        browser: Callable[..., Any]
+        loaded: Callable[..., Tuple[TestClient, Any]]
     ) -> None:
         # The page answers everything under the root, so the order the
         # two are added in is the whole of what keeps an API call from
         # being answered with a file -- or with the refusal a missing
         # one produces.
-        client, _api = browser()
+        client, _api = loaded()
 
         client.get(f'{RUNS_PATH}/r-1')
 
