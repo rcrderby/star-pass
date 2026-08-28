@@ -155,5 +155,9 @@ RUN chmod -R a+rX /app /models /web && \
 # write to become a deployment.
 USER starpass
 
-# Start the bash prompt
-CMD ["/bin/bash"]
+# What the image does when nobody says. The compose file names a
+# command for each service it runs, so this is only reached by
+# somebody running the image by hand -- and for them the command line's
+# own help is a better answer than a shell prompt, which looks like a
+# container that started and did nothing.
+CMD ["python", "/app/__main__.py", "--help"]
