@@ -245,6 +245,45 @@ class IdempotencyRepository(Repository):
 
         return None
 
+    def forget_abandoned(
+            self,
+            cutoff: str
+    ) -> int:
+        """ Delete reservations that never recorded a response.
+
+            A reservation is written before the write it claims and
+            completed after it.  One whose process died between the
+            two keeps no response for good, so every replay of that
+            key is told the first request is still running.
+
+            A reservation that holds a response is left alone: it is
+            what a replay is answered from.
+
+            Args:
+                cutoff (str):
+                    ISO-8601 UTC timestamp.  Reservations made before
+                    this and still holding no response are removed.
+
+            Raises:
+                UpstreamError:
+                    If the reservations cannot be removed.
+
+            Returns:
+                removed (int):
+                    How many reservations were deleted.
+        """
+
+        cursor = execute(
+            connection=self._connection,
+            statement=(
+                'DELETE FROM idempotency_keys '
+                'WHERE status_code IS NULL AND created_at < ?'
+            ),
+            parameters=(cutoff,)
+        )
+
+        return cursor.rowcount
+
     def get(
             self,
             operation: str,

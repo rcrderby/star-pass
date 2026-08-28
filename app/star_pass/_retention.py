@@ -13,7 +13,7 @@
     Amplify already has -- which is the failure this whole design is
     arranged around.  It is deliberately absent below.
 
-    Three things are swept and each is swept on its own terms, because
+    Four things are swept and each is swept on its own terms, because
     the question 'is this still worth keeping' has a different answer
     for each:
 
@@ -25,6 +25,10 @@
       it.  The first and the current one always are, so what expires
       is the sealed points in between, once the run itself has stopped
       being worked on.
+    - An **abandoned idempotency reservation** is one whose process
+      died between claiming a key and recording what the write
+      answered.  It holds no response, so every replay of that key is
+      told the first request is still running.
     - An **unmatched title** is worth keeping until the data model
       matches it, which is the entire reason one is recorded.  Age is
       the wrong question to ask of it -- its value is that it
@@ -47,6 +51,7 @@ from . import _defaults
 from ._helpers import Helpers
 from ._logging import get_logger
 from ._repository import (
+    IdempotencyRepository,
     JobRepository,
     RevisionRepository,
     UnmatchedTitleRepository
@@ -73,11 +78,15 @@ class Swept:
 
             unmatched_titles (int):
                 Sightings deleted, across every title forgotten.
+
+            idempotency_keys (int):
+                Reservations deleted that never recorded a response.
     """
 
     job_events: int = 0
     revisions: int = 0
     unmatched_titles: int = 0
+    idempotency_keys: int = 0
 
     def __bool__(self) -> bool:
         """ Return whether the sweep removed anything at all.
@@ -94,6 +103,7 @@ class Swept:
             self.job_events
             or self.revisions
             or self.unmatched_titles
+            or self.idempotency_keys
         )
 
 
@@ -150,14 +160,23 @@ def sweep(
             connection=connection,
             moment=moment,
             helpers=helpers if helpers is not None else Helpers()
+        ),
+        idempotency_keys=IdempotencyRepository(
+            connection=connection
+        ).forget_abandoned(
+            cutoff=_before(
+                moment=moment,
+                hours=_defaults.RETENTION_ABANDONED_KEY_HOURS
+            )
         )
     )
 
     if swept:
         message = (
             f'Retention removed {swept.job_events} job event(s), '
-            f'{swept.revisions} revision(s) and '
-            f'{swept.unmatched_titles} unmatched title sighting(s).'
+            f'{swept.revisions} revision(s), '
+            f'{swept.unmatched_titles} unmatched title sighting(s) '
+            f'and {swept.idempotency_keys} abandoned reservation(s).'
         )
         logger.info(message)
 
@@ -226,16 +245,20 @@ def _forget_titles(
 
 def _before(
         moment: datetime,
-        days: int
+        days: int = 0,
+        hours: int = 0
 ) -> str:
-    """ Return the timestamp a window of days reaches back to.
+    """ Return the timestamp a window reaches back to.
 
         Args:
             moment (datetime):
                 What to measure back from.
 
-            days (int):
-                How long the window is.
+            days (int, optional):
+                How many days the window is.
+
+            hours (int, optional):
+                How many hours the window is.
 
         Returns:
             cutoff (str):
@@ -244,5 +267,6 @@ def _before(
     """
 
     return (
-        moment.astimezone(timezone.utc) - timedelta(days=days)
+        moment.astimezone(timezone.utc)
+        - timedelta(days=days, hours=hours)
     ).isoformat(timespec='seconds')

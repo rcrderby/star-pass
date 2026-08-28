@@ -30,9 +30,11 @@ from star_pass._records import (
     JOB_STATUS_SUCCEEDED,
     LogEntry,
     OP_NUDGE,
+    OPERATION_EDIT,
     ShiftIdentity
 )
 from star_pass._repository import (
+    IdempotencyRepository,
     ChangeLogRepository,
     JobRepository,
     RevisionRepository,
@@ -53,6 +55,16 @@ SOMEBODY = 'a-principal'
 UNMATCHED_TITLE = 'Bake Sale Fundraiser'
 MATCHED_TITLE = 'Adult Scrimmage'
 CALENDAR = 'practices'
+
+
+def hours_later(hours: int) -> datetime:
+    """ Return a moment that many hours from now.
+
+        The abandoned-reservation window is measured in hours, so the
+        sweep is told what "now" is rather than the row being written
+        with an invented timestamp.
+    """
+    return datetime.now(timezone.utc) + timedelta(hours=hours)
 
 
 def later(days: int) -> datetime:
@@ -408,6 +420,90 @@ class TestWhichUnmatchedTitlesAreKept:
         sweep(connection=connection)
 
         assert unmatched.list_all()[0].times_seen == 2
+
+
+class TestWhichReservationsAreKept:
+    def test_a_reservation_with_no_response_is_forgotten(
+        self,
+        connection: sqlite3.Connection,
+        run_id: str
+    ) -> None:
+        # Its process died between claiming the key and recording
+        # what the write answered, so every replay of that key is
+        # told the first request is still running.
+        keys = IdempotencyRepository(connection=connection)
+        keys.reserve(
+            operation=OPERATION_EDIT,
+            key='abandoned',
+            run_id=run_id,
+            fingerprint='op=nudge',
+            principal_id=SOMEBODY
+        )
+
+        sweep(
+            connection=connection,
+            now=hours_later(
+                _defaults.RETENTION_ABANDONED_KEY_HOURS + 1
+            )
+        )
+
+        assert keys.get(
+            operation=OPERATION_EDIT, key='abandoned'
+        ) is None
+
+    def test_a_reservation_that_answered_is_kept(
+        self,
+        connection: sqlite3.Connection,
+        run_id: str
+    ) -> None:
+        # It is what a replay is answered from.
+        keys = IdempotencyRepository(connection=connection)
+        keys.reserve(
+            operation=OPERATION_EDIT,
+            key='answered',
+            run_id=run_id,
+            fingerprint='op=nudge',
+            principal_id=SOMEBODY
+        )
+        keys.complete(
+            operation=OPERATION_EDIT,
+            key='answered',
+            status_code=200,
+            response={'ok': True}
+        )
+
+        sweep(
+            connection=connection,
+            now=hours_later(
+                _defaults.RETENTION_ABANDONED_KEY_HOURS + 1
+            )
+        )
+
+        assert keys.get(
+            operation=OPERATION_EDIT, key='answered'
+        ) is not None
+
+    def test_a_reservation_inside_the_window_is_kept(
+        self,
+        connection: sqlite3.Connection,
+        run_id: str
+    ) -> None:
+        # A write still running holds no response either, and the
+        # window is what tells the two apart.
+        keys = IdempotencyRepository(connection=connection)
+        keys.reserve(
+            operation=OPERATION_EDIT,
+            key='running',
+            run_id=run_id,
+            fingerprint='op=nudge',
+            principal_id=SOMEBODY
+        )
+
+        sweep(connection=connection, now=hours_later(1))
+
+        assert keys.get(
+            operation=OPERATION_EDIT, key='running'
+        ) is not None
 
 
 class TestWhatIsNeverForgotten:

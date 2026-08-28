@@ -556,6 +556,17 @@ RETENTION_UNMATCHED_TITLE_DAYS = int_env(
     '365'
 )
 
+# How long a reservation may sit without a response before it is
+# treated as abandoned.  A reservation is written before the write it
+# claims, and completed after; one whose process died keeps no
+# response, and every replay of that key is told the first request is
+# still running.  Hours rather than days, and well above the longest
+# write: a send of a month of shifts is minutes.
+RETENTION_ABANDONED_KEY_HOURS = int_env(
+    'STAR_PASS_RETENTION_ABANDONED_KEY_HOURS',
+    '24'
+)
+
 # How often the service sweeps.  Once a day: every window above is
 # measured in months, so nothing is gained by looking more often, and
 # a sweep is a write against the database the service is answering
