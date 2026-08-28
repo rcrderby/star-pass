@@ -51,6 +51,23 @@ services:
         condition: service_healthy
     security_opt:
       - no-new-privileges:true
+    # Nothing here needs a capability except the one that binds 80 and
+    # 443. Dropping ALL on its own stops the image starting at all:
+    # the binary carries that capability as a file capability, and an
+    # exec that cannot be granted it fails with "operation not
+    # permitted" rather than failing later at the bind.
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    # The certificate authority writes its root certificate through a
+    # temporary file before installing it, and with no writable /tmp
+    # it starts and then serves without one.
+    tmpfs:
+      - /tmp
+    mem_limit: 256m
+    pids_limit: 128
 
   # What a browser talks to. Holds the API token and the session
   # signing value, and no Amplify credential of any kind: the
@@ -111,6 +128,16 @@ services:
         condition: service_healthy
     security_opt:
       - no-new-privileges:true
+    # It serves a page and forwards a request, and needs no capability
+    # for either: it binds 8000, which is above the privileged range.
+    cap_drop:
+      - ALL
+    # No writable path at all. The page and the code are read, and
+    # nothing here writes a temporary file, so there is no tmpfs
+    # either; if something ever needs one, the failure names the path.
+    read_only: true
+    mem_limit: 512m
+    pids_limit: 256
 
   # Everything the tool actually does, and the only service that holds
   # the Amplify credential or touches the database. On one network,
@@ -178,6 +205,21 @@ services:
       - backend
     security_opt:
       - no-new-privileges:true
+    # Nothing this service does needs a capability: it binds 8000 and
+    # talks to SQLite and to Amplify.
+    cap_drop:
+      - ALL
+    # The database is on a named volume, which stays writable under
+    # this, and nothing else this service does writes to a path inside
+    # the image.
+    read_only: true
+    # Generous rather than measured: a collect reads a month of
+    # calendar events and a page of Amplify responses at a time, and
+    # the peak of a real run has not been measured. The point is that
+    # there is a ceiling, so one runaway job cannot take the host down
+    # with it.
+    mem_limit: 1g
+    pids_limit: 512
 
 networks:
   # Caddy and the frontend. Addressed explicitly so that the one hop

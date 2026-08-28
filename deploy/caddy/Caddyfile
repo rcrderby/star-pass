@@ -7,6 +7,18 @@
 #
 # There is no ACME code in the application and none belongs there.
 # Certificates are this layer's business (plan section 3).
+{
+	# Do not try to add the internal authority's root to this
+	# container's own trust store.  Nothing inside the container
+	# verifies a certificate, the browser that does is outside it,
+	# and the attempt needs to write into the image and to run a
+	# helper -- both of which a read-only root filesystem with no
+	# capabilities refuse, leaving an error in the log for work that
+	# was never useful.  The root is still issued and still kept on
+	# the '/data' volume, which is where a browser is pointed to
+	# trust it.
+	skip_install_trust
+}
 
 {$STAR_PASS_SITE_ADDRESS:localhost} {
 	# Caddy's internal certificate authority by default (D14).  A
