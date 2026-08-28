@@ -54,7 +54,7 @@ const UNREADABLE = 'These settings could not be read';
 /* The heading and the line under it. */
 const TITLE = 'Settings';
 const LEDE = (
-  'What this service resolved at start up, and where its state lives.'
+  'Service configuration at startup and state configuration.'
 );
 
 /* Said of everything above the appearance section: it is the
@@ -67,35 +67,25 @@ const THIS_BROWSER = 'this browser';
 
 const CREDENTIALS_HEADING = 'Credentials';
 const CREDENTIALS_NOTE = (
-  'The Amplify credential comes from the environment this service was '
-  + 'started in. Replacing one is done there and takes effect on '
-  + 'restart — this screen cannot write a credential, and nothing can '
-  + 'read one back. What it can do is ask Amplify whether the one this '
-  + 'service is running on still works, and show the last four '
-  + 'characters so two can be told apart.'
+  'The Amplify credential comes from the environment configuration at '
+  + 'startup. Credential changes take effect after restarting the '
+  + 'application services.'
 );
 
 const CONFIGURATION_HEADING = 'Configuration';
 const CONFIGURATION_NOTE = (
-  'These come from the environment this service was started in. Change '
-  + 'one there and restart; this screen reports what was resolved, so '
-  + 'a surprising collection can be explained without reading a file.'
+  'These values come from the environment configuration at startup. '
+  + 'Configuration changes take effect after restarting the '
+  + 'application services.'
 );
 
-const STATE_HEADING = 'Where state lives';
-const STATE_NOTE = (
-  'How long what a run leaves behind is kept. Three windows rather '
-  + 'than one, because "is this still worth keeping" has three '
-  + 'different answers, and each is a setting rather than something '
-  + 'fixed in the code.'
-);
+const STATE_HEADING = 'State configuration';
+const STATE_NOTE = 'Retention periods for data collected for runs.';
 
 const APPEARANCE_HEADING = 'Appearance';
 const APPEARANCE_NOTE = (
-  'How much the page moves, and the theme control in the bar at the '
-  + 'top, are remembered in this browser and nowhere else. Asking your '
-  + 'operating system for reduced motion turns movement off whatever '
-  + 'is chosen here.'
+  'Motion and theme settings for this browser. Operating system '
+  + 'settings override browser settings.'
 );
 const MOTION_LABEL = 'Motion';
 
@@ -105,13 +95,9 @@ const MOTION_LABEL = 'Motion';
  * publishes it. */
 const CREDENTIAL_LABEL = 'Amplify credential';
 const CREDENTIAL_NEED = (
-  'Read for a preview as well as a send: the preview asks Amplify for '
-  + 'each opportunity and what it already holds.'
+  'Click the Test button to make a live call to Amplify.'
 );
-const TEST_NOTE = (
-  'A test makes one real call to Amplify, so it may only be asked for '
-  + 'a few times a minute.'
-);
+const TEST_NOTE = 'Allows a limited number of tests per minute.';
 
 /* What the four published characters are shown as.  Said as an ending
  * rather than printed alone, so nobody reads them as the credential. */
