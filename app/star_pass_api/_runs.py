@@ -78,7 +78,7 @@ from ._security import (
     SCOPE_RUNS_WRITE
 )
 from ._problems import conflict, not_found, unprocessable
-from ._storage import in_database, read
+from ._storage import in_database, in_the_database
 
 router = APIRouter(tags=[_defaults.API_TAG_RUNS])
 
@@ -139,7 +139,7 @@ async def list_runs(
 
     del principal
 
-    runs = await read(
+    runs = await in_the_database(
         lambda connection: RunRepository(
             connection=connection
         ).list_all()
@@ -190,7 +190,7 @@ async def get_run(
 
     del principal
 
-    detail = await read(
+    detail = await in_the_database(
         lambda connection: read_run_detail(
             connection=connection,
             run_id=run_id
@@ -251,7 +251,7 @@ async def delete_run(
 
     del principal
 
-    run = await read(
+    run = await in_the_database(
         lambda connection: RunRepository(connection=connection).get(
             run_id=run_id
         )
@@ -265,7 +265,7 @@ async def delete_run(
     if refusal is not None:
         raise conflict(detail=refusal)
 
-    await read(
+    await in_the_database(
         lambda connection: RunRepository(connection=connection).delete(
             run_id=run_id
         )
@@ -327,7 +327,7 @@ async def list_uncollected(
 
     del principal
 
-    found = await read(
+    found = await in_the_database(
         lambda connection: read_run_uncollected(
             connection=connection,
             run_id=run_id
@@ -398,7 +398,7 @@ async def get_preview(
 
     del principal
 
-    gathered = await read(
+    gathered = await in_the_database(
         lambda connection: read_run_for_send(
             connection=connection,
             run_id=run_id
@@ -469,7 +469,7 @@ async def _handed_over(
 
     request.app.state.runner.submit(job_id=job_id, work=work)
 
-    job = await read(
+    job = await in_the_database(
         lambda connection: JobRepository(
             connection=connection
         ).get(job_id=job_id)
@@ -662,7 +662,7 @@ async def collect_run(
     calendar = checked_calendar(calendar=collection.calendar)
     window = _checked_window(window=collection)
 
-    run, job_id = await read(
+    run, job_id = await in_the_database(
         lambda connection: _started(
             connection=connection,
             calendar=calendar,
@@ -770,7 +770,7 @@ async def recollect_run(
                 The job collecting the run again, queued.
     """
 
-    found = await read(
+    found = await in_the_database(
         lambda connection: _current_change_count(
             connection=connection,
             run_id=run_id
@@ -790,7 +790,7 @@ async def recollect_run(
     if refusal is not None:
         raise conflict(detail=refusal)
 
-    job_id = await read(
+    job_id = await in_the_database(
         lambda connection: _restarted(
             connection=connection,
             run_id=run_id,

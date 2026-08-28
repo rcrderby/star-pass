@@ -39,7 +39,7 @@ from . import _defaults
 from ._problems import conflict, unprocessable
 from ._runs import missing_run
 from ._security import Principal, requires, SCOPE_SEND_EXECUTE
-from ._storage import in_database, read
+from ._storage import in_database, in_the_database
 
 router = APIRouter(tags=[_defaults.API_TAG_RUNS])
 
@@ -93,14 +93,14 @@ async def _handed_over(
     request.app.state.runner.submit(job_id=job_id, work=work)
 
     job = to_job_view(
-        job=await read(
+        job=await in_the_database(
             lambda connection: JobRepository(
                 connection=connection
             ).get(job_id=job_id)
         )
     )
 
-    await read(
+    await in_the_database(
         lambda connection: IdempotencyRepository(
             connection=connection
         ).complete(
@@ -199,7 +199,7 @@ async def send_run(
                 The job sending the run, queued.
     """
 
-    found = await read(
+    found = await in_the_database(
         lambda connection: sendable(
             connection=connection,
             run_id=run_id,
@@ -215,7 +215,7 @@ async def send_run(
     if refusal is not None:
         raise conflict(detail=refusal)
 
-    existing, job = await read(
+    existing, job = await in_the_database(
         lambda connection: claim(
             connection=connection,
             run_id=run.id,

@@ -83,14 +83,15 @@ def in_database(
         connection.close()
 
 
-async def read(
+async def in_the_database(
         work: Callable[[sqlite3.Connection], Result]
 ) -> Result:
     """ Run work against the database, off the event loop.
 
-        What an endpoint calls.  The work runs on a worker thread, so
-        a slow read delays the request that asked for it rather than
-        every request the service is serving.
+        What an endpoint calls, for a read or a write.  The work runs
+        on a worker thread, so a slow statement delays the request
+        that asked for it rather than every request the service is
+        serving.
 
         Args:
             work (Callable[[sqlite3.Connection], Result]):
