@@ -13,13 +13,29 @@
 """
 
 # Imports - Python Standard Library
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
 # Imports - Third-Party
-from pydantic import Field
+from pydantic import Field, StringConstraints
 
 # Imports - Local
 from ._schemas import ApiModel
+
+# What a request may carry.  Every bound is well above what the page
+# sends, and none of them is absent.
+MAX_NAME_LENGTH = 64
+MAX_IDENTIFIER_LENGTH = 128
+MAX_TIME_LENGTH = 16
+MAX_DATE_LENGTH = 32
+MAX_TITLE_LENGTH = 1024
+MAX_EVENT_IDS = 1000
+MAX_OPERATIONS = 100
+
+# An identifier, bounded wherever one appears in a list.
+Identifier = Annotated[
+    str,
+    StringConstraints(max_length=MAX_IDENTIFIER_LENGTH)
+]
 
 
 class WindowRequest(ApiModel):
@@ -32,6 +48,7 @@ class WindowRequest(ApiModel):
     """
 
     start: str = Field(
+        max_length=MAX_DATE_LENGTH,
         description=(
             'First day to cover, as an ISO date. Read in the '
             'server\'s time zone.'
@@ -39,6 +56,7 @@ class WindowRequest(ApiModel):
         examples=['2026-09-01']
     )
     end: str = Field(
+        max_length=MAX_DATE_LENGTH,
         description=(
             'Day after the last day to cover, as an ISO date. '
             'Exclusive, so a one-day window is two consecutive dates. '
@@ -52,6 +70,7 @@ class CollectRequest(ApiModel):
     """ Which calendar to collect, and over which days. """
 
     calendar: str = Field(
+        max_length=MAX_NAME_LENGTH,
         description=(
             'Which configured calendar to read. One the deployment '
             'has configured; the names are not part of this contract, '
@@ -92,6 +111,7 @@ class UnmatchedTitleRequest(ApiModel):
     """ A title the data model did not match, to keep for later. """
 
     calendar: str = Field(
+        max_length=MAX_NAME_LENGTH,
         description=(
             'Which configured calendar the title was seen in. Part of '
             'what a title is, rather than a note beside it: the '
@@ -103,6 +123,7 @@ class UnmatchedTitleRequest(ApiModel):
     )
     title: str = Field(
         min_length=1,
+        max_length=MAX_TITLE_LENGTH,
         description=(
             'The title, as the calendar gave it. Recorded as it was '
             'written, because what the model has to match is the '
@@ -112,6 +133,7 @@ class UnmatchedTitleRequest(ApiModel):
     )
     run_id: Optional[str] = Field(
         default=None,
+        max_length=MAX_IDENTIFIER_LENGTH,
         description=(
             'The run the title was noticed in, when it was noticed in '
             'one. Kept as provenance and nothing more: the log '
@@ -166,6 +188,7 @@ class EventOperationRequest(ApiModel):
     """ One thing a reviewer did, over one or more events. """
 
     op: str = Field(
+        max_length=MAX_NAME_LENGTH,
         description=(
             'What was done. One of: `set_category`, `unassign`, '
             '`set_start`, `set_end`, `set_slots`, `nudge`, '
@@ -182,8 +205,9 @@ class EventOperationRequest(ApiModel):
         ),
         examples=['nudge']
     )
-    event_ids: List[str] = Field(
+    event_ids: List[Identifier] = Field(
         min_length=1,
+        max_length=MAX_EVENT_IDS,
         description=(
             'The events this applies to. A selection of thirty rows is '
             'one operation naming thirty, which is one log entry '
@@ -193,11 +217,13 @@ class EventOperationRequest(ApiModel):
     )
     category: Optional[str] = Field(
         default=None,
+        max_length=MAX_NAME_LENGTH,
         description='Category to set, for `set_category`.',
         examples=['adult_game']
     )
     time: Optional[str] = Field(
         default=None,
+        max_length=MAX_TIME_LENGTH,
         description=(
             'Time of day to set, for `set_start` and `set_end`, as '
             '`HH:MM` in the league\'s own zone.'
@@ -206,6 +232,7 @@ class EventOperationRequest(ApiModel):
     )
     need_id: Optional[str] = Field(
         default=None,
+        max_length=MAX_IDENTIFIER_LENGTH,
         description=(
             'Which of an event\'s roles to set, for `set_slots`. A '
             'role rather than the event, because an event serving '
@@ -235,6 +262,7 @@ class EditRequest(ApiModel):
 
     operations: List[EventOperationRequest] = Field(
         min_length=1,
+        max_length=MAX_OPERATIONS,
         description=(
             'What to do, in order. Each one sees what the one before '
             'it produced.\n\n'
@@ -277,6 +305,7 @@ class AddEventRequest(ApiModel):
 
     uncollected_id: str = Field(
         min_length=1,
+        max_length=MAX_IDENTIFIER_LENGTH,
         description=(
             'Identifier of the event to pull in, as the run\'s record '
             'of what it did not collect carries it. Only an event '

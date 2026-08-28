@@ -26,6 +26,7 @@ from starlette.requests import Request
 
 # Imports - Local
 from star_pass_bff import _defaults, create_app
+from star_pass_bff._proxy import MAX_BODY_BYTES
 from star_pass_bff._sessions import carries_our_token, csrf_token
 
 # Constants
@@ -438,6 +439,66 @@ class TestWhatMakesAReadOurs:
         client.get(RUNS_PATH)
 
         assert client.cookies[_defaults.SESSION_COOKIE]
+
+
+class TestHowMuchAWriteMayCarry:
+    def test_a_body_within_the_limit_goes_through(
+        self,
+        asked: List[httpx2.Request],
+        loaded: Callable[..., Tuple[TestClient, Any]]
+    ) -> None:
+        client, _api = loaded()
+
+        answer = client.post(
+            RUNS_PATH,
+            headers=writing(client=client),
+            content=b'x' * (MAX_BODY_BYTES // 2)
+        )
+
+        assert answer.status_code == 200
+        assert len(asked[-1].content) == MAX_BODY_BYTES // 2
+
+    def test_a_body_over_the_limit_is_refused(
+        self,
+        asked: List[httpx2.Request],
+        loaded: Callable[..., Tuple[TestClient, Any]]
+    ) -> None:
+        client, _api = loaded()
+        before = len(asked)
+
+        answer = client.post(
+            RUNS_PATH,
+            headers=writing(client=client),
+            content=b'x' * (MAX_BODY_BYTES + 1)
+        )
+
+        assert answer.status_code == 413
+        # Refused here, so nothing was spent on it upstream.
+        assert len(asked) == before
+
+    def test_a_body_with_no_declared_length_is_measured(
+        self,
+        asked: List[httpx2.Request],
+        loaded: Callable[..., Tuple[TestClient, Any]]
+    ) -> None:
+        # A chunked body declares no length, so the declared check
+        # never fires and the count as it arrives is the only bound.
+        client, _api = loaded()
+        before = len(asked)
+
+        def chunks() -> Iterator[bytes]:
+            """ Send more than the limit, a piece at a time. """
+            for _ in range((MAX_BODY_BYTES // 8192) + 2):
+                yield b'x' * 8192
+
+        answer = client.post(
+            RUNS_PATH,
+            headers=writing(client=client),
+            content=chunks()
+        )
+
+        assert answer.status_code == 413
+        assert len(asked) == before
 
 
 class TestWhatMakesAWriteOurs:
