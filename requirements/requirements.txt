@@ -1,19 +1,12 @@
 # Everything the container runs: the API service, the front end and
 # the command line.
 #
-# What both this and the Slack image need is in the core file, which
-# is the only place those packages are pinned.
+# Two lists, read as one.  The core file is what every way in needs
+# and the whole of what the Slack image installs; the service file is
+# what only the API service and the front end need.  Both are read by
+# 'pyproject.toml' as well, which is what keeps the package's declared
+# dependencies and the installed ones one list rather than two that
+# can disagree.
 
 -r requirements_core.txt
-
-# API service
-fastapi==0.141.1
-uvicorn==0.52.4
-
-# The front end's connection to the API service. Async, and it passes
-# an event stream through as it arrives rather than at the end, which
-# is what watching a job needs.
-httpx2==2.12.0
-
-# JSON Schema validation
-jsonschema==4.26.0
+-r requirements_service.txt
