@@ -114,6 +114,20 @@ Your browser will warn about the certificate, which is expected out of
 the box. [`docs/deployment.md`](docs/deployment.md) says why, what to do
 about it, and how to serve a real name instead.
 
+**On this host only, until you say otherwise.** Caddy publishes 80 and
+443 on the loopback address, so nothing else on the network reaches
+star-pass. To serve it to a tailnet, set `STAR_PASS_BIND_ADDRESS` to
+that host's tailnet address and bring the stack back up:
+
+```bash
+docker compose up -d
+```
+
+D14 decided this runs with no route out, and binding the address is
+what makes that a thing the deployment enforces rather than one it
+assumes. `0.0.0.0` publishes on every interface, which on a host with
+a public one means the internet.
+
 Then confirm the Amplify credential before doing anything else, from
 **Settings** in the page or from the command line:
 
