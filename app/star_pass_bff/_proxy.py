@@ -84,6 +84,14 @@ NOT_OURS = (
 # What it is told when the session is missing entirely, which is a
 # different thing: nothing was refused, there is simply nothing to
 # check a write against yet.
+# Most a request body may be. Well above anything the contract
+# produces: the largest is an edit naming every event in a run.
+MAX_BODY_BYTES = 1024 * 1024
+
+TOO_LARGE = (
+    'That request is larger than this service accepts.'
+)
+
 NO_SESSION = (
     'This browser has no star-pass session. Load the page first, '
     'then try again.'
@@ -111,7 +119,8 @@ async def proxied(
         Raises:
             HTTPException:
                 403 when the browser has no session or a write did not
-                come from this page, and 502 when the API cannot be
+                come from this page, 413 when the body is larger than
+                this service accepts, and 502 when the API cannot be
                 reached.
 
         Returns:
@@ -131,7 +140,7 @@ async def proxied(
         url=f'/{path}',
         params=dict(request.query_params),
         headers=_headers_for(request=request),
-        content=await request.body()
+        content=await _body_within_limit(request=request)
     )
 
     try:
@@ -232,6 +241,51 @@ def _headers_for(
     headers['Authorization'] = f'Bearer {_defaults.API_TOKEN}'
 
     return headers
+
+
+async def _body_within_limit(
+        request: Request
+) -> bytes:
+    """ Return the request body, or refuse one that is too large.
+
+        Read a chunk at a time and measured as it arrives, so a body
+        that lies about its length is refused at the limit rather than
+        after it has all been held.
+
+        Args:
+            request (Request):
+                The request to read.
+
+        Raises:
+            HTTPException:
+                413, when the body is larger than MAX_BODY_BYTES.
+
+        Returns:
+            body (bytes):
+                What the browser sent.
+    """
+
+    declared = request.headers.get('content-length')
+
+    if declared is not None and declared.isdigit():
+        if int(declared) > MAX_BODY_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail=TOO_LARGE
+            )
+
+    body = bytearray()
+
+    async for chunk in request.stream():
+        body.extend(chunk)
+
+        if len(body) > MAX_BODY_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail=TOO_LARGE
+            )
+
+    return bytes(body)
 
 
 def _session_or_refuse(

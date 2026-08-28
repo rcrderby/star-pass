@@ -9,6 +9,7 @@
             "examples": [
               "1a2b3c4d5e6f7g8h9i0j"
             ],
+            "maxLength": 128,
             "minLength": 1,
             "title": "Uncollectedid",
             "type": "string"
@@ -142,6 +143,7 @@
             "examples": [
               "events"
             ],
+            "maxLength": 64,
             "title": "Calendar",
             "type": "string"
           },
@@ -269,6 +271,7 @@
             "items": {
               "$ref": "#/components/schemas/EventOperationRequest"
             },
+            "maxItems": 100,
             "minItems": 1,
             "title": "Operations",
             "type": "array"
@@ -313,6 +316,7 @@
           "category": {
             "anyOf": [
               {
+                "maxLength": 64,
                 "type": "string"
               },
               {
@@ -334,8 +338,10 @@
               ]
             ],
             "items": {
+              "maxLength": 128,
               "type": "string"
             },
+            "maxItems": 1000,
             "minItems": 1,
             "title": "Eventids",
             "type": "array"
@@ -358,6 +364,7 @@
           "needId": {
             "anyOf": [
               {
+                "maxLength": 128,
                 "type": "string"
               },
               {
@@ -375,6 +382,7 @@
             "examples": [
               "nudge"
             ],
+            "maxLength": 64,
             "title": "Op",
             "type": "string"
           },
@@ -397,6 +405,7 @@
           "time": {
             "anyOf": [
               {
+                "maxLength": 16,
                 "type": "string"
               },
               {
@@ -1603,12 +1612,14 @@
             "examples": [
               "events"
             ],
+            "maxLength": 64,
             "title": "Calendar",
             "type": "string"
           },
           "runId": {
             "anyOf": [
               {
+                "maxLength": 128,
                 "type": "string"
               },
               {
@@ -1626,6 +1637,7 @@
             "examples": [
               "Jet City vs Cherry City"
             ],
+            "maxLength": 1024,
             "minLength": 1,
             "title": "Title",
             "type": "string"
@@ -1718,6 +1730,7 @@
             "examples": [
               "2026-10-01"
             ],
+            "maxLength": 32,
             "title": "End",
             "type": "string"
           },
@@ -1726,6 +1739,7 @@
             "examples": [
               "2026-09-01"
             ],
+            "maxLength": 32,
             "title": "Start",
             "type": "string"
           }
