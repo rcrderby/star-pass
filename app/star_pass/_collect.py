@@ -1,32 +1,21 @@
 #!/usr/bin/env python3
 """ Turning a calendar window into a stored run.
 
-    Read the calendar, match each event to a category, and work out the
-    shift each of its roles would create.  A revision holds one event
-    carrying a role per need ID rather than a row per need ID, which is
-    what lets a reviewer edit the event rather than the rows it
-    happened to produce: an event serving both skating and non-skating
-    officials is one thing to retime, not two things to keep in step.
+    Read the calendar, match each event to a category, and work out
+    the shift each of its roles would create.  A revision holds one
+    event carrying a role per need ID rather than a row per need ID,
+    so a reviewer edits the event rather than the rows it produced.
 
     A collection also records what it did **not** collect.  The window
-    is read twice -- once as the deployment searches it and once
-    whole -- and everything the run will not hold is stored with the
-    reason, so that a reviewer asking where an event went is answered
-    from the run rather than from a second calendar request.
-
-    In the core, not the service.  Nothing here is about HTTP, and the
-    command line client collects a run without one (D2).
+    is read twice - once as the deployment searches it and once whole
+    - and everything the run will not hold is stored with the reason.
 
     **What stops the run.**  An event that cannot become a correct
-    shift is named rather than dropped: a missing shift is invisible
-    until volunteers cannot sign up.  Two of those checks are about
-    what a stored event can express rather than about the calendar.  An
-    event holds one pair of shift times and a role per need ID, so a
-    category whose need IDs disagree about their offsets describes two
-    different shifts and cannot be stored as one event; and a shift
-    running past midnight cannot be read back, because the times are
-    stored as times of day.  Both are refused here, where the run can
-    still be corrected, rather than stored and misread later.
+    shift is named rather than dropped.  A category whose need IDs
+    disagree about their offsets describes two different shifts and
+    cannot be stored as one event; a shift running past midnight
+    cannot be read back, because the times are stored as times of day.
+    Both are refused here, where the run can still be corrected.
 """
 
 # Imports - Python Standard Library

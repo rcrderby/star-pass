@@ -1,35 +1,23 @@
 #!/usr/bin/env python3
 """ The commands that read a run, in whichever mode was asked for.
 
-    Each command does the same three things: pick a client, ask it one
-    of the contract's operations, and render what came back.  None of
-    them knows which mode it is in, because the answer is the same
-    document either way (D2) -- that is what makes one renderer
-    correct for both.
+    Each command picks a client, asks it one of the contract's
+    operations, and renders what came back.  None knows which mode it
+    is in, because the answer is the same document either way, which
+    is what makes one renderer correct for both.
 
-    Because all of them do the same three things, none of them is
-    written out.  A command is a row in 'COMMANDS' naming the operation
-    to ask and the renderer to show it with, and one function does the
-    three things for all of them.  The rows also build the parser, so a
-    command cannot be one the command line offers and the dispatcher
-    does not answer, or the reverse.
+    A command is a row in 'COMMANDS' naming the operation and the
+    renderer, and one function does the three things for all of them.
+    The rows also build the parser, so a command cannot be offered and
+    unanswered, or the reverse.
 
-    A failure the client reports is written and turned into a non-zero
-    status here rather than raised at the operator.  The reason is
-    already written for a person: a problem document carries a
-    sanitized summary, and an operation with no local answer carries
-    why it has none.
+    A failure the client reports is written and becomes a non-zero
+    status; its reason is already written for a person.  A failure the
+    core raises is only counted, because the core logs its own cause
+    before raising.
 
-    A failure the core raises is not written, only counted.  The core
-    logs its own cause before raising, which is the same arrangement
-    the run modes use, and writing it here as well would show the
-    operator the same sentence twice.
-
-    A command that writes is the same three things.  What it is given
-    arrives as flags rather than as a path value, and the row says what
-    turns those into the request the contract publishes -- a function
-    rather than a mapping, because a request is allowed to be shaped
-    differently from a command line, and the collection's window is.
+    A command that writes takes flags rather than a path value, and
+    its row names the function that turns those into the request.
 """
 
 # Imports - Python Standard Library

@@ -7,34 +7,20 @@
 
     **One request per opportunity, not per shift.**  Amplify's create
     endpoint takes an array, and a month is on the order of a hundred
-    shifts across a handful of opportunities, so a request per shift
-    would turn a handful into a hundred against an API this project has
-    measured as slow.  It would not buy what it looks like it buys
-    either: a single-shift request that times out is exactly as unknown
-    as a batch that times out, only smaller.  What settles either is
-    reading the opportunity back, which this does.
+    shifts across a handful of opportunities.  Idempotency is
+    unaffected: the record is per shift, keyed by the run and the four
+    columns a row is identified by, and so is the decision to skip.
 
-    Per-shift idempotency is unaffected, because it was never about the
-    unit of the request.  The record is per shift -- 'sent_shifts' is
-    keyed by the run and the four columns a row is identified by (D16)
-    -- and so is the decision to skip, which is made against what the
-    opportunity holds now.
+    **A batch cannot record a partial success.**  A request whose
+    answer never arrives leaves the run not knowing whether those rows
+    landed, so nothing is recorded, the run is left 'partly_sent', and
+    the next attempt reads the opportunity and sends the difference.
+    Duplicate safety rests on that live read.
 
-    **What a batch cannot do is record a partial success.**  A request
-    whose answer never arrives leaves this run not knowing whether
-    those rows landed.  Nothing is recorded for it, the run is left
-    'partly_sent', and the next attempt reads the opportunity and sends
-    the difference.  Rows a lost answer created are then in Amplify and
-    not in this run's sent record: that record says what the run saw
-    itself create, and duplicate safety rests on the live read, which
-    is what 'SentShift' already says of itself.
-
-    **Read immediately before written.**  Each opportunity is read from
-    Amplify in the step that sends to it, rather than all of them once
-    at the start, because minutes can pass between the first batch and
-    the last and a shift created in that time would otherwise be
-    created twice.  The endpoint's own check, made before the job was
-    queued, is the other of the two the plan asks for.
+    **Each opportunity is read in the step that sends to it**, not all
+    at the start: minutes can pass between the first batch and the
+    last, and a shift created in that time would otherwise be created
+    twice.
 """
 
 # Imports - Python Standard Library

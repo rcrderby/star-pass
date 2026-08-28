@@ -1,43 +1,23 @@
 #!/usr/bin/env python3
-""" Forgetting what a run leaves behind, on a policy (D12, D20).
+""" Forgetting what a run leaves behind, on a policy.
 
-    The driver is what this data *is*, not how much of it there is: a
-    job's event log names volunteers and the times they were asked to
-    be somewhere, and a revision holds the events that were in it.
-    None of it is small enough a reason to keep forever, and none of
-    it is what the tool exists to produce.
+    Four things are swept, each on its own window:
 
-    **What is never forgotten is the sent record.**  Duplicate safety
-    reads it to know which rows a run already created, so a window
-    there would eventually have a run offering to create shifts
-    Amplify already has -- which is the failure this whole design is
-    arranged around.  It is deliberately absent below.
+    - a **job's event log**, which names volunteers and the times they
+      were asked to be somewhere; the job row outlives it;
+    - a **revision**, except the first and the current one;
+    - an **abandoned idempotency reservation**, one that recorded no
+      response, which every replay of its key is told is still
+      running;
+    - an **unmatched title**, once the data model matches it, with age
+      only a backstop.
 
-    Four things are swept and each is swept on its own terms, because
-    the question 'is this still worth keeping' has a different answer
-    for each:
+    **The sent record is never forgotten** and has no window here.
+    Duplicate safety reads it to know which rows a run already
+    created.
 
-    - A **job's event log** is worth keeping while somebody might look
-      into what a run did, which is one monthly cycle and some room.
-      The job row outlives it: that a send ran and how it ended is not
-      what the window is protecting.
-    - A **revision** is worth keeping while somebody might go back to
-      it.  The first and the current one always are, so what expires
-      is the sealed points in between, once the run itself has stopped
-      being worked on.
-    - An **abandoned idempotency reservation** is one whose process
-      died between claiming a key and recording what the write
-      answered.  It holds no response, so every replay of that key is
-      told the first request is still running.
-    - An **unmatched title** is worth keeping until the data model
-      matches it, which is the entire reason one is recorded.  Age is
-      the wrong question to ask of it -- its value is that it
-      accumulates -- so the model answers first and age is only a
-      backstop for a title nobody ever acted on (D20).
-
-    Nothing here is reachable over the API and nothing should be.  The
-    contract deliberately publishes no deletion: retention removes a
-    run's leavings, a caller does not (plan section 5).
+    Nothing here is reachable over the API: retention removes a run's
+    leavings, a caller does not.
 """
 
 # Imports - Python Standard Library

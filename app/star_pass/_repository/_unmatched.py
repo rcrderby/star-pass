@@ -1,36 +1,16 @@
 #!/usr/bin/env python3
 """ Titles the data model did not match, kept for the next model edit.
 
-    An event whose title matches no category is collected under the
-    fallback, which has no need IDs, so it blocks the send and is
-    named.  That is enough to get one run out of the door.  What it is
-    not enough for is the next edit of 'shift_info.yml', which wants
-    every title that has wanted an alias -- across runs, and after the
-    run that showed it has been superseded.
+    Belongs to no run.  A row records **one sighting**, and a run
+    contributes at most one per title, so the count measures how many
+    runs a title turned up in.  A sighting recorded by hand is always
+    a new one.  Read back, sightings are counted into one entry per
+    title.
 
-    So this belongs to no run.  A row records **one sighting**, and a
-    run contributes at most one of them per title: a window holding
-    the same unmatched title four times saw one title, and collecting
-    that window again is the same window read twice rather than a
-    title that came back.  What the count therefore measures is how
-    many **runs** a title turned up in -- which is the question being
-    asked of it, since a title that turns up every month is a category
-    the model is missing and one that turned up once is an event that
-    happened once.  A sighting recorded by hand against no run is
-    always a new one, because nothing else can say it is the same.
-
-    Read back, the sightings are counted into one entry per title,
-    because a list showing the same title eleven times is a list
-    nobody works through.
-
-    Nothing here updates a row.  One thing deletes them, and only
-    together: retention forgets a title outright once the decision has
-    been made -- once the model matches it, which is what recording it
-    was for -- or once nothing has seen it for a very long time.  A
-    title is forgotten whole rather than sighting by sighting, because
-    the count means the runs a title turned up in, and a count that
-    lost its early rows would say a recurring title were a new one
-    (D20).
+    Nothing here updates a row.  Retention forgets a title whole -
+    once the model matches it, or once nothing has seen it for a very
+    long time - rather than sighting by sighting, because a count that
+    lost its early rows would make a recurring title look new.
 """
 
 # Imports - Python Standard Library

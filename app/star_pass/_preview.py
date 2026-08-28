@@ -1,46 +1,19 @@
 #!/usr/bin/env python3
 """ What sending a revision would create, worked out before it does.
 
-    A person about to write to a live volunteer system is shown this
-    first, and the confirmation restates it (D11).  So the numbers here
-    are the ones somebody decides on, and every one of them has to mean
-    exactly what it says.
+    Grouped by opportunity, because several categories can share one
+    Amplify listing.  Counted by shift identity - need ID, date, start
+    and end - because two events that would send the same row create
+    one shift.
 
-    Grouped by opportunity and never by category.  Several categories
-    share one Amplify listing, so grouping by category would show the
-    same listing twice under two names and split a total the reader is
-    about to check against Amplify itself.
+    What Amplify already holds is subtracted rather than mentioned:
+    the shifts an opportunity holds are read live and passed in, and a
+    row already there is reported as skipped.  The live answer is a
+    parameter rather than read here, so this module stays pure and no
+    caller is given a figure without having asked Amplify first.
 
-    Counted by shift identity -- need ID, date, start and end (D16) --
-    and never by how many events there are.  Two events that would send
-    the same row create one shift, and a count of events would promise
-    two.
-
-    In the core rather than the service, because the command line
-    client previews the same run and must be shown the same figures
-    (D1).
-
-    **What Amplify already has is subtracted, not mentioned.**  The
-    shifts an opportunity already holds are read live, by
-    '_opportunities.shifts_in_amplify', and a shift the revision asks
-    for that is already there is reported as skipped rather than
-    counted in what would be created.  The send path re-asks the same
-    way inside its own transaction, so the number somebody confirmed
-    against is the number of rows that will arrive.  A count that
-    included rows Amplify already holds would be a promise the send
-    could not keep.
-
-    The live answer is a parameter rather than something read here.
-    This module is pure, so a caller cannot be told what a send would
-    do without having asked Amplify first -- there is no default that
-    quietly means "nothing exists yet".
-
-    **The send works from the same two answers.**  'asked_for' decides
-    which rows a revision means and 'split_by_existing' decides which
-    of them Amplify already has; a preview reports what they say and a
-    send creates it.  Written twice, the two could differ about a row
-    -- one created that a person was told would not arrive, or one
-    counted that never does -- and nothing would say so.
+    The send works from the same two answers, 'asked_for' and
+    'split_by_existing', so a preview reports what a send creates.
 """
 
 # Imports - Python Standard Library
