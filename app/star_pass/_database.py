@@ -447,7 +447,7 @@ def _lacks_column(
     # is this module's own, so nothing a caller supplies reaches it.
     rows = query(
         connection=connection,
-        statement=f'PRAGMA table_info({table})'  # nosec B608
+        statement=f'PRAGMA table_info({table})'
     )
 
     return column not in {row['name'] for row in rows}

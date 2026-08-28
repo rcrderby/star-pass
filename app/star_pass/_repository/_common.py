@@ -270,7 +270,7 @@ def insert_statement(
     verb = 'INSERT OR IGNORE INTO' if or_ignore else 'INSERT INTO'
 
     return (
-        f'{verb} {table} ({", ".join(columns)}) '  # nosec B608
+        f'{verb} {table} ({", ".join(columns)}) '
         f'VALUES ({placeholders(columns)})'
     )
 
