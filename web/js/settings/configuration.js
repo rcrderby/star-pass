@@ -27,7 +27,7 @@ import { el, icon } from '../dom.js';
  * searched for.  An empty query string is a value rather than an
  * absence: it returns the whole window, which is what makes a search
  * miss impossible on a calendar configured with one. */
-const EVERYTHING = 'everything in the window';
+const EVERYTHING = 'All events';
 
 /* Stood in for a list the deployment configured nothing in. */
 const NOTHING = '—';
@@ -39,16 +39,15 @@ const TERM_GAP = ', ';
  * above is the one a window's dates are read in, and it belongs to
  * the service rather than to whoever is looking at this page. */
 const TIMEZONE_NOTE = (
-  'A run\'s window is read in the service\'s time zone, never in the '
-  + 'one this browser is set to. It is what the dates on every screen '
-  + 'are shown in.'
+  'Runs read and display calendar data in the specified time zone, '
+  + 'never the time zone of the browser.'
 );
 
 /* The note under the calendars table. */
 const SEARCH_NOTE = (
-  'Each term is a separate request against the window. An event no '
-  + 'term returned is left out of the run and listed under Not '
-  + 'collected, where it can be added by hand.'
+  'Each term requires a separate search request to the League '
+  + 'Calendar. Events that do not match a search term are classified '
+  + 'as Not collected, and they may be added to a run manually.'
 );
 
 /* What each row of the settings table is called and how its value is
@@ -60,11 +59,11 @@ const SETTINGS = [
     value: (config) => config.timezone
   },
   {
-    name: 'Match confidence needed',
+    name: 'Match confidence threshold',
     value: (config) => `${config.matchThreshold} out of 100`
   },
   {
-    name: 'Titles never collected',
+    name: 'Filtered event titles',
     value: (config) => config.excludedTitleTerms.join(TERM_GAP) || NOTHING
   }
 ];
@@ -78,36 +77,29 @@ const STORES = [
   {
     name: 'Job logs',
     kept: (retention) => `${retention.jobLogDays} days after the job finished`,
-    note: 'The job itself is not removed with its log. That a send ran '
-      + 'on a date and how it ended outlives the record of what it did, '
-      + 'which is the part naming volunteers and the times they were '
-      + 'asked to be somewhere.'
+    note: 'The job itself is not removed with its log. The record of '
+      + 'when a run occurred and its outcome survives longer than the '
+      + 'run data.'
   },
   {
     name: 'Revisions',
     kept: (retention) => `${retention.revisionDays} days after the run `
-      + 'was last touched',
-    note: 'The first revision and the current one are never removed. '
-      + 'The first is the run as the calendar gave it, and going back '
-      + 'to it is something you can still do; the current one is what '
-      + 'the run holds now.'
+      + 'last experienced activity',
+    note: 'The first and current revisions persist indefinitely. '
+      + 'Intermediate revisions expire.'
   },
   {
     name: 'Unmatched titles',
     kept: (retention) => `${retention.unmatchedTitleDays} days after a `
       + 'title was last seen',
-    note: 'A backstop rather than the rule. What usually removes a '
-      + 'title is the shift data model coming to match it, which is '
-      + 'the edit somebody notes one in order to make. The count is '
-      + 'the value, so nothing shorter would leave one worth reading.'
+    note: 'Unmatched titles expire if they are not added to the '
+      + 'shift data model.'
   },
   {
     name: 'Sent shifts',
-    kept: () => 'kept, and never removed',
-    note: 'What a run put into Amplify is the record a second send '
-      + 'reads to know which rows it already created. A window here '
-      + 'would eventually have a run offering to create shifts Amplify '
-      + 'already holds.'
+    kept: () => 'Indefinite',
+    note: 'Retaining shift data sent to Amplify supports preventing '
+      + 'attempts to create duplicate shifts.'
   }
 ];
 
@@ -195,7 +187,7 @@ export function resolvedSettings(config) {
     el('h3', { class: 'settings-subheading', text: 'Calendars' }),
     pairTable(
       'Calendar',
-      'Searched for',
+      'Search terms',
       config.calendars.map(
         (calendar) => [calendar.key, searchedFor(calendar)]
       )

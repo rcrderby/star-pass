@@ -57,12 +57,9 @@ const PRESETS = [
   { key: CUSTOM, words: 'Custom', ahead: null }
 ];
 
-const TITLE = 'Collect from Google Calendar';
-const LEDE = 'Builds a fresh list to review. Nothing is sent to Amplify.';
-
-/* Under the calendar control. A run is one calendar's, which is why
- * the control is a choice rather than a set of checkboxes. */
-const ONE_CALENDAR = 'One calendar per collection.';
+const TITLE = 'Collect League Calendar events';
+const LEDE = 'Creates a list of events to review. No data is sent to '
+  + 'Amplify.';
 
 /* Said when one of the two dates is missing, which is the only thing
  * this screen refuses on its own -- and it refuses by disabling,
@@ -72,17 +69,8 @@ const ONE_CALENDAR = 'One calendar per collection.';
  * can see is wrong. */
 const DAYS_NEEDED = 'A first day and a last day are both needed.';
 
-/* Under the resolved window. Says why the panel shows a day nobody
- * typed. */
-const HOW_THE_WINDOW_IS_READ = (
-  'The service reads these dates in the zone above, so a late evening '
-  + 'event lands on the day you expect. The day after your last day is '
-  + 'what gets sent, which is how the last day is included.'
-);
-
-/* Said instead, when the window is the run's rather than one being
- * asked for. Nothing is converted and nothing is sent, so the
- * sentence above would be explaining a request nobody is making. */
+/* Said when the window is the run's rather than one being asked
+ * for. Nothing is converted and nothing is sent. */
 const THE_RUNS_OWN_WINDOW = (
   'Collecting again reads the same calendar over the same days, and '
   + 'the run keeps this window. A different window is a different '
@@ -102,45 +90,24 @@ const WINDOW_IS_FIXED = 'Set when the run was collected.';
  * @returns {string} The note.
  */
 function zoneNote(timezone) {
-  return (
-    `These are league dates, read in ${timezone} — not this device's `
-    + 'time zone. The service resolves them the same way the command '
-    + 'line does.'
-  );
+  return `Dates are in ${timezone} time.`;
 }
 
-/** Return what the window's search will and will not pick up.
+/** Return what the window's search leaves out.
  *
- * @param {Object} calendar The chosen calendar, as the configuration
- *     describes it.
  * @param {Array<string>} excluded Terms the deployment never
  *     collects.
  * @returns {Array<Array>} An icon name and a sentence, per note.
  */
-function windowNotes(calendar, excluded) {
-  /* An empty query string searches for nothing in particular, which
-   * is how a calendar says it collects everything on it. A calendar
-   * with one is not also searched for its other terms in any way a
-   * reader needs to know about. */
-  const searchesEverything = calendar.searchTerms.includes('');
-  const terms = calendar.searchTerms
-    .filter((term) => term !== '')
-    .map((term) => `"${term}"`)
-    .join(', ');
+function windowNotes(excluded) {
+  const terms = excluded.map((term) => `"${term}"`).join(', ');
 
   return [
     [
       'funnel',
-      searchesEverything || terms === ''
-        ? `Every event on the ${calendar.key} calendar is collected.`
-        : `Only events found by ${terms} are collected from the `
-          + `${calendar.key} calendar.`
-    ],
-    [
-      'prohibit',
-      `Titles containing ${excluded.join(', ')} are never collected, `
-      + 'and neither are all-day or untitled events. They are listed '
-      + 'after the collection, under Not collected.'
+      `Events that include words like ${terms}, events with no titles, `
+      + 'and all-day events are automatically filtered and listed in a '
+      + '"Not collected" tab.'
     ]
   ];
 }
@@ -468,8 +435,7 @@ export class CollectDrawer {
           },
           calendar.key
         ))
-      ),
-      el('span', { class: 'field-note muted micro', text: ONE_CALENDAR })
+      )
     );
   }
 
@@ -575,10 +541,12 @@ export class CollectDrawer {
           text: `start=${first}  end=${dayAfter(last)}`
         })
         : null,
-      el('span', {
-        class: 'muted micro drawer-summary-note',
-        text: replacing ? THE_RUNS_OWN_WINDOW : HOW_THE_WINDOW_IS_READ
-      })
+      replacing
+        ? el('span', {
+          class: 'muted micro drawer-summary-note',
+          text: THE_RUNS_OWN_WINDOW
+        })
+        : null
     );
   }
 
@@ -598,7 +566,7 @@ export class CollectDrawer {
     return el(
       'div',
       { class: 'drawer-notes' },
-      windowNotes(calendar, this.config.excludedTitleTerms).map(
+      windowNotes(this.config.excludedTitleTerms).map(
         ([glyph, words]) => el(
           'span',
           { class: 'drawer-note' },

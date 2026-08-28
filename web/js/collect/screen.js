@@ -58,14 +58,6 @@ const INTERRUPTED = 'interrupted';
  * buttons, which is where somebody about to leave is looking. */
 const LEDE = 'This action sends no data to Amplify.';
 
-/* Said under a failure. A collection writes its events in one
- * transaction at the end, so a run whose collection failed holds
- * nothing rather than holding half a window. */
-const NOTHING_STORED = (
-  'Nothing was stored, so no run of yours has changed. Trying again '
-  + 'reads the calendar into this same run.'
-);
-
 /* And what a collection the service stopped in the middle of says
  * instead of a reason, because there is none: nothing refused
  * anything and the job carries no detail. It is the same sentence
@@ -425,8 +417,7 @@ export class CollectingScreen {
           icon('copy'),
           copied === this.state.job.id ? 'Copied' : this.state.job.id
         )
-      ),
-      el('span', { class: 'muted micro', text: NOTHING_STORED })
+      )
     );
   }
 

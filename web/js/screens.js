@@ -13,17 +13,15 @@ import { el, icon } from './dom.js';
 const STEPS = [
   [
     'number-circle-one',
-    'Pick a calendar and a window. The service reads the dates in '
-    + 'league time.'
+    'Choose a calendar and a date range, and start a run.'
   ],
   [
     'number-circle-two',
-    'Review what was collected, and what was set aside and why.'
+    'The application reads event data and prepares shifts.'
   ],
   [
     'number-circle-three',
-    'Preview the shifts, then send. Amplify is checked first, so '
-    + 'nothing is created twice.'
+    'Review the shifts, make edits, and send them to Amplify.'
   ]
 ];
 
@@ -33,10 +31,9 @@ const STEPS = [
 const NO_RUNS = 'This page could not load your runs';
 
 const LEDE = (
-  'A run is one collection, from one calendar, over one window of '
-  + 'league dates. Collecting reads the calendar and builds a list of '
-  + 'shifts for you to review — nothing reaches Amplify until you '
-  + 'send it.'
+  'A run is data collected from events in the League Calendar '
+  + 'converted to volunteer shifts that you can review and send to '
+  + 'Amplify.'
 );
 
 /** Return the screen shown when no run has been collected yet.
@@ -72,7 +69,7 @@ export function emptyState(onCollect) {
           onclick: onCollect
         },
         icon('download-simple'),
-        'Collect from Google Calendar'
+        'Start a new run'
       )
     )
   );

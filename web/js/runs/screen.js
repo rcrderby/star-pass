@@ -40,7 +40,7 @@ const LEDE = (
 );
 
 /* What the button above the list says. */
-const COLLECT = 'Collect a new run';
+const COLLECT = 'Start a new run';
 
 /* Said above the list when an address named a run that is not there.
  * A refusal rather than the newest run drawn quietly in its place:
