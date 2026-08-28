@@ -9,6 +9,8 @@
 
 # Imports - Python Standard Library
 import importlib
+from pathlib import Path
+from re import findall
 
 # Imports - Third-Party
 # The real implementation, imported from where it is defined.  The
@@ -22,6 +24,16 @@ import pytest
 
 # Imports - Local
 from star_pass import _defaults
+from star_pass._exceptions import ConfigurationError
+
+# Where a numeric setting is read.  The front end is deliberately not
+# here: it cannot import the core (D17), so its own two settings are a
+# separate change with a separate argument.
+REPOSITORY_ROOT = Path(__file__).parent.parent
+DEFAULTS_MODULES = (
+    REPOSITORY_ROOT / 'app' / 'star_pass' / '_defaults.py',
+    REPOSITORY_ROOT / 'app' / 'star_pass_api' / '_defaults.py'
+)
 
 
 @pytest.fixture
@@ -103,3 +115,74 @@ class TestEnvFileIsLoadedFirst:
         ]
 
         assert not early_reads
+
+
+class TestANumberThatIsNotOne:
+    @pytest.mark.parametrize(
+        'reader, wrong',
+        [
+            (_defaults.int_env, '1O'),
+            (_defaults.int_env, ''),
+            (_defaults.int_env, '1.5'),
+            (_defaults.float_env, '0.5s'),
+            (_defaults.float_env, 'ten')
+        ]
+    )
+    def test_it_is_refused(self, reader, wrong, monkeypatch):
+        monkeypatch.setenv('STAR_PASS_A_NUMBER', wrong)
+
+        with pytest.raises(ConfigurationError):
+            reader('STAR_PASS_A_NUMBER', '1')
+
+    def test_the_refusal_names_the_variable_and_the_value(
+        self, monkeypatch
+    ):
+        # The whole point.  Left to 'int', the message names neither,
+        # and arrives as a traceback through the import machinery.
+        monkeypatch.setenv('HTTP_TIMEOUT', '1O')
+
+        with pytest.raises(ConfigurationError) as error:
+            _defaults.int_env('HTTP_TIMEOUT', '10')
+
+        assert 'HTTP_TIMEOUT' in str(error.value)
+        assert '1O' in str(error.value)
+
+    def test_a_default_that_is_not_a_number_is_refused_too(self):
+        # A default goes through the same conversion a supplied value
+        # does, so a typo in this file is caught by the same check.
+        with pytest.raises(ConfigurationError):
+            _defaults.int_env('STAR_PASS_UNSET_ON_PURPOSE', 'zero')
+
+
+class TestANumberThatIsOne:
+    def test_a_whole_number_is_read(self, monkeypatch):
+        monkeypatch.setenv('STAR_PASS_A_NUMBER', '42')
+
+        assert _defaults.int_env('STAR_PASS_A_NUMBER', '1') == 42
+
+    def test_a_fraction_is_read(self, monkeypatch):
+        monkeypatch.setenv('STAR_PASS_A_NUMBER', '0.25')
+
+        assert _defaults.float_env('STAR_PASS_A_NUMBER', '1') == 0.25
+
+    def test_the_default_is_used_when_it_is_unset(self, monkeypatch):
+        monkeypatch.delenv('STAR_PASS_A_NUMBER', raising=False)
+
+        assert _defaults.int_env('STAR_PASS_A_NUMBER', '7') == 7
+
+
+class TestEveryNumericSettingGoesThroughThem:
+    @pytest.mark.parametrize(
+        'module', DEFAULTS_MODULES, ids=lambda path: path.parent.name
+    )
+    def test_nothing_converts_a_setting_by_hand(self, module):
+        # A setting added later with a bare 'int(getenv(...))' is one
+        # whose typo is a bare traceback again, and nothing else in
+        # the suite would notice.
+        source = module.read_text(encoding='utf-8')
+
+        by_hand = findall(
+            r'(?:int|float)\(\s*getenv\(', source.replace('\n', ' ')
+        )
+
+        assert by_hand == []
