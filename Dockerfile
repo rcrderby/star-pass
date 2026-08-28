@@ -15,21 +15,22 @@
 # and the import root.  No application dependency is installed here,
 # because which ones are installed is the whole difference between
 # them.
-FROM python:3.12-slim AS base
+# Pinned by digest rather than by tag.  '3.12-slim' moves, so two
+# builds of one commit could differ in their base layer, which is
+# what a pinned requirements file exists to prevent one level up.
+# Dependabot's docker ecosystem raises this the way it raises a
+# pinned package.
+FROM python:3.12-slim@sha256:09f7da3bc104798d0afb40bc08d23ab2da20a76130cec1f2ef170848f5d85217 AS base
 
 # Set the working directory
 WORKDIR /app
 
-# Update OS package list, install packages, and clear apt cache
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# Copy the Python pip requirements files.  Both files reach both
-# targets because the runtime file reads the core one, so a target
+# Copy the Python pip requirements files.  All three reach both
+# targets because the runtime file reads the other two, so a target
 # given only the file it installs from could not install from it.
 COPY requirements/requirements_core.txt requirements/requirements_core.txt
+COPY requirements/requirements_service.txt \
+     requirements/requirements_service.txt
 COPY requirements/requirements.txt requirements/requirements.txt
 
 # Upgrade pip once, above both targets

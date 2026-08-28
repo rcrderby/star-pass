@@ -3,20 +3,23 @@
 ## https://docs.github.com/code-security/dependabot
 
 # Every dependency in this repository is pinned to an exact version:
-# the Python requirements to '==', the GitHub Actions to a commit SHA.
-# Pinning is what makes a build reproducible, but nothing then notices a
-# published vulnerability or a security release, because no resolver
-# ever re-resolves. Dependabot supplies that missing half by opening a
-# pull request when a pinned version falls behind, which CI then tests
-# like any other change.
+# the Python requirements to '==', the GitHub Actions to a commit SHA,
+# and the base images to a digest. Pinning is what makes a build
+# reproducible, but nothing then notices a published vulnerability or a
+# security release, because no resolver ever re-resolves. Dependabot
+# supplies that missing half by opening a pull request when a pinned
+# version falls behind, which CI then tests like any other change.
+#
+# So every ecosystem that holds a pin is watched below. One that is
+# not watched is a pin that only goes stale.
 
 version: 2
 
 updates:
   # Python dependencies.  Scanning from the repository root reaches
-  # pyproject.toml and every file under 'requirements', so a version
-  # pinned in both is raised in one pull request and the two stay in
-  # step.
+  # every file under 'requirements', which is where every Python
+  # version is pinned; 'pyproject.toml' reads those files rather than
+  # listing the packages a second time.
   - package-ecosystem: pip
     directory: /
     schedule:
@@ -36,5 +39,19 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: ci
+    labels:
+      - dependencies
+
+  # Base images. Scanning from the repository root reaches the
+  # Dockerfile, which pins 'python' by digest, and 'compose.yaml',
+  # which names 'caddy' by tag. Watched so that a digest is a pin
+  # which stays current rather than one that stops moving.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
     labels:
       - dependencies

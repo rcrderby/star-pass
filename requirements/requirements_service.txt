@@ -1,0 +1,20 @@
+# What only the API service and the front end need, and nothing the
+# scheduled Slack summary does.
+#
+# Separate from 'requirements.txt' rather than written into it because
+# 'pyproject.toml' reads this file and the core one to declare the
+# package's dependencies, and a '-r' line is not a requirement
+# specifier: setuptools refuses one.  So the two lists are files, and
+# 'requirements.txt' is the entry point that reads both.
+
+# API service
+fastapi==0.141.1
+uvicorn==0.52.4
+
+# The front end's connection to the API service. Async, and it passes
+# an event stream through as it arrives rather than at the end, which
+# is what watching a job needs.
+httpx2==2.12.0
+
+# JSON Schema validation
+jsonschema==4.26.0

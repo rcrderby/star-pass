@@ -19,21 +19,8 @@ classifiers = [
   "Private :: Do Not Upload",
   "Programming Language :: Python :: 3.12"
 ]
-dependencies = [
-  "fastapi==0.141.1",
-  "uvicorn==0.52.4",
-  "python_dotenv==1.2.3",
-  "pyyaml==6.0.3",
-  "dateparser==1.4.2",
-  "jsonschema==4.26.0",
-  "pandas==3.0.5",
-  "python-Levenshtein==0.27.4",
-  "thefuzz==0.22.1",
-  "requests==2.34.2",
-  "slack_sdk==3.43.0"
-]
 description = "Tool to automate manual volunteer management in Galaxy Digital Amplify."
-dynamic = ["version"]
+dynamic = ["dependencies", "version"]
 name = "star-pass"
 readme = "README.md"
 requires-python = ">= 3.12"
@@ -69,6 +56,16 @@ include = ["app", "app.*"]
 # repeated here; only fields listed in [project] 'dynamic' belong in
 # this table.
 version = {attr = "app.__version__"}
+# Read from the requirements files rather than listed again here.  A
+# second list is a second place for a version to be pinned and a
+# package to be forgotten, and the pip files are the ones the image
+# installs, so they are the ones that have to be right.  Both files
+# are named because setuptools reads requirement specifiers and not
+# '-r' lines; 'requirements.txt' is the entry point that reads both.
+dependencies = {file = [
+  "requirements/requirements_core.txt",
+  "requirements/requirements_service.txt"
+]}
 
 [tool.coverage.run]
 # Measure the application only.  The previous '--cov=.' also measured

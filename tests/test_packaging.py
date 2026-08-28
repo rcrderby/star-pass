@@ -82,3 +82,58 @@ def test_the_data_directories_are_not_packaged() -> None:
     # the top level itself.
     assert not is_packaged(name='data')
     assert not is_packaged(name='models')
+
+
+def declared_dependencies() -> Set[str]:
+    """ Return the requirement files the package declares from. """
+    configuration = tomllib.loads(
+        (REPOSITORY_ROOT / 'pyproject.toml').read_text(encoding='utf-8')
+    )
+
+    return set(
+        configuration['tool']['setuptools']['dynamic']['dependencies'][
+            'file'
+        ]
+    )
+
+
+def pinned_in(name: str) -> Set[str]:
+    """ Return the packages one requirements file pins. """
+    return {
+        line.split('==')[0].strip().lower()
+        for line in (REPOSITORY_ROOT / name).read_text(
+            encoding='utf-8'
+        ).splitlines()
+        if '==' in line and not line.strip().startswith('#')
+    }
+
+
+def test_the_package_declares_from_the_requirements_files() -> None:
+    # One list rather than two.  A second list is a second place for a
+    # version to be pinned and a package to be forgotten, and it is
+    # the pip files that the image installs.
+    assert declared_dependencies() == {
+        'requirements/requirements_core.txt',
+        'requirements/requirements_service.txt'
+    }
+
+
+def test_nothing_is_pinned_in_two_files() -> None:
+    # The core file is read by the Slack image alone and by the
+    # runtime file, so a package in both could come to be pinned
+    # twice differently.
+    core = pinned_in('requirements/requirements_core.txt')
+    service = pinned_in('requirements/requirements_service.txt')
+
+    assert core & service == set()
+
+
+def test_the_entry_point_reads_both_lists() -> None:
+    # 'requirements.txt' is what the image installs from, and it has
+    # to reach everything the package declares.
+    text = (
+        REPOSITORY_ROOT / 'requirements' / 'requirements.txt'
+    ).read_text(encoding='utf-8')
+
+    assert '-r requirements_core.txt' in text
+    assert '-r requirements_service.txt' in text
