@@ -29,9 +29,8 @@ import { phrase } from '../phrases.js';
 
 /* What the tab says above the groups. */
 const LEDE = (
-  'Everything in this window that will not become a shift, and why. '
-  + 'Only events the calendar search never looked for can be added to '
-  + 'the run by hand.'
+  'These events will not become volunteer shifts. Only events the '
+  + 'calendar search never looked for can be added to the run by hand.'
 );
 
 /* Said when the collection took everything its window held. */
@@ -44,11 +43,8 @@ const NOTHING_LEFT_OUT = (
  * model, and what that list is. */
 const NOTED_HEADING = 'Noted for the model';
 const NOTED_NOTE = (
-  'Titles no category matched, kept for the next edit of the shift '
-  + 'data model. The collections record what they find themselves, and '
-  + 'one can be noted by hand as well. This list belongs to no run, '
-  + 'and a title leaves it when the data model matches it, so there is '
-  + 'nothing here to remove.'
+  'These events are recorded for the next update of the collection '
+  + 'model.'
 );
 const NOTHING_NOTED = (
   'No title has been noted yet, and no collection has found one.'
@@ -67,7 +63,7 @@ const NO_DATE = 'No date';
 
 /* Said of an event with a day and no times, which is what all day
  * means on a calendar. */
-const ALL_DAY = 'All day';
+const ALL_DAY = 'All-day';
 
 /* The one reason a row may be pulled in under, which is what the
  * line naming the calendar's query strings explains. Read to pick

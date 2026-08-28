@@ -24,7 +24,7 @@
     "fuzzy": "Matched to {category} by wording alone, scoring {score} of 100. Worth a look."
   },
   "row": {
-    "calendarTimes": "RCR Calendar times: {start} to {end}",
+    "calendarTimes": "League Calendar times: {start} to {end}",
     "noOpportunity": "Unable to match to an opportunity",
     "unassigned": "Unassigned",
     "duplicate": "Identical to \"{title}\" earlier in this run. Repeated rows are dropped, so this one creates nothing.",
@@ -39,13 +39,13 @@
   "uncollected": {
     "search": "Outside the calendar search",
     "excluded": "Excluded by title",
-    "allday": "All day",
+    "allday": "All-day",
     "untitled": "Untitled"
   },
   "uncollectedNote": {
-    "search": "No configured search term found these, so nobody looked for them; a second, wider read of the same window did. They are the only events here that can be added to the run by hand.",
-    "excluded": "The title carries a term this deployment never collects, whatever else is true about the event. These cannot be added to a run.",
-    "allday": "All day, so there are no times to build a shift from. These cannot be added to a run.",
+    "search": "No configured search term found these events, so they were excluded. You may note these events to improve the collection model and add these events to the run.",
+    "excluded": "The title carries a term the deployment excludes. You may note these events to improve the collection model, although you may not add them to the run.",
+    "allday": "You may not add these events to the run.",
     "untitled": "No title, so there is nothing to match an opportunity on, and nothing to note for the model either. These cannot be added to a run."
   },
   "revision": {

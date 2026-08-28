@@ -19,7 +19,7 @@ const SHIFTS_TAB = 'Shifts to create';
 const UNCOLLECTED_TAB = 'Not collected';
 
 /* The last entry in the run picker. */
-const NEW_RUN = 'Collect a new run';
+const NEW_RUN = 'Start a new run';
 
 /* What the revision picker's two actions say. */
 /* Over the identifier the callout shows. The run has an id because
@@ -32,15 +32,10 @@ const NEW_RUN = 'Collect a new run';
 const SEAL = 'Save a revision now';
 const REVERT = 'Revert';
 
-/* What the revision picker says under its list. Both facts are the
- * service's and neither is carried out here: going back adds a
- * revision rather than deleting one, and the first revision is the
- * run as the calendar gave it. */
+/* What the revision picker says under its list. */
 const ABOUT_REVISIONS = (
-  'Going back adds a revision holding what that one held. Nothing '
-  + 'between them is deleted, so a revert can itself be reverted. '
-  + 'Going back to revision 1 drops the events added by hand and '
-  + 'offers them again under Not collected.'
+  'Reverting opens a new revision that duplicates the one you go '
+  + 'back to. Nothing is deleted, so a revert can itself be reverted.'
 );
 
 /** Return the sentence under the run label.
@@ -64,7 +59,7 @@ export function metaText(run) {
   );
 
   return (
-    `Collected ${when}, changes save as you make them`
+    `Collected ${when}`
     + ` · ${counted(events, 'event')}`
     + ` · ${counted(shifts, 'shift')}`
   );

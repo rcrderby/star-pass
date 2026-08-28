@@ -46,11 +46,12 @@ import { notedKey, uncollectedView } from './uncollected.js';
  * offsets anywhere, the second sentence would describe notes that are
  * not there. */
 const TIMES_MATCH = (
-  'Shift times match the RCR Calendar times. Edit any time directly; '
-  + 'changes save as you make them.'
+  'Shift times match League Calendar times. Edit shift opportunities, '
+  + 'start and end times, or available slots; changes save as you '
+  + 'make them.'
 );
 const TIMES_OFFSET = (
-  'Shift times are set deliberately earlier or later than the RCR '
+  'Shift times are set deliberately earlier or later than the League '
   + 'Calendar times, by the amount each opportunity calls for. The '
   + 'note under each time says what that opportunity\'s setting is, '
   + 'and it stays put when you edit a time. Changes save as you make '
