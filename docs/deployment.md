@@ -19,17 +19,29 @@ Two processes, and in a deployment two containers: only the API holds
 the Amplify credential, and the frontend is the one facing a browser.
 The browser talks to the frontend, which attaches the API credential
 to what it forwards - so no credential is ever in the page, and there
-is nothing for a script injected into it to steal. Writes have to
-carry a token the frontend put in a readable cookie, in a header,
-which is what an off-site page cannot do.
+is nothing for a script injected into it to steal.
 
-The frontend needs `STAR_PASS_SESSION_SECRET` as well as
-`STAR_PASS_API_TOKEN`, and refuses to start without either. Both are
-commented out in `.env.example`, so a checkout that predates them has
-them commented out too; `docker compose` stops with the name of
-whichever is missing. It also refuses to start with no page to serve:
-it exists to give a browser one and to carry its session, so a proxy
-with nothing behind it would be reachable and unusable.
+**Every request through the frontend needs a session**, which the
+middleware mints on the way out of the page. Writes need two things
+more: the token derived from that session, in a header, which is what
+an off-site page cannot set, and nothing saying the request came from
+another site.
+
+The frontend sets the Content-Security-Policy and the two headers
+beside it on every answer it makes. The Caddyfile sets the same three,
+so the proxy reinforces the policy rather than providing it, and a
+test holds the two copies to each other. Run under bare `uvicorn` as
+above, the page still carries its policy.
+
+Four values are required and every service checks for the ones it
+needs. The frontend needs `STAR_PASS_SESSION_SECRET` and
+`STAR_PASS_API_TOKEN`; the API needs `STAR_PASS_API_TOKEN`,
+`AMPLIFY_TOKEN` and `GCAL_TOKEN`. All four are commented out in
+`.env.example`, so a plain copy stops at startup naming whichever is
+missing rather than failing at the first request to Amplify. The
+frontend also refuses to start with no page to serve: it exists to
+give a browser one and to carry its session, so a proxy with nothing
+behind it would be reachable and unusable.
 
 ## Running both behind Caddy
 
@@ -44,6 +56,20 @@ with a published port:
 it terminates TLS, redirects plain HTTP to it, and passes the request
 to the frontend. Neither application service is reachable from outside
 the host.
+
+**Caddy publishes on one interface.** `STAR_PASS_BIND_ADDRESS` names
+it, and the default is the loopback address, so a host that says
+nothing serves star-pass to itself alone. A tailnet deployment sets it
+to that host's tailnet address; `0.0.0.0` publishes on every
+interface, which on a host with a public one means the internet.
+
+**All three services are hardened the same way**: every capability
+dropped, a read-only root filesystem, and a limit on memory and
+processes. Caddy alone keeps `NET_BIND_SERVICE`, because its binary
+carries that capability and an exec that cannot be granted it fails
+outright, and Caddy alone has a writable `/tmp`, because its
+certificate authority writes through a temporary file. The database is
+on a named volume, which stays writable under a read-only root.
 
 They sit on two networks rather than one. Caddy and the frontend share
 the first; the frontend and the API share the second. Caddy is
@@ -90,15 +116,19 @@ them with `docker compose exec` or by forwarding a port, not by adding
 a route: a second way in to the credential-holding service is the
 thing this arrangement exists to prevent.
 
-Copy `.env.example` to `.env` before the first `docker compose up`.
-Docker creates a directory where the credential file is mounted if the
-file is not there.
+Run `python3 scripts/setup_env.py` before the first `docker compose
+up`. Docker creates a directory where the credential file is mounted
+if the file is not there, and a plain copy of `.env.example` leaves
+every credential unset.
 
 Both application containers run as an unprivileged account rather than
 as root, and the database volume is created owned by it. Two things
-follow. The credential file has to be readable by something other than
-its owner -- what `cp .env.example .env` produces is, and a file
-tightened to `0600` is not. And a volume that already holds a database
+follow. The credential file is bind-mounted, which keeps the host
+file's mode and ownership, so the container reads it through a
+supplementary group: `setup_env.py` writes the file `0640`, and
+`STAR_PASS_ENV_GID` names the group. It is `1000` by default, which is
+right where the host account is the first on the machine; set it to
+`id -g` where it is not. And a volume that already holds a database
 keeps the ownership it was created with, because Docker copies the
 image directory's ownership onto an empty volume only: a deployment
 that predates this either discards its volume with `docker compose
