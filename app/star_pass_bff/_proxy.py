@@ -2,7 +2,8 @@
 """ Passing a browser's request to the API, with the credential added.
 
     A thin proxy and nothing else: it attaches the credential, checks
-    that a write came from this page, and gets out of the way.  **No
+    that the browser has a session and that a write came from this
+    page, and gets out of the way.  **No
     domain logic** -- what an answer means is the API's to say and the
     contract's to shape, and a front-end that started interpreting
     answers would be a second implementation of the thing the API
@@ -18,6 +19,10 @@
     job event stream is one of the contract's operations, and a proxy
     that buffered it would turn a job somebody is watching into
     silence followed by a dump at the end.
+
+    **Every method is checked, not only the writes.**  A read needs a
+    session.  A write needs that session, the token derived from it in
+    a header, and nothing saying it came from another site.
 
     Same origin, so there is **no CORS configuration at all**.  If
     that changes, the boundary has leaked rather than moved.
@@ -105,16 +110,19 @@ async def proxied(
 
         Raises:
             HTTPException:
-                403 when a write did not come from this page, and 502
-                when the API cannot be reached.
+                403 when the browser has no session or a write did not
+                come from this page, and 502 when the API cannot be
+                reached.
 
         Returns:
             answer (Response):
                 What the API said, streamed when the API streams.
     """
 
+    session = _session_or_refuse(request=request)
+
     if request.method in WRITE_METHODS:
-        _check_the_write_is_ours(request=request)
+        _check_the_write_is_ours(request=request, session=session)
 
     client: httpx2.AsyncClient = request.app.state.api
 
@@ -226,26 +234,29 @@ def _headers_for(
     return headers
 
 
-def _check_the_write_is_ours(
+def _session_or_refuse(
         request: Request
-) -> None:
-    """ Refuse a write that did not come from this page.
+) -> str:
+    """ Return the session this request arrived with, or refuse it.
 
-        Three things have to hold, because any one of them can be
-        argued around: the browser has a session, the token derived
-        from it arrived in a header, and nothing says the request came
-        from another site.
+        Asked of every method.  A request without one is forwarded
+        carrying the service's credential and no check, so the session
+        is what stands between network reach and the database (D14).
+
+        The middleware mints one on the way out of the page, so a
+        browser has a session before its own code asks for anything.
 
         Args:
             request (Request):
-                The write to check.
+                The request to check.
 
         Raises:
             HTTPException:
                 403, saying what to do about it.
 
         Returns:
-            None.
+            session (str):
+                The session it arrived with.
     """
 
     session = session_of(request=request)
@@ -255,6 +266,37 @@ def _check_the_write_is_ours(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=NO_SESSION
         )
+
+    return session
+
+
+def _check_the_write_is_ours(
+        request: Request,
+        session: str
+) -> None:
+    """ Refuse a write that did not come from this page.
+
+        Three things have to hold: the browser has a session, the
+        token derived from it arrived in a header, and nothing says
+        the request came from another site.  The session is checked
+        for every method and arrives here as an argument; a header is
+        what an off-site form cannot set, so the token is a write
+        concern.
+
+        Args:
+            request (Request):
+                The write to check.
+
+            session (str):
+                The session it arrived with.
+
+        Raises:
+            HTTPException:
+                403, saying what to do about it.
+
+        Returns:
+            None.
+    """
 
     if not carries_our_token(request=request, session=session):
         raise HTTPException(

@@ -102,6 +102,8 @@ class TestWhatEveryAnswerCarries:
         name: str
     ) -> None:
         client, _api = opened()
+        # A read without a session is refused.
+        client.get('/')
 
         answer = client.get(RUNS_PATH)
 
