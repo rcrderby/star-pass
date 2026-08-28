@@ -1,22 +1,14 @@
 #!/usr/bin/env python3
 """ Saying no in the shape the API says it.
 
-    A caller of this service sees problem documents (RFC 9457)
-    whichever side refused: the API's arrive already shaped and are
-    passed through untouched, and the few this service raises itself
-    are shaped here to match.  A front-end that refused in its own
-    format would make every client handle two.
+    A caller sees problem documents (RFC 9457) whichever side refused.
+    The API's are passed through untouched; the few this service
+    raises are shaped here to match.
 
-    Written here rather than imported from the API package, which
-    would pull the core in with it.  Nothing in this process holds
-    domain logic, and the import graph is where that stays true (D17).
-
-    The refusal handled is the framework's base one rather than the
-    web framework's subclass of it, because not every refusal here is
-    raised by code in this package: the page mounted at the root
-    answers a path it does not hold by raising the base, and a handler
-    registered on the subclass alone would let that one out in a
-    different shape.
+    The handler is registered on Starlette's base HTTPException rather
+    than FastAPI's subclass: the page mounted at the root raises the
+    base for a path it does not hold, and a handler on the subclass
+    alone would let that out in a different shape.
 """
 
 # Imports - Third-Party

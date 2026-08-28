@@ -1,35 +1,20 @@
 #!/usr/bin/env python3
 """ The browser's session, and the token that proves a request is ours.
 
-    **The one module that decides what a session is.**  Everything
-    else asks it two questions -- which session is this, and is this
-    request carrying the right token -- and that is what keeps the
-    answer replaceable.  It is the arrangement the API service uses
-    for the same reason: reading the credential in exactly one place
-    is what makes swapping a static token for an identity provider a
-    change to one module rather than to every route (D3).
+    The one module that decides what a session is.  Everything else
+    asks it which session a request carries and whether the token
+    beside it is right.
 
-    **A session carries nothing today.**  There is no login: a single
-    person reaches this over a network that controls access (D14), and
-    an authentication boundary in front of the whole system is
-    deferred by decision.  So the session is an opaque identifier and
-    nothing else -- not a name, not a scope, not a token.  Adding a
-    signed payload, or a store to look one up in, is what happens the
-    day OIDC lands and the session starts carrying an identity, and
-    that day the change is here.
+    A session is an opaque identifier and nothing else: there is no
+    login, so it carries no name, scope or token.  The CSRF token is
+    an HMAC of that identifier rather than a stored value, so the pair
+    is checked without a store and knowing one does not give you the
+    other, and restarting the service logs nobody out.
 
-    **The token is derived rather than stored.**  It is an HMAC of the
-    session identifier, so the pair can be checked without a store,
-    and knowing one does not give you the other.  Signing rather than
-    storing is what lets this service be restarted, or eventually run
-    twice, without logging anybody out.
-
-    What makes a write safe is three things and not one: the cookie is
-    'SameSite=Strict', so a browser sends it on nothing an off-site
-    page initiated; the token has to arrive in a **header**, which an
-    off-site form cannot set; and the origin of a write is checked.
-    Any one of them can be argued around, which is why there are
-    three.
+    Three things make a write ours: the cookie is 'SameSite=Strict',
+    so a browser sends it on nothing an off-site page started; the
+    token arrives in a header, which an off-site form cannot set; and
+    the origin is checked.
 """
 
 # Imports - Python Standard Library

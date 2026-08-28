@@ -4,27 +4,13 @@
         python scripts/setup_env.py
 
     Four values stand between a fresh clone and a deployment that
-    starts: the two upstream credentials, which come from Amplify and
-    from Google, and the two this deployment signs with, which are
-    generated.  The instructions this replaces asked for all four by
-    hand, and every part of that was worse than doing it here:
+    starts.  AMPLIFY_TOKEN and GCAL_TOKEN come from Amplify and from
+    Google and are asked for without echoing; STAR_PASS_API_TOKEN and
+    STAR_PASS_SESSION_SECRET are generated.  A value already set is
+    never overwritten, so running this again fills in what is missing
+    and touches nothing else.  The file is written 0640.
 
-    - **A pasted credential goes into the shell's history**, where it
-      outlives the terminal and is read by anything that reads the
-      history file.  This asks for one without echoing it and never
-      prints it back.
-    - **'>>' is not idempotent.**  Running the documented append twice
-      leaves a file with the key in it twice, and which one wins is a
-      question about the reader of the file rather than about the
-      deployment.  This refuses to write a key that is already set, so
-      running it again fills in what is missing and touches nothing
-      else.
-    - **A file of credentials should not be world-readable**, and
-      nothing in a documented sequence of shell commands makes it
-      otherwise.  This writes it 0600.
-
-    What it does not do is check that a credential works.  That is
-    Settings' Test control, and the answer belongs to Amplify.
+    Whether a credential works is Settings' Test control to answer.
 """
 
 # Imports - Python Standard Library
@@ -41,25 +27,20 @@ REPOSITORY_ROOT = Path(__file__).parent.parent
 TEMPLATE = REPOSITORY_ROOT / '.env.example'
 TARGET = REPOSITORY_ROOT / '.env'
 
-# What both services refuse to start under.  Stated here rather than
-# imported, because this script runs before anything is installed and
-# an import of the application would be a dependency on the thing it
-# exists to make runnable.  'app/star_pass_api/_defaults.py' and
-# 'app/star_pass_bff/_defaults.py' hold the same number, and the test
-# beside this script holds the three to each other.
+# Shortest generated value both services accept.  The two service
+# '_defaults' modules hold the same number and a test holds the three
+# to each other.
 MINIMUM_LENGTH = 32
 
-# What the shell reports for a command an interrupt ended: 128 plus
-# the signal, and SIGINT is 2.
+# What a shell reports for a command an interrupt ended: 128 plus the
+# signal, and SIGINT is 2.
 INTERRUPTED = 130
 
-# How many bytes of randomness a generated value carries.  Its text is
-# longer than the minimum above, which is the point: nothing generated
-# here can fail the check the services make.
+# Bytes of randomness in a generated value.  Its text is longer than
+# MINIMUM_LENGTH, so nothing generated here fails the services' check.
 GENERATED_BYTES = 32
 
-# The two this deployment signs with, which are generated, and the two
-# that come from somewhere else and have to be asked for.
+# The two generated here, and the two asked for.
 GENERATED = (
     'STAR_PASS_API_TOKEN',
     'STAR_PASS_SESSION_SECRET'
@@ -69,9 +50,8 @@ ASKED = (
     ('GCAL_TOKEN', 'Google Calendar API key')
 )
 
-# What the template writes for a value nobody has filled in yet.  A
-# line carrying one of these is not a value set: it is the placeholder
-# still standing, and overwriting it is what this script is for.
+# What the template writes for a value nobody has filled in.  A line
+# carrying one is not a value set.
 PLACEHOLDERS = (
     'your-amplify-api-token',
     'your-google-calendar-api-key'
@@ -81,9 +61,8 @@ PLACEHOLDERS = (
 def _setting(line: str) -> Optional[Tuple[str, str]]:
     """ Return the name and value a line sets, if it sets one.
 
-        A commented line sets nothing.  Neither does one carrying a
-        placeholder the template wrote, which is the state a fresh
-        copy is in and the state this script exists to leave.
+        A commented line sets nothing, and neither does one carrying a
+        placeholder.
 
         Args:
             line (str):
@@ -161,14 +140,8 @@ def short(name: str, value: str) -> Optional[str]:
 def without_the_template_block(lines: List[str]) -> List[str]:
     """ Return the template without the part that describes itself.
 
-        The template opens by saying that it is one and how the script
-        turns it into '.env'.  Copied through, that leaves the written
-        file calling itself a template and telling its reader how to
-        create the file they already have.
-
-        The block is the lines before the first blank one, which is
-        what the template is arranged to make true: what follows the
-        blank line is the head of the file this writes.
+        The block is the lines before the first blank one; what
+        follows that blank line is the head of the file this writes.
 
         Args:
             lines (list):
@@ -192,9 +165,7 @@ def written(lines: List[str], values: Dict[str, str]) -> List[str]:
     """ Return the file with each value written where it belongs.
 
         A name the template mentions is set on the line that mentions
-        it, commented or not, so the comment above it goes on
-        describing the value below it.  A name it does not mention is
-        appended.
+        it, commented or not.  A name it does not mention is appended.
 
         Args:
             lines (list):
@@ -334,11 +305,8 @@ def main() -> int:
         ''.join(written(lines, values)),
         encoding='utf-8'
     )
-    # The group bit is what the API container reads the file through:
-    # a bind mount keeps the host file's mode, and the image runs as
-    # UID 1000.  A group rather than everyone, because on a host where
-    # each account has a group of its own the two are the same thing,
-    # and where they are not this is still the smaller claim.
+    # The API container reads the file through its group: a bind
+    # mount keeps the host file's mode, and the image runs as UID 1000.
     os.chmod(TARGET, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP)
 
     print(f'Wrote {TARGET.name}, readable by you and your group.')
@@ -349,12 +317,8 @@ def main() -> int:
 def run() -> int:
     """ Run it, and answer a Ctrl+C the way a command should.
 
-        A prompt is the whole middle of this script, so Ctrl+C is a
-        thing somebody does here rather than an accident: they meant
-        to stop, and a traceback tells them a program broke instead.
-        Nothing is written on the way out, because every value is
-        gathered before the single write -- so what to say is that
-        it stopped, and the file is as it was.
+        Every value is gathered before the single write, so an
+        interrupt leaves the file as it was.
 
         Returns:
             code (int):

@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
 """ Refusing to start half-configured.
 
-    Twelve-factor, and the reason it matters here: everything this
-    service does needs the credential and the signing secret, so a
-    process that started without one would work until somebody used
-    it.  A front-end that answered page loads and failed every write
-    is worse than one that did not start.
-
-    The page itself is checked for the same reason read the other way.
-    This service exists to serve one and to hold its session, so a
-    process with no page behind the proxy is reachable and unusable,
-    and says so only to whoever opens it.
+    Everything this service does needs the API token and the signing
+    secret, and it exists to serve a page, so all three are checked
+    while the application is built rather than at the first request.
 """
 
 # Imports - Local
@@ -18,12 +11,7 @@ from . import _defaults
 
 
 class ConfigurationError(Exception):
-    """ The service cannot run on what it was given.
-
-        Its own exception rather than the core's: this package does
-        not import the core, and must not -- the internet-facing
-        process holds no domain logic and no credential mount (D17).
-    """
+    """ The service cannot run on what it was given. """
 
 
 def check_configuration() -> None:
