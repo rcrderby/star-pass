@@ -36,7 +36,7 @@ from ._security import (
     SCOPE_RUNS_READ,
     SCOPE_RUNS_WRITE
 )
-from ._storage import in_database, read
+from ._storage import in_database, in_the_database
 
 # Constants
 SSE_MEDIA_TYPE = 'text/event-stream'
@@ -139,7 +139,7 @@ async def get_job(
 
     del principal
 
-    job = await read(
+    job = await in_the_database(
         lambda connection: _find(
             connection=connection,
             job_id=job_id
@@ -246,7 +246,7 @@ async def _events(
     silent_for = 0.0
 
     while not await request.is_disconnected():
-        job = await read(
+        job = await in_the_database(
             lambda connection: _find(
                 connection=connection,
                 job_id=job_id
@@ -258,7 +258,7 @@ async def _events(
             # about it, and nothing that would be true to send.
             return
 
-        reported = await read(
+        reported = await in_the_database(
             lambda connection: JobRepository(
                 connection=connection
             ).events(job_id=job_id, after=after)
@@ -346,7 +346,7 @@ async def stream_job_events(
 
     del principal
 
-    job = await read(
+    job = await in_the_database(
         lambda connection: _find(
             connection=connection,
             job_id=job_id
@@ -430,7 +430,7 @@ async def resume_job(
                 The job, queued again.
     """
 
-    found = await read(
+    found = await in_the_database(
         lambda connection: resumable(
             connection=connection,
             job_id=job_id
@@ -445,7 +445,7 @@ async def resume_job(
     if refusal is not None:
         raise conflict(detail=refusal)
 
-    await read(
+    await in_the_database(
         lambda connection: JobRepository(connection=connection).requeue(
             job_id=job.id
         )
@@ -462,7 +462,7 @@ async def resume_job(
     request.app.state.runner.submit(job_id=job.id, work=resumed)
 
     return to_job_view(
-        job=await read(
+        job=await in_the_database(
             lambda connection: _find(connection=connection, job_id=job.id)
         )
     )

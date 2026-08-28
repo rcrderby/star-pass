@@ -232,11 +232,11 @@ class TestTheOrderTheLoopReadsIn:
         # the events -- so writing after the second is writing into the
         # gap.
         jobs.start(job_id=job_id)
-        real_read = _jobs.read
+        real_work = _jobs.in_the_database
         reads = {'count': 0}
 
         async def read_then_write(work: Any) -> Any:
-            result = await real_read(work)
+            result = await real_work(work)
             reads['count'] += 1
 
             if reads['count'] == 2:
@@ -256,7 +256,7 @@ class TestTheOrderTheLoopReadsIn:
 
             return result
 
-        monkeypatch.setattr(_jobs, 'read', read_then_write)
+        monkeypatch.setattr(_jobs, 'in_the_database', read_then_write)
 
         sent = frames(running_client.get(events_path(job_id=job_id)).text)
 
@@ -277,18 +277,18 @@ class TestTheOrderTheLoopReadsIn:
         jobs.start(job_id=job_id)
         jobs.finish(job_id=job_id, status=JOB_STATUS_SUCCEEDED)
 
-        real_read = _jobs.read
+        real_work = _jobs.in_the_database
         results: List[str] = []
 
         async def note(work: Any) -> Any:
-            result = await real_read(work)
+            result = await real_work(work)
             results.append(
                 'job' if isinstance(result, Job) else 'events'
             )
 
             return result
 
-        monkeypatch.setattr(_jobs, 'read', note)
+        monkeypatch.setattr(_jobs, 'in_the_database', note)
         running_client.get(events_path(job_id=job_id))
 
         # The first is the check that the job exists; the loop follows.
@@ -360,11 +360,11 @@ def finish_after(
         Returns the counter, so a test can assert the stream kept
         looking rather than ending at its first.
     """
-    real_read = _jobs.read
+    real_work = _jobs.in_the_database
     counted = {'count': 0}
 
     async def read_and_maybe_finish(work: Any) -> Any:
-        result = await real_read(work)
+        result = await real_work(work)
 
         if isinstance(result, Job) and result.status == JOB_STATUS_RUNNING:
             counted['count'] += 1
@@ -381,7 +381,7 @@ def finish_after(
 
         return result
 
-    monkeypatch.setattr(_jobs, 'read', read_and_maybe_finish)
+    monkeypatch.setattr(_jobs, 'in_the_database', read_and_maybe_finish)
 
     return counted
 
