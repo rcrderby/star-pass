@@ -225,7 +225,7 @@ export class SendingScreen {
     ));
   }
 
-  /** Ask for the interrupted job to be run again (D10).
+  /** Ask for the interrupted job to be run again.
    *
    * The same movement as a send and deliberately so: the preview said
    * what is left, the confirmation restated it, and this is the third

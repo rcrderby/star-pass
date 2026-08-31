@@ -10,7 +10,7 @@
  * `default-src 'self'` with no `unsafe-inline`, so a font from
  * fonts.gstatic.com is refused by the browser rather than merely
  * discouraged; and the deployment is meant to run on a tailnet with no
- * route out (D14), where a font from anywhere else never arrives.
+ * route out, where a font from anywhere else never arrives.
  * Monospace is the system stack: nothing is downloaded for it and the
  * handoff asks only that numbers, times, identifiers and paths are set
  * in one.

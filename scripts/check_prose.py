@@ -69,6 +69,10 @@ NARRATION = (
 # it.
 DECISION = re.compile(r'\(D\d+[^)]*\)|\bD\d+\b')
 
+# What a line of prose opens with.  '/*' and '/**' are here because a
+# block comment's first line carries prose like any other.
+MARKS = ('#', '*', '//', '/*', '"""')
+
 # What silences one line, for the exception that is genuinely one.
 ESCAPE = 'prose-ok'
 
@@ -308,10 +312,7 @@ def _narrates(path: Path, text: str) -> List[str]:
     for number, line in enumerate(text.splitlines(), 1):
         bare = line.lstrip()
 
-        if not (
-            number in inside or bare.startswith('#') or bare.startswith('*')
-            or bare.startswith('//') or bare.startswith('"""')
-        ):
+        if not (number in inside or bare.startswith(MARKS)):
             continue
 
         # A line that says why it is an exception is one.

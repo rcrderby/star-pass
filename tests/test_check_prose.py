@@ -84,6 +84,18 @@ class TestWhatItCatches:
             for problem in check.check(written(tmp_path, body))
         )
 
+    def test_a_decision_on_a_block_comment_s_first_line(
+            self, check, tmp_path
+    ):
+        # A '/*' line opens with a slash, so it is not caught by the
+        # marks a '*' continuation line is.
+        body = '/* One run is one calendar (D5).\n */\nconst x = 1;\n'
+
+        assert any(
+            'cites a decision' in problem
+            for problem in check.check(written(tmp_path, body, 'sample.js'))
+        )
+
     def test_narration_in_the_body_of_a_docstring(self, check, tmp_path):
         # A docstring's body is indented prose, opening with none of
         # the marks a comment does.

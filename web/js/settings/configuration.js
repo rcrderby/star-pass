@@ -27,9 +27,9 @@ const NOTHING = '—';
 /* How a list of terms is joined. */
 const TERM_GAP = ', ';
 
-/* The note under the settings table.  D16 in a sentence: the zone
- * above is the one a window's dates are read in, and it belongs to
- * the service rather than to whoever is looking at this page. */
+/* The note under the settings table.  The zone above is the one a
+ * window's dates are read in, and it belongs to the service rather
+ * than to whoever is looking at this page. */
 const TIMEZONE_NOTE = (
   'Runs read and display calendar data in the specified time zone, '
   + 'never the time zone of the browser.'

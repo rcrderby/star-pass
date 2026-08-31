@@ -105,7 +105,7 @@ CMD ["python", "/app/__main__.py", "-s"]
 
 # Everything star-pass does: the API service, the frontend and the
 # command line, which ship together so that the core and the service
-# cannot drift (D17).
+# cannot drift.
 FROM base AS full
 
 # Install the requirements from the requirements file, which reads the
@@ -124,7 +124,7 @@ COPY /models /models
 # reads from the same kind of path ('<app>/../web').  It ships in the
 # image because it can only work from that service's origin: the token
 # a write carries is a cookie the page reads, and a write from another
-# origin is refused (D4, D18).
+# origin is refused.
 COPY /web /web
 
 # Create the directory the SQLite database lives in, so a deployment

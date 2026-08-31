@@ -1,4 +1,4 @@
-/* What a send restates before it happens (D11).
+/* What a send restates before it happens.
  *
  * The first thing that cannot be undone, put through the dialog both
  * of them share: the count, the run and its window, and what each

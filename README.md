@@ -134,10 +134,10 @@ that host's tailnet address and bring the stack back up:
 docker compose up -d
 ```
 
-D14 decided this runs with no route out, and binding the address is
-what makes that a thing the deployment enforces rather than one it
-assumes. `0.0.0.0` publishes on every interface, which on a host with
-a public one means the internet.
+The deployment is meant to run with no route out, and binding the
+address is what enforces that rather than assuming it. `0.0.0.0`
+publishes on every interface, which on a host with a public one means
+the internet.
 
 Then confirm the Amplify credential before doing anything else, from
 **Settings** in the page or from the command line:
