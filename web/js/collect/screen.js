@@ -1,31 +1,20 @@
 /* A collection as it happens, and as it is picked back up.
  *
- * The same shape as the send: the request answers with a job, the job
- * runs in the service, and this screen is a reading of what that job
- * reports.  Nothing here is remembered between frames that could not
- * be rebuilt from the job's own event log, which a browser opening the
- * stream fresh is given from the first frame -- so leaving and coming
- * back draws the same screen.
+ * The same shape as the send: the request answers with a job, and
+ * this screen is a reading of what that job reports.  Nothing is
+ * remembered between frames that could not be rebuilt from the job's
+ * event log, so leaving and coming back draws the same screen.
  *
- * **Nothing reaches Amplify from here**, which is why leaving is
- * offered plainly and why there is no confirmation in front of it.
- * The collection reads a calendar, reads opportunity titles, and
- * writes to this service's own database.
+ * **Nothing reaches Amplify from here**, so leaving is offered
+ * plainly and with no confirmation in front of it.
  *
- * **There is no Cancel.**  The design draws one, saying that
- * cancelling leaves no trace because nothing has been written yet;
- * neither half survives contact with the API.  The run is minted by
- * the request and is in the list from the moment it answers, and the
- * contract publishes no way to stop a job.  A button that could only
- * stop watching is what "Leave this running" already is, and offering
- * it twice under two names -- one of them promising a rollback that
- * does not happen -- would be worse than not offering it.
+ * **There is no Cancel.**  The run is minted by the request and is in
+ * the list from the moment it answers, and the contract publishes no
+ * way to stop a job.  A button that could only stop watching is what
+ * "Leave this running" already is.
  *
- * A failed collection leaves the run it minted, empty.  So "Try
- * again" is a *recollection* of that run rather than a second
- * collection: a fresh one would leave a stranded empty run behind
- * every failure, and replacing what this run holds is precisely what
- * the attempt was trying to do.
+ * A failed collection leaves the run it minted, empty, so "Try again"
+ * is a *recollection* of that run rather than a second collection.
  */
 
 import { ApiError, getRun, recollectRun } from '../api.js';

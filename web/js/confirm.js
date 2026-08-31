@@ -1,27 +1,22 @@
-/* The gate in front of the things that cannot be undone (D11).
+/* The gate in front of the things that cannot be undone.
  *
  * There are two: a send, which creates shifts Amplify has no undo
  * for, and a deletion, which destroys the only record on this side of
- * what a run held.  They are one object -- the command line has one
- * `confirmed()` for both, and this is the same shape for the browser.
+ * what a run held.  One object for both, the shape the command line's
+ * `confirmed()` already has.
  *
- * Its job is to make somebody read the summary, which is why it
- * **restates** rather than asks: what is about to happen is on the
- * card above the button, and the caller supplies it.  A typed
- * confirmation was rejected for both: it tests typing, and on a task
- * done once a month it becomes something the hands do while the eyes
+ * Its job is to make somebody read the summary, so it **restates**
+ * rather than asks: what is about to happen is on the card above the
+ * button, supplied by the caller.  A typed confirmation tests typing,
+ * and on a monthly task becomes something the hands do while the eyes
  * are elsewhere.
  *
- * On a different surface from the control that opened it, which is
- * the click that does the irreversible thing
- * is not in the place the last click was.
+ * On a different surface from the control that opened it, so the
+ * click that does the irreversible thing is not in the place the last
+ * click was.
  *
- * What differs between the two is what each restates and what its
- * button says, so that is what a caller passes. What is the same --
- * the heading, the warning in the alert colour, the two buttons, the
- * focus taken and given back -- is here, because two copies of it
- * would drift and the duplicate check said so the moment the second
- * one appeared.
+ * A caller passes what differs: what each restates and what its
+ * button says.  What is the same is here.
  */
 
 import { el, icon } from './dom.js';

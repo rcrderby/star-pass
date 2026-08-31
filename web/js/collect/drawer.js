@@ -2,38 +2,20 @@
  * window will and will not pick up.
  *
  * **Nothing about the window is worked out in the browser's own
- * zone.**  A preset computed in the visitor's zone is a
- * live bug in the design this replaces, so "this month" means the
- * month it is where the service is, and the zone is shown rather than
- * assumed.  `format.today` is the only place the current moment
- * becomes a day, and it is given the zone the configuration
- * publishes.
+ * zone.**  "This month" means the month it is where the service is,
+ * and `format.today` is the only place the current moment becomes a
+ * day.  The field says "Last day"; the request carries the day after
+ * it, and the panel shows both.
  *
- * The one conversion this screen does make is the other direction:
- * the field says "Last day" because that is how a person means a
- * window, and the request carries the day after it, because no
- * request takes an inclusive day.  The panel shows both, so what is
- * about to be asked for is on screen rather than implied.
+ * What the search collects is read, never written here.
  *
- * What the search does and does not collect is read, never written
- * here: the query strings belong to a calendar and the excluded terms
- * to the deployment, and both are published for exactly this.
- *
- * **Collecting again offers no window and no calendar.**  A run is one
- * calendar over one set of days, and `POST /runs/{id}/recollect`
- * carries neither: it reads the same calendar over the same days and
- * the run keeps its own window.  So the controls are shown holding
- * what the run already has and refused, the way the calendar control
- * already was -- a field a person can type into and a summary
- * restating what it says would both be describing a request that does
- * not exist.
+ * **Collecting again offers no window and no calendar.**
+ * `POST /runs/{id}/recollect` carries neither, so the controls are
+ * shown holding what the run already has, and refused.
  *
  * **A double-clicked button is this screen's problem.**  Collect and
- * recollect take no `Idempotency-Key`, so nothing behind this makes a
- * second arrival of the same request safe -- two would be two runs,
- * or two jobs on one run.  Every control is disabled from the moment
- * one is in the air, which is the rule the review screen already
- * keeps for a different reason.
+ * recollect take no `Idempotency-Key`, so two arrivals would be two
+ * runs.  Every control is disabled from the moment one is in the air.
  */
 
 import { el, fill, icon } from '../dom.js';
@@ -282,25 +264,15 @@ export class CollectDrawer {
 
   /** Take a typed date.
    *
-   * Typing one is choosing a custom window, whichever preset was lit
-   * a moment ago: a preset still showing would be describing a window
-   * that is no longer the one in the fields.
+   * Typing one is choosing a custom window, whichever preset was
+   * lit a moment ago.
    *
-   * Either date set so that the window reads backwards carries the
-   * last day to the day after the first, rather than leaving the
-   * panel refusing a window nobody meant to ask for -- picking a
-   * month by its first day is the ordinary way in, and the last day
-   * still holding the previous month's is not a mistake worth a
-   * refusal.  **The last day is the one that moves, whichever was
-   * typed**: it is the end of the window a first day begins, so a
-   * last day typed before that beginning is the one of the pair that
-   * cannot be meant.
+   * Either date set so the window reads backwards carries the last
+   * day to the day after the first.  **The last day moves, whichever
+   * was typed**: it ends the window a first day begins.
    *
-   * **An emptied field is not a day to count from.** A date input
-   * reports an empty string for a cleared or half-typed value, and
-   * 'dayAfter' of one is an invalid date that throws rather than
-   * returning a day.  So the window is left as the reader has it and
-   * the panel says a day is missing, which is what is wrong with it.
+   * **An emptied field is not a day to count from.**  The window is
+   * left as it is and the panel says a day is missing.
    *
    * @param {string} which `first` or `last`.
    * @param {string} value The date typed.
@@ -370,17 +342,13 @@ export class CollectDrawer {
       this.state.busy = false;
       this.state.failure = error;
 
-      /* A recollection refused reads the run again, so that the count
-       * this drawer shows -- and the one it would send next -- is
-       * what the run holds now.  Without it the refusal is one a
-       * reader cannot act on: it says the run has been edited since
-       * the number was read, and pressing the button again sends the
-       * same stale number and is refused identically, for as long as
-       * anybody keeps pressing.
+      /* A recollection refused reads the run again, so the count
+       * this drawer shows is what the run holds now.  Without it,
+       * pressing the button again sends the same stale number and is
+       * refused identically.
        *
-       * Read, not retried.  What is discarded has to be what somebody
-       * was shown and agreed to, so the corrected number is put in
-       * front of them and the second press is theirs. */
+       * Read, not retried: the corrected number is put in front of
+       * the reader and the second press is theirs. */
       await this.reread();
 
       this.draw();
