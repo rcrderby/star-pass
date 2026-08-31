@@ -1,29 +1,16 @@
 /* The only way this page talks to anything.
  *
  * It reaches `/api` on its own origin and nothing else.  The frontend
- * attaches the Amplify-holding service's credential on the way past;
- * this page holds none and must never be given one (D4).
+ * attaches the credential on the way past; this page holds none.
  *
- * Three things are this module's alone, so that no screen has to
- * remember them:
+ * Three things are this module's alone, so no screen remembers them:
+ * a write carries the `star_pass_csrf` cookie's value in the
+ * `X-Star-Pass-CSRF` header; four operations require an
+ * `Idempotency-Key` naming one thing somebody did; and a failure
+ * arrives as a problem document (RFC 9457), carrying a reason below
+ * 500 and, at 500 and above, only a reference to the service's log.
  *
- *   - A write carries the `star_pass_csrf` cookie's value in the
- *     `X-Star-Pass-CSRF` header.  Together with the session cookie
- *     being SameSite=Strict and the frontend checking the origin, that
- *     is what says a write came from this page (D18).
- *   - Four operations require an `Idempotency-Key`, and the key names
- *     one thing somebody did.  A retry of the same action sends the
- *     same key and is answered with the original result rather than
- *     writing twice; a new action mints a new one.
- *   - A failure arrives as a problem document (RFC 9457).  Below 500 it
- *     carries a reason the caller can act on, and at 500 and above it
- *     deliberately does not -- the reason is in the service's log under
- *     the same reference, because an internal failure can carry a
- *     credential or a volunteer's name.
- *
- * Only headers on the frontend's allowlist reach the API: `accept`,
- * `content-type` and `idempotency-key`.  Nothing else a page sets is
- * forwarded, so setting one here would be setting it nowhere.
+ * Only `accept`, `content-type` and `idempotency-key` reach the API.
  */
 
 /* Where the API is, from this page.  Same origin, which is why there
@@ -135,8 +122,7 @@ export class ApiError extends Error {
 /** Return the value of one cookie this page can read.
  *
  * The session cookie is httpOnly and is deliberately not reachable
- * here; the token derived from it is the readable one, which is the
- * whole shape of D18.
+ * here; the token derived from it is the readable one.
  *
  * @param {string} name Cookie to read.
  * @returns {string} Its value, or an empty string when there is none.
@@ -302,15 +288,12 @@ export function listRevisions(runId, options = {}) {
 
 /** Fix what a run holds now as a numbered revision.
  *
- * Editing changes the revision a run is working in as it goes, so
- * this is what makes a point in that work something to come back to.
  * Nothing is deleted: the revision that was current keeps its rows
  * and stays readable at its own number, and the work moves to a new
  * one holding a copy.
  *
- * The key names this seal. Sealing is not idempotent in itself --
- * twice is two revisions -- so a retry after a lost answer is given
- * the first answer rather than opening a second one.
+ * The key names this seal.  Sealing twice is two revisions, so a
+ * retry after a lost answer is given the first answer.
  *
  * @param {string} runId Which run.
  * @param {string} key The `Idempotency-Key` naming this seal.
@@ -379,22 +362,15 @@ export function getVersion(options = {}) {
 
 /** Ask Amplify whether the service's credential still works.
  *
- * **The only thing published about that credential, and deliberately
- * so**: no endpoint replaces one, because an endpoint able to
- * overwrite the service's own production credential is the
- * highest-value target in the system for the least benefit (D8).
- * Rotation is changing the secret and restarting.
+ * **The only thing published about that credential.**  No endpoint
+ * replaces one: rotation is changing the secret and restarting.
  *
- * The answer is whether one small authenticated read was accepted and
- * the last four characters, which is enough to tell two credentials
- * apart and no use to whoever reads them. A credential Amplify
- * refuses comes back as an answer rather than as a failure -- whether
- * it works is what was asked.
+ * The answer is whether one small authenticated read was accepted,
+ * and the last four characters.  A credential Amplify refuses is an
+ * answer rather than a failure.
  *
- * A `POST` because it is not free: every call reaches somebody else's
- * service. It is rate-limited per caller, and asking too often is
- * refused with the limit named in the reason. It stores nothing and
- * takes no `Idempotency-Key`.
+ * A `POST`, rate-limited per caller, storing nothing and taking no
+ * `Idempotency-Key`.
  *
  * @param {Object} [options] Passed through to the request.
  * @returns {Promise<Object>} Whether it works, and its last four
@@ -406,19 +382,14 @@ export function testCredential(options = {}) {
 
 /** Apply one thing somebody did to a run's current revision.
  *
- * **One call per user action, not per event.** A nudge over thirty
- * selected rows is one operation naming thirty, which the service
- * applies whole or not at all and records as one log entry. Thirty
- * calls would be thirty entries, thirty keys, and a half-applied
- * action if one of them failed.
+ * **One call per user action, not per event.**  A nudge over thirty
+ * selected rows is one operation naming thirty, applied whole or not
+ * at all and recorded as one log entry.
  *
- * The key names the action. A second arrival of the same key with the
- * same request is answered with what the first one answered rather
- * than writing again; the same key carrying a *different* request is
- * refused, and a key whose first request has not finished yet is a
- * conflict. So a key is minted per action and never reused for the
- * next one -- two nudges are two actions and must move the shift
- * twice.
+ * The key names the action: the same key with the same request is
+ * answered from the first, with a *different* request is refused, and
+ * before the first has finished is a conflict.  A key is minted per
+ * action and never reused - two nudges must move the shift twice.
  *
  * @param {string} runId Which run.
  * @param {Array<Object>} operations What to do, in order.
@@ -517,18 +488,13 @@ export function recordUnmatchedTitle(calendar, title, runId, options = {}) {
 /** Ask for a calendar window to be collected into a new run.
  *
  * Answers with a job as soon as the run exists rather than when it
- * has been filled: reading a calendar and naming every opportunity it
- * finds takes longer than a request should be held open. The run is
- * in the list from that moment, so somebody who closed the page can
- * find it again.
+ * has been filled, so the run is in the list from that moment.
  *
- * **No `Idempotency-Key`, deliberately**, so nothing here makes a
- * second arrival of the same request safe: two would be two runs.
- * Preventing that is the screen's job, and the screen does it by
- * refusing to have two of these in the air at once.
+ * **No `Idempotency-Key`, deliberately**: two arrivals would be two
+ * runs, and the screen prevents that by refusing to have two of these
+ * in the air at once.
  *
- * The window's `end` is the day **after** the last day to cover. No
- * request takes an inclusive day, which is why the caller converts.
+ * The window's `end` is the day **after** the last day to cover.
  *
  * @param {string} calendar Which configured calendar to read.
  * @param {Object} window The days to cover.
@@ -571,7 +537,7 @@ export function recollectRun(runId, expectedChangeCount, options = {}) {
 /** Delete a run and everything it holds.
  *
  * Refused when the run has sent, and separately while something is
- * working on it (D24). Whether it may go at all is the run's own
+ * working on it. Whether it may go at all is the run's own
  * `mayDelete`, so a caller draws its control from the answer rather
  * than working the rule out; asking anyway is answered by the
  * refusal, which carries its own reason.
@@ -613,7 +579,7 @@ export function getPreview(runId, options = {}) {
  * and the browser is not what holds it open.
  *
  * `expectedShiftCount` is the preview's `totals.willCreate` -- the
- * number the confirmation restated (D11). The service refuses when it
+ * number the confirmation restated. The service refuses when it
  * no longer matches what a send would create, which is what closes
  * the case of a tab left open while the run was edited or Amplify
  * gained a shift.
@@ -649,29 +615,15 @@ export function getJob(jobId, options = {}) {
 
 /** Ask for an interrupted job to be run again.
  *
- * **The third way a write to Amplify starts**, and the only one whose
- * request restates nothing: a job left queued or running when the
- * service stopped is marked interrupted at startup and never resumed
- * on its own (D10), because a send that resumed itself would write to
- * a live volunteer system from state rebuilt after a crash. So a
- * person asks, and the screen puts the send confirmation in front of
- * the asking (D11) the way a retry does.
+ * A job left queued or running when the service stopped is marked
+ * interrupted at startup and never resumed on its own.  A resumed
+ * send reads every opportunity immediately before writing to it and
+ * creates exactly the rows the interrupted attempt did not.  The job
+ * keeps its identifier and its event log, which is why a stream can
+ * carry two `sending_started` frames.
  *
- * What runs is the ordinary work pointed at a job that already
- * exists. A resumed send reads every opportunity immediately before
- * writing to it and creates exactly the rows the interrupted attempt
- * did not, so nothing has to remember how far that attempt got --
- * Amplify answers it.
- *
- * The job keeps its identifier, so the screen that asked goes on
- * following the same job. Its event log keeps the interrupted
- * attempt's frames as well, which is why a stream can carry two
- * `sending_started` frames and why the second one begins an attempt
- * rather than continuing the first.
- *
- * **No `Idempotency-Key`**, and none would help: a job may only be
- * resumed while it is interrupted, so the second arrival of this
- * request is refused by the state of the job rather than by a key.
+ * **No `Idempotency-Key`**: a job may only be resumed while it is
+ * interrupted.
  *
  * @param {string} jobId Which job to run again.
  * @param {Object} [options] Passed through to the request.
@@ -687,21 +639,14 @@ export function resumeJob(jobId, options = {}) {
 /** Follow what a job reports, until it is over.
  *
  * An `EventSource` rather than polling: the service holds the
- * connection open and the frontend passes it through unbuffered, so a
- * frame arrives when the job writes it.
+ * connection open and the frontend passes it through unbuffered.
  *
- * **Reattachable, and that is what "leave this running" means.** A
- * browser that opens this stream with no history is sent the job's
- * whole event log from the first frame, because a client that is not
- * resuming names no last event. So a reload during a send is
- * answered with everything it missed rather than with whatever
- * happens next, and a screen rebuilt from it knows as much as one
- * that never went away. A browser that *is* resuming sends
+ * **Reattachable.**  A browser opening this stream with no history
+ * is sent the job's whole event log; one that *is* resuming sends
  * `Last-Event-ID` itself.
  *
- * The stream is closed here when the job's own last frame arrives.
- * Left open, the connection would end anyway and the browser would
- * reconnect to a job that has nothing further to say, forever.
+ * The stream is closed when the job's last frame arrives, or the
+ * browser would reconnect to a job with nothing more to say.
  *
  * @param {string} jobId Which job.
  * @param {Object} handlers What to do with what arrives.

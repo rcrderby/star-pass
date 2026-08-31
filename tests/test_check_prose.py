@@ -107,6 +107,18 @@ class TestWhatItLeavesAlone:
 
         assert check.check(written(tmp_path, body)) == []
 
+    def test_a_jsdoc_tag_block_is_fields_not_prose(self, check, tmp_path):
+        # '@param' is what 'Args:' is, so a well-documented function
+        # is not punished for documenting its arguments.
+        body = (
+            '/** Title.\n'
+            + ' * @param {string} a One.\n' * 14
+            + ' */\n'
+            'export function f(a) { return a; }\n'
+        )
+
+        assert check.check(written(tmp_path, body, 'sample.js')) == []
+
     def test_prose_within_the_limits(self, check, tmp_path):
         body = (
             '""" Title.\n\n    Two lines of it.\n"""\n\n\n'

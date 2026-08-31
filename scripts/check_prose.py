@@ -40,6 +40,10 @@ COMMENT_LIMIT = 10
 # Field blocks that end the prose of a docstring.
 FIELDS = ('Args:', 'Returns:', 'Raises:', 'Attributes:', 'Yields:')
 
+# What ends the prose of a JavaScript comment.  A '@param' block is
+# what 'Args:' is, so neither counts as prose.
+TAG = '@'
+
 # Phrasings that narrate rather than state.  Deliberately few and
 # specific: a check that guessed would be argued with rather than
 # fixed.
@@ -156,6 +160,7 @@ def _too_long(path: Path, text: str) -> List[str]:
     run = 0
     start = 0
     first = True
+    documents = False
 
     for number, line in enumerate(text.splitlines(), 1):
         bare = line.lstrip()
@@ -164,16 +169,29 @@ def _too_long(path: Path, text: str) -> List[str]:
             or bare.startswith('//') or bare.startswith('/*')
         )
 
+        if bare.startswith('/**'):
+            documents = True
+
         if comment:
-            run += 1
-            start = start or number
-        else:
-            # A JavaScript module opens with a block where Python
-            # has a module docstring, so it is allowed that length.
-            heads_a_module = (
-                path.suffix == '.js' and first and start == 1
-            )
-            limit = MODULE_LIMIT if heads_a_module else COMMENT_LIMIT
+            # A tag block is fields rather than prose, and ends the
+            # run being counted.
+            if bare.lstrip('*/ ').startswith(TAG):
+                comment = False
+            else:
+                run += 1
+                start = start or number
+
+        if not comment:
+            # A JavaScript module opens with a block where Python has
+            # a module docstring; a '/**' block above a function is
+            # that function's docstring.  Each is allowed the length
+            # its Python equivalent is.
+            if path.suffix == '.js' and first and start == 1:
+                limit = MODULE_LIMIT
+            elif documents:
+                limit = DOCSTRING_LIMIT
+            else:
+                limit = COMMENT_LIMIT
 
             if run:
                 first = False
@@ -185,6 +203,7 @@ def _too_long(path: Path, text: str) -> List[str]:
                 )
             run = 0
             start = 0
+            documents = False
 
     return problems
 
