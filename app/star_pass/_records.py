@@ -16,38 +16,33 @@
     documented as such on the field.  Their queries live in
     '_repository'; the distinction matters to nobody above this layer.
 """
-# A record holds one field per stored column, which is more attributes
-# than a class carrying behavior should have.  The limit is aimed at
-# classes that do something; every class here only holds values.
+# Every class here holds values and no behavior, so the attribute
+# limit does not apply.
 # pylint: disable=too-many-instance-attributes
 
 # Imports - Python Standard Library
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple
 
-# The row Amplify receives, and so the unit of duplicate safety and of
-# idempotency (D16): need ID, date, start and end.  Never a count -- a
-# count cannot say *which* shifts a send would repeat.
+# The row Amplify receives, and so the unit of duplicate safety and
+# of idempotency: need ID, date, start and end.  Never a count, which
+# cannot say *which* shifts a send would repeat.
 #
-# Here rather than with the function that builds one, because the
-# record of what was sent stores exactly these four columns and
-# '_derived' works them out from an event.  Written in either place it
-# would be a second answer to "is this the same shift", which is the
-# one question D16 says must have only one.
+# Here rather than beside either caller: the sent record stores these
+# four columns and '_derived' works them out from an event, and "is
+# this the same shift" has one answer.
 ShiftIdentity = Tuple[str, str, str, str]
 
-# Statuses a run holds.  The first four are the order it moves through
-# them: 'collecting' is set when the run is created, before any event
-# exists, and 'partly_sent' is reachable because a send that fails part
-# way through leaves shifts in Amplify that cannot be taken back.
+# Statuses a run holds.  The first four are the order it moves
+# through them.  'collecting' is set when the run is created, before
+# any event exists; 'partly_sent' is reachable because a send that
+# fails part way leaves shifts in Amplify that cannot be taken back.
 #
-# 'failed' is not on that path.  It is where a run whose **first**
-# collection raised comes to rest (D31), and it is terminal only in the
-# sense that nothing moves out of it by itself: collecting the window
-# again is how such a run is recovered, and it may not be sent, because
-# it holds no revision and a send of nothing would still stamp
-# 'sent_at'.  A recollection that fails goes back to 'unsent' instead,
-# because what it was working over is still there.
+# 'failed' is off that path: it is where a run whose **first**
+# collection raised comes to rest.  Collecting the window again
+# recovers it, and it may not be sent, because it holds no revision.
+# A recollection that fails goes back to 'unsent', because what it
+# was working over is still there.
 RUN_STATUS_COLLECTING = 'collecting'
 RUN_STATUS_UNSENT = 'unsent'
 RUN_STATUS_PARTLY_SENT = 'partly_sent'
@@ -222,16 +217,12 @@ class Revision:
 class Opportunity:
     """ An Amplify opportunity a run creates shifts under.
 
-        Resolved while the run is collected and stored with it, not
-        looked up when a preview is asked for: every review row is
-        labelled with an opportunity title, so a lookup deferred to
-        preview time would leave the main screen unable to name
-        anything.
+        Resolved while the run is collected and stored with it, so
+        every review row can be labelled with its opportunity title.
 
-        **What Amplify says about the listing, and nothing else.**  How
-        a shift is timed under it belongs to the role that creates the
-        shift, because one listing can be named by categories that time
-        it differently (D25).
+        Holds what Amplify says about the listing and nothing else.
+        How a shift is timed under it belongs to the role that creates
+        the shift.
 
         Attributes:
             need_id (str):
@@ -282,12 +273,10 @@ class EventRole:
         An event produces a shift per role: a scrimmage wanting both
         skating and non-skating officials carries two.
 
-        **The timing is the role's, not the opportunity's.**  What a
-        shift asks of its event is decided by the category the event
-        matched, and one Amplify listing can be named by categories
-        that time it differently -- need 905196 is named by three, on
-        three sets of offsets.  Recorded per role, so a run can hold
-        two events sending to one listing on different timings (D25).
+        The timing is the role's, not the opportunity's.  One Amplify
+        listing can be named by categories that time it differently,
+        so a run can hold two events sending to one listing on
+        different timings.
 
         Attributes:
             need_id (str):
@@ -333,16 +322,14 @@ class EventRole:
 class Event:
     """ One calendar event as a revision holds it.
 
-        Times are 24-hour 'HH:MM' strings in the league's own time
-        zone, and the date is a separate ISO date, because that is how
-        an event is read, edited and displayed.  The calendar times are
+        Times are 24-hour 'HH:MM' strings in the league's time zone
+        and the date is a separate ISO date.  The calendar times are
         what the calendar said; the shift times are those plus the
         opportunity's offsets, and are what reaches Amplify.
 
-        What is not here is derived: how long the shift is, whether an
-        opportunity's maximum shortened it, whether another event in
-        the revision would create the same shift, and whether the event
-        blocks the run for want of a match.
+        Shift length, whether a maximum shortened it, whether another
+        event would create the same shift, and whether the event
+        blocks the run are all derived elsewhere.
 
         Attributes:
             id (str):
@@ -415,24 +402,14 @@ class Event:
 
 
 # Why something in a run's window did not become one of its events.
-# Three of them are what the calendar filter drops: a title the
-# deployment never collects, an all-day event with no times to build a
-# shift from, and an event with no title to match.  The fourth is the
-# one the filter never sees -- an event the configured query strings
-# did not return -- and it is the only one a person may pull in, since
-# the other three describe events that cannot become a correct shift
-# rather than events nobody looked for.
-# How a revision came to exist.  Stored rather than worked out: the
-# first is always revision 1 and the third always continues from the
-# revision below it, but nothing else separates a revision a
-# recollection replaced from one a seal opened, and only the revert
-# knows which revision it went back to.
-#
-# An identifier rather than the sentence it used to be.  The sentence
-# was written by the core, stored in the row, and printed unchanged by
-# both clients -- so neither could word it, and changing the wording
-# would have left every revision already recorded saying the old
-# thing beside a new one saying the new.
+# Three are what the calendar filter drops: an excluded title, an
+# all-day event with no times, and an event with no title.  The
+# fourth is one the query strings did not return, and it is the only
+# one a person may pull in.
+# How a revision came to exist.  Stored rather than worked out:
+# nothing separates a revision a recollection replaced from one a
+# seal opened, and only the revert knows which revision it went back
+# to.  An identifier, so each client words it.
 REVISION_COLLECTED = 'collected'
 REVISION_RECOLLECTED = 'recollected'
 REVISION_CONTINUED = 'continued'
@@ -461,14 +438,9 @@ class UnmatchedTitle:
     """ A title the data model did not match, and how often it has been.
 
         What is stored is a **sighting**, and a run contributes at
-        most one of them per title: a window holding the same
-        unmatched title four times saw one title, and collecting that
-        window again is one window read twice rather than a title that
-        came back.  So the count is the number of **runs** a title
-        turned up in, which is the question being asked of it.  What
-        is read back is one entry per title in a calendar, with the
-        sightings counted, because a list showing the same title
-        eleven times is a list nobody works through.
+        most one per title, so the count is the number of runs a title
+        turned up in.  What is read back is one entry per title in a
+        calendar, with the sightings counted.
 
         Attributes:
             calendar (str):
@@ -503,16 +475,12 @@ class UnmatchedTitle:
 class UncollectedEvent:
     """ Something in a run's window that did not become an event.
 
-        Stored while the run is collected rather than worked out when
-        somebody asks: the count is shown on every load of the review
-        screen, and reading the calendar again to produce it would
-        make looking at a run cost a Google request and give the run
-        a second source of truth about its own window.
+        Stored while the run is collected, so the review screen shows
+        the count without a second calendar read.
 
-        Every field but the identifier and the reason may be absent,
-        because the reasons describe exactly the events that are
-        missing something: an untitled event has no title and an
-        all-day event has no times.
+        Every field but the identifier and the reason may be absent:
+        an untitled event has no title and an all-day event has no
+        times.
 
         Attributes:
             id (str):
@@ -559,17 +527,12 @@ class UncollectedEvent:
 class LogEntry:
     """ One line of a run's change log.
 
-        Written when the change is made rather than assembled by a
-        client, so the log survives a reload and reads the same in a
-        browser and a terminal.
+        Written when the change is made, so the log survives a reload
+        and reads the same in a browser and a terminal.
 
-        **What was done comes first, and the identity has defaults.**
-        Whoever performs an operation knows what it did and none of
-        the rest: which run, which revision, who and when are the
-        repository's to stamp on as it stores the entry.  So an
-        operation builds one of these from its action and its values
-        alone, and what comes back from the repository is the same
-        record with its identity filled in.
+        An operation builds one from its action and values alone.
+        Which run, which revision, who and when are stamped on by the
+        repository as it stores the entry.
 
         Attributes:
             action (str):
@@ -659,12 +622,10 @@ JOB_KINDS = (
     JOB_KIND_SEND
 )
 
-# What an idempotency key may be used on.  Every job is one of these,
-# because a job is asked for once and must not be started twice; but
-# an edit is answered in the request that asked for it and starts no
-# job, so the two vocabularies are not the same one.  A key is per
-# operation, so the same value used on an edit and a send is two
-# reservations rather than one replaying the other's answer.
+# What an idempotency key may be used on.  Every job is one, because
+# a job must not be started twice; an edit is answered in its own
+# request and starts no job.  A key is per operation, so the same
+# value used on an edit and a send is two reservations.
 OPERATION_EDIT = 'edit'
 OPERATION_REVERT = 'revert'
 OPERATION_SEAL = 'seal'
@@ -675,12 +636,9 @@ IDEMPOTENT_OPERATIONS = JOB_KINDS + (
 )
 
 # What a reviewer may ask to be done to the events in a revision.
-# Named here beside the other vocabularies the contract publishes,
-# because three separate things read them: the operation a request
-# carries, the table in '_editing' that answers it, and the wordings
-# each client keeps for the change log.  Distinct from
-# 'IDEMPOTENT_OPERATIONS' above, which is what a key may be claimed
-# on -- a whole call of these is one 'edit'.
+# Read by the operation a request carries, the table in '_editing'
+# that answers it, and each client's change-log wordings.  A whole
+# call of these is one 'edit' to 'IDEMPOTENT_OPERATIONS' above.
 OP_SET_CATEGORY = 'set_category'
 OP_UNASSIGN = 'unassign'
 OP_SET_START = 'set_start'
@@ -703,20 +661,17 @@ EDIT_OPERATIONS = (
     OP_UNDO
 )
 
-# What a change-log entry can record: every edit, plus the one action
-# that is not one.  Pulling in an event the collection left out
-# changes what the revision holds without being an operation over the
-# events already in it, and the log has to be able to say so.
+# What a change-log entry can record: every edit, plus pulling in an
+# event the collection left out, which changes what the revision
+# holds without being an operation over the events in it.
 LOG_ADDED = 'added'
 LOG_ACTIONS = EDIT_OPERATIONS + (LOG_ADDED,)
 
-# Where a job is in its life.  'interrupted' is the one that needs
-# explaining: it means the service stopped while the job was in hand,
-# so nobody knows how far it got.  It is separate from 'failed' because
-# a failure was observed and an interruption was not, and separate from
-# 'running' because nothing is running it now.  Resuming one is a human
-# action, never automatic, since a send that resumed itself would write
-# to a live volunteer system from state rebuilt after a crash.
+# Where a job is in its life.  'interrupted' means the service
+# stopped while the job was in hand, so nobody knows how far it got:
+# separate from 'failed', which was observed, and from 'running',
+# which nothing is doing now.  Resuming one is always a human
+# action.
 JOB_STATUS_QUEUED = 'queued'
 JOB_STATUS_RUNNING = 'running'
 JOB_STATUS_SUCCEEDED = 'succeeded'
@@ -739,10 +694,9 @@ JOB_STATUSES_FINISHED = (
     JOB_STATUS_INTERRUPTED
 )
 
-# Statuses that mean shifts of this run are in Amplify.  Amplify has
-# no way to take a shift back, so anything that would replace the
-# events describing what was sent is refused for a run in one of
-# these.
+# Statuses that mean shifts of this run are in Amplify.  Anything
+# that would replace the events describing what was sent is refused
+# for a run in one of these.
 RUN_STATUSES_SENT = (
     RUN_STATUS_PARTLY_SENT,
     RUN_STATUS_SENT
@@ -759,15 +713,12 @@ JOB_STATUSES_UNFINISHED = (
 
 # Who is holding a job, and so who may end it when it is found
 # unfinished.  The service and the command line write into one
-# database (D2), and a sweep of what a stopped process left behind has
-# to leave alone what it never held: a command line run that swept
-# everything unfinished would mark a live send interrupted.
+# database, and a sweep must leave alone what it never held.
 #
-# The role rather than the process.  One service serves a deployment
-# (D5), so a job held by 'service' and still unfinished at startup
-# belongs to the process that just stopped; a command line process is
-# short-lived and waits for its own job, so one still unfinished is
-# one whose process is gone.
+# The role rather than the process.  One service serves a deployment,
+# so a job held by 'service' and unfinished at startup belongs to the
+# process that just stopped; a command line process waits for its own
+# job, so one still unfinished is one whose process is gone.
 JOB_HOLDER_SERVICE = 'service'
 JOB_HOLDER_LOCAL = 'local-cli'
 JOB_HOLDERS = (
@@ -834,10 +785,9 @@ class Job:
 class JobEvent:
     """ Something a job reported while it ran.
 
-        Recorded rather than only streamed, so that a client which
-        connects late or reconnects can be given what it missed: the
-        identifier ascends, so "everything after the last one I saw" is
-        a query rather than a guess.
+        Recorded rather than only streamed, so a client that connects
+        late can be given what it missed.  The identifier ascends, so
+        "everything after the last one I saw" is a query.
 
         Attributes:
             id (int):
@@ -869,17 +819,13 @@ class JobEvent:
 class SentShift:
     """ One row a send put into Amplify, and who put it there.
 
-        The record duplicate safety rests on, so it is never purged
-        (D12) and its first four fields are exactly a 'ShiftIdentity':
-        a send that is retried asks what it already created, and an
-        answer assembled from anything else would be a second opinion.
+        The record duplicate safety rests on, so it is never purged,
+        and its first four fields are exactly a 'ShiftIdentity'.
 
-        It is not the whole answer to "does Amplify already have this".
-        Amplify is the authority, and a shift created by an earlier run
-        or by hand appears in no run's sent record; that is why the
-        send path reads the live opportunity as well.  This says what
-        *this* run did, which is what a retry needs and what a live
-        read cannot tell it.
+        It is not the whole answer to "does Amplify already have
+        this": a shift created by an earlier run or by hand appears in
+        no run's sent record, which is why the send path reads the
+        live opportunity as well.  This says what *this* run did.
 
         Attributes:
             run_id (str):
@@ -924,12 +870,10 @@ class SentShift:
 class IdempotencyRecord:
     """ A write that was asked for once, and what it answered.
 
-        Reserved before the write and completed after it, so the record
-        exists while the work is still running.  That gap is the point:
-        a second request arriving with the same key finds a reservation
-        with no response yet and knows the first one is still in hand,
-        which is a different answer from "here is what it returned"
-        and a different one again from "nothing has asked for this".
+        Reserved before the write and completed after it, so a second
+        request with the same key can tell "the first one is still
+        running" from "here is what it returned" and from "nothing has
+        asked for this".
 
         Attributes:
             operation (str):

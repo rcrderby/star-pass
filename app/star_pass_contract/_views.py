@@ -1,28 +1,21 @@
 #!/usr/bin/env python3
 """ Turning what is stored into what a caller is shown.
 
-    One place, because there is more than one caller.  The endpoints
+    One place, because there is more than one caller: the endpoints
     answer over HTTP and the command line client answers from the same
-    database in the same process, and D2 only holds while both produce
-    the same answer: two copies of this conversion would drift, and a
-    difference between the modes would mean the core boundary had
-    leaked.
+    database in the same process.  Two copies of this conversion would
+    drift, and a difference between the modes would mean the core
+    boundary had leaked.  **That is the reason for everything in this
+    module, and it is not repeated below.**
 
-    Separate from the routes for the same reason it is separate from
-    the records.  A route decides what to read and what a failure
-    looks like; these functions decide what the answer contains, and
-    nothing here knows it is being asked over a network -- which is
-    what lets a client that is not asking over one use them.
+    A route decides what to read and what a failure looks like; these
+    functions decide what an answer contains, and nothing here knows
+    it is being asked over a network.
 
-    What each figure means is not decided here either.  The counts on
-    a run come from the repository, and what an event does not store
-    comes from the core's '_derived' and '_preview'; this module reads
-    those answers and names them for the contract.
-
-    What the deployment was configured with is shown the same way, for
-    the same reason.  Nothing stored it, but both callers publish it
-    and a second reading of one environment could differ from the
-    first.
+    What each figure means is decided elsewhere.  The counts come from
+    the repository and what an event does not store comes from
+    '_derived' and '_preview'; this module names those answers for the
+    contract.
 """
 
 # Imports - Python Standard Library
@@ -104,13 +97,9 @@ def _window_view(
 ) -> WindowView:
     """ Return a run's window, said both ways.
 
-        The stored end is exclusive and stays that way: it is what is
-        compared and what a collection is asked for.  The last day it
-        covers is worked out here rather than by each client, because
-        every client that shows a window has to say it the way a
-        reader means it, and the command line already had this
-        subtraction written once.  Two of them would be two answers to
-        "which days does this run cover".
+        The stored end is exclusive and stays that way: it is what
+        is compared and what a collection is asked for.  The last day
+        it covers is published beside it, so no client subtracts.
 
         Args:
             run (Run):
@@ -141,12 +130,10 @@ def _categories_of(
         the ones its own events reached, and an event that matched
         nothing needs one no other event used.
 
-        The fallback the model falls back to is not among them.  It is
-        a sibling of the categories rather than one of them, and its
-        need IDs are empty on purpose -- an event under it could not
-        become a shift, so offering it would be offering a choice the
-        write refuses.  A category configured with no usable need ID
-        is left out for the same reason.
+        The fallback is not among them, and neither is a category
+        configured with no usable need ID: an event under either could
+        not become a shift, so offering it would offer a choice the
+        write refuses.
 
         Args:
             calendar (str):
@@ -237,13 +224,9 @@ def to_run_view(
     """ Return a run as a caller sees it.
 
         The window carries the zone the calendar is read in, which is
-        the one a bound without a UTC offset means.  A run says which
-        zone its dates were read in, so the value has to be the
-        setting that read them rather than the one the league keeps
-        its clock by; the two are the same until a deployment sets the
-        calendar's, which is what that setting is for.  It is the same
-        value the configuration reports, because there is one answer
-        to the question.
+        what a bound with no UTC offset means.  It is the calendar's
+        setting rather than the league's clock; the two are the same
+        until a deployment sets the calendar's.
 
         Args:
             run (Run):
@@ -485,18 +468,14 @@ def to_uncollected_views(
         was left out for is not published as an empty group: a reader
         counting the groups is counting what there is to look at.
 
-        Whether an event may be pulled in is decided here rather than
-        by whoever is showing it.  A client working it out from the
-        reason would be a second opinion about what the endpoint that
-        adds one will accept, and the two would eventually differ.
+        Whether an event may be pulled in is decided here, so no
+        client forms a second opinion about what the endpoint that
+        adds one will accept.
 
-        An event already in the revision is not addable, and its row
-        is still published.  The row outlives the pull-in on purpose:
-        reverting to the first revision drops the hand-added events,
-        and the row is what the reviewer gets back.  So what makes it
-        addable again is the revision no longer holding it, which is
-        the same question asked twice rather than a second fact
-        stored.
+        An event already in the revision is not addable and its row is
+        still published: reverting to the first revision drops the
+        hand-added events, and the row is what the reviewer gets
+        back.
 
         Args:
             uncollected (Sequence[UncollectedEvent]):
@@ -555,11 +534,9 @@ def previewed(
     """ Return what a send would do, as the core works it out.
 
         The step before shaping.  A caller deciding something from a
-        preview -- whether a send may go ahead, say -- reads the core's
-        own answer rather than the published one, so a rename on the
-        wire cannot change what a refusal decides.  The keying of the
-        opportunities happens here, so both callers preview the same
-        revision against the same set.
+        preview reads the core's own answer rather than the published
+        one, so a rename on the wire cannot change what a refusal
+        decides.
 
         Args:
             events (Sequence[Event]):
@@ -591,9 +568,7 @@ def to_preview_view(
     """ Return what sending a revision would create.
 
         The calculation is the core's; this names its answer for the
-        contract.  Both are done here rather than by each caller, so
-        that a caller cannot preview the same revision against a
-        differently built set of opportunities.
+        contract.
 
         Args:
             events (Sequence[Event]):
@@ -665,11 +640,9 @@ def to_edit_view(
 ) -> EditView:
     """ Return a revision after an edit, and what the edit logged.
 
-        The whole revision rather than the events that changed: a
-        reviewer's screen is redrawn from this, and the derived figures
-        beside a row -- whether another event would create the same
-        shift, above all -- are answers about the revision as a whole
-        and change for rows the edit never named.
+        The whole revision rather than the events that changed: the
+        derived figures beside a row are answers about the revision as
+        a whole, and change for rows the edit never named.
 
         Args:
             events (Sequence[Event]):
@@ -712,10 +685,8 @@ def to_operations(
 ) -> List[Operation]:
     """ Return a request's operations as the core takes them.
 
-        Below both halves, like every other conversion here: the
-        service and the command line client are given the same shape
-        and must hand the core the same record, and two conversions
-        could differ about a field that is absent.
+        Both halves are given the same shape and must hand the core
+        the same record.
 
         Args:
             asked (EditRequest):
@@ -743,15 +714,10 @@ def to_operations(
 def to_config_view() -> ConfigView:
     """ Return what the deployment was configured with.
 
-        Read from the settings rather than from a record, and here
-        rather than in either half for the same reason as everything
-        else in this module: a service and a command line client that
-        each assembled this would be two readings of one environment,
-        and the difference would show up as a value the two modes
-        disagree about.
+        Read from the settings rather than from a record.
 
-        The calendars are in key order rather than in the order they
-        were configured, so what is published is a property of the
+        The calendars are in key order rather than the order they were
+        configured, so what is published is a property of the
         configuration rather than of how it was written down.
 
         Args:
@@ -789,10 +755,7 @@ def to_credential_view(
 ) -> CredentialView:
     """ Return what a credential test answered.
 
-        Here for the reason the rest of this module is: the service
-        answers this over HTTP and the command line client answers it
-        from the same process, and two assemblies of one answer would
-        eventually differ about what "working" means.
+        One answer to what "working" means.
 
         Args:
             checked (CredentialCheck):
