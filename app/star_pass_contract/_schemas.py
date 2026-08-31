@@ -36,7 +36,7 @@ from star_pass._records import (
 )
 
 
-# The header a send is claimed under (D16).  Named here rather than in
+# The header a send is claimed under.  Named here rather than in
 # the service, because the command line client answering the same
 # operation locally reads the key out of it and nothing about the
 # spelling belongs to one half.
@@ -220,7 +220,7 @@ class RunView(ApiModel):
             'Identifier of the job this run last ran, when the '
             'service stopped while it was in hand, and null '
             'otherwise. Resuming one is a deliberate act and never '
-            'automatic (D10), which means a caller has to be able to '
+            'automatic, which means a caller has to be able to '
             'name it -- and an interrupted job is finished, so it is '
             'never the "activeJobId". Only the run\'s most recent job '
             'is reported here: a send that a later one has since '
@@ -232,7 +232,7 @@ class RunView(ApiModel):
             'Whether this run may be deleted. False while something '
             'is working on it, and false for ever once its shifts '
             'reached Amplify, because the record of what it created '
-            'is the only account of that anything here holds (D24). '
+            'is the only account of that anything here holds. '
             'Answered here for the same reason `mayUnassign` is on an '
             'event: it is the rule the delete operation refuses by, '
             'and a caller working it out again would be a second '
@@ -273,7 +273,7 @@ class EventRoleView(ApiModel):
         The timing is the role's and not the opportunity's: one Amplify
         listing can be named by categories that time it differently, so
         two events in a run may send to one listing on different
-        offsets (D25).
+        offsets.
     """
 
     need_id: str = Field(
@@ -453,7 +453,7 @@ class OpportunityView(ApiModel):
 
         What Amplify says about the listing, and nothing else. How a
         shift is timed under it belongs to the role that creates the
-        shift (D25).
+        shift.
     """
 
     need_id: str = Field(
@@ -606,11 +606,8 @@ class RevisionView(ApiModel):
     kind: str = Field(
         description=(
             f'How the revision came to exist: {", ".join(REVISION_KINDS)}. '
-            'An identifier rather than a sentence, because a client '
-            'that is handed the words cannot word it -- and the '
-            'sentence used to be stored on the row, so a change of '
-            'wording would have left every revision already recorded '
-            'saying the old thing beside a new one saying the new.'
+            'An identifier rather than a sentence, so that each '
+            'client words it.'
         ),
         examples=['reverted']
     )
@@ -846,7 +843,7 @@ class CredentialView(ApiModel):
             'enough to tell two apart and no use to whoever reads it. '
             'The credential itself is never published, and no '
             'endpoint replaces it: rotation is changing the secret '
-            'and restarting (D8). Absent when none is configured.'
+            'and restarting. Absent when none is configured.'
         ),
         examples=['4f2a']
     )

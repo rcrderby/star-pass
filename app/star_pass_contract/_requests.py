@@ -44,7 +44,7 @@ class WindowRequest(ApiModel):
         No zone, unlike the window a run answers with.  The server's
         zone is the authoritative one, and a client that sent its own
         would be deciding which days a run covers from wherever the
-        person happened to be sitting (D16).
+        person happened to be sitting.
     """
 
     start: str = Field(

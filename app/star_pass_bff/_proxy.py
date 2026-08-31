@@ -3,29 +3,21 @@
 
     A thin proxy and nothing else: it attaches the credential, checks
     that the browser has a session and that a write came from this
-    page, and gets out of the way.  **No
-    domain logic** -- what an answer means is the API's to say and the
-    contract's to shape, and a front-end that started interpreting
-    answers would be a second implementation of the thing the API
-    exists to be (D1, D4).
+    page, and gets out of the way.  No domain logic -- what an answer
+    means is the API's to say.
 
     The browser holds no credential, so every request arrives without
-    one and leaves with the service's.  Anything the browser sent that
-    could be mistaken for one is dropped rather than forwarded: what
-    reaches the API is an allowed set of headers, and the credential
-    this service was configured with.
+    one and leaves with the service's.  What reaches the API is an
+    allowed set of headers and this service's own credential.
 
-    **Answers that arrive over time are passed on over time.**  The
-    job event stream is one of the contract's operations, and a proxy
-    that buffered it would turn a job somebody is watching into
+    Answers that arrive over time are passed on over time.  A buffered
+    job event stream would turn a job somebody is watching into
     silence followed by a dump at the end.
 
-    **Every method is checked, not only the writes.**  A read needs a
-    session.  A write needs that session, the token derived from it in
-    a header, and nothing saying it came from another site.
-
-    Same origin, so there is **no CORS configuration at all**.  If
-    that changes, the boundary has leaked rather than moved.
+    Every method is checked, not only the writes.  A read needs a
+    session; a write needs that session, the token derived from it in a
+    header, and nothing saying it came from another site.  Same origin,
+    so there is no CORS configuration at all.
 """
 
 # Imports - Python Standard Library
@@ -295,7 +287,7 @@ def _session_or_refuse(
 
         Asked of every method.  A request without one is forwarded
         carrying the service's credential and no check, so the session
-        is what stands between network reach and the database (D14).
+        is what stands between network reach and the database.
 
         The middleware mints one on the way out of the page, so a
         browser has a session before its own code asks for anything.
@@ -373,7 +365,7 @@ def _from_elsewhere(
     """ Return whether a write says it came from another site.
 
         The host is compared rather than the whole origin: a proxy
-        terminates TLS in front of this service (D6), so the scheme
+        terminates TLS in front of this service, so the scheme
         the browser used and the scheme this process sees are
         different by design, and comparing them would refuse every
         write in a real deployment.

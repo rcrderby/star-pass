@@ -12,7 +12,7 @@
     making, and a limiter that wrote a row per attempt would put a
     write in the path of an endpoint whose whole point is to be cheap.
     A deployment behind more than one process would need the count
-    moved somewhere both could see; D5 says there is one.
+    moved somewhere both could see; there is one.
 
     A window that slides rather than one that resets on the hour: a
     fixed window lets twice the allowance through across its edge,
@@ -83,8 +83,7 @@ class RateLimit:
 
             Args:
                 caller (str):
-                    Who is asking, as the principal is identified
-                    (D13).
+                    Who is asking, as the principal is identified.
 
             Returns:
                 wait (float | None):

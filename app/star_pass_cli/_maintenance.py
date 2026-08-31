@@ -1,27 +1,20 @@
 #!/usr/bin/env python3
 """ Applying the retention policy by hand, to the local database.
 
-    **Not one of the commands beside it.**  Every row in 'COMMANDS'
-    names an operation the contract publishes and is answered in
-    either mode, and this is neither of those things: the contract
-    publishes no deletion on purpose -- retention removes what a run
-    leaves behind, a caller does not (plan section 5) -- so there is no
-    operation to name and no service to ask.  Putting it in that table
-    would also hand it '--api-url', which every command there takes,
-    and a flag naming a service that cannot answer is a flag that
-    lies.
+    Not one of the commands beside it.  Every row in 'COMMANDS' names
+    an operation the contract publishes and is answered in either
+    mode.  The contract publishes no deletion -- retention removes what
+    a run leaves behind, a caller does not -- so there is no operation
+    to name and no service to ask, and the table would hand it
+    '--api-url', a flag naming a service that cannot answer.
 
     So it sits where the Slack summary sits: the small set of things
-    the API deliberately does not publish, which the command line
-    carries because nothing else will (D2's scope note).
+    the API does not publish, which the command line carries.
 
-    **Why it exists at all.**  The service sweeps on a timer, which
-    covers a deployment.  It does not cover the deployment this tool
-    started as -- a person with a checkout and a database file, running
-    a collection once a month -- and there the windows would never be
-    applied at all.  A retention policy nothing applies is a policy
-    that has been written down rather than adopted, and what
-    accumulates in the meantime is volunteer names (D12, D20).
+    The service sweeps on a timer, which covers a deployment.  It does
+    not cover a person with a checkout and a database file, running a
+    collection once a month, and what accumulates unswept is volunteer
+    names.
 """
 
 # Imports - Python Standard Library

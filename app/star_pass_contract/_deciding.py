@@ -11,8 +11,8 @@
     So the reading and the deciding live together, below both halves,
     for the reason '_messages' says of the words alone: the service
     answers over HTTP and the command line client answers from the same
-    database in the same process (D2), and D2 only holds while the two
-    reach the same answer.
+    database in the same process, and the two have to reach the same
+    answer.
 
     Nothing here decides what a refusal *is* to a caller.  A status
     code is a property of the transport, and each half raises its own
@@ -159,7 +159,7 @@ def resumable(
         connection: sqlite3.Connection,
         job_id: str
 ) -> Optional[Tuple[Job, Optional[str]]]:
-    """ Read a job and decide whether it may be resumed (D10).
+    """ Read a job and decide whether it may be resumed.
 
         The run is read as well as the job, and not only to know it
         exists: whether something else is already working on it is
@@ -316,10 +316,10 @@ def keyed_write(
                 Run the write acts on.
 
             key (str):
-                What this action is claimed under (D13, D16).
+                What this action is claimed under.
 
             principal_id (str):
-                Who asked (D13).
+                Who asked.
 
             write (KeyedWrite):
                 Which write it is, and what carrying it out means.
@@ -409,10 +409,10 @@ def edited(
                 What the reviewer did.
 
             key (str):
-                What this action is claimed under (D13, D16).
+                What this action is claimed under.
 
             principal_id (str):
-                Who did it (D13).
+                Who did it.
 
             refusals (WriteRefusals):
                 How this half says no.
@@ -490,10 +490,10 @@ def sealed(
 
             key (str):
                 What the seal is claimed under, so a retry opens no
-                second revision (D13, D16).
+                second revision.
 
             principal_id (str):
-                Who sealed it (D13).
+                Who sealed it.
 
             refusals (WriteRefusals):
                 What this half raises when it will not carry the write
@@ -572,10 +572,10 @@ def reverted(
 
             key (str):
                 What the revert is claimed under, so a retry opens no
-                second revision (D13, D16).
+                second revision.
 
             principal_id (str):
-                Who reverted it (D13).
+                Who reverted it.
 
             refusals (WriteRefusals):
                 What this half raises when it will not carry the write

@@ -1,26 +1,22 @@
 #!/usr/bin/env python3
 """ Building the front-end service.
 
-    A factory rather than a module-level application, for the reason
-    the API service has one: the process starts when something asks
-    for it, not when a module is imported, so a test can build one
-    against its own settings.
+    A factory rather than a module-level application, as the API
+    service has: the process starts when something asks for it, not
+    when a module is imported, so a test can build one against its own
+    settings.
 
-    Three things happen here that happen nowhere else: the connection
-    to the API is opened once and closed once, because a client made
-    per request would open a connection per request and lose the
-    pooling that makes a proxy cheap; a browser without a session is
-    given one on the way out, so that the page a person loads can make
-    a write without a round trip to fetch a token first; and the page
-    itself is served from this origin, because it is the only origin
-    it can work from (D4, D18).
+    Three things happen here and nowhere else.  The connection to the
+    API is opened once and closed once, so a proxy keeps its pooling.
+    A browser without a session is given one on the way out.  And the
+    page is served from this origin, the only one it can work from.
 
     Order matters where the page is mounted.  It answers everything
     under the root, so the proxy is included first and the mount takes
     what is left; the other order would serve a file, or a refusal,
-    where an API call was meant to go.  The page's own paths (D28) are
-    added between the two for the same reason: the mount would answer
-    '/settings' with a 404 before they were reached.
+    where an API call was meant to go.  The page's own paths are added
+    between the two, or the mount would answer '/settings' with a 404
+    before they were reached.
 """
 
 # Imports - Python Standard Library
@@ -69,7 +65,7 @@ async def _lifespan(
 def _answer_the_screens_with_the_page(
         api: FastAPI
 ) -> None:
-    """ Answer each of the page's own paths with the page (D28).
+    """ Answer each of the page's own paths with the page.
 
         The page routes itself, so every one of them draws a different
         screen in the browser and every one of them is the same file
@@ -107,32 +103,20 @@ def _send_the_slashed_form_to_this_one(
         api: FastAPI,
         path: str
 ) -> None:
-    """ Send a screen's trailing-slash address to the screen (D28).
+    """ Send a screen's trailing-slash address to the screen.
 
-        A person who deletes the run identifier out of
-        '/runs/<id>' is left holding '/runs/', and that is not one of
-        the enumerated paths -- so the mount at the root answered it,
-        found no file of that name, and returned a refusal document as
-        raw JSON where a screen was meant to be.  Every screen had it,
-        not only that one.
+        A person who deletes the run identifier out of '/runs/<id>' is
+        left holding '/runs/', which the mount at the root would answer
+        with a refusal document as raw JSON.
 
-        **The framework's own answer never ran.**  A router redirects
-        a trailing slash to the path without one, but only where
-        nothing else matches first, and the mount matches everything
-        under the root.  This is that redirect, registered explicitly
-        so that it happens before the mount is reached, which is the
-        same reason the screens themselves are registered here.
+        A router redirects a trailing slash to the path without one,
+        but only where nothing else matches first, and the mount
+        matches everything under the root.  This is that redirect,
+        registered before the mount is reached, per screen rather than
+        as a rule about slashes.
 
-        Registered per screen rather than as a rule about slashes:
-        enumerating is what stops a mistyped module path being
-        answered with the page at a 200, and a catch-all for anything
-        ending in a slash would give that back for every address one
-        segment deeper than a screen.
-
-        Temporary rather than permanent, which is what a router's own
-        redirect answers with: the two addresses are the same screen
-        today, and a permanent one is cached by the browser past any
-        chance to change its mind.
+        Temporary rather than permanent: a permanent redirect is cached
+        by the browser past any chance to change its mind.
 
         Args:
             api (FastAPI):
@@ -194,7 +178,7 @@ def create_app() -> FastAPI:
     api = FastAPI(
         title='star-pass front end',
         # Nothing here is a published surface: the API is the
-        # contract, and this is one client of it (D1).  A generated
+        # contract, and this is one client of it.  A generated
         # specification of a proxy would describe the same operations
         # a second time and eventually differently.
         openapi_url=None,

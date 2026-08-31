@@ -7,28 +7,17 @@
 
         python scripts/generate_architecture.py
 
-    The pictures are generated rather than drawn by hand so that the
-    thing a person edits is the thing a person can read: the boxes,
-    the networks and the arrows below are a list of names and
-    coordinates, which a second person can follow in a text editor
-    without a renderer, and the SVG is an artifact of it. Hand-drawn
-    SVG would put the readable copy in the one place nobody reads.
+    The pictures are generated so the thing a person edits is the
+    thing a person can read: the boxes, networks and arrows below are
+    names and coordinates, and the SVG is an artifact of them.
 
-    Positions are stated rather than computed. A layout engine is a
-    project of its own and would still need coaxing on a drawing this
-    small; what is here instead is a set of numbers to nudge, and a
-    generator that refuses what it cannot draw honestly - a label
-    wider than the box it sits in, and an arrow naming a box or a side
-    that is not there - so a mistake fails here rather than in the
-    picture.
+    Positions are stated rather than computed, and the generator
+    refuses what it cannot draw honestly: a label wider than its box,
+    or an arrow naming a box or a side that is not there.
 
-    '_drawing.py' beside this holds how a diagram is drawn. It is
-    imported by name because a script's own directory is what Python
-    puts on the path first.
-
-    'tests/test_architecture.py' fails while a committed file
-    disagrees with what this writes, so a forgotten run is caught
-    rather than shipped.
+    '_drawing.py' beside this holds how a diagram is drawn, and
+    'tests/test_architecture.py' fails while a committed file disagrees
+    with what this writes.
 """
 
 # Imports - Python Standard Library

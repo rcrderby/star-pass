@@ -2,9 +2,9 @@
 """ Writing the client's operations from the committed specification.
 
     The command line client can do anything the web interface can, and
-    D15 makes that structural rather than a discipline: every operation
-    the contract publishes becomes a method here, because a generator
-    reads the contract rather than a person reading it and remembering.
+    that is structural rather than a discipline: every operation the
+    contract publishes becomes a method here, because a generator reads
+    the contract rather than a person reading it and remembering.
 
     Only the operations are generated.  The session, the credential and
     the failure mapping are written by hand in '_client.py', so what a
@@ -65,7 +65,7 @@ HEADER = '''#!/usr/bin/env python3
 
     One method per operation in the contract, which is what makes
     "the command line client can do anything the web interface can"
-    a property of the build rather than a promise (D15). What each
+    a property of the build rather than a promise. What each
     method sends, and what it does with the answer, is in
     '_client.py'.
 """

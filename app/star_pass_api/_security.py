@@ -3,16 +3,13 @@
 
     One dependency reads the credential and returns a 'Principal'.  No
     other module reads the token or the Authorization header, and no
-    route decides for itself whether a caller is allowed in.  That is
-    what makes the move to OpenID Connect a change here rather than a
-    change everywhere (D3): the token comparison becomes a token
-    validation, the same 'Principal' comes out, and the routes are
-    untouched.
+    route decides for itself whether a caller is allowed in, so a move
+    to OpenID Connect is a change here and nowhere else.
 
-    Every route declares the scopes it needs even though there is one
-    principal today and it holds all of them.  A scope added to a route
-    later is a change to that route; a scope system added later is a
-    change to every route.
+    Every route declares the scopes it needs, though there is one
+    principal and it holds all of them.  A scope added to a route later
+    is a change to that route; a scope system added later is a change
+    to every route.
 
     The two failures are different and are answered differently.  A
     caller the service cannot identify gets 401 and a challenge saying

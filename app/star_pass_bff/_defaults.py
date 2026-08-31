@@ -2,7 +2,7 @@
 """ What the front-end service was configured with.
 
     Its own settings, separate from the API service's, because the two
-    are separate containers with separate environments (D17) and the
+    are separate containers with separate environments and the
     one thing the front-end must **not** have is the credential mount:
     the internet-facing process never holds the Amplify secret on its
     filesystem, and in one container that separation would be a coding
@@ -15,13 +15,13 @@ from pathlib import Path
 
 # Where the API service is.  A configuration value rather than a
 # constant, because encryption between the two is a deployment
-# decision and never a code change (D6): plain HTTP on a private
+# decision and never a code change: plain HTTP on a private
 # network today, something else the day they are on separate hosts.
 API_URL = getenv('STAR_PASS_API_URL', 'http://api:8000')
 
 # What this service presents to the API.  Held here and never sent to
 # a browser, which is the whole point of the pattern: cross-site
-# scripting cannot exfiltrate a credential that is not there (D4).
+# scripting cannot exfiltrate a credential that is not there.
 API_TOKEN = getenv('STAR_PASS_API_TOKEN')
 
 # What the session cookie and the token derived from it are signed
@@ -77,13 +77,10 @@ REQUEST_TIMEOUT_SECONDS = float(
 )
 
 # Where the page this service holds the session for is read from.
-# The page is served here rather than from anywhere else because it
-# cannot work from anywhere else: the token a write carries is a
-# cookie the page has to read, the session cookie is 'SameSite=Strict'
-# so a browser sends it on nothing another site initiated, and a write
-# whose origin is not this host is refused (D4, D18).  A page on a
-# second origin would fail all three, and answering that with CORS
-# would be the boundary leaking rather than moving.
+# The page is served here because it cannot work from anywhere else:
+# the token a write carries is a cookie the page has to read, the
+# session cookie is 'SameSite=Strict', and a write whose origin is not
+# this host is refused.
 #
 # A configuration value rather than a constant, so a deployment can
 # serve a built interface from a mounted directory without rebuilding
@@ -102,20 +99,16 @@ WEB_ROOT = Path(
 # the mount serves it.
 WEB_INDEX = 'index.html'
 
-# The paths the page routes itself (D28), each answered with the page.
+# The paths the page routes itself, each answered with the page.
 #
-# **Enumerated, and never a catch-all.**  The page is mounted with
-# 'html=True', which answers a path that is not a file with 404 -- and
-# that refusal is what says a module the page imports is missing.  A
-# blanket fallback would answer a mistyped module path with the page
-# and a 200, so the browser would be handed HTML where it asked for
-# JavaScript, and the screen would silently never draw.  Enumerating
-# costs this tuple; 'tests/test_web_routes.py' holds it to the table
-# the page routes with, because a path one of them knows and the other
-# does not is a screen that works until somebody reloads it.
+# Enumerated, never a catch-all.  The mount answers a path that is not
+# a file with 404, and that refusal is what says a module the page
+# imports is missing; a blanket fallback would hand the browser HTML
+# where it asked for JavaScript.  'tests/test_web_routes.py' holds
+# this tuple to the table the page routes with.
 #
-# The root is here rather than left to the mount so that the list is
-# the whole answer to "which paths are the page".
+# The root is here rather than left to the mount, so the list is the
+# whole answer to "which paths are the page".
 SCREEN_PATHS = (
     '/',
     '/runs',

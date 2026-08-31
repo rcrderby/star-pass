@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """ What arrives on a stream, as records rather than as wire syntax.
 
-    An operation the contract answers over time hands its caller these,
-    not the lines a server-sent event stream is written in.  The reason
-    is D2: the same operation is answered locally by reading the job's
-    events out of the database, and a line-shaped surface would make
-    that half serialize records into wire syntax for the next layer to
-    parse straight back.  Neither half would be doing anything useful,
-    and the two could disagree about the format they had invented.
+    An operation the contract answers over time hands its caller
+    these, not the lines a server-sent event stream is written in.  The
+    same operation is answered locally by reading the job's events out
+    of the database, and a line-shaped surface would make that half
+    serialize records into wire syntax for the next layer to parse
+    straight back.
 
     So the parsing happens once, here, on the side that actually
     receives wire syntax.  What a caller works with is the same record

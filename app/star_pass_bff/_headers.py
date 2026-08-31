@@ -8,11 +8,10 @@
     both services under bare uvicorn, and in that mode there is no
     Caddy and there would be no policy at all.
 
-    That matters more here than it usually would, because this policy
-    is load-bearing rather than decorative.  It is what makes
+    The policy is load-bearing rather than decorative.  It makes
     'href: opportunity.url' in 'web/js/review/table.js' safe against a
-    'javascript:' value arriving from upstream, and it is the policy
-    D14's no-route-out assumption is written against.
+    'javascript:' value arriving from upstream, and it is what leaves
+    the page no route out.
 
     Two copies that can drift will, so a test holds this module and
     the Caddyfile to each other, for the reason 'test_web_routes.py'

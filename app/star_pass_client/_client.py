@@ -2,9 +2,9 @@
 """ How the generated client reaches the service.
 
     Everything here is written by hand.  The operations -- one method
-    per endpoint -- are generated from the committed specification into
-    '_operations.py', so the surface cannot drift from the contract
-    (D15), while the parts worth reading and testing stay ordinary
+    per endpoint -- are generated from the committed specification
+    into '_operations.py', so the surface cannot drift from the
+    contract, while the parts worth reading and testing stay ordinary
     code.
 
     The split is what makes generation cheap.  A generator that also
@@ -251,7 +251,7 @@ class Client(OperationCaller, Operations):
         # A no-content answer has no body to decode, and asking for one
         # raises rather than returning nothing.  The operation that
         # gives one is the deletion, which has nothing to say beyond
-        # having happened (D24).
+        # having happened.
         if response.status_code == NO_CONTENT:
             return None
 
@@ -267,7 +267,7 @@ class Client(OperationCaller, Operations):
 
             The lines are parsed here rather than handed on, because
             the other half of this client answers the same operation
-            from the database and has no wire syntax to hand on (D2).
+            from the database and has no wire syntax to hand on.
             Parsing on the side that receives it is what lets a caller
             work with one record either way.
 

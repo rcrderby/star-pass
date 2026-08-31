@@ -4,7 +4,7 @@
     The operations are generated from 'docs/api/openapi.json', so the
     command line client can reach everything the web interface can and
     a missing endpoint is a failing test rather than something nobody
-    notices (D15).
+    notices.
 """
 
 # Imports - Local

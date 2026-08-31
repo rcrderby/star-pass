@@ -2,29 +2,22 @@
 """ Titles the data model did not match, kept for the next model edit.
 
     A title no category matches blocks the send of the run it is in,
-    which gets that run out of the door.  What it does not do is
-    survive: the run is superseded, and the next person editing
-    'shift_info.yml' is working from memory and from whatever they
-    scrolled back to in a log.
+    and the run is eventually superseded.  This is a log of its own,
+    belonging to no run, read when 'shift_info.yml' is about to be
+    edited.
 
-    So this is a log of its own, belonging to no run, read when the
-    model is about to be edited.  **Append-only**: nothing updates an
-    entry and nothing deletes one, because how often a title has
-    turned up is the evidence for a decision nobody has made yet.
+    Append-only: nothing updates an entry and nothing deletes one,
+    because how often a title has turned up is the evidence for the
+    edit.
 
-    Most of what it holds is written by collections rather than
-    through here: a collection is where a title is discovered to match
-    nothing, and a log that depended on somebody remembering to say so
-    would hold what people remembered rather than what happened.  This
-    endpoint is for the sighting that arrives another way -- somebody
-    looking at a blocked event, or at a calendar nobody has collected
-    yet.
+    Most of what it holds is written by collections.  This endpoint is
+    for the sighting that arrives another way -- somebody looking at a
+    blocked event, or at a calendar nobody has collected yet.
 
-    No idempotency key.  A run is held to one sighting of a title by
-    the repository, so a retry naming one adds nothing on its own; a
-    sighting naming no run is one nothing can be the same as, and
-    recording it twice means it was seen twice.  Nothing here is
-    irreversible, and nothing about a run changes.
+    No idempotency key.  The repository holds a run to one sighting of
+    a title, so a retry naming one adds nothing; a sighting naming no
+    run is one nothing can be the same as, and recording it twice
+    means it was seen twice.
 """
 
 # Imports - Python Standard Library

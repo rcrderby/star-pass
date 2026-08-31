@@ -380,7 +380,7 @@ async def stream_job_events(
         'Queues an interrupted job to be run again, and hands it back '
         'to a worker. A job left queued or running when the service '
         'stopped is marked interrupted at startup and never resumed on '
-        'its own (D10): a send that resumed itself would write to a '
+        'its own: a send that resumed itself would write to a '
         'live volunteer system from state rebuilt after a crash.\n\n'
         'What runs is the ordinary work, pointed at a job that already '
         'exists. A resumed send reads every opportunity immediately '

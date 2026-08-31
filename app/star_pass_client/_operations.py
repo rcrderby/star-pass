@@ -7,7 +7,7 @@
 
     One method per operation in the contract, which is what makes
     "the command line client can do anything the web interface can"
-    a property of the build rather than a promise (D15). What each
+    a property of the build rather than a promise. What each
     method sends, and what it does with the answer, is in
     '_client.py'.
 """
