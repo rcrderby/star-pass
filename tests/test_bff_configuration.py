@@ -8,6 +8,7 @@
 """
 
 # pylint: disable=missing-function-docstring,missing-class-docstring
+# pylint: disable=protected-access
 
 # Imports - Third-Party
 import pytest
