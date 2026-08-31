@@ -69,9 +69,8 @@ def _minutes_of(
     """ Return a time of day as minutes since midnight.
 
         Times of day rather than moments: both of an event's times
-        belong to the same day, and the arithmetic is minutes within
-        it.  Reading them as instants would invite a shift to move by
-        an hour on the two days a year the offset changes.
+        belong to the same day.  Reading them as instants would move a
+        shift by an hour on the two days a year the offset changes.
 
         Args:
             time (str):
@@ -128,10 +127,9 @@ def timed(
 ) -> Event:
     """ Return an event with new shift times, checked as storable.
 
-        The maximum is not applied here.  A maximum shortens the shift
-        the offsets produced; a person setting a time has overridden
-        that, and silently pulling their end time back in would read as
-        the edit not having worked.
+        The maximum is not applied here.  It shortens the shift the
+        offsets produced, and a person setting a time has overridden
+        that.
 
         Args:
             event (Event):
@@ -181,11 +179,10 @@ def timings_for(
 ) -> List[EventRole]:
     """ Return what the event's category asks of it.
 
-        Read from the data model rather than from the event, because an
-        event stores which opportunities it serves and how many
-        volunteers each wants, and not the offsets that produced its
-        times.  An event with no category asks for nothing, which is
-        what leaves it holding the calendar's own times.
+        Read from the data model rather than the event, which stores
+        the opportunities it serves and not the offsets that produced
+        its times.  An event with no category asks for nothing and
+        keeps the calendar's own times.
 
         Args:
             event (Event):
@@ -228,16 +225,13 @@ def under_category(
 ) -> Event:
     """ Return an event placed under a category.
 
-        Its times and its roles come from the category rather than
-        from what the event already holds, so putting an event under
-        one is the same arithmetic wherever it is asked for: a
-        reviewer choosing a different opportunity, and an undo putting
-        the row back under the one the collection matched.
+        Times and roles come from the category rather than from what
+        the event holds, so a reviewer's change and an undo are the
+        same arithmetic.
 
         The shift times are recomputed from the calendar times, which
         never move, so a category change lands on the times collection
-        would have produced for that category rather than on the times
-        the previous one produced.
+        would have produced for that category.
 
         Args:
             event (Event):
@@ -310,17 +304,13 @@ def as_collected(
 ) -> Event:
     """ Return an event with its edits undone.
 
-        Recomputed from the calendar times and the category the
-        collection matched rather than restored from a stored copy:
-        the calendar times never move, so the same rules that produced
-        the event at collection produce it again here.  The category
-        goes back to the collected one, the times and the slots follow
-        from it, and the roles stop being marked as edited.
+        Recomputed from the calendar times and the collected
+        category rather than restored from a stored copy: the calendar
+        times never move, so the rules that produced the event produce
+        it again.
 
-        Where the collection matched nothing, that is what it goes
-        back to: unassigned, holding the calendar's own times and no
-        roles, which is a state a person can see and choose their way
-        out of again (D29).
+        Where the collection matched nothing, it goes back to
+        unassigned, holding the calendar's own times and no roles.
 
         Args:
             event (Event):
@@ -485,10 +475,9 @@ def slots_reset(
 ) -> Event:
     """ Return an event whose roles want what their category asked.
 
-        The role's own default supplies the number, not the data model
-        as it stands now.  A role records what it was collected with,
-        and resetting to today's model would quietly move a number the
-        reviewer never touched.
+        The role's own default supplies the number, not the model as
+        it stands now, so resetting cannot move a number the reviewer
+        never touched.
 
         Args:
             event (Event):
@@ -513,11 +502,10 @@ def _order_free(
 ) -> Event:
     """ Return an event whose roles are in a settled order.
 
-        Which order an event's roles are stored in follows the data
-        model's, so a model whose need IDs were reordered would have
-        every row in a run collected before it comparing unequal to
-        what collection produces now.  Nobody edited those rows, and
-        the order is not something an event means anything by.
+        Role order follows the data model's, so reordering need IDs
+        would otherwise make every row in an earlier run compare
+        unequal.  The order is not something an event means anything
+        by.
 
         Args:
             event (Event):
@@ -541,20 +529,13 @@ def was_edited(
 ) -> bool:
     """ Return whether a person has changed this event.
 
-        The same arithmetic 'undo' runs, asked as a question rather
-        than applied: an event is edited when putting it back as
-        collection produced it would change it.  Written here rather
-        than worked out from the stored fields because there is nothing
-        stored to work it out from -- the calendar times never move, so
-        an event that was nudged is one whose shift times no longer
-        follow from them, and only the category's offsets say what they
-        would have been.  A caller that compared them itself would be a
-        second copy of '_shift_timing'.
+        The same arithmetic 'undo' runs, asked as a question: an
+        event is edited when putting it back as collection produced it
+        would change it.  Nothing stored says so - only the category's
+        offsets say what the shift times would have been.
 
         Covers the roles as well as the times, because undo resets
-        both: a row whose volunteers were changed is a row undo would
-        change, and offering no way back from it because only the times
-        are looked at would be a control that lies about what it does.
+        both.
 
         Args:
             event (Event):
