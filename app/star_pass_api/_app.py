@@ -32,7 +32,7 @@ from fastapi.routing import APIRoute
 from star_pass._defaults import RETENTION_SWEEP_HOURS
 from star_pass._helpers import require_env_vars
 from star_pass._job_runner import JobRunner
-from star_pass._logging import get_logger
+from star_pass._logging import get_logger, send_server_logs_the_same_way
 from star_pass._repository import JobRepository
 from star_pass._retention import sweep
 from . import _defaults
@@ -87,6 +87,12 @@ async def lifespan(
             None:
                 While the service is running.
     """
+
+    # The server has finished configuring its own logging by now, so
+    # this is the moment its lines can be sent the same way as the
+    # application's.  Done at import it would be undone as uvicorn
+    # booted.
+    send_server_logs_the_same_way()
 
     interrupted = in_database(
         lambda connection: JobRepository(
