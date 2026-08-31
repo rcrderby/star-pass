@@ -47,25 +47,18 @@ SERVER_LOGGERS = (
 class JSONFormatter(logging.Formatter):
     """ Render a record as one line of JSON.
 
-        A line was prose, so the reference id that ties a screen's
-        refusal to the line that produced it -- the thing that makes
-        a log worth attaching to a report at all -- could only be got
-        at with a regular expression.
+        One line of JSON, so the reference id that ties a screen's
+        refusal to the line that produced it is a field rather than
+        something to match with a regular expression.
 
         **What is serialized is what the record already carries.**
-        Full upstream detail reaches the log through 'redact_secrets'
-        at the call site, so the message handed here is redacted
-        before it arrives.  Nothing else about the record is
-        serialized: no 'extra', no arguments, no attributes a future
-        caller might attach, because each of those is a way to write
-        a value into a log that never passed the redaction the
-        message did.
+        The message arrives redacted, through 'redact_secrets' at the
+        call site.  Nothing else is - no 'extra', no arguments, no
+        attributes a caller might attach - because each is a way to
+        write a value that never passed that redaction.
 
-        The exception text is the one addition, and it is here to
-        keep what the previous formatter did rather than to add
-        anything.  Nothing in this application logs with 'exc_info'
-        today; dropping it silently if something starts to would lose
-        the traceback with no sign that it had gone.
+        The exception text is the one addition, so a traceback is not
+        dropped silently.
     """
 
     def format(
@@ -126,23 +119,17 @@ def _resolve_level(
 def configure_logging() -> logging.Logger:
     """ Put every log line on one stream in one format.
 
-        **The handler goes on the root logger**, so that a package
-        nobody thought to name is still formatted.  Attaching one per
-        package looked tidier and was the arrangement that produced
-        the split this replaced: the core was configured, the API
-        service was not, and its records -- the reference id among
-        them -- fell to 'logging.lastResort', which prints the bare
-        message at WARNING and drops everything below it.
+        **The handler goes on the root logger**, so a package nobody
+        thought to name is still formatted.  One per package would
+        leave an unconfigured package falling to 'logging.lastResort',
+        which prints the bare message at WARNING.
 
         **Levels are set per package, and the root keeps its own.**
-        The application talks at 'LOG_LEVEL'; everything else it
-        imports is left at the root's WARNING, so one format does not
-        also mean every library's INFO.  A package left out of the
-        list below is still formatted -- it is only quieter than
-        intended, which is the milder of the two ways to be wrong.
+        The application talks at 'LOG_LEVEL'; everything it imports
+        stays at the root's WARNING.  A package left out of the list
+        below is still formatted, only quieter than intended.
 
-        Idempotent: repeated calls do not attach a second handler, and
-        every 'get_logger' call comes through here.
+        Idempotent: repeated calls do not attach a second handler.
 
         Args:
             None.
@@ -178,19 +165,17 @@ def send_server_logs_the_same_way() -> None:
     """ Put the server's own lines through the same handler.
 
         Uvicorn configures 'uvicorn' and 'uvicorn.access' with a
-        handler each and 'propagate' off, so its lines reach the
-        stream without passing anything of ours: a container's output
-        was JSON from the application and plain text from the server
-        that was carrying it.
+        handler each and 'propagate' off, so without this a
+        container's output is JSON from the application and plain text
+        from the server carrying it.
 
         Their handlers are taken away rather than re-dressed, so there
         is one handler in the process and one place the format is
         decided.
 
         **Called after the server has started**, from each service's
-        lifespan.  Uvicorn applies its logging configuration as it
-        boots, which is after this module was imported -- so doing it
-        at import would be undone a moment later.
+        lifespan: uvicorn applies its logging configuration as it
+        boots, after this module is imported.
 
         Args:
             None.

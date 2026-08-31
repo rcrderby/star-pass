@@ -19,20 +19,13 @@
  * of one run are two places and two runs are four. */
 const places = new Map();
 
-/* How long to keep waiting for the page to grow, in milliseconds,
- * and how often to look.  A read that takes longer than this has
- * bigger problems than where the reader was, and an offset applied a
- * long time after the screen settled would move somebody who had
- * started reading.
+/* How long to keep waiting for the page to grow, in milliseconds, and
+ * how often to look.  An offset applied long after the screen settled
+ * would move somebody who had started reading.
  *
- * Looked at on a timer rather than watched with a 'ResizeObserver'.
- * An observer is the tidier way to hear about a box changing size and
- * is what the width hint and the run header use -- but neither of
- * those depends on it alone, and this would: they measure again on
- * every draw, and the whole point here is the moment *after* the last
- * draw this code knows about.  Forty reads of one number over two
- * seconds costs nothing, and unlike an observer it can be watched
- * working. */
+ * A timer rather than a 'ResizeObserver': what is wanted is the
+ * moment *after* the last draw this code knows about, and an observer
+ * would be the only thing this depends on. */
 const GIVE_UP = 2000;
 const LOOK_EVERY = 50;
 

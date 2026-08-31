@@ -155,21 +155,33 @@ def _too_long(path: Path, text: str) -> List[str]:
 
     run = 0
     start = 0
+    first = True
 
-    for number, line in enumerate(text.splitlines(), 1):  # comment runs
+    for number, line in enumerate(text.splitlines(), 1):
         bare = line.lstrip()
-        comment = bare.startswith('#') or bare.startswith('*') or (
-            bare.startswith('//')
+        comment = (
+            bare.startswith('#') or bare.startswith('*')
+            or bare.startswith('//') or bare.startswith('/*')
         )
 
         if comment:
             run += 1
             start = start or number
         else:
-            if run > COMMENT_LIMIT:
+            # A JavaScript module opens with a block where Python
+            # has a module docstring, so it is allowed that length.
+            heads_a_module = (
+                path.suffix == '.js' and first and start == 1
+            )
+            limit = MODULE_LIMIT if heads_a_module else COMMENT_LIMIT
+
+            if run:
+                first = False
+
+            if run > limit:
                 problems.append(
                     f'{path}:{start}: comment runs {run} lines, over '
-                    f'{COMMENT_LIMIT}'
+                    f'{limit}'
                 )
             run = 0
             start = 0
@@ -249,7 +261,9 @@ def changed(ref: str) -> List[Path]:
                 The files worth checking.
     """
 
-    finished = subprocess.run(  # nosec B603
+    # 'git' is resolved on PATH, which is how it is reached
+    # everywhere else this repository runs it.
+    finished = subprocess.run(  # nosec B603 B607
         ['git', 'diff', '--name-only', '--diff-filter=d', f'{ref}...HEAD'],
         capture_output=True,
         text=True,
