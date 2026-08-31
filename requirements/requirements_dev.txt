@@ -14,8 +14,6 @@ dateparser==1.4.2
 # HTTP requests
 requests==2.34.2
 
-# JSON Schema validation
-jsonschema==4.26.0
 
 # Python formatting
 autopep8==2.3.2

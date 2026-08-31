@@ -16,5 +16,3 @@ uvicorn==0.52.4
 # is what watching a job needs.
 httpx2==2.12.0
 
-# JSON Schema validation
-jsonschema==4.26.0
