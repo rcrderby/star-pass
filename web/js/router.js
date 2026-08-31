@@ -19,6 +19,9 @@
  * person cannot type.
  */
 
+// Imports - Local
+import { remember, restore } from './scroll.js';
+
 /* What each route is called, so that nothing matches on a spelling.
  */
 export const HOME = 'home';
@@ -132,6 +135,12 @@ export class Router {
   constructor(onRoute) {
     this.onRoute = onRoute;
 
+    /* Which address the page is showing, so that leaving it can be
+     * told from redrawing it.  Read from here rather than from
+     * 'location' when a place is put away, because by the time a
+     * press is being drawn the address has already moved. */
+    this.at = tidied(window.location.pathname);
+
     /* Back and Forward are the same drawing as a press, and the
      * address has already moved by the time this runs -- so it reads
      * the address rather than what it was given. */
@@ -140,10 +149,32 @@ export class Router {
 
   /** Draw whatever the address currently names.
    *
+   * Where the reader was is put away against the address being left
+   * and asked for again against the one being entered, both here
+   * because this is the one place a press, Back and a redraw all
+   * pass through (D28 gave them the names to be kept under).
+   *
+   * A redraw of the address already showing keeps its place: the
+   * retry on a failed screen draws again, and starting the reader at
+   * the top of what they were already reading would be the change,
+   * not the fix.
+   *
    * @returns {void}
    */
   draw() {
+    const entering = tidied(window.location.pathname);
+    const moving = entering !== this.at;
+
+    if (moving) {
+      remember(this.at);
+    }
+
+    this.at = entering;
     this.onRoute(match(window.location.pathname));
+
+    if (moving) {
+      restore(entering);
+    }
   }
 
   /** Go to a path, adding it to the history.
