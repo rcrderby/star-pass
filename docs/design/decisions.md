@@ -4,7 +4,7 @@ One entry per decision, with why, what was rejected, and **what would make us
 revisit it**. Append new entries; don't rewrite old ones — supersede them.
 
 Companion to `api-and-security-plan.md` (the plan these decisions produced).
-Last updated: 2026-08-24.
+Last updated: 2026-08-31.
 
 ---
 
@@ -1080,6 +1080,34 @@ revision, which would make "has a revision" the wrong question. It cannot
 today - the revision and the events are written in one transaction.
 
 ---
+
+## D32 - A revision's name says how it came to exist
+
+**Decided:** `kind` records what *opened* a revision, not what it holds. The
+first revision of a run is opened by the collection, and an edit changes the
+current revision in place, so that revision holds the collection **plus every
+edit made before the first seal**. Reverting to it returns all of that. The
+front end words it "Collected" rather than "As collected".
+
+**Why:** the wording was the defect, not the behaviour. "As collected" reads as
+a snapshot and promised an undo of last resort that was never there: the
+operator expected as-collected semantics twice on the strength of it. Nothing
+is lost by naming it honestly: collecting the window again reads the calendar
+afresh, and per-row Undo already restores a single row to what it was
+collected as.
+
+**Rejected:** making revert to that revision mean "undo every row", which
+`as_collected` makes computable. It would give the label its old meaning back,
+but it changes what revert *does* to buy wording that can be fixed for free.
+
+**Consequence:** `_revising.py` said the opposite in three places and now says
+this. `web/phrases.json` words the two collection kinds without "As". The
+version 7 migration still maps the stored English `'As collected'`, because
+that is data in databases written before the column existed and not a label.
+
+**Revisit if:** a reviewer needs the run as the calendar gave it *without*
+collecting again, which is the operation that was rejected here and would
+want its own name rather than being folded into revert.
 
 
 ## Deferred, on purpose
