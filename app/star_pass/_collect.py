@@ -1,32 +1,21 @@
 #!/usr/bin/env python3
 """ Turning a calendar window into a stored run.
 
-    Read the calendar, match each event to a category, and work out the
-    shift each of its roles would create.  A revision holds one event
-    carrying a role per need ID rather than a row per need ID, which is
-    what lets a reviewer edit the event rather than the rows it
-    happened to produce: an event serving both skating and non-skating
-    officials is one thing to retime, not two things to keep in step.
+    Read the calendar, match each event to a category, and work out
+    the shift each of its roles would create.  A revision holds one
+    event carrying a role per need ID rather than a row per need ID,
+    so a reviewer edits the event rather than the rows it produced.
 
     A collection also records what it did **not** collect.  The window
-    is read twice -- once as the deployment searches it and once
-    whole -- and everything the run will not hold is stored with the
-    reason, so that a reviewer asking where an event went is answered
-    from the run rather than from a second calendar request.
-
-    In the core, not the service.  Nothing here is about HTTP, and the
-    command line client collects a run without one (D2).
+    is read twice - once as the deployment searches it and once whole
+    - and everything the run will not hold is stored with the reason.
 
     **What stops the run.**  An event that cannot become a correct
-    shift is named rather than dropped: a missing shift is invisible
-    until volunteers cannot sign up.  Two of those checks are about
-    what a stored event can express rather than about the calendar.  An
-    event holds one pair of shift times and a role per need ID, so a
-    category whose need IDs disagree about their offsets describes two
-    different shifts and cannot be stored as one event; and a shift
-    running past midnight cannot be read back, because the times are
-    stored as times of day.  Both are refused here, where the run can
-    still be corrected, rather than stored and misread later.
+    shift is named rather than dropped.  A category whose need IDs
+    disagree about their offsets describes two different shifts and
+    cannot be stored as one event; a shift running past midnight
+    cannot be read back, because the times are stored as times of day.
+    Both are refused here, where the run can still be corrected.
 """
 
 # Imports - Python Standard Library
@@ -118,10 +107,9 @@ def _local_moment(
     """ Return a calendar time, or stop the run for want of one.
 
         The reading an event needs.  A time that cannot be read is a
-        shift that cannot be built, and a run that stored it would be
-        one nobody could send; an event the run is only describing
-        reads the same value through '_read_moment' and settles for
-        not knowing.
+        shift that cannot be built.  An event the run is only
+        describing reads the same value through '_read_moment' and
+        settles for not knowing.
 
         Args:
             value (str):
@@ -212,10 +200,9 @@ def _event_from(
 ) -> Event:
     """ Return one calendar item as a revision holds it.
 
-        The reading of the item is here and the making of the event is
-        below, because a person pulling an event in by hand makes one
-        from a stored row rather than from a calendar item, and the
-        two have to produce the same event.
+        The reading of the item is here and the making of the event
+        is below, so that pulling an event in by hand from a stored
+        row produces the same event.
 
         Args:
             item (Dict[str, Any]):
@@ -272,12 +259,10 @@ def _uncollected_from(
     """ Return one calendar item as the record of a thing left out.
 
         Every field but the identifier and the reason may be absent,
-        because the reasons name exactly the items that are missing
-        something.  A value the calendar gave that cannot be read is
-        recorded as absent rather than stopping the run: this item is
-        not becoming a shift either way, and a run refused for the
-        shape of an event it was never going to collect would be a run
-        nobody could correct.
+        because the reasons name exactly the items missing something.
+        A value that cannot be read is recorded as absent rather than
+        stopping the run: this item is not becoming a shift either
+        way.
 
         Args:
             item (Dict[str, Any]):
@@ -345,11 +330,9 @@ def _uncollected(
 ) -> List[UncollectedEvent]:
     """ Return what the window held that the run will not collect.
 
-        Three of the reasons come from the item itself and hold
-        whether or not a search found it.  The fourth is the one no
-        item can carry: an event the configured query strings never
-        returned is one nobody looked for, and only the whole window
-        says which those are.
+        Three reasons come from the item itself.  The fourth cannot:
+        an event the query strings never returned is one nobody looked
+        for, and only the whole window says which those are.
 
         Args:
             read (WindowRead):
@@ -397,18 +380,12 @@ def _window_contents(
 ) -> Tuple[List[Dict[str, Any]], List[UncollectedEvent]]:
     """ Return what a run's window holds, collected and not.
 
-        The calendar is searched once per configured query string and
-        the results are concatenated, so an event matching two of them
-        arrives twice.  It is one event either way, and the first
-        arrival is the one kept: a revision holding it twice would
-        show a reviewer two rows for one thing and send Amplify two
-        identical shifts.
+        The calendar is searched once per query string and the
+        results are concatenated, so an event matching two arrives
+        twice.  The first arrival is kept.
 
-        What is left out is worked out here, from the same reading, and
-        never from a second read at the moment somebody asks: the
-        figure is shown on every reading of the run, and a live read
-        would cost a calendar request per look and give the run a
-        second opinion about its own window.
+        What is left out is worked out here from the same reading,
+        never from a second read when somebody asks.
 
         Args:
             run (Run):
@@ -476,10 +453,8 @@ def _collected(
 ) -> Tuple[List[Event], List[Opportunity]]:
     """ Return the events a run holds and the opportunities they name.
 
-        The titles are read from Amplify here rather than when a
-        preview is asked for: every review row is labelled with one, so
-        a lookup deferred to preview time would leave the main screen
-        unable to name anything.
+        The titles are read from Amplify here, so every review row
+        can be labelled with one.
 
         Args:
             items (Sequence[Dict[str, Any]]):
@@ -532,9 +507,8 @@ def _collected(
 
         # The need IDs alone.  How each one is timed is the business of
         # the role that names it, which the event carries: two
-        # categories timing one listing differently is what this window
-        # is allowed to hold now (D25), so there is nothing left here
-        # for the categories to disagree about.
+        # categories may time one listing differently, so there is
+        # nothing left here for the categories to disagree about.
         need_ids.update(
             role.need_id
             for role in role_timings(
@@ -564,23 +538,17 @@ def collect(
 ) -> Run:
     """ Fill in a run from the calendar it names.
 
-        The run exists before this is called, holding the calendar and
-        the window that were asked for.  That is what makes a
-        collection watchable: the job that does this work is recorded
-        against a run, so it has to have one.
+        The run exists before this is called, holding the calendar
+        and the window asked for, which is what makes the collection
+        watchable: the job is recorded against a run.
 
-        The same work whether the run is new or is being collected
-        again.  A run collected again gains a revision holding what
-        the calendar has now, and the revisions before it stay
-        readable, so what was replaced is still there to look at.
+        The same work whether the run is new or collected again.  A
+        run collected again gains a revision holding what the calendar
+        has now, and the revisions before it stay readable.
 
         Everything the collection produces is written in one
-        transaction.  A run left holding events but no opportunities
-        would label none of them, and a reader could not tell that
-        from a run whose opportunities Amplify had forgotten.  What the
-        window held and the run left out is written there too, for the
-        same reason, and so are the titles the data model had no match
-        for: they all describe one reading of one window.
+        transaction, because it all describes one reading of one
+        window.
 
         Args:
             connection (sqlite3.Connection):
@@ -622,8 +590,8 @@ def collect(
         logger.error(message)
         raise ValidationError(message)
 
-    # Whatever went wrong, the run must not be left saying it is being
-    # collected (D31).  Broad on purpose: a status corrected only for
+    # Whatever went wrong, the run must not be left saying it is
+    # being collected.  Broad on purpose: a status corrected only for
     # the failures somebody thought of is a status that strands the
     # run on the first one nobody did.  The failure itself is the
     # caller's to report, so it goes on up.
@@ -644,17 +612,16 @@ def _after_failing(
 ) -> str:
     """ Return the status a run takes when its collection fails.
 
-        The run answers which case this is, because the caller cannot:
-        by the time the work runs, the status has already been set to
-        'collecting', and the one it held before that is gone.
+        The run answers which case this is: by the time the work
+        runs the status is already 'collecting', and the one before it
+        is gone.
 
-        A run that has never completed a collection has no revision,
-        so there is nothing for it to go back to and 'failed' is where
-        it comes to rest.  A recollection is working over at least one
-        revision, which is still complete and still sendable, so the
-        run goes back to holding it.  'unsent' is not a guess:
-        'why_not_recollect' refuses any run already sent, so that is
-        the only status a recollection can have begun from.
+        A run that never completed a collection has no revision to go
+        back to, so 'failed' is where it rests.  A recollection has at
+        least one complete revision, so the run goes back to holding
+        it.  'unsent' is the only status a recollection can have begun
+        from, because 'why_not_recollect' refuses any run already
+        sent.
 
         Args:
             run (Run):
@@ -780,18 +747,13 @@ def _record_unmatched(
 ) -> None:
     """ Keep the titles this window held that the model did not match.
 
-        Written here because here is where the fact is discovered: an
-        event the model matched nothing for is collected under the
-        fallback category, whose need IDs are empty, and that is an
-        event with no roles.  It blocks the send, which is what gets
-        this run seen to; the log is what survives the run, for the
-        next edit of the model.
+        An event the model matched nothing for is collected under
+        the fallback category, whose need IDs are empty, so it has no
+        roles and blocks the send.  The log is what survives the run,
+        for the next edit of the model.
 
         One sighting per title, however many events carry it and
-        however often the window is collected again -- the repository
-        holds a run to one sighting of a title, so what the count
-        measures is the runs a title turned up in rather than the
-        times somebody read the same window.
+        however often the window is collected again.
 
         Args:
             connection (sqlite3.Connection):

@@ -285,10 +285,8 @@ def fixture_collected(
 ) -> str:
     """ Return a run whose first revision holds one event.
 
-        Left 'unsent' rather than 'collecting', which is where a real
-        collection leaves a run it has finished filling in.  A fixture
-        that stopped short of that would be a run nothing may be done
-        with, and a test using it would be testing the wrong refusal.
+        Left 'unsent', which is where a real collection leaves a run
+        it has finished filling in.
     """
     events.add(
         run_id=run_id,
@@ -333,10 +331,9 @@ def fixture_populated(
 ) -> str:
     """ Return a run with something of everything in it.
 
-        A run holding one plain event can be read correctly by code
-        that is wrong about everything a run can also hold, so this one
-        has two revisions, a repeat, a blocked event, a fuzzy match, an
-        opportunity and a change log entry.
+        Two revisions, a repeat, a blocked event, a fuzzy match, an
+        opportunity and a change log entry: a run holding one plain
+        event is read correctly by code wrong about everything else.
     """
     del job_id
 
@@ -378,11 +375,9 @@ def fixture_not_collected(
 ) -> Callable[[str], List[Any]]:
     """ Return a way to record what a run's window left out.
 
-        One of each reason, because a grouping read correctly for one
-        group can be read wrongly for the rest, and only the first is
-        addable.  Dated in the order the reasons are declared is
-        deliberately avoided: the rows go in by date and come out
-        grouped, so a group order taken from the row order would show.
+        One of each reason, only the first addable.  The dates are
+        deliberately not in the order the reasons are declared, so a
+        group order taken from the row order would show.
     """
 
     def record(run_id: str) -> List[Any]:
@@ -435,9 +430,7 @@ def fixture_add_second_event(
     """ Return a way to add one more event to the collected run.
 
         A figure over a revision is only interesting once there is
-        more than one thing in it, so most tests of one want a second
-        event differing from the first in the single respect under
-        test.
+        more than one event in it.
     """
 
     def add(**overrides: Any) -> None:
@@ -506,11 +499,9 @@ def fixture_finished_job(
 ) -> str:
     """ Return a job that has ended, with an entry in its log.
 
-        Here rather than in any of the three modules that want one:
-        the retention policy, the service that applies it at startup
-        and the command that applies it by hand all need the same
-        arrangement, and three copies would let them drift into
-        arranging different things while claiming to test one policy.
+        Shared by the three that want one: the retention policy, the
+        service that applies it at startup, and the command that
+        applies it by hand.
     """
     job = jobs.create(
         run_id=run_id,
@@ -556,9 +547,8 @@ def fixture_cli(
     """ Return a way to run a command against the test's database.
 
         Nothing is stubbed: the command picks its own client, so the
-        mode selection is exercised rather than replaced.  The database
-        it opens is redirected instead, which is the one thing a test
-        cannot let it choose.
+        mode selection is exercised rather than replaced.  Only the
+        database it opens is redirected.
     """
     del service_database
 
@@ -604,12 +594,11 @@ def an_event(**overrides: Any) -> Event:
     """ Return an event, replacing any field named in 'overrides'.
 
         The day and the hours are stated once for every test that
-        needs an event, because a test naming times of its own says
-        nothing more and one that reproduces these says it twice.
+        needs an event.
 
-        The category the collection matched follows the category
-        unless a test names it, because that is what a collection
-        produces and what leaves a row saying nothing was changed.
+        The matched category follows the category unless a test names
+        it, which is what a collection produces and what leaves a row
+        saying nothing was changed.
     """
     fields: dict = {
         'id': 'event-1',
@@ -647,20 +636,17 @@ def fixture_make_event() -> Callable[..., Event]:
 def fixture_matching_model(shift_model: Callable[..., None]) -> None:
     """ Install a data model the fixture event's category is in.
 
-        'make_event' names a category and a need ID, and the data model
-        this repository ships holds neither under that name.  A test
-        about what the model says of an event -- whether its shift
-        times still follow from the calendar's, above all -- has to
-        arrange one that answers, or it is testing the case where
-        nothing does.
+        'make_event' names a category and a need ID that the shipped
+        data model does not hold, so a test about what the model says
+        of an event has to arrange one that answers.
 
-        The offsets and the count are the ones that reproduce the
-        event's own shift times, so an event nothing has touched is one
-        the model agrees with.
+        The offsets and the count reproduce the event's own shift
+        times, so an event nothing has touched is one the model agrees
+        with.
 
         Only the calendar the 'run_id' fixture collects from holds it,
-        so a reading that went to another calendar's model finds
-        nothing rather than finding the same answer by accident.
+        so a reading that went elsewhere finds nothing rather than the
+        same answer by accident.
     """
     shift_model(
         categories={
@@ -684,10 +670,9 @@ def fixture_moved_event(
 ) -> str:
     """ Return the collected run, its event's shift start moved.
 
-        A run holding something an undo would change, which is what
-        separates a row offered one from a row with nothing to put
-        back.  Arranged with the stand-in model, because what says the
-        row was moved is the model disagreeing with its shift times.
+        A run holding something an undo would change.  Arranged with
+        the stand-in model, because what says the row was moved is the
+        model disagreeing with its shift times.
     """
     del matching_model
     events.replace(
@@ -821,10 +806,10 @@ def fixture_start_service(
 class WaitingRunner(JobRunner):
     """ The real runner, with a way to wait for what it was given.
 
-        A job runs on a thread, so a test that read the database
-        straight after asking for one would be racing it.  This is not
-        a stand-in for the runner: it is the runner, keeping the
-        futures it already returns so a test can wait on the last one.
+        A job runs on a thread, so a test reading the database
+        straight after asking for one would race it.  This is the real
+        runner, keeping the futures it returns so a test can wait on
+        the last one.
     """
 
     def __init__(self, connect_to: Any) -> None:

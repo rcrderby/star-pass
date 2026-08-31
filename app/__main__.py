@@ -62,10 +62,9 @@ logger = get_logger('star_pass.main')
 class TerminalReporter(Reporter):
     """ Render core progress and results as terminal text.
 
-        Holds every decision the core used to make about display: the
-        trailing ellipsis on a step, the "done." that closes it, and how
-        much of a sent batch to show.  Verbosity lives here because how
-        much detail to display is a property of the display.
+        Holds every decision about display: the trailing ellipsis on
+        a step, the "done." that closes it, and how much of a sent
+        batch to show.
     """
 
     def __init__(
@@ -103,10 +102,8 @@ class TerminalReporter(Reporter):
     ) -> None:
         """ Open a status line, leaving it for 'step_finished'.
 
-            The core names the step and this decides what to call it,
-            through the same map the job watcher reads: a step is one
-            thing whether it is watched here or read back off a job,
-            so it is worded once.
+            The core names the step and this words it, through the
+            same map the job watcher reads.
 
             Args:
                 step (str):
@@ -220,14 +217,12 @@ class TerminalReporter(Reporter):
     ) -> None:
         """ Render one opportunity's turn at the chosen verbosity.
 
-            The need ID is not shown at any verbosity: the title names
-            the opportunity in a way an operator recognizes.
+            The need ID is not shown at any verbosity: the title
+            names the opportunity in a way an operator recognizes.
 
-            What Amplify already held is shown beside what was
-            created, and only when there was any.  An opportunity that
-            needed nothing is the case this reports that the old one
-            did not, and a line saying it created nothing without
-            saying why would read as a failure.
+            What Amplify already held is shown beside what was created,
+            and only when there was any, so an opportunity that needed
+            nothing does not read as a failure.
 
             Args:
                 batch (ShiftBatch):
@@ -381,17 +376,14 @@ def resolve_need_ids(
 def build_parser() -> argparse.ArgumentParser:
     """ Build the command-line argument parser.
 
-        Two ways in.  A command word -- "runs collect", "jobs watch" --
-        selects something the API publishes and the command line
-        answers in either mode (D2).  The one remaining run mode flag,
-        '-s/--post-slack-summary', selects the Slack sign-up summary,
-        which the API deliberately does not publish, so nothing
-        replaces it and it stays a flag.
+        Two ways in.  A command word - "runs collect", "jobs watch" -
+        selects something the API publishes.  '-s/--post-slack-summary'
+        selects the Slack sign-up summary, which the API does not
+        publish, so it stays a flag.
 
-        Options that are required for the run mode cannot be marked
-        required at the argparse level (they are only required within
-        it), so 'main' validates them explicitly; the help text and
-        usage line mark them.
+        Options required only within a run mode cannot be marked
+        required at the argparse level, so 'main' validates them; the
+        help text and usage line mark them.
 
         Args:
             None.
@@ -476,7 +468,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # The run-based commands, which work against the local database or
-    # a service (D2).  Added last so they appear below the run modes.
+    # a service.  Added last so they appear below the run modes.
     #
     # The maintenance command joins the same set of subparsers, because
     # argparse allows a parser only one: it is not one of those
@@ -493,11 +485,9 @@ def _command_answered(
 ) -> bool:
     """ Run a command word, if one selected this run.
 
-        Holds the whole question of how a run was selected: a command
-        answers it, the maintenance command answers it, a run mode
-        answers it, and nothing answering it is the error.  Kept
-        together because reading one without the others would not say
-        what a run without any of them does.
+        Holds the whole question of how a run was selected: a
+        command, the maintenance command, or a run mode answers it, and
+        nothing answering it is the error.
 
         Args:
             parser (argparse.ArgumentParser):
@@ -548,14 +538,13 @@ def main(
 ) -> None:
     """ Main application.
 
-        Dispatches to a run mode and converts an expected failure into a
+        Dispatches to a run mode and turns an expected failure into a
         non-zero exit.  The core raises 'StarPassError' rather than
-        exiting, so deciding the status code belongs here, where the
-        process is owned.  'resolve_window', 'SlackNotifier.post',
-        the Slack Web API and the core all log the cause before raising,
-        so the handler exits without repeating the message or printing a
-        traceback over a report the operator has already been given.  An
-        unexpected exception is deliberately left to propagate.
+        exiting, so the status code is decided here.
+
+        Everything that raises logs its cause first, so the handler
+        exits without repeating the message.  An unexpected exception
+        is left to propagate.
 
         Args:
             argv (Optional[Sequence[str]]):

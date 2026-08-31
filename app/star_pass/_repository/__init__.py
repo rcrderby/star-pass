@@ -3,31 +3,20 @@
 
     Every statement that touches the database is in this package.  A
     caller asks for records and passes records back; it never builds a
-    query, and no SQL appears outside these modules.  That is what keeps
-    the core testable without a database and what keeps a move to
-    another one contained: the queries change, and nothing that calls
-    them does.
+    query, and no SQL appears outside these modules.
 
-    One repository per thing that has a lifetime of its own, and a
-    module each, because a single module holding all of them would not
-    stay readable.
+    One repository per thing with a lifetime of its own, and a module
+    each.  The sent record and the idempotency reservations are two
+    rather than one: they answer which rows a run has put into Amplify
+    and what an already-made request answered, and a key covers many
+    shifts, so neither is a column of the other.
 
-    The record of what was sent and the reservations made against
-    idempotency keys are two of them rather than one.  They answer
-    different questions: which rows a run has already put into Amplify,
-    and what a request that has already been made answered.  A key is
-    one request covering many shifts, so neither can be stored as a
-    column of the other.
+    A run owns the opportunities it resolved, a revision owns its
+    events, and an event owns its roles, so each is read and written
+    whole.
 
-    A run owns the opportunities it resolved, so those live with it; a
-    revision owns the events in it, and an event owns its roles, so each
-    is read and written whole rather than a piece at a time.
-
-    Times the layer records are ISO-8601 UTC.  A caller that displays
-    one converts it to the league's own time zone, which is also why
-    nothing here reads the host clock for a calendar day: the record of
-    when something happened is an instant, and only its presentation is
-    local.
+    Times recorded here are ISO-8601 UTC.  A caller converts to the
+    league's zone for display.
 """
 
 # Imports - Local

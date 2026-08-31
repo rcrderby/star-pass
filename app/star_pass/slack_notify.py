@@ -53,12 +53,12 @@ def _split_title(
 ) -> Tuple[str, str]:
     """ Split an opportunity title into its event and role parts.
 
-        Opportunity titles repeat the event across the roles that staff
-        it ('Adult Scrimmages: Skating Officials', 'Adult Scrimmages:
-        Non-Skating Officials').  Splitting on the separator groups
-        those together and shortens each line to the part that differs,
-        with no mapping file to maintain.  A title without the separator
-        is its own group and keeps its full text.
+        Opportunity titles repeat the event across the roles that
+        staff it ('Adult Scrimmages: Skating Officials', 'Adult
+        Scrimmages: Non-Skating Officials').  Splitting on the
+        separator groups those and shortens each line to the part that
+        differs.  A title without the separator is its own group and
+        keeps its full text.
 
         Args:
             title (str):
@@ -104,15 +104,13 @@ def _build_rows(
 ) -> List[Dict[str, Any]]:
     """ Build one display row per event and time slot.
 
-        A row is what a reader scans: an event at a time, with a count
-        for each role staffing it.  Opportunities staffing the same
-        event at the same time merge into one row, so every role for
-        that hour appears together.
+        A row is an event at a time, with a count for each role
+        staffing it.  Opportunities staffing the same event at the same
+        time merge into one row.
 
-        Rows are ordered by start time.  Two events at the same time are
-        ordered by where their opportunities appear in 'needs', which
-        follows the order the need IDs were given, so the order is
-        deterministic and the caller controls it.
+        Rows are ordered by start time, then by where their
+        opportunities appear in 'needs', so the caller controls the
+        order.
 
         Args:
             needs (List[Dict[str, Any]]):
@@ -255,12 +253,11 @@ def _build_day_elements(
     """ Build one day's rows as Block Kit 'rich_text' elements.
 
         The styling is carried by explicit spans rather than 'mrkdwn'
-        markup because Slack reads a ':...:' pair as an emoji shortcode
-        candidate, and that candidate splits a bold run that wraps a
-        time range: '*Adult Scrimmages 6:00-7:00 p.m.*' lost its bold
-        between the two colons on mobile clients.  Every time range
-        holds two colons, so no markup spelling avoids this; a styled
-        span is not parsed and renders the same on every client.
+        markup: Slack reads a ':...:' pair as an emoji shortcode
+        candidate, which breaks a bold run wrapping a time range.
+        Every time range holds two colons, so no markup spelling avoids
+        it; a styled span is not parsed and renders the same on every
+        client.
 
         Args:
             day (Dict[str, Any]):
@@ -303,11 +300,10 @@ def _build_summary_elements(
 ) -> List[Dict[str, Any]]:
     """ Build every day's rows as one run of 'rich_text' elements.
 
-        The days share a single block so that the spacing between them
-        is set here rather than by Slack.  Adjacent 'rich_text' blocks
-        sit closer together than a blank line, which put a new date
-        nearer the previous day's last row than that day's own rows
-        were to each other.
+        The days share a single block, so the spacing between them is
+        set here.  Adjacent 'rich_text' blocks sit closer together than
+        a blank line, which puts a new date nearer the previous day's
+        rows than its own.
 
         Args:
             days (List[Dict[str, Any]]):
@@ -377,13 +373,12 @@ def _button_text(
     """ Build a sign-up button's label.
 
         The role is shortened, because Slack truncates a button that
-        outgrows its width, and the label ends with the configured
-        suffix, which marks that the button opens a browser rather than
-        acting inside Slack.
+        outgrows its width.  The configured suffix marks that the
+        button opens a browser rather than acting inside Slack.
 
-        The suffix is plain text rather than an emoji shortcode: Slack
-        renders a shortcode as a full emoji tile with a hover card, and
-        it crowds out the label on a narrow button.
+        The suffix is plain text rather than an emoji shortcode, which
+        Slack renders as a full emoji tile that crowds out the label on
+        a narrow button.
 
         Args:
             title (str):
@@ -436,11 +431,10 @@ def build_summary_blocks(
 ) -> List[Dict[str, Any]]:
     """ Build Slack Block Kit blocks from a sign-up summary.
 
-        The message groups shifts by event, with one line per time slot
-        listing every role's sign-up count, then closes with one
-        sign-up button per opportunity.  Buttons sit at the end, one per
-        'actions' block: several buttons in a single block wrap by
-        client width, so a block each keeps them one per row.
+        Shifts are grouped by event, one line per time slot listing
+        every role's sign-up count, closing with one sign-up button per
+        opportunity.  Buttons sit one per 'actions' block: several in
+        one block wrap by client width.
 
         Args:
             summary (Dict[str, Any]):

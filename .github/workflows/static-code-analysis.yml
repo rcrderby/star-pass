@@ -58,3 +58,12 @@ jobs:
       - name: Python static code analysis
         run: |
           bandit -rc .bandit.yml .
+
+      # Comments and docstrings, on the files this branch touches.
+      # Scoped to the diff rather than the tree: the sweep in issue
+      # #374 is still working through what was written before this
+      # check existed, and new work is held to the standard now.
+      - name: Comment and docstring style
+        run: |
+          git fetch --no-tags --depth=1 origin main
+          python scripts/check_prose.py --changed origin/main

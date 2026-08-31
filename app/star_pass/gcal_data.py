@@ -54,10 +54,9 @@ logger = get_logger(__name__)
 class WindowRead:
     """ One reading of a calendar window, searched and whole.
 
-        Both halves rather than either alone, because what a run does
-        not collect is the difference between them: an event the
-        configured query strings never returned is one nobody looked
-        for, and only the whole window says which those are.
+        Both halves, because what a run does not collect is the
+        difference between them: an event the query strings never
+        returned is one nobody looked for.
 
         Attributes:
             searched (List[Dict[str, Any]]):
@@ -126,12 +125,9 @@ def exclusion_reason(
 ) -> Optional[str]:
     """ Return why an item must not become a shift, or None.
 
-        One answer to that question, read twice: the filter drops the
-        items it names, and the collection records them against the run
-        so that a reviewer can be told what the window held and why it
-        is not there.  Two copies would eventually disagree, and a
-        reviewer would be given a reason for an item the run had
-        collected anyway.
+        One answer, read twice: the filter drops the items it names,
+        and the collection records them against the run so a reviewer
+        is told what the window held and why it is not there.
 
         Args:
             gcal_item (Dict[str, Any]):
@@ -169,13 +165,11 @@ class GCALData:
     ) -> None:
         """ Class initialization method.
 
-            Construction reads nothing and sends no request.  The
-            caller chooses the window and asks for the calendar it
-            wants: 'get_gcal_shift_data' collects the items in a window
-            and 'filter_gcal_items' removes the ones that must not
-            become shifts.  'read_window' does the first of those and
-            reads the whole window beside it, which is what says which
-            events nobody looked for.
+            Construction reads nothing and sends no request.
+            'get_gcal_shift_data' collects the items in a window,
+            'filter_gcal_items' removes the ones that must not become
+            shifts, and 'read_window' does the first while reading the
+            whole window beside it.
 
             Args:
                 gcal_name (str):
@@ -228,14 +222,12 @@ class GCALData:
         gcal_id = GCAL_CALENDARS[self.gcal_name].get('gcal_id')
         query_strings = GCAL_CALENDARS[self.gcal_name].get('query_strings')
 
-        # An identifier that is missing, and one that is present and
-        # empty, are the same deployment mistake.  '.env.example'
-        # ships the key with no value, so an empty string is what a
-        # '.env' nobody finished holds -- 'is None' would let that
-        # through and send Google a request for no calendar.  The
-        # query strings keep the identity test: the events calendar
-        # is configured with [''], which is falsy in every element and
-        # is a real setting.
+        # A missing identifier and an empty one are the same
+        # deployment mistake: '.env.example' ships the key with no
+        # value, so 'is None' would let an unfinished '.env' send
+        # Google a request for no calendar.  The query strings keep
+        # the identity test, because [''] is falsy and is a real
+        # setting.
         if not gcal_id or query_strings is None:
             # Log an error message and exit
             message = f'Invalid Google Calendar data for "{self.gcal_name}"'
@@ -253,10 +245,9 @@ class GCALData:
     ) -> List[Dict[str, Any]]:
         """ Return every item a set of query strings finds in a window.
 
-            Below both readings of a window: the configured strings
-            build the run, and the empty string reads the window whole.
-            One implementation, so the two cannot page or de-duplicate
-            differently and disagree about what the window holds.
+            Below both readings of a window - the configured strings
+            build the run, the empty string reads it whole - so the two
+            cannot page or de-duplicate differently.
 
             Args:
                 query_strings (Sequence[str]):
@@ -401,12 +392,10 @@ class GCALData:
     ) -> WindowRead:
         """ Read a window as it is searched and as it stands.
 
-            Two readings because a run has to be able to say what it
-            did not collect, and the events nobody looked for are the
-            ones the configured query strings never returned.  A
-            calendar searched with the empty string is already read
-            whole, so its second reading is the first one rather than
-            a repeat of the same request.
+            Two readings, because the events nobody looked for are
+            the ones the query strings never returned.  A calendar
+            searched with the empty string is already read whole, so
+            its second reading is the first.
 
             Args:
                 timeMin (str):
@@ -468,21 +457,15 @@ class GCALData:
     ) -> List[Dict[str, Any]]:
         """ Remove calendar items that must not become shifts.
 
-            Filtering runs before the caller matches a title to a
-            category, for two reasons:
+            Filtering runs before a title is matched to a category,
+            for two reasons.  Matching looks the title up in the shift
+            data model, so a cancelled event filtered afterwards logs a
+            spurious "no confident match" warning.  And an item without
+            a 'dateTime' or a 'summary' has nothing a shift can be
+            built from.
 
-            1. Matching looks the event title up in the shift data
-               model, so a cancelled event filtered afterwards is
-               matched first and logs a spurious "no confident match"
-               warning on every run.
-            2. An item without a 'dateTime' (an all-day event) or
-               without a 'summary' (an untitled event) has nothing a
-               shift can be built from, and is named here rather than
-               failing partway through a collection.
-
-            Which items those are is 'exclusion_reason's answer rather
-            than this method's, because the collection records the same
-            answer against the run.
+            Which items those are is 'exclusion_reason's answer, which
+            the collection records against the run.
 
             Args:
                 gcal_shift_data (List[Dict[str, Any]]):

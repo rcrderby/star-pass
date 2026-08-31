@@ -92,11 +92,8 @@ def minutes_between(
 ) -> int:
     """ Return how many minutes separate two times of day.
 
-        Below both callers.  A stored event's shift length is worked
-        out this way, and so is the duration Amplify is sent for a
-        shift the send is about to create -- and those two have to be
-        the same number, because the second is what arrives and the
-        first is what a person was shown.
+        Below both callers, so the length a person is shown and the
+        duration Amplify is sent are the same number.
 
         Negative when the end is earlier than the start.  Reported
         rather than refused: the caller knows whether that is a row to
@@ -129,15 +126,12 @@ def shift_length(
 ) -> int:
     """ Return how long the shift an event creates lasts, in minutes.
 
-        This is the duration Amplify is given: it takes a start and a
-        length, not a start and an end, so the number here is the one
-        that reaches it.
+        The duration Amplify is given: it takes a start and a length
+        rather than a start and an end.
 
-        Negative when the event's shift ends before it starts.
-        Reported rather than refused, because the collection path
-        rejects such an event but an edit can still produce one, and a
-        reader is better served by the number than by an exception
-        raised while a list was being drawn.
+        Negative when the shift ends before it starts.  Reported
+        rather than refused, because an edit can still produce one and
+        a list is better drawn with the number than stopped.
 
         Args:
             event (Event):
@@ -164,23 +158,18 @@ def capping_maximum(
 ) -> Optional[int]:
     """ Return the maximum that shortened an event's shift, if one did.
 
-        Worked out by comparing the shift against the one the calendar
-        and the offsets would have produced on their own: when that
-        would have run longer than the opportunity allows, the maximum
-        is what decided the length, and a reader is told which number
-        did it rather than being left to wonder why the shift is
-        shorter than the event.
+        Compares the shift against the one the calendar and the
+        offsets would have produced alone: when that runs longer than
+        the opportunity allows, the maximum decided the length and the
+        reader is told which number did it.
 
-        An event serves one shift per role and the roles can name
-        different opportunities, so the binding maximum is the smallest
-        of the ones that applied.  Every category in the data model
-        gives its need IDs the same timing today, so there is only ever
-        one; nothing enforces that, which is why this does not assume
-        it.
+        The roles can name different opportunities, so the binding
+        maximum is the smallest that applied.  Nothing enforces one
+        timing per category, which is why this does not assume it.
 
-        Read from the roles and not from the run's opportunities: the
-        offsets and the maximum are what the role was collected with,
-        which is what produced the times being explained (D25).
+        Read from the roles rather than the run's opportunities: the
+        offsets and the maximum are what the role was collected
+        with.
 
         Args:
             event (Event):
@@ -224,16 +213,12 @@ def repeated(
     """ Return which events would create a shift an earlier one already does.
 
         Two events repeat each other when they would send Amplify the
-        same row, and a row is identified by need ID, date, start and
-        end (D16) -- never by a count, which cannot say *which* shifts
-        already exist.  Sharing a title or a time is not enough: two
-        events at the same hour under different opportunities are two
-        different shifts and both belong.
+        same row, identified by need ID, date, start and end.  Sharing
+        a title or a time is not enough: two events at the same hour
+        under different opportunities are two different shifts.
 
-        The earlier event is the one kept, so a reader is pointed at
-        the one already in the list rather than at the one they are
-        looking at.  Earlier means earlier in the sequence given, which
-        is the order the revision is read in.
+        The earlier event is kept, meaning earlier in the sequence
+        given, which is the order the revision is read in.
 
         Args:
             events (Iterable[Event]):
@@ -269,16 +254,13 @@ def may_unassign(
 ) -> bool:
     """ Return whether an event can be put back to unassigned.
 
-        True where the collection matched no category for the event,
-        which is the only row unassigned is a state of: it is where
-        that row began, so returning it there is putting it back
-        rather than breaking it.
+        True where the collection matched no category, which is the
+        only row unassigned is a state of and where that row began.
 
-        A row the collection did match has no way back to unassigned
-        and asking for one is refused.  What a matched row that should
-        create no shift wants is to be removed from the revision;
-        unassigning it would leave a row behind blocking the whole run
-        (D29).
+        A matched row has no way back and asking for one is refused.
+        A matched row that should create no shift is removed from the
+        revision instead; unassigning it would leave a row behind
+        blocking the whole run.
 
         Args:
             event (Event):
@@ -298,13 +280,11 @@ def blocks_the_run(
     """ Return whether an event stops the run being sent.
 
         True when the event has no role, which is what an unmatched
-        title leaves behind: nothing matched, so there is no
-        opportunity to create a shift under, and a category that
-        resolved to no need ID leaves the same absence.
+        title leaves behind, and what a category resolving to no need
+        ID leaves too.
 
         A blocked run stops rather than dropping the event, because a
-        missing shift is invisible -- the operator finds out when
-        volunteers cannot sign up.
+        missing shift is invisible until volunteers cannot sign up.
 
         Args:
             event (Event):
