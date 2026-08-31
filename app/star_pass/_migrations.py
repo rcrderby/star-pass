@@ -91,7 +91,12 @@ MIGRATIONS = {
             column='source',
             statement='ALTER TABLE revisions ADD COLUMN source INTEGER'
         ),
-        # Each sentence the column holds, read back into what it says.
+        # Each sentence the old 'label' column holds, read back into
+        # what it says.  These four strings are the English that
+        # pre-version-7 code wrote into the database, so they match
+        # stored data and are not labels: the wording a client shows
+        # changes without them.
+        #
         # Gated on 'kind', which every step of a version is asked
         # about before any of them runs and so is still absent here.
         Step(
