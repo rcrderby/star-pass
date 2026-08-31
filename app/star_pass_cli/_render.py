@@ -205,14 +205,9 @@ def last_day(
 ) -> str:
     """ Return the last day a window covers, as a reader means it.
 
-        Read from the answer rather than worked out here.  The
-        contract publishes it because every client showing a window
-        has to say it this way, and the subtraction that used to live
-        here was the first of what would have been one per client --
-        two of which can disagree about which days a run covers.
-        'after' is still this module's, because that direction is a
-        request: the command line takes the day it displays and hands
-        the contract the day after.
+        Read from the answer rather than worked out here, so no
+        client subtracts.  'after' is still this module's, because
+        that direction is a request.
 
         Args:
             window (Dict[str, Any]):
@@ -231,12 +226,10 @@ def after(
 ) -> str:
     """ Return the exclusive end a window covering that last day has.
 
-        The inverse of 'last_day', and here beside it for the same
-        reason: the window is authoritative with an exclusive end
-        everywhere it is stored, sent or compared, and the one place
-        that converts is the one place a reader is spoken to.  A
-        command line takes the day it displays and hands the contract
-        the day after.
+        The inverse of 'last_day'.  The window has an exclusive end
+        everywhere it is stored, sent or compared, so the command line
+        takes the day it displays and hands the contract the day
+        after.
 
         Args:
             last_day_covered (str):
@@ -330,10 +323,8 @@ def labelled(
 ) -> str:
     """ Return named values, one to a line, aligned on their names.
 
-        What a table is for a list, this is for one thing: a run and a
-        job each carry more fields than a terminal row can hold, and a
-        reader of one is looking a single value up rather than
-        comparing it with the value beside it.
+        What a table is for a list, this is for one thing: a run and
+        a job each carry more fields than a terminal row holds.
 
         Args:
             pairs (Sequence[Tuple[str, str]]):
@@ -447,11 +438,8 @@ def roles_text(
     """ Return the opportunities an event creates shifts for.
 
         With the offsets, because they are the role's: two events in
-        one run can send to one Amplify listing on different timings
-        (D25), and a reader comparing them has nowhere else to see
-        that.  Signed rather than plain, because which way the shift
-        moved from the event is the question, and a bare number leaves
-        it to be guessed.
+        one run can send to one Amplify listing on different timings.
+        Signed, because which way the shift moved is the question.
 
         Args:
             event (Dict[str, Any]):
@@ -476,10 +464,8 @@ def event_notes(
 ) -> str:
     """ Return what a reader has to be told about an event.
 
-        Everything here is a reason to look at the row twice, which is
-        why an ordinary keyword match is absent: it is how most events
-        reach their category, and noting it on every row would bury the
-        rows that need attention.
+        Everything here is a reason to look at the row twice, which
+        is why an ordinary keyword match is absent.
 
         Args:
             event (Dict[str, Any]):
@@ -636,16 +622,14 @@ def run_summary(
 ) -> str:
     """ Return what a run is, above what it holds.
 
-        The zone is shown beside the window rather than folded into it.
-        The server's zone is the authoritative one (D16), and a reader
-        somewhere else is entitled to know which zone the dates they
-        are looking at were read in.
+        The zone is shown beside the window rather than folded into
+        it, so a reader elsewhere knows which zone the dates were read
+        in.
 
         The interrupted job is here because this is where somebody
         finds the identifier 'jobs resume' takes.  Resuming is a
-        deliberate act (D10), so nothing hands the identifier over on
-        its own, and before it was published the only place to read
-        one was the service's log.
+        deliberate act, so nothing hands the identifier over on its
+        own.
 
         Args:
             run (Dict[str, Any]):
@@ -684,10 +668,8 @@ def run_detail(
 ) -> str:
     """ Return one run, everything in it and everything done to it.
 
-        The three lists arrive in one answer because a reader looking
-        at one is looking at all three, and reading them separately
-        would let them disagree.  They are shown together for the same
-        reason.
+        The three lists arrive in one answer and are shown together:
+        reading them separately would let them disagree.
 
         Args:
             answer (Dict[str, Any]):
@@ -737,10 +719,8 @@ def revision_words(
 ) -> str:
     """ Return what a revision is, in words.
 
-        The two kinds a collection fills name no revision, so the
-        wording for them holds no placeholder and formatting one with
-        a number nobody asked for would be formatting a sentence that
-        has no room for it.
+        The two kinds a collection fills name no revision, so their
+        wordings hold no placeholder.
 
         Args:
             revision (Dict[str, Any]):
@@ -789,15 +769,13 @@ def delete_restatement(
 ) -> str:
     """ Return what a deletion is about to destroy, for somebody to read.
 
-        The confirmation's job is to make them read it (D11), so what
-        is about to go is on the line above the question rather than a
-        bare "are you sure".  The counts are the point: a run holding
-        nothing and a run holding a month of reviewed events read the
-        same way in an identifier alone.
+        What is about to go is on the line above the question rather
+        than a bare "are you sure".  The counts are the point: a run
+        holding nothing and a run holding a month of reviewed events
+        read the same in an identifier alone.
 
-        The status is here because it is what says whether the
-        deletion will be refused at all -- a run that has sent is kept
-        (D24) -- so somebody reading "sent" learns why before asking.
+        The status says whether the deletion will be refused at all,
+        because a run that has sent is kept.
 
         Args:
             run (Dict[str, Any]):
@@ -828,10 +806,8 @@ def deleted_text(
 ) -> str:
     """ Return what to say when a run has been deleted.
 
-        The operation answers with no body, because a deletion has
-        nothing to report beyond having happened, so what is written
-        is this client's own words rather than anything the service
-        worded.
+        The operation answers with no body, so these are this
+        client's own words.
 
         Args:
             answer (None):

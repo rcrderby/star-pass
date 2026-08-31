@@ -20,14 +20,13 @@ from ._exceptions import ConfigurationError
 FILE_ENCODING = 'utf-8'
 # .env file path
 ENV_FILE_PATH = './.env'
-# Load environment variables before any setting is read, so every value
-# in this module can be supplied by the .env file as well as by the
-# process environment (twelve-factor config).  Values already present in
-# the environment win over the file.
+# Load environment variables before any setting is read, so every
+# value here can come from the .env file or the process environment.
+# A value already in the environment wins over the file, and the file
+# is read once, so a rotated credential needs a restart.
 #
-# Nothing may call 'getenv' above this line.  A setting read before the
-# load binds to its default and the .env file has no effect on it, with
-# no error to say so.
+# Nothing may call 'getenv' above this line: a setting read before the
+# load binds to its default with no error to say so.
 load_dotenv(
     dotenv_path=ENV_FILE_PATH,
     encoding=FILE_ENCODING

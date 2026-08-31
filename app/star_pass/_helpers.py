@@ -44,12 +44,12 @@ def amplify_headers() -> Dict[str, str]:
     """ Return the headers an Amplify request carries.
 
         Here rather than beside any one caller: attaching the
-        credential is the same rule for every request, and a second
-        copy of it is a second place to forget.
+        credential is the same rule for every request.
 
-        Read when a request is about to be made rather than held from
-        import time, so a deployment that rotates the credential and
-        restarts nothing still sends the current one.
+        The value is read from the environment when a request is about
+        to be made.  '.env' is loaded once at import and does not
+        override what is already set, so rotating the credential means
+        changing it and restarting.
 
         Args:
             None.
@@ -90,16 +90,13 @@ def parse_amplify_datetime(
 ) -> Optional[datetime]:
     """ Return an Amplify datetime as a datetime, or None.
 
-        Here rather than beside either caller.  The sign-up summary
-        reads a shift's start to decide whether it falls in its window,
-        and the shift preview reads the same field to decide whether
-        Amplify already has a row (D16).  Two readings of one format
-        could disagree about a value with no seconds in it, and the
-        disagreement would show up as a shift sent twice.
+        Here rather than beside either caller: the sign-up summary
+        and the shift preview read the same field, and two readings of
+        one format could disagree about a value with no seconds in it.
 
         Amplify writes datetimes as naive local values, so what comes
-        back carries no zone and is directly comparable with another
-        one from the same source.
+        back carries no zone and compares directly with another from
+        the same source.
 
         Args:
             value (Any):
@@ -128,11 +125,10 @@ def parse_amplify_datetime(
 class CategoryMatch:
     """ Which category a title matched, and how it got there.
 
-        The answer to one lookup, kept whole.  A caller that only
-        wants the shift configuration reads 'need_details'; a caller
-        storing the event needs the other two as well, because a run
-        records the match it actually made rather than the one the
-        data model would make today.
+        The answer to one lookup, kept whole.  A caller wanting only
+        the shift configuration reads 'need_details'; a caller storing
+        the event needs all three, because a run records the match it
+        made rather than the one the model would make today.
 
         Attributes:
             need_details (Dict[str, Any]):
@@ -427,11 +423,8 @@ class Helpers:
         """ Return a category by name, for a person who chose it.
 
             Beside 'match_shift_info' because both answer "what does
-            this category ask for", and they differ only in how the
-            category was reached.  A chosen category carries no 'Match':
-            nothing was matched, somebody decided, and a run that
-            recorded a match here would claim the model did work it did
-            not do.
+            this category ask for".  A chosen category carries no
+            'Match': nothing was matched, somebody decided.
 
             Args:
                 gcal_name (str):
@@ -478,11 +471,10 @@ class Helpers:
         """ Match a title to a category, and say which one and how.
 
             The whole answer to the lookup 'search_shift_info' takes
-            one field of.  A run stores which category a title matched
-            and how it matched, because the data model can change
-            between the day a run is collected and the day it is
-            reviewed: recomputed later, the match would describe the
-            model as it is now instead of what the run actually did.
+            one field of.  A run stores which category matched and how,
+            because the model can change between collection and review
+            and a recomputed match would describe the model as it is
+            now.
 
             Args:
                 gcal_name (str):
@@ -737,11 +729,10 @@ class Helpers:
             connection error that occurred before the request reached
             the server, which cannot create a duplicate shift.
 
-            The session is built once and reused.  A session per request
-            left its pooled connections unreleased and defeated the
-            connection reuse a Session exists to provide, which matters
-            most to the responses reader: it can send up to
-            'AMPLIFY_RESPONSES_MAX_PAGES' requests in one run.
+            The session is built once and reused, so its pooled
+            connections are reused.  That matters most to the responses
+            reader, which can send up to 'AMPLIFY_RESPONSES_MAX_PAGES'
+            requests in one run.
 
             Args:
                 None.
@@ -893,10 +884,10 @@ def require_env_vars(
 ) -> None:
     """ Confirm required environment variables have a value.
 
-        Without this check a missing credential is only discovered when
-        the API rejects the request: the run sends 'Bearer None' (or
-        'key=None'), gets a 401 or 403, and reports the status code,
-        which says nothing about the actual cause.
+        Without this a missing credential is only discovered when the
+        API rejects the request: the run sends 'Bearer None', gets a
+        401 or 403, and reports a status code that says nothing about
+        the cause.
 
         Args:
             *var_names (str):
