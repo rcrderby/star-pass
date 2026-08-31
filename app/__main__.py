@@ -468,7 +468,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # The run-based commands, which work against the local database or
-    # a service (D2).  Added last so they appear below the run modes.
+    # a service.  Added last so they appear below the run modes.
     #
     # The maintenance command joins the same set of subparsers, because
     # argparse allows a parser only one: it is not one of those

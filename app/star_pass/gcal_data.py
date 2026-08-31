@@ -222,14 +222,12 @@ class GCALData:
         gcal_id = GCAL_CALENDARS[self.gcal_name].get('gcal_id')
         query_strings = GCAL_CALENDARS[self.gcal_name].get('query_strings')
 
-        # An identifier that is missing, and one that is present and
-        # empty, are the same deployment mistake.  '.env.example'
-        # ships the key with no value, so an empty string is what a
-        # '.env' nobody finished holds -- 'is None' would let that
-        # through and send Google a request for no calendar.  The
-        # query strings keep the identity test: the events calendar
-        # is configured with [''], which is falsy in every element and
-        # is a real setting.
+        # A missing identifier and an empty one are the same
+        # deployment mistake: '.env.example' ships the key with no
+        # value, so 'is None' would let an unfinished '.env' send
+        # Google a request for no calendar.  The query strings keep
+        # the identity test, because [''] is falsy and is a real
+        # setting.
         if not gcal_id or query_strings is None:
             # Log an error message and exit
             message = f'Invalid Google Calendar data for "{self.gcal_name}"'

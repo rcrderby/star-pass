@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """ Logging configuration for the star_pass package.
 
-    Provides a single, idempotently-configured package logger so that
-    diagnostic and status output flows through the standard 'logging'
-    framework instead of bare 'print' calls.  The log level is read from
-    the 'LOG_LEVEL' environment variable (see _defaults), defaulting to
-    'INFO'.  User-facing report data (shift previews, JSON) goes to the
-    caller's 'Reporter' instead, which the CLI renders; the core does
-    not decide how anything is displayed.
+    One idempotently-configured package logger, at 'LOG_LEVEL' and
+    defaulting to 'INFO'.
+
+    Diagnostic output goes here.  What a person asked for goes to the
+    caller's 'Reporter'; the core does not decide how anything is
+    displayed.
 """
 
 # Imports - Python Standard Library
@@ -159,21 +158,12 @@ def configure_logging() -> logging.Logger:
         isinstance(handler.formatter, JSONFormatter)
         for handler in root.handlers
     ):
-        # Standard error, not standard output.
-        #
-        # Plan section 8 asks for "structured JSON logs to stdout".
-        # The structure is the half worth having and is above; the
-        # destination is wrong in contact with this code, because one
-        # logger serves both the services and the command line, and
+        # Standard error, not standard output.  One logger serves
+        # the services and the command line, and
         # 'star_pass_cli/_output.py' writes what a person asked for to
-        # standard output.  Moving log lines there would interleave
-        # them with the answer to 'runs list', and redirecting that
-        # answer to a file would collect the log with it.
-        #
-        # Nothing is lost in a container: Docker captures both
-        # streams, so 'docker compose logs' reads the same either way.
-        # What section 8 is really asking for -- no log files, no
-        # rotation inside the application -- is already true.
+        # standard output: log lines there would interleave with the
+        # answer to 'runs list'.  Docker captures both streams, so
+        # 'docker compose logs' reads the same either way.
         handler = logging.StreamHandler(stream=sys.stderr)
         handler.setFormatter(JSONFormatter())
         root.addHandler(handler)

@@ -1,33 +1,23 @@
 #!/usr/bin/env python3
 """ Turning an answer into something to read in a terminal.
 
-    Rendering only.  Everything here takes what a client answered --
-    the same document in either mode -- and returns text, so what is
-    shown cannot depend on which mode produced it.
+    Rendering only.  Everything here takes what a client answered -
+    the same document in either mode - and returns text.
 
     The window is the one place a value is converted rather than
-    printed.  The contract carries an exclusive end, because that is
-    what the server stores and what arithmetic wants; a person reading
-    a run means the last day it covers.  Converting here is what
-    CLAUDE.md asks for -- times and window bounds are converted for
-    display -- and it keeps the authoritative value unconverted
-    everywhere else.
+    printed: the contract carries an exclusive end, and a person
+    reading a run means the last day it covers.
 
-    Two shapes, and the choice between them is the size of the answer.
-    A list is a table, because a reader is comparing rows.  One thing
-    is a column of labelled values, because a reader is looking a
-    single fact up and a row that wide would wrap.  A document holding
-    both -- a run, which arrives with its events, its opportunities and
-    its change log -- is the labelled values followed by a table each.
+    Two shapes, chosen by the size of the answer.  A list is a table,
+    because a reader is comparing rows.  One thing is a column of
+    labelled values.  A document holding both is the labelled values
+    followed by a table each.
 
-    Every renderer a command uses takes one argument, named 'answer',
-    so that '_commands' can hold which renderer belongs to which
-    operation as data rather than as five near-identical functions.
+    Every renderer takes one argument, named 'answer', so '_commands'
+    can hold which renderer belongs to which operation as data.
 
     What a run holds is here; what would become of it is in
-    '_sending' -- the preview, the restatement a send is confirmed
-    with, and the job that does it.  The primitives are here, because
-    a table looks the same whichever answer it is showing.
+    '_sending'.
 """
 
 # Imports - Python Standard Library
@@ -91,7 +81,7 @@ EVENT_HEADERS = (
 
 # What an opportunity's row shows, in order.  What Amplify says about
 # the listing, and nothing else: how a shift is timed under it is the
-# role's and is shown with the role (D25).
+# role's and is shown with the role.
 OPPORTUNITY_HEADERS = (
     'NEED',
     'TITLE'

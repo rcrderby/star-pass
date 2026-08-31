@@ -507,9 +507,8 @@ def _collected(
 
         # The need IDs alone.  How each one is timed is the business of
         # the role that names it, which the event carries: two
-        # categories timing one listing differently is what this window
-        # is allowed to hold now (D25), so there is nothing left here
-        # for the categories to disagree about.
+        # categories may time one listing differently, so there is
+        # nothing left here for the categories to disagree about.
         need_ids.update(
             role.need_id
             for role in role_timings(
@@ -591,8 +590,8 @@ def collect(
         logger.error(message)
         raise ValidationError(message)
 
-    # Whatever went wrong, the run must not be left saying it is being
-    # collected (D31).  Broad on purpose: a status corrected only for
+    # Whatever went wrong, the run must not be left saying it is
+    # being collected.  Broad on purpose: a status corrected only for
     # the failures somebody thought of is a status that strands the
     # run on the first one nobody did.  The failure itself is the
     # caller's to report, so it goes on up.

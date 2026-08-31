@@ -280,9 +280,8 @@ def why_not_send(
 
     # Refused rather than allowed to send nothing.  A run whose first
     # collection failed holds no revision, and a send of nothing would
-    # still stamp 'sent_at' -- which is what D24 refuses a deletion on,
-    # so the run would become permanent litter for having been sent
-    # when there was nothing to send (D31).
+    # still stamp 'sent_at', which is what refuses a deletion, so the
+    # run would become permanent litter.
     if run.status == RUN_STATUS_FAILED:
         return collection_failed(run_id=run.id)
 

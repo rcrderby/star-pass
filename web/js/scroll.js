@@ -1,30 +1,22 @@
-/** Where the reader was, per address (D28).
+/** Where the reader was, per address.
  *
- * A twenty-eight event review is taller than the window, and every
- * way out of it and back -- the Not collected tab, the preview, Back
- * from either -- returned to the top.  The address names the run and
- * the view, so it is what a place can be remembered against; before
- * D28 there was no such name and this could not be built.
+ * The address names the run and the view, so it is what a place is
+ * remembered against.
  *
- * **Restoring has to wait for the content.**  A screen is put on the
- * page before it has read anything and fills itself in when the read
- * lands, so the moment the router draws is the moment there is
- * nothing to scroll to.  Nothing publishes "the screen is finished" --
- * a run's rows, its banners and its change log all arrive on their own
- * -- so what is waited on is the page being tall enough to hold the
- * offset, looked at on a short timer until it is or until waiting
- * stops being welcome.
+ * **Restoring waits for the content.** A screen is put on the page
+ * before it has read anything and fills itself in when the read
+ * lands, and nothing publishes "the screen is finished". What is
+ * waited on is the page being tall enough to hold the offset, checked
+ * on a short timer until it is or until waiting stops being welcome.
  *
- * **In memory, not in storage.**  This remembers a place inside one
- * visit rather than across reloads: a reload is somebody starting
- * again, and a position restored into a run whose rows moved while the
- * page was closed is a worse answer than the top of the table.
+ * **In memory, not in storage.** A place is remembered inside one
+ * visit rather than across reloads: a position restored into a run
+ * whose rows moved while the page was closed is a worse answer than
+ * the top of the table.
  */
 
-/* Where each address was left, by path. Keyed by the whole path, so
- * two views of one run are two places and two runs are four -- which
- * is what "per run and view, reset when the run changes" comes to
- * once the run is part of the name. */
+/* Where each address was left, keyed by the whole path, so two views
+ * of one run are two places and two runs are four. */
 const places = new Map();
 
 /* How long to keep waiting for the page to grow, in milliseconds,

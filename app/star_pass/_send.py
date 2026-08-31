@@ -5,22 +5,17 @@
     no way to take a shift back, so everything here is arranged around
     one question: does this row already exist?
 
-    **One request per opportunity, not per shift.**  Amplify's create
-    endpoint takes an array, and a month is on the order of a hundred
-    shifts across a handful of opportunities.  Idempotency is
+    **One request per opportunity, not per shift.**  Idempotency is
     unaffected: the record is per shift, keyed by the run and the four
     columns a row is identified by, and so is the decision to skip.
 
     **A batch cannot record a partial success.**  A request whose
     answer never arrives leaves the run not knowing whether those rows
     landed, so nothing is recorded, the run is left 'partly_sent', and
-    the next attempt reads the opportunity and sends the difference.
-    Duplicate safety rests on that live read.
+    the next attempt sends the difference.
 
     **Each opportunity is read in the step that sends to it**, not all
-    at the start: minutes can pass between the first batch and the
-    last, and a shift created in that time would otherwise be created
-    twice.
+    at the start: minutes can pass between batches.
 """
 
 # Imports - Python Standard Library

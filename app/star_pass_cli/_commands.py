@@ -64,7 +64,7 @@ from ._sending import (
 FAILURE = 1
 SUCCESS = 0
 
-# What a send asks before it writes into Amplify (D11).
+# What a send asks before it writes into Amplify.
 SEND_QUESTION = 'Create these shifts in Amplify? This cannot be undone.'
 
 # What a send says when there is nothing to ask about, and when the
@@ -579,7 +579,7 @@ def _send(
         command: Command,
         args: argparse.Namespace
 ) -> None:
-    """ Read what a send would do, ask, and do it (D11).
+    """ Read what a send would do, ask, and do it.
 
         Three operations rather than one, and that is the point.  What
         somebody is asked to confirm is read here and now -- so it

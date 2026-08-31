@@ -335,20 +335,17 @@ BASE_GCAL_PARAMS = {
     'timeMin': '',
     'timeMax': '',
 }
-# Which calendars this deployment reads.  **No default**, and the API
-# service will not start without both: a default here is one
-# organization's calendar, and an installation that forgot the variable
-# would collect somebody else's events and have no way to tell.  The
-# failure is a missing value at startup instead, named.
+# Which calendars this deployment reads.  **No default**: one would
+# be some other organization's calendar, and an installation that
+# forgot the variable would collect their events with no way to tell.
 #
-# Read here rather than raised here.  This module is imported by every
-# run mode including the Slack summary, which reads no calendar at all
-# and must not be stopped by their absence, so the requirement is
-# stated where a service that needs them is built.
+# Read here and required elsewhere.  Every run mode imports this
+# module, including the Slack summary, which reads no calendar, so the
+# requirement is stated where a service that needs them is built.
 GCAL_EVENTS_CAL_ID = getenv('GCAL_EVENTS_CAL_ID')
 GCAL_PRACTICES_CAL_ID = getenv('GCAL_PRACTICES_CAL_ID')
 # 'notes' says whether this calendar's entries carry a description
-# worth keeping with the event (D30).  A property of the calendar
+# worth keeping with the event.  A property of the calendar
 # rather than of the interface: a client deciding it by the calendar's
 # name would be second-guessing configuration it is handed.  The
 # events calendar puts the door and game times there; the practices
@@ -392,15 +389,12 @@ SLACK_DEV_CHANNEL_ID = getenv('SLACK_DEV_CHANNEL_ID')
 SLACK_CHECK_MODE_MESSAGE = '\n** Slack Check Mode Run (no message sent) **'
 # Text appended to a sign-up button's label, marking that it opens a
 # browser rather than acting inside Slack.  A plain arrow rather than
-# ':arrow_upper_right:', which Slack renders as a full emoji tile with
-# a hover card and which crowds out the label on a narrow button.  Set
-# it empty for no suffix.
+# ':arrow_upper_right:', which Slack renders as a full emoji tile that
+# crowds out the label.  Set it empty for no suffix.
 #
-# U+2197 carries an emoji presentation by default and would render as
-# that same tile, so U+FE0E follows it to ask for the text glyph.  The
-# selector is invisible, which is why both are written as escapes: a
-# literal arrow pasted here looks identical with the selector dropped,
-# and the tile would return with nothing in the diff to explain it.
+# U+2197 carries an emoji presentation and would render as that same
+# tile, so U+FE0E follows it to ask for the text glyph.  Both are
+# written as escapes because the selector is invisible.
 SLACK_SIGN_UP_BUTTON_SUFFIX = getenv(
     'SLACK_SIGN_UP_BUTTON_SUFFIX',
     ' \u2197\ufe0e'
@@ -463,17 +457,15 @@ AMPLIFY_RESPONSES_TIMEOUT = int_env(
     'AMPLIFY_RESPONSES_TIMEOUT',
     '90'
 )
-# Look-back window (days) for the 'since_created' filter on the responses
-# read.  The Amplify API has no server-side filter for a need or for a
-# shift's date; 'since_created' (when the sign-up record was created) is
-# the only lever that bounds the volume, so the whole domain's recent
-# responses are paged and filtered to the target need client-side.
+# Look-back window (days) for the 'since_created' filter on the
+# responses read.  Amplify has no server-side filter for a need or a
+# shift's date, so the domain's recent responses are paged and
+# filtered to the target need here.
 #
-# The window is safe because a sign-up cannot predate the shift it is
-# for, and shifts are created at most a month or two ahead, so a sign-up
-# for an upcoming shift is always recent.  Widen this value if sign-ups
-# might be created further ahead than the window; 'AmplifyResponses'
-# logs the observed margin on every run and warns when it gets thin.
+# A sign-up cannot predate the shift it is for, and shifts are created
+# at most a month or two ahead.  Widen this if sign-ups might be
+# created further ahead; 'AmplifyResponses' logs the observed margin
+# and warns when it gets thin.
 AMPLIFY_RESPONSES_SINCE_DAYS = int_env(
     'AMPLIFY_RESPONSES_SINCE_DAYS',
     '90'
@@ -510,7 +502,7 @@ SHIFTS_INFO_FILE = Path.joinpath(
     SHIFTS_INFO_FILE_NAME
 )
 
-# How long what a run leaves behind is kept (D12).  The driver is the
+# How long what a run leaves behind is kept.  The driver is the
 # volunteer names and schedules this data holds, not disk: a job's
 # event log names people and the times they were asked to be
 # somewhere, and a superseded revision holds the events that were in
@@ -531,17 +523,15 @@ RETENTION_JOB_LOG_DAYS = int_env(
     '90'
 )
 
-# Revisions a run no longer needs.  The first revision and the current
-# one are never removed: the first is the run as the calendar gave it,
-# which reverting to is a published operation, and the current one is
-# what the run *is*.  What goes is the sealed ones in between, once
-# the run itself has gone untouched for this long.
+# How long a run's sealed revisions are kept.  The first and the
+# current one are never removed: the first is the run as the calendar
+# gave it, and reverting to it is a published operation; the current
+# one is what the run *is*.  What goes is the sealed ones in between,
+# once the run has gone untouched for this long.
 #
-# D12 said superseded revisions were deleted immediately, which was
-# written before revisions could be reverted to.  Every revision is
-# reachable now -- a caller can list them and go back to any -- so
-# there is no moment at which one is superseded, and a window is what
-# replaces that (D20).
+# Every revision is reachable - a caller can list them and go back to
+# any - so there is no moment at which one is superseded and a window
+# is what decides instead.
 RETENTION_REVISION_DAYS = int_env(
     'STAR_PASS_RETENTION_REVISION_DAYS',
     '90'
