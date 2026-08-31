@@ -1,29 +1,22 @@
 /* Preview, confirm, send: the three screens the run leaves by.
  *
- * One screen object rather than three, because they are one movement
- * and share one thing between them -- what the preview said.  The
- * confirmation restates it, the request carries its `willCreate` as
- * `expectedShiftCount`, and the sending screen starts from its rows.
- * Split apart, each would have to be handed the same answer anyway.
+ * One screen object rather than three, because they share what the
+ * preview said: the confirmation restates it, the request carries its
+ * `willCreate`, and the sending screen starts from its rows.
  *
  * **The client decides nothing.**  What would be created, what
  * Amplify already holds, what blocks the run and how far the send has
- * got are all read.  The rules the review screen established hold
- * here too: an action is one call, its answer is what the screen
- * redraws from, and a refusal is a notice rather than a screen-wide
- * failure -- what was being looked at is still worth looking at.
+ * got are all read.  An action is one call, its answer is what the
+ * screen redraws from, and a refusal is a notice rather than a
+ * screen-wide failure.
  *
- * The exception is the send itself, which is not one call but a call
- * and a stream.  The call answers with a job; the stream says what
- * the job is doing.  Nothing waits for the send: the browser is not
- * what holds it open, and this screen can be closed and reopened
- * against the same job.
+ * The send is the exception: a call answering with a job, and a
+ * stream saying what the job is doing.  Nothing waits for it, so this
+ * screen can be closed and reopened against the same job.
  *
- * **Both ways to the send go through the confirmation** (D11), which
- * is why the retry reads the preview again before it opens one: the
- * count it restates has to be the count the request carries, and
- * after a partial send that is no longer the number anybody agreed
- * to.
+ * **Both ways to the send go through the confirmation**, which is why
+ * a retry reads the preview again first: the count it restates has to
+ * be the count the request carries.
  */
 
 import {
@@ -59,7 +52,7 @@ export const SEND_JOB = 'send';
 /* What the job says when it ended well, and what it says when the
  * service stopped while it was in hand. The second is not a failure:
  * nothing refused anything, and how far it got is a question for
- * Amplify rather than for the job (D10). */
+ * Amplify rather than for the job. */
 const SUCCEEDED = 'succeeded';
 const INTERRUPTED = 'interrupted';
 
@@ -199,9 +192,9 @@ export class SendingScreen {
       { run: this.state.run, preview: this.state.preview },
       {
         /* Which write it gates is the only thing that differs. All
-         * three ways a run reaches Amplify come through here (D11):
-         * the first send, a retry after a refusal, and a resume after
-         * the service stopped. */
+         * three ways a run reaches Amplify come through here: the
+         * first send, a retry after a refusal, and a resume after the
+         * service stopped. */
         onConfirm: () => (
           this.state.interrupted
             ? this.resumeSend()
@@ -402,18 +395,13 @@ export class SendingScreen {
 
   /** Begin an attempt, letting go of what an earlier one reported.
    *
-   * **A resumed job keeps its event log**, so a stream can carry the
-   * attempt that was interrupted and the one that replaced it, one
-   * after the other. What is worth drawing is the attempt now
-   * running: the earlier one's rows describe requests this one has
-   * made again, and an opportunity the first attempt created is one
-   * the second is told Amplify already holds. Left as they were, a
-   * row the job did create would end up reporting nothing created.
+   * **A resumed job keeps its event log**, so a stream can carry an
+   * interrupted attempt and the one that replaced it.  What is worth
+   * drawing is the attempt now running.
    *
-   * The rows themselves stay. They came from the preview or from the
-   * replay, and either way they are the opportunities this send
-   * works through; it is what was reported about them that belongs
-   * to the attempt.
+   * The rows themselves stay: they are the opportunities this send
+   * works through.  What was reported about them belongs to the
+   * attempt.
    *
    * @returns {void}
    */
@@ -466,37 +454,15 @@ export class SendingScreen {
 
   /** Read the preview again, and confirm what is left to send.
    *
-   * **Both ways back to Amplify come through here**: a retry after an
-   * opportunity was refused, and a resume after the service stopped
-   * (D10). They differ in one request and in nothing else -- what is
-   * left is worked out the same way, by asking Amplify.
+   * **Both ways back to Amplify come through here**: a retry after a
+   * refusal, and a resume after the service stopped.
    *
-   * **Read again, because the count has moved.** Some of what the
-   * first attempt was confirmed against is now in Amplify, so the
-   * number that request carried describes a moment that has passed
-   * and a second one carrying it would be refused, rightly. A resume
-   * carries no count at all: the request takes none, so what the
-   * confirmation buys there is only that somebody read what is about
-   * to happen -- which is what D11 says the confirmation is for.
-   *
-   * **Confirmed again, because a retry is a send.** D11 gates the
-   * write and does not distinguish the first from the second; the
-   * design draws this as a plain button because the prototype it was
-   * drawn against could not have its count move underneath it. And
-   * the guard that protects the first send stops guarding here
-   * otherwise: `expectedShiftCount` is what somebody read and agreed
-   * to, but a retry that read the preview and handed the same number
-   * straight back satisfies that check by construction. It could
-   * never refuse, and nobody would have seen the number. A run edited
-   * in another tab between the failure and this click would then
-   * create shifts nobody previewed -- not duplicates, which the live
-   * read per opportunity prevents whatever happens, but rows that
-   * reached Amplify unreviewed.
+   * **Read again, because the count has moved**, and **confirmed
+   * again, because a retry is a send.**  Handing back the number just
+   * read would satisfy `expectedShiftCount` by construction, so a run
+   * edited elsewhere would create shifts nobody previewed.
    *
    * When nothing is left, nothing is written and the notice says so.
-   * An interrupted job that turns out to have finished its work stays
-   * interrupted, which is true of it -- and the run below is still
-   * readable and still sendable from its own preview.
    *
    * @returns {Promise<void>} When the confirmation is on screen, or
    *     when there was nothing to confirm.
