@@ -28,6 +28,7 @@ from star_pass._records import (
     REVISION_REVERTED
 )
 from star_pass._repository import EventRepository, RevisionRepository
+from star_pass._editing import edit, Operation
 from star_pass._revising import revert, seal
 
 
@@ -249,6 +250,55 @@ class TestWhatIsLogged:
             sealing(run_id)
 
         assert 'collected nothing' in caplog.text
+
+
+class TestWhatTheCollectionsRevisionHolds:
+    def test_it_holds_the_edits_made_before_the_first_seal(
+        self,
+        collected: str,
+        connection: sqlite3.Connection,
+        events: EventRepository,
+        reverting: Callable[..., Any]
+    ) -> None:
+        # A revision's kind is fixed when it is opened, and an edit
+        # changes the current revision in place, so revision 1 holds
+        # the collection plus whatever was edited before the first
+        # seal.  Its name says how it came to exist, not what it
+        # holds, and the wording in 'web/phrases.json' says the same.
+        #
+        # Reverting here therefore gives the edit back.  A revert that
+        # returned the run as the calendar gave it would be a
+        # different operation, and this is what would have to change.
+        row = events.list_all(run_id=collected, revision=1)[0]
+        role = row.roles[0]
+
+        assert role.slots != 99
+
+        edit(
+            connection=connection,
+            run_id=collected,
+            operations=[
+                Operation(
+                    op='set_slots',
+                    event_ids=(row.id,),
+                    need_id=role.need_id,
+                    slots=99
+                )
+            ],
+            principal_id='test-principal'
+        )
+
+        edited = events.list_all(run_id=collected, revision=1)[0]
+
+        assert edited.roles[0].slots == 99
+
+        opened = reverting(collected, 1)
+        restored = events.list_all(
+            run_id=collected,
+            revision=opened.number
+        )[0]
+
+        assert restored.roles[0].slots == 99
 
 
 class TestWhatRevertingOpens:

@@ -49,8 +49,8 @@
     "untitled": "No title, so there is nothing to match an opportunity on, and nothing to note for the model either. These cannot be added to a run."
   },
   "revision": {
-    "collected": "As collected",
-    "recollected": "As recollected",
+    "collected": "Collected",
+    "recollected": "Recollected",
     "continued": "Continued from revision {number}",
     "reverted": "Reverted to revision {number}"
   },

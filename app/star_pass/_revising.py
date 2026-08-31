@@ -12,12 +12,11 @@
     a revision holding a copy of an earlier one, one per revert, and
     the revision that was current stays readable at its own number.
 
-    Reverting to the revision a collection filled drops the events a
-    person pulled in by hand, because that revision is the run as the
-    calendar gave it.
-
-    In the core, not the service: a revision means the same thing to
-    whoever asks for one.
+    Reverting to the revision a collection opened drops the events a
+    person pulled in by hand.  That revision holds every edit made
+    before the first seal, so its name says how it came to exist
+    rather than what it holds; collecting the window again is what
+    reads the calendar afresh.
 """
 
 # Imports - Python Standard Library
@@ -32,9 +31,13 @@ from ._records import Revision
 from ._repository import EventRepository, RevisionRepository, RunRepository
 
 # Constants
-# The revision a collection fills.  Reverting to it is asking for the
-# run as the calendar gave it, which is why it is the one revert that
-# drops what a person pulled in by hand.
+# The revision a collection opens.  Reverting to it is the one revert
+# that drops what a person pulled in by hand, because the row those
+# events were built from belongs to the run rather than to a revision.
+#
+# It holds what the collection produced *and* every edit made before
+# the first seal, because an edit changes the current revision in
+# place.  Its name says how it came to exist, not what it holds.
 COLLECTED_REVISION = 1
 
 # Module logger
@@ -115,11 +118,13 @@ def revert(
         first would add a revision holding an identical copy of the
         one it sealed.
 
-        Reverting to the revision the collection filled also drops the
-        events a person pulled in by hand.  That revision is the run
-        as the calendar gave it, and what puts a dropped event back on
+        Reverting to the revision the collection opened also drops
+        the events a person pulled in by hand.  What puts one back on
         the list of what was not collected is the current revision no
         longer holding it -- the row was never deleted.
+
+        That revision is not the run as the calendar gave it: it holds
+        every edit made before the first seal.
 
         Args:
             connection (sqlite3.Connection):
