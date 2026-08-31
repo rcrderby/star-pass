@@ -318,15 +318,21 @@ select.input {
  * between the two.  The callout opens inside its row rather than over
  * the page, which is why it is not a '.popover': an identifier is
  * something to read and copy, and a row that grows says which run it
- * belongs to without an arrow having to. */
+ * belongs to without an arrow having to.
+ *
+ * It is only as wide as what it holds.  Stretched to the width of a
+ * row on the runs list it read as a second card rather than as a note
+ * about the row above it, which is the whole of what it is. */
 
 .run-id-callout {
-  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
   margin: 0 10px 6px;
-  padding: 8px 10px;
+  padding: 4px 8px;
   border-radius: 7px;
   background: color-mix(in srgb, var(--color-text) 5%, transparent);
 }
@@ -336,22 +342,6 @@ select.input {
  * same thing `.table-hint` says, for the same reason. */
 .run-id-callout[hidden] {
   display: none;
-}
-
-/* In the corner, over the label rather than beside it: the label and
- * the identifier both start at the left edge, and a control in the
- * flow would push one of them off it. */
-.run-id-close {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-}
-
-.run-id-line {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: space-between;
 }
 
 .run-id-value {
