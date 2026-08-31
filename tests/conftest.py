@@ -32,6 +32,11 @@ dotenv.load_dotenv = lambda *args, **kwargs: False
 # Values are intentionally fake; no test may make a live API call.
 os.environ.setdefault('AMPLIFY_TOKEN', 'test-amplify-token')
 os.environ.setdefault('GCAL_TOKEN', 'test-gcal-token')
+# The two calendars a collection reads.  They carry no default, so the
+# API service will not start without them; set here for the same reason
+# the credentials above are, and fake for the same reason.
+os.environ.setdefault('GCAL_EVENTS_CAL_ID', 'test-events-calendar-id')
+os.environ.setdefault('GCAL_PRACTICES_CAL_ID', 'test-practices-calendar-id')
 # Set so the run-mode credential preflight passes. Tests that exercise a
 # missing credential delete the variable with monkeypatch.
 os.environ.setdefault('SLACK_BOT_TOKEN', 'test-slack-not-a-real-token')

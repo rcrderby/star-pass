@@ -70,8 +70,19 @@ derives that session's CSRF token from it. **Both services refuse to
 start without them**, which is a hard stop rather than a subtle failure.
 
 It then asks for your `AMPLIFY_TOKEN` and your `GCAL_TOKEN`, without
-echoing what you type and without printing either back. Every other
-setting has a working default; `.env.example` documents all of them.
+echoing what you type and without printing either back.
+
+**Then set the two calendar IDs** in `.env`, by hand:
+`GCAL_EVENTS_CAL_ID` and `GCAL_PRACTICES_CAL_ID`. Neither has a
+default, and the API service names whichever is missing and refuses to
+start. A default would be one organization's calendars, so a
+deployment that left them unset would collect somebody else's events
+without anything on any screen to say so. They are not secrets, which
+is why the script does not ask for them the way it asks for a
+credential.
+
+Every other setting has a working default; `.env.example` documents all
+of them.
 
 Run it again whenever a value is missing: it refuses to overwrite one
 already set, and writes the file readable by you and your group.

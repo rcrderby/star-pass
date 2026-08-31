@@ -223,7 +223,17 @@ def create_app() -> FastAPI:
     # Without this the service starts, answers, and fails inside a
     # job: a collect after minting a run, and a send partway through,
     # leaving it 'partly_sent'.
-    require_env_vars('AMPLIFY_TOKEN', 'GCAL_TOKEN')
+    require_env_vars(
+        'AMPLIFY_TOKEN',
+        'GCAL_TOKEN',
+
+        # Beside the credentials because the failure is the same
+        # shape: without these a collection reads a calendar this
+        # deployment does not own, or none at all.  They carry no
+        # default for that reason.
+        'GCAL_EVENTS_CAL_ID',
+        'GCAL_PRACTICES_CAL_ID'
+    )
 
     api = FastAPI(
         lifespan=lifespan,
