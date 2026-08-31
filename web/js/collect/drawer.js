@@ -2,7 +2,7 @@
  * window will and will not pick up.
  *
  * **Nothing about the window is worked out in the browser's own
- * zone.**  D16 names a preset computed in the visitor's zone as a
+ * zone.**  A preset computed in the visitor's zone is a
  * live bug in the design this replaces, so "this month" means the
  * month it is where the service is, and the zone is shown rather than
  * assumed.  `format.today` is the only place the current moment
@@ -165,7 +165,7 @@ export class CollectDrawer {
      * never worked out from `end` here: every client that shows a
      * window has to say it the inclusive way, and a subtraction
      * written once per client is a client that can disagree with the
-     * server about which days a run covers (D16). */
+     * server about which days a run covers. */
     const start = run === null
       ? monthWindow(config.timezone, 0)
       : { first: run.window.start, last: run.window.lastDay };

@@ -1,7 +1,7 @@
 /* Settings: what this service is running on, and what it will not do.
  *
  * Read only, and that is the screen rather than a limitation of it.
- * **There is no way to write a credential** (D8): an endpoint able to
+ * **There is no way to write a credential**: an endpoint able to
  * overwrite the service's own production credential would be the
  * highest-value target in the system for the least benefit, so none
  * exists and nothing here asks for one.  Rotation is changing the

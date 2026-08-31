@@ -1,6 +1,6 @@
 /* The five things a collection does, and how far it has got.
  *
- * **Five, not the four the design was drawn with** (D22).  Reading
+ * **Five steps.**  Reading
  * the calendar and reading the Amplify opportunities are two upstream
  * services and either can fail on its own, so which of them stopped a
  * collection is exactly what this screen exists to say; and the
@@ -45,7 +45,7 @@ export const FAILED = 'failed';
 /* And the state a step is left in when the service stopped while it
  * was working. Not `failed`: nothing refused anything, and the step
  * neither finished nor failed -- it was in hand when the process
- * holding it went away (D10). */
+ * holding it went away. */
 export const STOPPED = 'stopped';
 
 /* What each state is drawn as, and what it says beside the step. The

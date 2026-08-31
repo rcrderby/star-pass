@@ -19,7 +19,7 @@
  * window that is eventually superseded, and what the data model is
  * missing outlives it.  So the last section is read beside the run
  * rather than out of it, and there is nothing on it to remove -- a
- * title leaves that log when the data model matches it (D20), which
+ * title leaves that log when the data model matches it, which
  * is the edit somebody notes one in order to make.
  */
 

@@ -1,6 +1,6 @@
 /* Turning what the contract answers with into what a reader sees.
  *
- * One rule governs everything here, and it is D16's: **the server's
+ * One rule governs everything here: **the server's
  * zone is authoritative**.  A run carries the zone its window was read
  * in, and every date and time belonging to that run is shown in it.
  * The browser's own zone is never consulted -- a reviewer in another
@@ -130,7 +130,7 @@ export function lengthText(minutes) {
  *
  * **This is the one place the current moment is turned into a day**,
  * and it is turned into one in the zone the service published rather
- * than the zone the browser happens to be in. D16 calls a preset
+ * than the zone the browser happens to be in. A preset
  * computed in the visitor's zone a live bug in the original design,
  * and it is: somebody in London opening the drawer at nine in the
  * morning would otherwise be offered a September window on the last

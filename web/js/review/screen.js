@@ -91,7 +91,7 @@ const CLEAR_FILTERS = 'Clear filters';
 
 /* Which tab is showing. The names the header's control reports, and
  * the names a path is routed to: each tab is one of the run's two
- * addresses (D28), so what the header says and what the address says
+ * addresses, so what the header says and what the address says
  * have to be the same word. */
 export const SHIFTS_VIEW = 'shifts';
 export const UNCOLLECTED_VIEW = 'uncollected';

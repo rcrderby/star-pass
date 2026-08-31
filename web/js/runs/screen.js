@@ -13,7 +13,7 @@
  * says whether it may be deleted (`mayDelete`), and a run that may
  * not is offered nothing rather than offered something that fails: a
  * run that has sent is kept for ever, and a run something is working
- * on becomes deletable when the work finishes (D24). Nothing here
+ * on becomes deletable when the work finishes. Nothing here
  * works that rule out -- a second opinion about what the operation
  * will accept is one that agrees until the rule changes.
  *

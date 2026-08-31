@@ -152,7 +152,7 @@ export class Router {
    * Where the reader was is put away against the address being left
    * and asked for again against the one being entered, both here
    * because this is the one place a press, Back and a redraw all
-   * pass through (D28 gave them the names to be kept under).
+   * pass through, kept under the names the addresses give them.
    *
    * A redraw of the address already showing keeps its place: the
    * retry on a failed screen draws again, and starting the reader at

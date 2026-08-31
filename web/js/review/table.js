@@ -44,7 +44,7 @@ const HEADERS = [
  * something to read would make its absence look like a fault, and a
  * reader could not tell "nothing was written" from "this row is
  * different".  Which calendars carry notes is the service's answer
- * (D30), never a test of the calendar's name.
+ * rather than a test of the calendar's name.
  *
  * The note is set as text, so what a calendar's description held
  * cannot become markup here.  It is already text by the time it is

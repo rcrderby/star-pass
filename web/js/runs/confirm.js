@@ -29,7 +29,7 @@ const QUESTION = 'Delete this run and everything in it?';
 const NO_UNDO = 'This cannot be undone.';
 
 /* What goes, and what does not. The titles a window did not match
- * belong to no run (D24): what the data model is missing outlives the
+ * belong to no run: what the data model is missing outlives the
  * window that revealed it. */
 const WHAT_GOES = (
   'Its revisions, events, opportunities, change log and jobs go with '

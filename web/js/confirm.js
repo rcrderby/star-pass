@@ -13,7 +13,7 @@
  * are elsewhere.
  *
  * On a different surface from the control that opened it, which is
- * the other half of D11: the click that does the irreversible thing
+ * the click that does the irreversible thing
  * is not in the place the last click was.
  *
  * What differs between the two is what each restates and what its

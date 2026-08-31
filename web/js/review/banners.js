@@ -119,7 +119,7 @@ export function reviewBanners(state, handlers) {
   /* First, and in the alert colour, because it is the one thing here
    * that is not a fact about the run but a question left open about
    * it: a write to Amplify stopped in the middle, and how far it got
-   * is not something this service knows (D10).
+   * is not something this service knows.
    *
    * A banner rather than a screen of its own to open on. An
    * interrupted job stays interrupted until somebody acts on it, so a
@@ -142,7 +142,7 @@ export function reviewBanners(state, handlers) {
    * found nothing.  Without this the screen gives no account of
    * itself at all: the status is drawn in the run picker and nowhere
    * on the run.  What such a run wants is to be collected again, or
-   * deleted (D31). */
+   * deleted. */
   if (run.status === RUN_FAILED) {
     banners.push(banner({
       tone: ALERT,

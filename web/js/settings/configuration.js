@@ -69,7 +69,7 @@ const SETTINGS = [
 ];
 
 /* What is kept, for how long, and why that is the window it is on.
- * Three axes rather than one (D20): the first two expire by age and
+ * Three axes rather than one: the first two expire by age and
  * the third is answered by the data model coming to match a title,
  * and a single window over all three would delete the thing one of
  * them measures. */

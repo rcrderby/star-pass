@@ -48,7 +48,7 @@ export const RECOLLECT_JOB = 'recollect';
 export const COLLECT_JOBS = [COLLECT_JOB, RECOLLECT_JOB];
 
 /* What the job says when it ended well, and what it says when the
- * service stopped while it was in hand (D10). */
+ * service stopped while it was in hand. */
 const SUCCEEDED = 'succeeded';
 const INTERRUPTED = 'interrupted';
 
