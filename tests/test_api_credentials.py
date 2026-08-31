@@ -31,7 +31,7 @@ CREDENTIALS_PATH = f'{_defaults.API_VERSION_PREFIX}/credentials/test'
 CONFIGURED = 'test-amplify-token'
 
 # Written out rather than sliced from the value above: how much of a
-# credential may be shown is a decision (D8), and a test that took the
+# credential may be shown is a decision, and a test that took the
 # length from the code would agree with whatever the code did.
 SHOWN = 'oken'
 
@@ -96,7 +96,7 @@ class TestWhatItAnswers:
         test_credential: Callable[[], Any]
     ) -> None:
         # No endpoint publishes it and none replaces it: rotation is
-        # changing the secret and restarting (D8).
+        # changing the secret and restarting.
         del credential_accepted
 
         assert CONFIGURED not in test_credential().text

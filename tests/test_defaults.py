@@ -28,7 +28,7 @@ from star_pass import _defaults
 from star_pass._exceptions import ConfigurationError
 
 # Where a numeric setting is read.  The front end is deliberately not
-# here: it cannot import the core (D17), so its own two settings are a
+# here: it cannot import the core, so its own two settings are a
 # separate change with a separate argument.
 REPOSITORY_ROOT = Path(__file__).parent.parent
 DEFAULTS_MODULES = (

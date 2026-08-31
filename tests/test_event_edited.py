@@ -87,7 +87,7 @@ class TestWhetherAnEventHasBeenEdited:
         ask_if_edited
     ):
         # The note is truth about the calendar, in the same way and
-        # for the same reason the calendar times are (D30).  A row
+        # for the same reason the calendar times are.  A row
         # whose note counted as an edit would be a row a reviewer
         # could not have changed and could not put back.
         assert ask_if_edited(

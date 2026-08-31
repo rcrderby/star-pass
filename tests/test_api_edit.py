@@ -128,7 +128,7 @@ class TestWhatAnEditAnswers:
 
     def test_the_entry_records_who_made_the_edit(self, edit, collected):
         # Every write records the principal, even while there is one
-        # of them and it is a static token (D13).
+        # of them and it is a static token.
         answer = edit(run_id=collected, operations=[a_nudge()])
 
         assert answer.json()['log'][0]['principalId'] == (
@@ -289,8 +289,8 @@ class TestWhatAnEditAnswers:
     def test_the_principal_is_recorded(
         self, edit, collected, connection
     ):
-        # D13: every write records who asked, while there is still only
-        # one principal, so the column is populated before it matters.
+        # Every write records who asked, while there is still only one
+        # principal, so the column is populated before it matters.
         edit(run_id=collected, operations=[a_nudge()])
 
         stored = ChangeLogRepository(connection=connection).list_all(

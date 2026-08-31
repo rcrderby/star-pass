@@ -159,7 +159,7 @@ class TestWhatTheBrowserIsGiven:
     ) -> None:
         # What script cannot read, injected script cannot send
         # anywhere, which is the whole point of holding the credential
-        # here instead (D4).
+        # here instead.
         client, _api = browser()
 
         answer = client.get(RUNS_PATH)
@@ -634,7 +634,7 @@ class TestWhatIsServedAtTheRoot:
     ) -> None:
         # It is served from here because it can be served nowhere
         # else: the token a write carries is a cookie the page has to
-        # read, and a write from a second origin is refused (D4, D18).
+        # read, and a write from a second origin is refused.
         client, _api = browser()
 
         answer = client.get('/')

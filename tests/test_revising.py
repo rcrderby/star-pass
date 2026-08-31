@@ -175,7 +175,7 @@ class TestWhatSealingLeavesAlone:
         # The change count on a revision is what was done while it was
         # current, so an entry written as one opens would have every
         # sealed revision starting at a change nobody made. Who sealed
-        # it is recorded against the key instead (D13).
+        # it is recorded against the key instead.
         sealing(collected)
 
         assert change_log.list_all(run_id=collected) == []
@@ -349,7 +349,7 @@ class TestHowManyRevisionsARevertAdds:
     ) -> None:
         # For the reason sealing writes none: the count on a revision
         # is what was done while it was current, and who reverted is
-        # recorded against the key instead (D13).
+        # recorded against the key instead.
         reverting(collected, 1)
 
         assert change_log.list_all(run_id=collected) == []

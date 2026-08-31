@@ -202,7 +202,7 @@ class TestWhatPullingOneInAnswers:
         missed: Callable[..., str]
     ) -> None:
         # Every write records the principal, even while there is one
-        # of them and it is a static token (D13).
+        # of them and it is a static token.
         missed(run_id=collected)
 
         log = add(run_id=collected).json()['log']

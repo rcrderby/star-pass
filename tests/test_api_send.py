@@ -141,8 +141,8 @@ class TestStartingASend:
         sending: Callable[..., Any],
         collected: str
     ) -> None:
-        # The key reaches the record of every row the send creates
-        # (D13), so a send given the wrong one would record the wrong
+        # The key reaches the record of every row the send creates,
+        # so a send given the wrong one would record the wrong
         # attempt.
         _response, asked = sending(collected)
 
@@ -220,11 +220,11 @@ class TestWhatIsRefused:
         runs: RunRepository,
         collected: str
     ) -> None:
-        # Such a run holds no revision and so no shifts, and a send of
-        # nothing would still stamp 'sent_at' -- which is what a
-        # deletion is refused on (D24), so the run would be permanent
-        # litter for having been sent when there was nothing to send
-        # (D31).  Nothing is asked of Amplify.
+        # Such a run holds no revision and so no shifts, and a send
+        # of nothing would still stamp 'sent_at' -- which is what a
+        # deletion is refused on, so the run would be permanent litter
+        # for having been sent when there was nothing to send.
+        # Nothing is asked of Amplify.
         runs.set_status(run_id=collected, status=RUN_STATUS_FAILED)
 
         response, asked = sending(collected)

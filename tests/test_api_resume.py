@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Asking the service to run an interrupted job again (D10).
+""" Asking the service to run an interrupted job again.
 
     What resuming runs is pinned in 'test_job_repository.py' and in the
     tests of the work itself, and it is replaced here.  These tests ask
@@ -117,7 +117,7 @@ class TestResumingAJob:
         interrupted: str
     ) -> None:
         # They caused this work, not whoever asked for the attempt that
-        # was interrupted (D13).
+        # was interrupted.
         _response, ran = resuming(interrupted)
 
         assert ran[0][2] == job_principal

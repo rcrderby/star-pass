@@ -243,7 +243,7 @@ class TestAnIdentifiedCaller:
         scoped_client: Callable[..., TestClient]
     ) -> None:
         # One value while the credential is a static token, and it is
-        # what a write records (D13).
+        # what a write records.
         document = scoped_client(SCOPE_CONFIG_READ).get('/scoped').json()
 
         assert document['id'] == _defaults.API_PRINCIPAL_ID

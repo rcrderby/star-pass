@@ -1,14 +1,11 @@
-""" Behaviors the API-first extraction must not change.
+""" The behaviours the contract holds to, whatever answers a call.
 
-    The extraction described in 'docs/design/api-and-security-plan.md'
-    moves domain logic behind a core package and a service boundary.
-    These tests pin the behaviors that the plan names explicitly, so a
-    change to any of them fails here rather than being discovered by an
-    operator during a monthly run.
+    These pin the filter order, the fuzzy match threshold, and the
+    search window's bounds, so a change to any of them fails here
+    rather than during a monthly run.
 
-    Behaviors the existing suite already pins are not repeated here; a
-    duplicate characterization test reads as coverage while testing
-    nothing new.  Those are:
+    The rest of the suite pins the neighbouring behaviours, and they
+    are not repeated here:
 
       - duration capped at 'max_length': 'test_derived.TestCappingMaximum'
       - a shift ending no later than it starts stopping the run:
@@ -19,9 +16,6 @@
         'test_derived.TestBlocksTheRun'
       - an unmatched title routing to review:
         'test_helpers.test_unmatched_title_routes_to_review'
-
-    What is left, and pinned below, is the filter order, the fuzzy match
-    threshold, and the search window's bounds.
 """
 # pylint: disable=missing-function-docstring,missing-class-docstring
 # pylint: disable=protected-access,redefined-outer-name

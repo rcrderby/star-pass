@@ -1,30 +1,23 @@
 #!/usr/bin/env python3
-""" The page's route table, held to what the front end answers (D28).
+""" The page's route table, held to what the front end answers.
 
     The page routes itself with the History API, so a screen is a
-    path: a person reloads one, bookmarks one, or opens one in a
-    second tab, and the request reaches the front end before any of
-    the page's own code runs.  The front end answers those paths with
-    the page and refuses everything else that is not a file.
+    path: a person reloads one or opens one in a second tab, and the
+    request reaches the front end before the page's own code runs.
 
-    Two lists say what "those paths" are -- 'ROUTES' in
+    Two lists say what those paths are -- 'ROUTES' in
     'web/js/router.js' and 'SCREEN_PATHS' in the front end -- and they
     have to be the same list.  A path the page routes and the service
     refuses is a screen that works until somebody reloads it; a path
     the service answers and the page does not route is a blank screen
-    at a 200.  Neither shows up in a diff of one file.
+    at a 200.
 
-    A Python test for a JavaScript table for the reason
-    'test_web_page.py' is one: there is no build step and no
-    JavaScript test runner here, and the table is read as text rather
-    than parsed, which is what that file already does for the imports
-    and the stylesheets the page names.
+    A Python test for a JavaScript table, as 'test_web_page.py' is:
+    there is no JavaScript test runner here, so the table is read as
+    text rather than parsed.
 
-    The refusal is tested here as well as the answer.  The enumerated
-    fallback exists because a catch-all would hand the browser the
-    page where it asked for a module, at a 200, and the screen would
-    silently never draw -- so a test that only proved the screens are
-    answered would pass on the arrangement D28 rejects.
+    The refusal is tested as well as the answer: a catch-all would
+    hand the browser the page where it asked for a module, at a 200.
 """
 
 # pylint: disable=missing-function-docstring,missing-class-docstring
@@ -179,7 +172,7 @@ class TestWhatTheFrontEndAnswers:
     ) -> None:
         # The redirect is registered per screen, not as a rule about
         # trailing slashes: a rule would answer anything one segment
-        # deeper than a screen, which is the catch-all D28 refuses.
+        # deeper than a screen, which is the catch-all to avoid.
         for path in ('/nope/', '/js/', '/runs/a-run/preview/extra/'):
             assert browser.get(
                 path,

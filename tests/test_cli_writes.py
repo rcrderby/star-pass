@@ -267,7 +267,7 @@ class TestCollectingARunAgain:
         collected: str
     ) -> None:
         # The refusal is the service's own words, which is what makes
-        # one mode readable to somebody who learned the other (D2).
+        # one mode readable to somebody who learned the other.
         del collecting_locally
 
         status = cli(
@@ -608,8 +608,8 @@ class TestConfirmingASend:
         asking_to_send: Callable[[], Tuple[int, str]],
         answering: Callable[[str], None]
     ) -> None:
-        # The confirmation's job is to make somebody read the summary
-        # (D11), so it says the count, the window and the
+        # The confirmation's job is to make somebody read the
+        # summary, so it says the count, the window and the
         # opportunities before it asks.
         answering('n')
 
@@ -780,7 +780,7 @@ class TestConfirmingADeletion:
         answering: Callable[[str], None],
         collected: str
     ) -> None:
-        # The confirmation's job is to make somebody read it (D11), so
+        # The confirmation's job is to make somebody read it, so
         # what the run holds is said before the question.  A run
         # holding nothing and a run holding a month of reviewed events
         # read the same way in an identifier alone.
@@ -848,7 +848,7 @@ class TestConfirmingADeletion:
     ) -> None:
         # No answer is not yes, and no flag turns it into one: a gate
         # with a way around it is a gate somebody eventually goes
-        # around (D11).  The reason names the deletion rather than the
+        # around.  The reason names the deletion rather than the
         # send, so a caller is not sent looking for a send that is not
         # there.
         status, shown = asking_to_delete()

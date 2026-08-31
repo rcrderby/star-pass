@@ -161,7 +161,7 @@ class TestWhatIsPulledIn:
         missed: Callable[..., str]
     ) -> None:
         # Adding reads the stored row and never the calendar, so the
-        # note is kept on the row for this (D30).  Without it, an
+        # note is kept on the row for this.  Without it, an
         # event pulled in from Not collected would say the calendar
         # wrote nothing about it while the calendar had.
         missed(calendar_note='Doors at 6 PM, Game at 7 PM')
@@ -355,9 +355,8 @@ class TestTheOpportunityItNames:
         run: str,
         runs: RunRepository
     ) -> None:
-        # It used to be refused, because the run recorded one set of
-        # offsets per opportunity. The timing is the role's now, so an
-        # event pulled in brings its own and nothing disagrees (D25).
+        # The timing is the role's, so an event pulled in brings its
+        # own and nothing disagrees with the run's opportunities.
         runs.set_opportunities(
             run_id=run,
             opportunities=[make_opportunity(need_id=NEED_IDS[0])]

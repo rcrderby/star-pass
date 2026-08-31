@@ -30,9 +30,9 @@ from star_pass._reporting import Reporter
 from star_pass._repository import RunRepository
 
 # Constants
-# Who an arranged collection is recorded as having been asked for by
-# (D13).  The service's principal, because that is what a collection
-# started over the API carries.
+# Who an arranged collection is recorded as having been asked for by.
+# The service's principal, because that is what a collection started
+# over the API carries.
 COLLECTED_BY = 'static-token'
 
 

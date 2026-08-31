@@ -510,7 +510,7 @@ class TestWhatAmplifyAlreadyHas:
         self,
         make_event: Callable[..., Event]
     ) -> None:
-        # The total is what the confirmation restates (D11), so it has
+        # The total is what the confirmation restates, so it has
         # to be the number of rows that will arrive.
         result = preview(
             events=[make_event()],
@@ -543,7 +543,7 @@ class TestWhatAmplifyAlreadyHas:
     ) -> None:
         # A count says how many rows will not arrive; the reader
         # deciding whether that is right is deciding about days and
-        # times (D16).
+        # times.
         result = preview(
             events=[make_event()],
             opportunities={},

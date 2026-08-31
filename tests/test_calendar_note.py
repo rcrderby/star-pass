@@ -1,4 +1,4 @@
-""" What a calendar description becomes before it is stored (D30).
+""" What a calendar description becomes before it is stored.
 
     The conversion is the reason a note can be shown safely, so what
     it drops matters as much as what it keeps.

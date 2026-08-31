@@ -211,7 +211,7 @@ class TestWhatTheRecordRefuses:
         run_id: str,
         shift_identity: ShiftIdentity
     ) -> None:
-        # The record duplicate safety rests on is never purged (D12),
+        # The record duplicate safety rests on is never purged,
         # so the reference does not cascade and the deletion fails
         # instead of taking the record with it.
         record_one(sent=sent, run_id=run_id, identity=shift_identity)
@@ -240,7 +240,7 @@ class TestTheRecordAndTheIdentityAgree:
     ) -> None:
         # The two have to be the same four values.  Derived one way
         # and stored another, a retry would ask a question the record
-        # could not answer, which is the one thing D16 forbids.
+        # could not answer.
         event: Event = make_event()
         role: EventRole = event.roles[0]
         identity = _derived.shift_identity(event=event, role=role)

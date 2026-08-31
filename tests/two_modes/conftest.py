@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """ Asking both modes the same thing, and comparing the two answers.
 
-    D2 says the command line works with no server running, and it only
-    holds while both modes answer the same question the same way.  So
-    every operation is asked of both and the answers are compared --
-    not described and checked separately, which would compare two
+    The command line works with no server running, which only holds
+    while both modes answer the same question the same way.  So every
+    operation is asked of both and the answers are compared -- not
+    described and checked separately, which would compare two
     descriptions rather than two answers.
 
     A directory with a conftest of its own rather than a module, so the
@@ -39,19 +39,14 @@ SERVICE_URL = 'http://star-pass.test'
 class InProcessAdapter(BaseAdapter):
     """ Hands a request to an application instead of to a socket.
 
-        Counts what it was asked for, which is what lets a test prove
-        the remote half was really used.  Without that, a harness that
-        asked the same client twice would compare an answer with
-        itself and pass while testing nothing.
+        Counts what it was asked for, which lets a test prove the
+        remote half was really used.
 
-        **Waits for what the request started.**  A write the service
-        answers leaves a job running on a thread, and it answers before
-        that job is done -- which is the whole point of a job.  The
-        local half has no such gap: the process that would run the work
-        is the one about to return.  So a comparison made without this
-        would be comparing what one mode has finished doing with what
-        the other has only begun, and would pass or fail depending on
-        which thread got there first.
+        Waits for what the request started.  A write the service
+        answers leaves a job running on a thread and answers before
+        that job is done; the local half has no such gap.  Without the
+        wait, a comparison would pass or fail depending on which
+        thread got there first.
     """
 
     def __init__(

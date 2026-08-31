@@ -59,8 +59,7 @@ class TestTheGeneratedSpecification:
         self,
         client: TestClient
     ) -> None:
-        # D15 asks for 3.1, which is the version that reads JSON Schema
-        # as JSON Schema.
+        # 3.1 is the version that reads JSON Schema as JSON Schema.
         specification = client.get(_defaults.API_OPENAPI_PATH).json()
 
         assert specification['openapi'].startswith('3.1')

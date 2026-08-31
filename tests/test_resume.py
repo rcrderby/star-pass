@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" What running an interrupted job again actually runs (D10).
+""" What running an interrupted job again actually runs.
 
     The endpoint tests replace this, because what they ask is whether a
     job is queued again and handed over.  What is handed over is asked
@@ -28,7 +28,7 @@ from star_pass._repository import JobRepository
 from star_pass._resume import resume_key, work_for
 
 # Constants
-# Who asked for the resume (D13).
+# Who asked for the resume.
 PRINCIPAL_ID = 'whoever-clicked'
 
 
@@ -122,7 +122,7 @@ class TestWhatAResumedSendIsRecordedAs:
         resuming: Callable[..., Any]
     ) -> None:
         # They caused this work, not whoever asked for the attempt that
-        # was interrupted (D13).
+        # was interrupted.
         resuming(JOB_KIND_SEND)
 
         assert recorded[0][1]['principal_id'] == PRINCIPAL_ID

@@ -297,7 +297,7 @@ class TestTheOpportunitiesARunResolves:
         events: EventRepository
     ) -> None:
         # The role and not the opportunity: what a shift asks of its
-        # event is decided by the category the event matched (D25).
+        # event is decided by the category the event matched.
         collect_run(
             items=[an_item()]
         )
@@ -377,7 +377,7 @@ class TestWhatTheCalendarSaidAboutTheEvent:
         expected: str
     ) -> None:
         # Converted once, here, which is what lets every reader show
-        # it without sanitizing it again (D30).
+        # it without sanitizing it again.
         collect_run(items=[an_item(description=description)])
 
         event = events.list_all(run_id=collecting, revision=1)[0]
@@ -393,7 +393,7 @@ class TestWhatTheCalendarSaidAboutTheEvent:
     ) -> None:
         # The description is there and is still not kept, because
         # whether a calendar carries notes is the calendar's own
-        # setting (D30).  Asserted on the stored event rather than on
+        # setting.  Asserted on the stored event rather than on
         # the screen: a note stored and then not drawn would still be
         # a note this calendar was never meant to hold.
         monkeypatch.setitem(
@@ -460,7 +460,7 @@ class TestOneListingTimedTwoWays:
             calendar had never been collected: need 905196 is named by
             three categories there, on three sets of offsets.  The
             timing is the role's now, so this is a window the run can
-            store (D25).
+            store.
         """
         collect_run(
             items=[
@@ -614,9 +614,9 @@ class TestWhatStopsTheRun:
         collecting: str,
         runs: RunRepository
     ) -> None:
-        # 'failed' is where such a run comes to rest, not somewhere it
-        # is stuck: collecting the window again is how it is recovered
-        # (D31), and nothing about the failed attempt is in the way.
+        # 'failed' is where such a run comes to rest, not somewhere
+        # it is stuck: collecting the window again recovers it, and
+        # nothing about the failed attempt is in the way.
         with pytest.raises(ValidationError):
             collect_run(
                 items=[an_item()],
@@ -644,7 +644,7 @@ class TestWhatStopsTheRun:
         # and still sendable, so putting the run in a failure state
         # would strand it -- and 'why_not_send' refuses a run that
         # says it is collecting, so leaving it there made an otherwise
-        # sendable run permanently unsendable (D31).
+        # sendable run permanently unsendable.
         collect_run(items=[an_item()])
 
         with pytest.raises(ValidationError):

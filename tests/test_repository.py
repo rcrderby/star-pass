@@ -319,7 +319,7 @@ class TestOpportunities:
         revision: int
     ) -> None:
         # The maximum is the role's and is the one column of the four
-        # that may be absent (D25).
+        # that may be absent.
         events.add(
             run_id=run_id,
             revision=revision,
