@@ -189,8 +189,9 @@
 
 /* — what is running — */
 
+/* Under the lede in the head, on its own line: the heading block is a
+ * column, and this is the third thing in it. */
 .settings-version {
-  display: flex;
-  gap: 6px;
-  margin: 0;
+  display: block;
+  margin-top: 2px;
 }
