@@ -8,10 +8,72 @@
     filesystem, and in one container that separation would be a coding
     convention rather than a boundary.
 """
+# '_number' below reads what the core's own reader reads, and says the
+# same thing about it.  Sharing one would mean importing the core, and
+# 'tests/test_bff_configuration.py' asserts the core never appears in
+# this package's import graph.  The repetition is what that boundary
+# costs.
+# pylint: disable=duplicate-code
 
 # Imports - Python Standard Library
 from os import getenv
 from pathlib import Path
+from typing import Callable, TypeVar, Union
+
+# Imports - Local
+from ._exceptions import ConfigurationError
+
+# What a setting below is read as.
+Number = TypeVar('Number', int, float)
+
+
+def _number(
+        var_name: str,
+        default: str,
+        kind: Callable[[str], Number],
+        description: str
+) -> Number:
+    """ Return a numeric setting, or say which one is unusable.
+
+        Configuration arrives from the environment, so it is untrusted
+        input.  'STAR_PASS_BFF_TIMEOUT_SECONDS=12O' with a letter O is
+        a typo somebody makes once; left to 'float' it ends the import
+        with a message naming neither the variable nor where to fix it.
+
+        Args:
+            var_name (str):
+                Name of the environment variable to read.
+
+            default (str):
+                What to read when it is unset.
+
+            kind (Callable[[str], Number]):
+                What to read it as.
+
+            description (str):
+                How to describe an acceptable value.
+
+        Raises:
+            ConfigurationError:
+                When the value cannot be read as that kind.
+
+        Returns:
+            value (Number):
+                The number.
+    """
+
+    raw: Union[str, None] = getenv(var_name, default)
+
+    try:
+        return kind(raw)
+
+    except (TypeError, ValueError) as error:
+        raise ConfigurationError(
+            f'{var_name} must be {description}, and is {raw!r}. It is '
+            'read from the environment or the .env file at the '
+            'repository root (see .env.example).'
+        ) from error
+
 
 # Where the API service is.  A configuration value rather than a
 # constant, because encryption between the two is a deployment
@@ -46,11 +108,11 @@ CSRF_HEADER = 'X-Star-Pass-CSRF'
 # remember-me: this is a tool somebody opens to do one operation a
 # month, and a cookie that outlives the browser being closed is a
 # cookie that outlives the person leaving the machine.
-SESSION_MAX_AGE_SECONDS = int(
-    getenv(
-        'STAR_PASS_SESSION_MAX_AGE_SECONDS',
-        '43200'
-    )
+SESSION_MAX_AGE_SECONDS = _number(
+    var_name='STAR_PASS_SESSION_MAX_AGE_SECONDS',
+    default='43200',
+    kind=int,
+    description='a whole number of seconds'
 )
 
 # Whether the cookies say 'Secure'.  On by default and turned off only
@@ -69,11 +131,11 @@ API_PREFIX = '/api'
 
 # How long to wait for the API on a request that is not a stream.
 # Generous: the slow ones read Amplify.
-REQUEST_TIMEOUT_SECONDS = float(
-    getenv(
-        'STAR_PASS_BFF_TIMEOUT_SECONDS',
-        '120'
-    )
+REQUEST_TIMEOUT_SECONDS = _number(
+    var_name='STAR_PASS_BFF_TIMEOUT_SECONDS',
+    default='120',
+    kind=float,
+    description='a number of seconds'
 )
 
 # Where the page this service holds the session for is read from.
