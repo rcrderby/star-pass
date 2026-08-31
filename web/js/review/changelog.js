@@ -27,16 +27,13 @@ const NOTHING_YET = (
 
 /** Return how many changes were made in the revision being edited.
  *
- * Counted from the log rather than read off the revision, which is
- * the same number -- a revision's count is what was logged while it
- * was current -- and stays right after an edit without asking the
- * service for the revisions again. Only the current one is worked
- * out this way: every revision below it is history and is never
- * written to, so the count the service published for one of those is
- * already final.
+ * Counted from the log rather than read off the revision, so it
+ * stays right after an edit without asking for the revisions again.
+ * Only the current revision is worked out this way; the count
+ * published for any below it is already final.
  *
- * Here rather than beside either caller, because the toolbar's tag
- * and the revision picker's line are the same number said twice.
+ * Here rather than beside either caller: the toolbar's tag and the
+ * revision picker's line are the same number.
  *
  * @param {Object} run The run, which carries its whole log.
  * @returns {number} Entries made in the current revision.

@@ -1,34 +1,22 @@
 /* Settings: what this service is running on, and what it will not do.
  *
- * Read only, and that is the screen rather than a limitation of it.
- * **There is no way to write a credential**: an endpoint able to
- * overwrite the service's own production credential would be the
- * highest-value target in the system for the least benefit, so none
- * exists and nothing here asks for one.  Rotation is changing the
- * secret and restarting, which this screen says out loud -- a screen
- * that showed a credential and offered nothing to do about it would
- * read as one whose button had been forgotten.
+ * Read only.  **There is no way to write a credential**, so nothing
+ * here asks for one; rotation is changing the secret and restarting,
+ * which this screen says out loud.
  *
- * **The credential is not read when the screen opens.**  The only
- * thing published about it is what a test answered, and a test is a
- * real request to Amplify, rate-limited for that reason.  A screen
- * that tested on open would spend somebody else's service on every
- * visit and hand a reader four characters they did not ask about.  So
- * the card says it has not been checked until it has been, and the
- * last four characters arrive with the answer.
+ * **The credential is not read when the screen opens.**  A test is a
+ * real request to Amplify, rate-limited for that reason, so the card
+ * says it has not been checked until it has been and the last four
+ * characters arrive with the answer.
  *
- * **The motion setting lives here.**  There are three levels, the
- * theme control in the bar at the top is the other half of the same
- * choice, and both are kept in this browser and nowhere else -- there
- * is no account to hang them on and the service stores nothing about
- * whoever is looking.
+ * **The motion setting lives here**, in three levels, with the theme
+ * control in the top bar as the other half of the same choice.  Both
+ * are kept in this browser and nowhere else.
  *
- * The rules the other screens established hold: one call in flight at
- * a time, the answer is what the screen redraws from, and a refused
- * call is a line beside what it was about rather than a screen-wide
- * failure. The exception is the read this screen is made of -- there
- * is nothing else to look at when it fails, so that one is the whole
- * screen.
+ * One call in flight at a time, the answer is what the screen redraws
+ * from, and a refused call is a line beside what it was about.  The
+ * read this screen is made of is the exception: there is nothing else
+ * to look at when it fails.
  */
 
 import {
@@ -533,17 +521,14 @@ export class SettingsScreen {
         if (secondsLeft(this.state) === 0) {
           this.stopTicking();
 
-          /* And the refusal goes with the wait it was counting. What
-           * it said was that the test had been asked for too often,
-           * which stopped being true at this tick; leaving it up
-           * would append "Try again shortly" at the moment trying
-           * again became possible, which is advice about a state
-           * that has just ended. The card goes back to saying the
-           * credential has not been checked, which is what happened.
+          /* The refusal goes with the wait it was counting: it said
+           * the test had been asked for too often, which stops being
+           * true at this tick.  The card goes back to saying the
+           * credential has not been checked.
            *
            * Only ever the too-often refusal: nothing else sets a
            * deadline, and the button is disabled for its whole
-           * length, so no other refusal can arrive while it runs. */
+           * length. */
           this.state.refusal = null;
           this.state.waitUntil = 0;
         }

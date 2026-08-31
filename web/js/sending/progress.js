@@ -1,25 +1,17 @@
 /* A send as it happens, and as it is picked back up.
  *
  * **Leaving is allowed, and that shapes everything here.**  The send
- * runs in the service, not in this page: the request answers with a
- * job as soon as one exists, and the job goes on whether or not
- * anybody is watching.  So nothing on this screen is remembered
- * between frames that could not be rebuilt from the job's own event
- * log, which a browser opening the stream fresh is given from the
- * first frame.  Close the tab, come back, and the same screen is
- * drawn from the same events.
+ * runs in the service, so nothing on this screen is remembered
+ * between frames that could not be rebuilt from the job's event log.
+ * Close the tab, come back, and the same screen is drawn.
  *
- * That is why the total comes from `sending_started` rather than from
- * the preview.  A reload has no preview, and reading one during a
- * send would be asking Amplify about the opportunities the send is
- * writing to.
+ * The total comes from `sending_started` rather than the preview: a
+ * reload has no preview, and reading one during a send would ask
+ * Amplify about the opportunities the send is writing to.
  *
- * A row reaches this screen twice: once by identity, when the send
- * says which opportunity it is reading, and once with its result.
- * Rows the send has not reached yet are drawn from the preview when
- * there is one, so somebody who stayed sees the whole list waiting
- * rather than an empty screen filling up -- and a reattaching browser
- * sees what has happened plus a count of what has not.
+ * A row reaches this screen twice, once by identity and once with its
+ * result.  Rows the send has not reached are drawn from the preview
+ * when there is one.
  */
 
 import { el, icon } from '../dom.js';
@@ -35,16 +27,12 @@ const FAILED = 'failed';
 const UNKNOWN = 'unknown';
 
 /* What each state is called and drawn as. `done` says how many rows
- * arrived rather than the word, because that is the answer somebody
- * is watching for.
+ * arrived rather than the word.
  *
- * `unknown` is the one an interrupted send leaves, and it is **not**
- * `failed`: a failure is Amplify refusing, which the service saw and
- * recorded, while an interruption is the service stopping with a
- * request in the air. The batch may have arrived or may not have, and
- * the only thing that knows is Amplify -- which is what the next send
- * asks. Drawing it as failed would be this page making a claim the
- * service does not. */
+ * `unknown` is what an interrupted send leaves, and is **not**
+ * `failed`: a failure is Amplify refusing, which the service saw,
+ * while an interruption is the service stopping with a request in the
+ * air.  Only Amplify knows, which is what the next send asks. */
 const STATES = {
   [WAITING]: { words: 'Waiting', glyph: 'circle-dashed' },
   [SENDING]: { words: 'Sending', glyph: 'circle-notch' },

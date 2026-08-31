@@ -9,17 +9,13 @@
  * is what makes the middle-click, the bookmark and the second tab
  * work, and it is why the row is an `<a>` and not a `<button>`.
  *
- * **The delete control is drawn from the run's own answer.** A run
- * says whether it may be deleted (`mayDelete`), and a run that may
- * not is offered nothing rather than offered something that fails: a
- * run that has sent is kept for ever, and a run something is working
- * on becomes deletable when the work finishes. Nothing here
- * works that rule out -- a second opinion about what the operation
- * will accept is one that agrees until the rule changes.
+ * **The delete control is drawn from the run's own answer.**  A run
+ * says whether it may be deleted with `mayDelete`, and one that may
+ * not is offered nothing rather than something that fails.  Nothing
+ * here works that rule out.
  *
- * A refusal is the service's own sentence. The one thing a screen
- * must never do with a failure is invent a reason for it, which is
- * what the preview did until #297.
+ * A refusal is the service's own sentence: a screen must never invent
+ * a reason for a failure.
  */
 
 import { counted } from '../format.js';
@@ -257,12 +253,9 @@ export class RunsScreen {
    * what else changed while somebody was reading this screen is the
    * service's answer, not an edit to a copy of it.
    *
-   * **A refusal re-reads it too.** Both reasons a deletion is refused
-   * are things that happened to the run after this screen was drawn
-   * -- it was sent, or something started working on it -- so the
-   * refusal is itself evidence that the row it came from is out of
-   * date. Leaving it would be leaving a control that will refuse
-   * again beside a status that is now wrong.
+   * **A refusal re-reads it too.**  Both reasons a deletion is
+   * refused are things that happened to the run after this screen was
+   * drawn, so the refusal is evidence that the row is out of date.
    *
    * @param {Object} run The run to delete.
    * @returns {Promise<void>} When it has gone, or been refused.

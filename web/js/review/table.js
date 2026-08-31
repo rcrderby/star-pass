@@ -40,16 +40,12 @@ const HEADERS = [
 /** Return the control showing what the calendar said about a row.
  *
  * Drawn on every row of a calendar that carries notes, including the
- * rows that have none: a control that appeared only where there was
- * something to read would make its absence look like a fault, and a
- * reader could not tell "nothing was written" from "this row is
- * different".  Which calendars carry notes is the service's answer
- * rather than a test of the calendar's name.
+ * rows that have none, so a reader can tell "nothing was written"
+ * from "this row is different".  Which calendars carry notes is the
+ * service's answer rather than a test of the calendar's name.
  *
- * The note is set as text, so what a calendar's description held
- * cannot become markup here.  It is already text by the time it is
- * published -- the conversion happens once, at collection -- and this
- * is the second of the two reasons it can be shown safely.
+ * The note is set as text, so a calendar's description cannot become
+ * markup here.  It is already text when it is published.
  *
  * @param {Object} event The event.
  * @returns {HTMLElement} The trigger, and the callout it opens.
@@ -166,20 +162,15 @@ const UNASSIGNED = '';
 
 /** Return the opportunity chooser for one event.
  *
- * The options are the calendar's categories: a run holds only the
- * opportunities its own events reached, and the event that needs this
- * chooser is the one that matched nothing.
+ * The options are the calendar's categories, because a run holds only
+ * the opportunities its own events reached.
  *
  * **Unassigned is offered where the row may hold it**, which the
- * server says (`mayUnassign`): a row the collection matched nothing
- * for started there and can be put back, and a row it did match
- * cannot - the service refuses that, and an option whose only outcome
- * is a refusal is not a choice. A matched row that should create no
- * shift is removed from the run instead.
+ * server says with `mayUnassign`.  A matched row that should create
+ * no shift is removed from the run instead.
  *
  * The question is what the **collection** matched, not what the row
- * holds now, so a row somebody has since assigned an opportunity to
- * keeps its way back.
+ * holds now, so a row since assigned one keeps its way back.
  *
  * @param {Object} event The event.
  * @param {Object} context What the rows are drawn against.

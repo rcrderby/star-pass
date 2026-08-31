@@ -3,10 +3,9 @@
  * One rule governs everything here: **the server's
  * zone is authoritative**.  A run carries the zone its window was read
  * in, and every date and time belonging to that run is shown in it.
- * The browser's own zone is never consulted -- a reviewer in another
- * one must not be shown a different day from the one the shift will be
- * created on, and the whole reason run identity, time and idempotency
- * moved server-side is that all three used to be worked out here.
+ * The browser's own zone is never consulted: a reviewer in another
+ * one must not be shown a different day from the one the shift will
+ * be created on.
  */
 
 /* What a zone-less formatter would fall back to, which is the thing
@@ -129,12 +128,9 @@ export function lengthText(minutes) {
 /** Return today's date, as the server's zone has it.
  *
  * **This is the one place the current moment is turned into a day**,
- * and it is turned into one in the zone the service published rather
- * than the zone the browser happens to be in. A preset
- * computed in the visitor's zone a live bug in the original design,
- * and it is: somebody in London opening the drawer at nine in the
- * morning would otherwise be offered a September window on the last
- * day of August.
+ * in the zone the service published rather than the browser's.
+ * Otherwise somebody in London opening the drawer at nine in the
+ * morning is offered a September window on the last day of August.
  *
  * `en-CA` because its short date is an ISO one, which is the shape
  * every date in this contract crosses the wire as.
@@ -158,17 +154,12 @@ export function today(timeZone) {
 
 /** Return the day after a given one.
  *
- * A run's window crosses the wire with an **exclusive** end, and a
- * person says a window by its last day, so a request has one more
- * day added to it. That conversion is the client's here and only
- * here: the answer publishes `lastDay` beside `end` so nothing has to
- * subtract, but no request takes an inclusive day, which is why the
- * command line's `_render.after` does the same thing in the same
- * direction.
+ * A run's window crosses the wire with an **exclusive** end and a
+ * person says a window by its last day, so a request adds one day.
+ * The answer publishes `lastDay` beside `end`, so nothing subtracts.
  *
- * Read out as parts and built in UTC. `new Date('2026-09-30')` is
- * parsed as UTC midnight and lands on the 29th anywhere behind UTC,
- * which is a window a day short.
+ * Read out as parts and built in UTC: `new Date('2026-09-30')` is
+ * parsed as UTC midnight and lands on the 29th anywhere behind UTC.
  *
  * @param {string} day An ISO date.
  * @returns {string} The next one.

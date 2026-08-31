@@ -81,14 +81,10 @@ export function emptyState(onCollect) {
  * worth showing at 500 and above: the reason is in the service's log
  * under it, deliberately not in the answer.
  *
- * The heading is the caller's, because what could not be read is: a
- * page that could not list the runs and a settings screen that could
- * not read the settings are the same shape and not the same sentence.
+ * The heading is the caller's, because what could not be read is.
  *
- * A caller that can ask again passes what asking again does, and gets
- * a control for it. Without one this screen is the end of the road:
- * a page whose first read failed has nothing else on it, so the only
- * way on was a reload.
+ * A caller that can ask again passes what asking again does and gets
+ * a control for it.  Without one, a reload is the only way on.
  *
  * @param {ApiError} error What went wrong.
  * @param {string} [heading] What could not be read.

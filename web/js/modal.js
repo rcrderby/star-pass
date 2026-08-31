@@ -14,15 +14,12 @@
  */
 
 /* What can be focused inside a panel, for the trap.  Queried each
- * time rather than kept as a list, because a panel is rebuilt when it
- * is drawn and a remembered element would be one no longer on screen.
+ * time, because a panel is rebuilt when it is drawn.
  *
- * **`a[href]`, never a bare `[href]`.** Every icon on these screens is
- * an `<svg>` holding a `<use href="...">`, so a bare attribute
- * selector matches the first icon in the panel -- which comes before
- * the buttons, and which focusing does nothing at all. The panel then
- * opens with focus still behind it, which is the one thing a modal
- * must not do.
+ * **`a[href]`, never a bare `[href]`.** Every icon is an `<svg>`
+ * holding a `<use href="...">`, so a bare attribute selector matches
+ * the first icon, which comes before the buttons and cannot take
+ * focus - leaving the panel open with focus still behind it.
  */
 const FOCUSABLE = [
   'button:not(:disabled)',

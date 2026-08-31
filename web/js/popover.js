@@ -140,16 +140,13 @@ export class Popover {
 
   /** Put the panel where its anchor is.
    *
-   * The geometry an absolutely positioned panel got for nothing:
-   * 'top' is how far below the anchor's own top edge it sits, and
-   * 'left' is the anchor's left edge, both read from the anchor
-   * rather than stated.
+   * 'top' is how far below the anchor's own top edge the panel
+   * sits and 'left' is the anchor's left edge, both read from the
+   * anchor rather than stated.
    *
-   * Two things a clipped panel never had to answer, because the
-   * container cut it off before the window could: a panel wider than
-   * the room to its right, and a panel taller than the room below it.
-   * The first is pulled back inside the window, the second opens
-   * upwards where there is room above and not below.
+   * A panel wider than the room to its right is pulled back inside
+   * the window; one taller than the room below it opens upwards where
+   * there is room above.
    *
    * @returns {void}
    */

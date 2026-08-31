@@ -152,19 +152,15 @@ function showing(events, state) {
 
 /** Let go of any filter with nothing left to select.
  *
- * **A filter's own banner is the only control that turns it off**, and
- * a banner is drawn only while it has something to count.  So an
- * operation that empties a filter's population -- giving every
- * blocking row an opportunity, removing every row a filter is showing
- * -- took away the control while leaving the filter on, and the table
- * then hid everything with no way back but a reload.
+ * **A filter's own banner is the only control that turns it off**,
+ * and a banner is drawn only while it has something to count.  An
+ * operation that empties a filter's population would otherwise take
+ * the control away while leaving the filter on, hiding the whole
+ * table with no way back but a reload.
  *
  * Turning the filter off is the answer rather than drawing a banner
- * that counts nothing: a filter selecting no rows is not narrowing
- * anything, and one that still has rows always leaves at least one on
- * screen, so nobody can reach an empty table by filtering alone.  That
- * is also what makes the empty table's sentence true again -- with
- * this, only a search can empty it.
+ * that counts nothing, so nobody reaches an empty table by filtering
+ * alone and only a search can empty it.
  *
  * @param {Object} state What the screen is showing.
  * @returns {void}
@@ -631,16 +627,14 @@ export class ReviewScreen {
 
   /** Say how far the header may scroll before its actions stay put.
    *
-   * The actions sit on the header's last row, so what scrolls away is
-   * everything above where that row begins, and what stays is the
-   * rest. Published as two custom properties, because both answers
-   * are measurements and CSS has no way to ask for one: the header
-   * is pulled up by the first, and the change log panel starts below
-   * the second, so the panel's heading and its close button do not
-   * spend a long review underneath the strip that stays.
+   * The actions sit on the header's last row, so what scrolls away
+   * is everything above where that row begins.  Published as two
+   * custom properties, because both are measurements and CSS cannot
+   * ask for one: the header is pulled up by the first, and the change
+   * log panel starts below the second.
    *
-   * Set on the screen rather than on the header, because the panel is
-   * the header's sibling and inherits from what holds them both.
+   * Set on the screen rather than the header, because the panel is
+   * the header's sibling.
    *
    * @returns {void}
    */
