@@ -164,6 +164,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-width: var(--settings-block);
 }
 
 .settings-store {
@@ -188,6 +189,7 @@
   display: flex;
   gap: 14px;
   align-items: center;
+  max-width: var(--settings-block);
 }
 
 .settings-motion-label {
