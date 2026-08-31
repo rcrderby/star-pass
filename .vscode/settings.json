@@ -8,7 +8,6 @@
         "Gcal",
         "getfilesystemencoding",
         "Hadolint",
-        "jsonschema",
         "mechatroner",
         "nosborn",
         "pylint",

@@ -35,7 +35,7 @@ from _importing import imported_modules
 # What the image the schedule runs on does not install, and what the
 # '-s' path must therefore not import.  The distribution is 'httpx2'
 # and so is the module it provides, which is not 'httpx'.
-WEB_MODULES = ('fastapi', 'starlette', 'uvicorn', 'httpx2', 'jsonschema')
+WEB_MODULES = ('fastapi', 'starlette', 'uvicorn', 'httpx2')
 
 # Loading the entry point the way 'conftest' does, in a process that
 # has imported nothing else.

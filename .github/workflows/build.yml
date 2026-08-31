@@ -152,7 +152,7 @@ jobs:
           from importlib.util import find_spec
           carried = [
               name
-              for name in ('fastapi', 'uvicorn', 'httpx2', 'jsonschema')
+              for name in ('fastapi', 'uvicorn', 'httpx2')
               if find_spec(name) is not None
           ]
           if carried:

@@ -58,8 +58,8 @@ RUN groupadd --gid 1000 starpass && \
 # to run that summary by hand without bringing a deployment up.
 #
 # It installs the core requirements alone, which is everything
-# '__main__.py -s' imports and nothing else: no 'fastapi', 'uvicorn',
-# 'httpx2' or 'jsonschema'.  The code is not changed to achieve that
+# '__main__.py -s' imports and nothing else: no 'fastapi', 'uvicorn'
+# or 'httpx2'.  The code is not changed to achieve that
 # and must not be -- the entry point keeps importing 'star_pass_cli'
 # and the contract exactly as it does now, because one dispatcher for
 # both ways in is worth more than the megabytes a lazy import would
