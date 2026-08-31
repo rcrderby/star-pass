@@ -33,14 +33,12 @@ export const SETTINGS = 'settings';
 
 /* The screens that have an address.
  *
- * Ordered from the most specific: '/runs/{runId}' matches
- * '/runs/1/preview' if it is asked first, because a run identifier is
- * matched as a segment and the tail would be thrown away rather than
- * refused.
+ * Ordered from the most specific: '/runs/{runId}' would match
+ * '/runs/1/preview' if asked first, because a run identifier matches
+ * as a segment and the tail would be thrown away.
  *
- * A job has no address of its own. A run being worked on opens on the
- * work, so the job is reached at the run's own path and stays
- * reachable across a reload, which is what an address is for here.
+ * A job has no address of its own.  A run being worked on opens on
+ * the work, so the job is reached at the run's own path.
  */
 export const ROUTES = [
   { name: HOME, path: '/' },
@@ -152,7 +150,7 @@ export class Router {
    * Where the reader was is put away against the address being left
    * and asked for again against the one being entered, both here
    * because this is the one place a press, Back and a redraw all
-   * pass through (D28 gave them the names to be kept under).
+   * pass through, kept under the names the addresses give them.
    *
    * A redraw of the address already showing keeps its place: the
    * retry on a failed screen draws again, and starting the reader at

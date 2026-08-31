@@ -1,24 +1,16 @@
 /* What the service resolved at start up, and how long it keeps what a
  * run leaves behind.
  *
- * A pure reading of `GET /v1/config`: every value here was answered by
- * the service, and nothing on this screen works one out.  Its own
- * module beside the screen for the same reason
- * `star_pass_cli/_configuration.py` is one beside the two that show a
- * run -- a setting is neither a run nor something somebody does.
+ * A pure reading of `GET /v1/config`: every value was answered by the
+ * service, and nothing here works one out.
  *
- * **The design's Configuration table has three columns and this one
- * has two.**  The third said where each value came from -- a default,
- * the environment, fixed in the tool -- and no such field is
- * published: `_defaults` does not record where a value came from, so a
- * column here would either be blank or be this page inventing an
- * answer about somebody else's process.
+ * **Two columns, not three.**  Where a value came from - a default,
+ * the environment, fixed in the tool - is not published, so a third
+ * column would be blank or invented.
  *
- * The words are this client's, as they are everywhere else: the
- * contract answers with a zone, a threshold and three numbers of days,
- * and saying what each number is measured from is the job of whoever
- * shows it.  The command line says the same things in
- * `_configuration.py`, in its own words, over the same answer.
+ * The words are this client's.  The contract answers with a zone, a
+ * threshold and three numbers of days, and saying what each is
+ * measured from is the job of whoever shows it.
  */
 
 import { el, icon } from '../dom.js';
@@ -69,7 +61,7 @@ const SETTINGS = [
 ];
 
 /* What is kept, for how long, and why that is the window it is on.
- * Three axes rather than one (D20): the first two expire by age and
+ * Three axes rather than one: the first two expire by age and
  * the third is answered by the data model coming to match a title,
  * and a single window over all three would delete the thing one of
  * them measures. */

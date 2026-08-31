@@ -2,25 +2,18 @@
  * a shift, and why.
  *
  * Read from `GET /runs/{id}/uncollected`, which answers from what the
- * collection stored rather than from a calendar read -- so this
- * describes the window as the collection found it, and recollecting
- * is what refreshes it.
+ * collection stored, so recollecting is what refreshes it.
  *
  * **Whether a row may be pulled in is `addable`, and nothing here
- * works it out.**  The reason a group is drawn under and the reason a
- * row may be added happen to line up today, and reading the first to
- * decide the second would be a second opinion about what the endpoint
- * will accept -- one that would go on disagreeing quietly once the
- * two stopped lining up.  A row already pulled in keeps its entry and
+ * works it out**, so no client forms a second opinion about what the
+ * endpoint will accept.  A row already pulled in keeps its entry and
  * stops being addable, because reverting to the first revision drops
  * the hand-added events and this list is where they come back to.
  *
- * The titles noted for the model belong to **no run**: a run is a
- * window that is eventually superseded, and what the data model is
- * missing outlives it.  So the last section is read beside the run
- * rather than out of it, and there is nothing on it to remove -- a
- * title leaves that log when the data model matches it (D20), which
- * is the edit somebody notes one in order to make.
+ * The titles noted for the model belong to **no run**, so the last
+ * section is read beside the run rather than out of it.  There is
+ * nothing on it to remove: a title leaves that log when the data
+ * model matches it.
  */
 
 import { el, icon } from '../dom.js';

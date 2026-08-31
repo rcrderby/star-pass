@@ -2,31 +2,21 @@
  *
  * Read what was remembered about the theme, read the wordings, and
  * draw whatever the address names.  Nothing is drawn before the
- * answers arrive: a page that showed the empty state and then
- * replaced it would be telling somebody they have no runs while it
- * finds out.
+ * answers arrive.
  *
- * **The address decides the screen (D28).**  Every screen with a path
- * is reached by going to that path and drawing what it names, whether
+ * **The address decides the screen.**  Every screen with a path is
+ * reached by going to that path and drawing what it names, whether
  * somebody pressed a control, pressed Back, reloaded, or typed the
- * address in a new tab.  One drawing for all four is what makes the
- * last three work at all: a control that showed a screen itself would
- * be a screen no address could reach.
+ * address in a new tab.
  *
- * Moving between screens re-reads the run rather than keeping what
- * was read before.  A send changes the run -- its status, when its
- * shifts reached Amplify -- and coming back to a copy from before it
- * would be coming back to a run that had not been sent.  Moving
- * between the two **tabs** of one run does not: they are one screen
- * with two addresses, and re-reading would throw away the search, the
- * filters and the selection somebody is in the middle of using.
+ * Moving between screens re-reads the run, because a send changes it.
+ * Moving between the two **tabs** of one run does not: they are one
+ * screen with two addresses, and re-reading would throw away the
+ * search, the filters and the selection in use.
  *
- * **A run that is being worked on opens on the work.**  A run carries
- * the job still working on it, which is what makes one somebody
- * walked away from reattachable: opening it goes to the screen for
- * that job rather than to a review screen with no sign anything is
- * happening.  A job has no address of its own -- it is what the run's
- * own path draws while there is one.
+ * **A run being worked on opens on the work.**  A run carries the job
+ * working on it, so opening it goes to that job's screen.  A job has
+ * no address of its own.
  */
 
 import {
@@ -234,18 +224,14 @@ async function start() {
 
   /** Open the drawer over whatever is on screen.
    *
-   * **A recollection reads the run first, by identifier.** What the
+   * **A recollection reads the run first, by identifier.**  What the
    * drawer says a recollection would discard, and the number it sends
-   * to prove it, both come from the run's change log -- so a run
-   * captured when the screen was drawn describes the run as it was
-   * before every edit and revert made since.  The service refuses
-   * that number, correctly, and the operator is told to read the run
-   * again by a screen with no way to do it.
+   * to prove it, both come from the run's change log, so a run
+   * captured when the screen was drawn would describe it before every
+   * edit made since.
    *
-   * Read here rather than at the moment of sending, which would defeat
-   * the guard: 'expectedChangeCount' exists so that what is discarded
-   * is what somebody was shown and agreed to, and a number gathered
-   * as the request left would always agree with itself.
+   * Read here rather than as the request leaves: a number gathered
+   * at send time always agrees with itself.
    *
    * @param {Object} config What the deployment was configured with.
    * @param {string} [runId] The run being replaced, for a

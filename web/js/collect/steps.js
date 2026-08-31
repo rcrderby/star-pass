@@ -1,25 +1,18 @@
 /* The five things a collection does, and how far it has got.
  *
- * **Five, not the four the design was drawn with** (D22).  Reading
- * the calendar and reading the Amplify opportunities are two upstream
- * services and either can fail on its own, so which of them stopped a
- * collection is exactly what this screen exists to say; and the
- * design's fourth step was "write the CSV", which describes an
- * artefact the tool stopped producing.  The order here is the order
- * the core reports them in, which is the order they happen.
+ * Reading the calendar and reading the Amplify opportunities are two
+ * upstream services and either can fail on its own, so which of them
+ * stopped a collection is what this screen exists to say.  The order
+ * is the order the core reports them in.
  *
- * The words are `phrases.json`'s, not this module's, because the
- * contract publishes an identifier per step and every client words it
- * -- the same rule that keeps a blocker or a run's status out of the
- * answer as English.
+ * The words are `phrases.json`'s: the contract publishes an
+ * identifier per step and every client words it.
  *
- * **A step never reports its own failure.**  `step_failed` exists on
- * the reporter and nothing in the core calls it, so there is no frame
- * that says a step went wrong.  What there is instead is the job
- * ending badly, and the step that was running when it did is the step
- * that failed -- the collection stops at the first thing that raises,
- * so there is never more than one.  That is exactly as accurate as a
- * frame would be.
+ * **A step never reports its own failure.**  There is no frame saying
+ * a step went wrong; there is the job ending badly, and the step that
+ * was running when it did is the step that failed.  A collection
+ * stops at the first thing that raises, so there is never more than
+ * one.
  */
 
 import { el, icon } from '../dom.js';
@@ -45,7 +38,7 @@ export const FAILED = 'failed';
 /* And the state a step is left in when the service stopped while it
  * was working. Not `failed`: nothing refused anything, and the step
  * neither finished nor failed -- it was in hand when the process
- * holding it went away (D10). */
+ * holding it went away. */
 export const STOPPED = 'stopped';
 
 /* What each state is drawn as, and what it says beside the step. The

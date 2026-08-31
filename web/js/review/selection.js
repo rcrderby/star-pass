@@ -60,8 +60,8 @@ export function undoable(state) {
  * The intersection and not the union. 'set_slots' names one role, the
  * service applies an operation whole or not at all, and 'with_slots'
  * refuses an event that serves no such opportunity -- so offering one
- * only some of them serve would turn the whole batch down. D29
- * rejected a bulk control on that exact ground, a selection being
+ * only some of them serve would turn the whole batch down. A bulk
+ * control was rejected on that exact ground, a selection being
  * refused "for a reason the person selecting could not have
  * predicted". Offering only what will work is the other way out.
  *

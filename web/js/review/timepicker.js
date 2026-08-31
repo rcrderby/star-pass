@@ -77,15 +77,11 @@ function everyStep() {
 /** Put the list where the time it is showing is, as it opens.
  *
  * Ninety-six options and nothing scrolling them leaves the list at
- * 00:00, so a field reading 19:15 opens on a list of small hours with
- * the time it holds nineteen hours below the fold - and the list
- * reads as offering the wrong day rather than the wrong scroll
- * position.
+ * 00:00, so a field reading 19:15 would open on small hours with the
+ * time it holds nineteen hours below the fold.
  *
- * Centred rather than merely brought to an edge: the steps either
- * side of the current time are what somebody opening this list most
- * often wants, and an option resting on the last row has none of the
- * ones after it.
+ * Centred rather than brought to an edge: the steps either side of
+ * the current time are what somebody opening this list wants.
  *
  * @param {HTMLElement} panel The list, once it is on the page.
  * @param {string} clock What the field says.
@@ -114,16 +110,14 @@ function showTime(panel, clock) {
 /** Return where a shift's end goes when its start is moved onto it.
  *
  * A start set onto or past its end takes the end with it, so the
- * length nobody touched survives: 19:00 to 20:00, with the start set
- * to 20:00, becomes 20:00 to 21:00. Where the start still falls
- * before the end there is nothing to do, and the end stays where the
- * reader put it.
+ * length survives: 19:00 to 20:00, with the start set to 20:00,
+ * becomes 20:00 to 21:00.  A start still before the end moves
+ * nothing.
  *
- * **A shift cannot leave its day.** Where preserving the length would
- * carry the end past 23:59, the end is not moved and this answers
- * nothing: the start is then sent on its own and the service refuses
- * it in the words it already uses. Clamping to 23:59 instead would
- * silently change the length, which is the thing this exists to keep.
+ * **A shift cannot leave its day.**  Where keeping the length would
+ * carry the end past 23:59 this answers nothing, so the start is sent
+ * alone and the service refuses it.  Clamping would silently change
+ * the length.
  *
  * @param {string} shiftStart The start as it stands, `HH:MM`.
  * @param {string} shiftEnd The end as it stands.

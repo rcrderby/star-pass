@@ -189,15 +189,11 @@ function revisionLine(revision, run, busy, onRevert) {
 /** Return the entry that starts a fresh run.
  *
  * Here rather than beside "Collect again", which is about the run on
- * screen: this popover is where *which run* lives, and a new one is
- * another answer to that question.
+ * screen: this popover is where *which run* lives.
  *
- * It is also the only way to a second run. Every other route into the
- * drawer carries the run being looked at, so without this the page
- * could do nothing but replace the run it opened on -- and a run that
- * has sent shifts refuses that, which would make a sent run the end
- * of what the browser could do. The monthly workflow is a new run a
- * month.
+ * It is also the only way to a second run.  Every other route into
+ * the drawer carries the run being looked at, and a run that has sent
+ * shifts refuses to be replaced.
  *
  * @param {Function} onCollectNew What pressing it does.
  * @returns {HTMLElement} The entry.
