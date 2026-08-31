@@ -3,12 +3,14 @@
 
         python scripts/setup_env.py
 
-    Four values stand between a fresh clone and a deployment that
+    Six values stand between a fresh clone and a deployment that
     starts.  AMPLIFY_TOKEN and GCAL_TOKEN come from Amplify and from
-    Google and are asked for without echoing; STAR_PASS_API_TOKEN and
-    STAR_PASS_SESSION_SECRET are generated.  A value already set is
-    never overwritten, so running this again fills in what is missing
-    and touches nothing else.  The file is written 0640.
+    Google and are asked for without echoing; GCAL_EVENTS_CAL_ID and
+    GCAL_PRACTICES_CAL_ID name the calendars and are asked for in the
+    open; STAR_PASS_API_TOKEN and STAR_PASS_SESSION_SECRET are
+    generated.  A value already set is never overwritten, so running
+    this again fills in what is missing and touches nothing else.  The
+    file is written 0640.
 
     Whether a credential works is Settings' Test control to answer.
 """
@@ -40,7 +42,8 @@ INTERRUPTED = 130
 # MINIMUM_LENGTH, so nothing generated here fails the services' check.
 GENERATED_BYTES = 32
 
-# The two generated here, and the two asked for.
+# The two generated here, and the four asked for.  Every name in the
+# three is one the API service refuses to start without.
 GENERATED = (
     'STAR_PASS_API_TOKEN',
     'STAR_PASS_SESSION_SECRET'
@@ -49,6 +52,22 @@ ASKED = (
     ('AMPLIFY_TOKEN', 'Amplify (Galaxy Digital) API bearer token'),
     ('GCAL_TOKEN', 'Google Calendar API key')
 )
+
+# Asked for the same way, and echoed: a calendar identifier is not a
+# secret, and one typed blind is one nobody can check.
+PUBLIC = (
+    (
+        'GCAL_EVENTS_CAL_ID',
+        'Google Calendar ID for the events calendar'
+    ),
+    (
+        'GCAL_PRACTICES_CAL_ID',
+        'Google Calendar ID for the practices calendar'
+    )
+)
+
+# How many values a finished '.env' holds, for the line that says so.
+REQUIRED_COUNT = len(GENERATED) + len(ASKED) + len(PUBLIC)
 
 # What the template writes for a value nobody has filled in.  A line
 # carrying one is not a value set.
@@ -134,6 +153,12 @@ def short(name: str, value: str) -> Optional[str]:
     if not value:
         return f'{name} is empty.'
 
+    if name in dict(PUBLIC) and value.startswith('/'):
+        return (
+            f'{name} starts with "/". Give the calendar identifier '
+            'alone; the address is built around it.'
+        )
+
     return None
 
 
@@ -197,19 +222,25 @@ def written(lines: List[str], values: Dict[str, str]) -> List[str]:
     return out
 
 
-def ask(prompt: str) -> str:
-    """ Return what somebody typed, without it reaching the screen.
+def ask(prompt: str, secret: bool = True) -> str:
+    """ Return what somebody typed.
 
         Args:
             prompt (str):
                 What to ask for.
+
+            secret (bool, optional):
+                Whether to keep it off the screen.  Defaults to True.
 
         Returns:
             answer (str):
                 What they typed, stripped.
     """
 
-    return getpass(f'{prompt}: ').strip()
+    if secret:
+        return getpass(f'{prompt}: ').strip()
+
+    return input(f'{prompt}: ').strip()
 
 
 def collect(missing: Dict[str, str]) -> Dict[str, str]:
@@ -227,6 +258,7 @@ def collect(missing: Dict[str, str]) -> Dict[str, str]:
     """
 
     values = {}
+    public = dict(PUBLIC)
 
     for name, described in missing.items():
         if not described:
@@ -236,7 +268,10 @@ def collect(missing: Dict[str, str]) -> Dict[str, str]:
             continue
 
         while True:
-            typed = ask(f'{described} ({name})')
+            typed = ask(
+                f'{described} ({name})',
+                secret=name not in public
+            )
             complaint = short(name, typed)
 
             if complaint is None:
@@ -283,19 +318,19 @@ def main() -> int:
         if name not in settings:
             missing[name] = ''
 
-    for name, described in ASKED:
+    for name, described in ASKED + PUBLIC:
         if name not in settings:
             missing[name] = described
 
     for name in sorted(set(GENERATED) & set(settings)):
         print(f'{name}: already set, left alone')
 
-    for name, _ in ASKED:
+    for name, _ in ASKED + PUBLIC:
         if name in settings:
             print(f'{name}: already set, left alone')
 
     if not missing:
-        print(f'{TARGET.name} has all four values. Nothing to do.')
+        print(f'{TARGET.name} has all {REQUIRED_COUNT} values. Nothing to do.')
 
         return 0
 

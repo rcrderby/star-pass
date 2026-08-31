@@ -179,7 +179,7 @@ class TestCopyingTheTemplateByHand:
         target = tmp_path / '.env'
         monkeypatch.setattr(setup, 'TEMPLATE', TEMPLATE)
         monkeypatch.setattr(setup, 'TARGET', target)
-        monkeypatch.setattr(setup, 'ask', lambda prompt: 'typed')
+        monkeypatch.setattr(setup, 'ask', lambda prompt, secret=True: 'typed')
 
         setup.main()
 
@@ -200,14 +200,16 @@ class TestItRefusesToOverwrite:
             f'AMPLIFY_TOKEN=kept-by-hand\n'
             f'GCAL_TOKEN=also-kept\n'
             f'STAR_PASS_API_TOKEN={LONG_ENOUGH}\n'
-            f'STAR_PASS_SESSION_SECRET={LONG_ENOUGH}\n',
+            f'STAR_PASS_SESSION_SECRET={LONG_ENOUGH}\n'
+            'GCAL_EVENTS_CAL_ID=events-calendar\n'
+            'GCAL_PRACTICES_CAL_ID=practices-calendar\n',
             encoding='utf-8'
         )
-        monkeypatch.setattr(
-            setup,
-            'ask',
-            lambda prompt: pytest.fail('asked for a value already set')
-        )
+
+        def refuse(*_args, **_kwargs):
+            pytest.fail('asked for a value already set')
+
+        monkeypatch.setattr(setup, 'ask', refuse)
 
         assert setup.main() == 0
         assert 'kept-by-hand' in placed.read_text(encoding='utf-8')
@@ -223,7 +225,11 @@ class TestItRefusesToOverwrite:
             'GCAL_TOKEN=your-google-calendar-api-key\n',
             encoding='utf-8'
         )
-        monkeypatch.setattr(setup, 'ask', lambda prompt: 'typed-gcal')
+        monkeypatch.setattr(
+            setup,
+            'ask',
+            lambda prompt, secret=True: 'typed-gcal'
+        )
 
         assert setup.main() == 0
 
@@ -244,7 +250,7 @@ class TestItRefusesToOverwrite:
     ):
         # What '>>' could not promise: the second run finds all four
         # set and writes nothing, so no name appears twice.
-        monkeypatch.setattr(setup, 'ask', lambda prompt: 'typed')
+        monkeypatch.setattr(setup, 'ask', lambda prompt, secret=True: 'typed')
 
         assert setup.main() == 0
         assert setup.main() == 0
@@ -263,7 +269,11 @@ class TestWhatReachesTheScreen:
     def test_no_value_is_printed(
         self, setup, placed, capsys, monkeypatch
     ):
-        monkeypatch.setattr(setup, 'ask', lambda prompt: 'typed-secret')
+        monkeypatch.setattr(
+            setup,
+            'ask',
+            lambda prompt, secret=True: 'typed-secret'
+        )
 
         assert setup.main() == 0
 
@@ -281,7 +291,7 @@ class TestWhatReachesTheScreen:
     def test_it_says_what_it_did_for_each_name(
         self, setup, placed, capsys, monkeypatch
     ):
-        monkeypatch.setattr(setup, 'ask', lambda prompt: 'typed')
+        monkeypatch.setattr(setup, 'ask', lambda prompt, secret=True: 'typed')
         setup.main()
 
         shown = capsys.readouterr().out
@@ -298,7 +308,11 @@ class TestTheTemplateDescribesItselfAndNotWhatItWrites:
         # Copied through, it left the written file calling itself a
         # template and telling its reader how to create the file they
         # already had.
-        monkeypatch.setattr(setup, 'ask', lambda prompt: LONG_ENOUGH)
+        monkeypatch.setattr(
+            setup,
+            'ask',
+            lambda prompt, secret=True: LONG_ENOUGH
+        )
         setup.main()
 
         written = placed.read_text(encoding='utf-8')
@@ -317,7 +331,11 @@ class TestTheTemplateDescribesItselfAndNotWhatItWrites:
         # The other half, and the one that says the drop stops where
         # it should: a rule that took the whole file would pass the
         # test above.
-        monkeypatch.setattr(setup, 'ask', lambda prompt: LONG_ENOUGH)
+        monkeypatch.setattr(
+            setup,
+            'ask',
+            lambda prompt, secret=True: LONG_ENOUGH
+        )
         setup.main()
 
         written = placed.read_text(encoding='utf-8')
@@ -334,7 +352,11 @@ class TestTheTemplateDescribesItselfAndNotWhatItWrites:
         # the head this already gave it. Dropping that would take a
         # block off the file every time somebody filled in one more
         # value.
-        monkeypatch.setattr(setup, 'ask', lambda prompt: LONG_ENOUGH)
+        monkeypatch.setattr(
+            setup,
+            'ask',
+            lambda prompt, secret=True: LONG_ENOUGH
+        )
         setup.main()
 
         first = placed.read_text(encoding='utf-8')
@@ -362,7 +384,7 @@ class TestWhatIsWritten:
         # The group bit is what the API container reads it through, a
         # bind mount keeping the host file's mode and the image
         # running as UID 1000.
-        monkeypatch.setattr(setup, 'ask', lambda prompt: 'typed')
+        monkeypatch.setattr(setup, 'ask', lambda prompt, secret=True: 'typed')
         setup.main()
 
         mode = stat.S_IMODE(placed.stat().st_mode)
@@ -374,7 +396,7 @@ class TestWhatIsWritten:
     ):
         # The group is the smaller claim, and the whole reason the
         # credential is a file rather than the environment.
-        monkeypatch.setattr(setup, 'ask', lambda prompt: 'typed')
+        monkeypatch.setattr(setup, 'ask', lambda prompt, secret=True: 'typed')
         setup.main()
 
         mode = stat.S_IMODE(placed.stat().st_mode)
@@ -385,7 +407,7 @@ class TestWhatIsWritten:
     def test_a_value_is_written_where_its_comment_explains_it(
         self, setup, placed, monkeypatch
     ):
-        monkeypatch.setattr(setup, 'ask', lambda prompt: 'typed')
+        monkeypatch.setattr(setup, 'ask', lambda prompt, secret=True: 'typed')
         setup.main()
 
         lines = placed.read_text(encoding='utf-8').splitlines()
@@ -398,13 +420,71 @@ class TestWhatIsWritten:
 
         assert above.startswith('# The token every request')
 
+    def test_the_calendar_identifiers_are_asked_for(
+        self, setup, placed, monkeypatch
+    ):
+        # The API service refuses to start without them, so a '.env'
+        # this script called finished and left them empty is one that
+        # cannot bring the deployment up.
+        monkeypatch.setattr(
+            setup, 'ask', lambda prompt, secret=True: 'a-calendar'
+        )
+
+        assert setup.main() == 0
+
+        written = setup.already_set(
+            placed.read_text(encoding='utf-8').splitlines(keepends=True)
+        )
+
+        assert written['GCAL_EVENTS_CAL_ID'] == 'a-calendar'
+        assert written['GCAL_PRACTICES_CAL_ID'] == 'a-calendar'
+
+    def test_a_calendar_identifier_is_asked_for_in_the_open(
+        self, setup, monkeypatch
+    ):
+        # It is not a secret, and one typed blind is one nobody can
+        # check against the calendar's settings page.
+        seen = {}
+
+        def watched(prompt, secret=True):
+            seen[prompt.split('(')[-1].rstrip(')')] = secret
+
+            return 'a-calendar'
+
+        monkeypatch.setattr(setup, 'ask', watched)
+        setup.collect({
+            'GCAL_EVENTS_CAL_ID': 'the events calendar',
+            AMPLIFY: 'the credential'
+        })
+
+        assert seen['GCAL_EVENTS_CAL_ID'] is False
+        assert seen[AMPLIFY] is True
+
+    def test_a_calendar_identifier_carrying_a_slash_is_refused(
+        self, setup
+    ):
+        # The separator belongs to the address, not to the value.
+        complaint = setup.short('GCAL_EVENTS_CAL_ID', '/a-calendar')
+
+        assert complaint is not None
+        assert 'alone' in complaint
+        assert setup.short('GCAL_EVENTS_CAL_ID', 'a-calendar') is None
+
+        # The rule is the calendars', not every value's: a credential
+        # is whatever it was issued as.
+        assert setup.short(AMPLIFY, '/a-token') is None
+
     def test_a_short_answer_is_refused_and_asked_for_again(
         self, setup, placed, capsys, monkeypatch
     ):
         # Only the generated names carry the length rule: an upstream
         # credential is whatever Amplify and Google issued.
         answers = iter([TOO_SHORT, LONG_ENOUGH])
-        monkeypatch.setattr(setup, 'ask', lambda prompt: next(answers))
+        monkeypatch.setattr(
+            setup,
+            'ask',
+            lambda prompt, secret=True: next(answers)
+        )
 
         assert not placed.is_file()
 
@@ -424,10 +504,9 @@ class TestWhatIsWritten:
         self, setup, placed, capsys, monkeypatch
     ):
         # A prompt is the whole middle of this script, so Ctrl+C is
-        # something somebody does on purpose here.  It used to reach
-        # the shell as a traceback, which reads as the script having
-        # broken rather than having been stopped.
-        def interrupted(prompt):
+        # something somebody does on purpose here, and it reaches the
+        # shell as a stopped command rather than a traceback.
+        def interrupted(prompt, secret=True):
             raise KeyboardInterrupt
 
         monkeypatch.setattr(setup, 'ask', interrupted)
@@ -452,7 +531,11 @@ class TestWhatIsWritten:
         # The wrapper has to still be the way the work happens, not a
         # handler wrapped around nothing: a 'run' that swallowed the
         # call would pass the test above and write no file ever.
-        monkeypatch.setattr(setup, 'ask', lambda prompt: LONG_ENOUGH)
+        monkeypatch.setattr(
+            setup,
+            'ask',
+            lambda prompt, secret=True: LONG_ENOUGH
+        )
 
         assert setup.run() == 0
         assert placed.is_file()

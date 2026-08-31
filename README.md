@@ -72,14 +72,21 @@ start without them**, which is a hard stop rather than a subtle failure.
 It then asks for your `AMPLIFY_TOKEN` and your `GCAL_TOKEN`, without
 echoing what you type and without printing either back.
 
-**Then set the two calendar IDs** in `.env`, by hand:
-`GCAL_EVENTS_CAL_ID` and `GCAL_PRACTICES_CAL_ID`. Neither has a
-default, and the API service names whichever is missing and refuses to
-start. A default would be one organization's calendars, so a
-deployment that left them unset would collect somebody else's events
-without anything on any screen to say so. They are not secrets, which
-is why the script does not ask for them the way it asks for a
-credential.
+It also asks for the two calendar IDs, `GCAL_EVENTS_CAL_ID` and
+`GCAL_PRACTICES_CAL_ID`, and **does** echo those: a calendar
+identifier is not a secret, and one typed blind is one nobody can
+check. Neither has a default, and the API service names whichever is
+missing and refuses to start. A default would be one organization's
+calendars, so a deployment that left them unset would collect somebody
+else's events without anything on any screen to say so.
+
+Give the identifier as Google shows it under the calendar's settings,
+with **no leading slash** - the address is built around it. A Google
+Workspace resource calendar looks like
+`example.com_2d3534@resource.calendar.google.com`.
+
+**Six values in all**, and the API service checks for every one of
+them at startup.
 
 Every other setting has a working default; `.env.example` documents all
 of them.

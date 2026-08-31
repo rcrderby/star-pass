@@ -234,6 +234,19 @@ class GCALData:
             logger.error(message)
             raise ConfigurationError(message)
 
+        # The separator belongs to the URL, not to the value.  An
+        # identifier carrying one would build a path with '//' in it,
+        # which Google answers with a 404 that says nothing about the
+        # cause.
+        if gcal_id.startswith('/'):
+            message = (
+                f'The Google Calendar identifier for "{self.gcal_name}" '
+                'starts with "/".  Set it to the calendar identifier '
+                'alone, without a leading slash.'
+            )
+            logger.error(message)
+            raise ConfigurationError(message)
+
         return gcal_id, query_strings
 
     def _read(  # pylint: disable=too-many-locals
@@ -283,10 +296,12 @@ class GCALData:
 
         gcal_id, _ = self._calendar_settings()
 
-        # Construct URL
+        # Construct URL.  The separator is written here, so the
+        # configured value is the calendar identifier Google shows and
+        # nothing else.
         url = (
             f'{BASE_GCAL_URL}'
-            f'{gcal_id}'
+            f'/{gcal_id}'
             f'{BASE_GCAL_ENDPOINT}'
         )
 
