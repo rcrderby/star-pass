@@ -116,8 +116,85 @@ def _prose_of(docstring: str) -> int:
     return len([line for line in head.strip().splitlines() if line.strip()])
 
 
-def _too_long(path: Path, text: str) -> List[str]:
-    """ Return the docstrings and comment runs that go on too long.
+def _docstrings_too_long(path: Path, text: str) -> List[str]:
+    """ Return the Python docstrings that go on too long.
+
+        Args:
+            path (Path):
+                The file, for naming a problem.
+
+            text (str):
+                Its contents.
+
+        Returns:
+            problems (List[str]):
+                One line per problem.
+    """
+
+    if path.suffix != '.py':
+        return []
+
+    problems = []
+    module = _module_docstring_lines(text)
+
+    if module > MODULE_LIMIT:
+        problems.append(
+            f'{path}:1: module docstring is {module} lines, over '
+            f'{MODULE_LIMIT}'
+        )
+
+    for node in ast.walk(ast.parse(text)):
+        if not isinstance(
+            node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+        ):
+            continue
+
+        doc = ast.get_docstring(node, clean=False)
+
+        if doc and _prose_of(doc) > DOCSTRING_LIMIT:
+            problems.append(
+                f'{path}:{node.lineno}: {node.name} opens with '
+                f'{_prose_of(doc)} lines of prose, over '
+                f'{DOCSTRING_LIMIT}'
+            )
+
+    return problems
+
+
+def _limit_for(path: Path, start: int, first: bool, documents: bool) -> int:
+    """ Return how long this run of comment lines may be.
+
+        A JavaScript module opens with a block where Python has a
+        module docstring, and a '/**' block above a function is that
+        function's docstring.  Each is allowed the length its Python
+        equivalent is.
+
+        Args:
+            path (Path):
+                The file the run is in.
+
+            start (int):
+                Line the run began on.
+
+            first (bool):
+                Whether any run has ended before this one.
+
+            documents (bool):
+                Whether the run opened with '/**'.
+
+        Returns:
+            limit (int):
+                Lines the run may take.
+    """
+
+    if path.suffix == '.js' and first and start == 1:
+        return MODULE_LIMIT
+
+    return DOCSTRING_LIMIT if documents else COMMENT_LIMIT
+
+
+def _comments_too_long(path: Path, text: str) -> List[str]:
+    """ Return the runs of comment lines that go on too long.
 
         Args:
             path (Path):
@@ -132,31 +209,6 @@ def _too_long(path: Path, text: str) -> List[str]:
     """
 
     problems = []
-
-    if path.suffix == '.py':
-        module = _module_docstring_lines(text)
-
-        if module > MODULE_LIMIT:
-            problems.append(
-                f'{path}:1: module docstring is {module} lines, over '
-                f'{MODULE_LIMIT}'
-            )
-
-        for node in ast.walk(ast.parse(text)):
-            if not isinstance(
-                node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
-            ):
-                continue
-
-            doc = ast.get_docstring(node, clean=False)
-
-            if doc and _prose_of(doc) > DOCSTRING_LIMIT:
-                problems.append(
-                    f'{path}:{node.lineno}: {node.name} opens with '
-                    f'{_prose_of(doc)} lines of prose, over '
-                    f'{DOCSTRING_LIMIT}'
-                )
-
     run = 0
     start = 0
     first = True
@@ -164,46 +216,33 @@ def _too_long(path: Path, text: str) -> List[str]:
 
     for number, line in enumerate(text.splitlines(), 1):
         bare = line.lstrip()
-        comment = (
-            bare.startswith('#') or bare.startswith('*')
-            or bare.startswith('//') or bare.startswith('/*')
-        )
 
         if bare.startswith('/**'):
             documents = True
 
-        if comment:
-            # A tag block is fields rather than prose, and ends the
-            # run being counted.
-            if bare.lstrip('*/ ').startswith(TAG):
-                comment = False
-            else:
-                run += 1
-                start = start or number
+        opens = (
+            bare.startswith('#') or bare.startswith('*')
+            or bare.startswith('//') or bare.startswith('/*')
+        )
 
-        if not comment:
-            # A JavaScript module opens with a block where Python has
-            # a module docstring; a '/**' block above a function is
-            # that function's docstring.  Each is allowed the length
-            # its Python equivalent is.
-            if path.suffix == '.js' and first and start == 1:
-                limit = MODULE_LIMIT
-            elif documents:
-                limit = DOCSTRING_LIMIT
-            else:
-                limit = COMMENT_LIMIT
+        if opens and not bare.lstrip('*/ ').startswith(TAG):
+            run += 1
+            start = start or number
+            continue
 
-            if run:
-                first = False
+        limit = _limit_for(path, start, first, documents)
 
-            if run > limit:
-                problems.append(
-                    f'{path}:{start}: comment runs {run} lines, over '
-                    f'{limit}'
-                )
-            run = 0
-            start = 0
-            documents = False
+        if run:
+            first = False
+
+        if run > limit:
+            problems.append(
+                f'{path}:{start}: comment runs {run} lines, over {limit}'
+            )
+
+        run = 0
+        start = 0
+        documents = False
 
     return problems
 
@@ -265,7 +304,11 @@ def check(path: Path) -> List[str]:
 
     text = path.read_text(encoding='utf-8')
 
-    return _too_long(path, text) + _narrates(path, text)
+    return (
+        _docstrings_too_long(path, text)
+        + _comments_too_long(path, text)
+        + _narrates(path, text)
+    )
 
 
 def changed(ref: str) -> List[Path]:
