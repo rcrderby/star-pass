@@ -67,21 +67,14 @@ EVENT_ROLE_COLUMNS = (
 IDENTIFIER = re.compile(r'^[a-z][a-z0-9_]*$')
 
 # When a run was last worked on, as an expression over 'runs'.  Stated
-# once because two callers read it and they have to agree: the run's
-# own select publishes it, and the sweep that forgets superseded
-# revisions decides by it.  A run one of them called untouched and the
-# other called in use is a run whose middle revisions are swept while
-# somebody is working on it.
-#
-# Three sources, not the change log alone.  Sealing a revision and
-# reverting to one are both somebody working on the run and both
-# deliberately write no change-log entry; what each writes is a
-# 'revisions' row.  Collection is the floor, for a run nothing has
+# once because two callers have to agree: the run's own select
+# publishes it, and the sweep that forgets superseded revisions
+# decides by it.  Three sources, not the change log alone -- sealing a
+# revision and reverting to one write a 'revisions' row and no
+# change-log entry, and collection is the floor for a run nothing has
 # happened to since.  Times are ISO-8601 UTC to the second, so the
-# largest string is the latest moment.
-#
-# 'revisions' is aliased because one caller deletes from that table,
-# and a correlated name is easier to trust than a scoping rule.
+# largest string is the latest moment.  'revisions' is aliased because
+# one caller deletes from that table.
 LAST_TOUCHED = """
     MAX(
         runs.collected_at,

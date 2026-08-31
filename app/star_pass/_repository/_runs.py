@@ -35,39 +35,15 @@ from ._common import (
 UNFINISHED_PLACEHOLDERS = ', '.join('?' * len(JOB_STATUSES_UNFINISHED))
 
 # Everything a caller reads about a run that the run's own row cannot
-# say.  All of it is derived, and all of it is derived here rather than
-# by whoever is displaying a run, so that the runs list costs one query
-# however many runs it holds: read per run instead, a list of thirty
-# runs would be a hundred and twenty queries.
+# say, derived here rather than by whoever displays a run, so the runs
+# list costs one query however many runs it holds.
 #
 # The current revision is joined rather than sub-selected per column,
-# so that "the current revision" is defined once and the three counts
-# taken over it cannot drift from each other or from
-# 'current_revision'.  A run that has not reached its first revision
-# joins to nothing: the revision number reads through COALESCE, and
-# the counts match no row and come back as zero, which is what a run
-# with no events holds.
-#
-# The fourth count is not one of those.  What the window held and the
-# run left out is a fact about the collection, so editing a revision
-# does not change it and it is counted over the run alone.
-#
-# Nothing stops a run holding two unfinished jobs, so the active one is
-# the most recently created.  Ordered by 'rowid' rather than by
-# 'created_at': the stamp is written to the second, so two jobs asked
-# for in the same second would tie and be separated by whichever
-# identifier sorted higher, and a job identifier is a random value.
-# The rowid ascends in the order rows were written, which is the order
-# the jobs were asked for.
-#
-# The interrupted one is read from the same place and answers a
-# different question: **was the last thing that happened to this run
-# interrupted**.  Not "has one ever been", which would go on offering
-# to resume a send that a later one has since finished, and not the
-# newest interrupted job, which is the same offer worded differently.
-# So the newest job is read whatever state it is in and its identifier
-# is answered only when that state is 'interrupted' -- a run whose last
-# job succeeded, failed or is still in hand says nothing here.
+# so "the current revision" is defined once and the three counts taken
+# over it cannot drift.  A run short of its first revision joins to
+# nothing, and reads as revision zero with counts of zero.  The fourth
+# count is over the run alone: what the window left out is a fact
+# about the collection.
 RUN_SELECT = f"""
     SELECT
         runs.id            AS id,
@@ -109,6 +85,9 @@ RUN_SELECT = f"""
             FROM uncollected_events
             WHERE uncollected_events.run_id = runs.id
         ) AS uncollected_count,
+        -- The newest unfinished job, by rowid: 'created_at' is written
+        -- to the second, and a job identifier is a random value, so two
+        -- jobs asked for in the same second would tie.
         (
             SELECT jobs.id
             FROM jobs
@@ -117,6 +96,9 @@ RUN_SELECT = f"""
             ORDER BY jobs.rowid DESC
             LIMIT 1
         ) AS active_job_id,
+        -- Whether the last thing that happened to this run was
+        -- interrupted.  The newest job is read whatever state it is in
+        -- and named only when that state is 'interrupted'.
         (
             SELECT CASE WHEN jobs.status = ? THEN jobs.id END
             FROM jobs
@@ -564,22 +546,18 @@ class RunRepository(Repository):
         """ Delete a run and everything belonging to it.
 
             Used by the retention policy and by a caller asking for
-            one to go (D24).
+            one to go.
 
             A run that sent shifts is not deletable.  The record of
-            what a send created is never purged (D12), and its
-            reference to the run does not cascade, so the deletion
-            fails rather than taking the record with it.  A retention
-            policy therefore chooses among runs that sent nothing; the
-            alternative is a policy that quietly decides how long
-            duplicate safety lasts.
+            what a send created is never purged and its reference to
+            the run does not cascade, so the deletion fails rather
+            than taking the record with it.  That refusal is the
+            database's and is the last line: 'why_not_delete' answers
+            a caller before it.
 
-            That refusal is the database's and is the last line: a
-            caller is answered before it by 'why_not_delete', which
-            says which of the two reasons it is.  What does not go
-            with the run is its unmatched-title sightings, which name
-            it and declare no foreign key, because what the data model
-            is missing outlives the window that revealed it.
+            The run's unmatched-title sightings stay.  They name it
+            and declare no foreign key, because what the data model is
+            missing outlives the window that revealed it.
 
             Args:
                 run_id (str):

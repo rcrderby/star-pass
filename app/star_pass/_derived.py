@@ -17,7 +17,7 @@
 
     Pure functions over records, in the core rather than in the
     service: none of this is about HTTP, and the command line client
-    shows the same figures the web interface does (D1).
+    shows the same figures the web interface does.
 """
 
 # Imports - Python Standard Library
@@ -41,7 +41,7 @@ def shift_identity(
 
         Written once and used wherever sameness is decided, so that
         the answer to "is this the same shift" cannot come out
-        differently in two places (D16).
+        differently in two places.
 
         Args:
             event (Event):

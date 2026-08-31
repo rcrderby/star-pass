@@ -2,29 +2,22 @@
 """ Editing the events in a run's current revision.
 
     One user action is one call carrying a list of operations, so a
-    bulk action over thirty selected rows is one request, one log entry
-    and one revision delta rather than thirty of each.
+    bulk action over thirty selected rows is one request, one log
+    entry and one revision delta rather than thirty of each.
 
-    In the core, not the service.  Nothing here is about HTTP, and the
-    command line client edits a run without one (D2).  What an edit
-    means has to be decided in one place for the same reason a refusal
-    does: a service and a command line that worked it out separately
-    would eventually disagree about what a nudge did, and nothing would
-    say so.
+    In the core, not the service: the command line client edits a run
+    without one, and what an edit means is decided in one place so the
+    two cannot disagree about what a nudge did.
 
-    **An edit moves the shift times; the calendar times never move.**
-    The calendar times are what the calendar said, and a run keeps them
-    so it can always say what it started from.  The shift times are
-    what reaches Amplify, and they are what a reviewer sets, nudges and
-    resets.  That is what lets 'undo' recompute the original from the
-    calendar times and the category's offsets instead of storing a copy
-    of it.
+    An edit moves the shift times; the calendar times never move.  The
+    calendar times are what the calendar said, so a run can always say
+    what it started from.  The shift times reach Amplify, and a
+    reviewer sets, nudges and resets them, which lets 'undo' recompute
+    the original from the calendar times and the category's offsets.
 
-    **An edit that cannot become a correct shift is refused whole.**
-    The operations in one call are applied together or not at all, so a
-    bulk nudge that would push one event of thirty past midnight leaves
-    all thirty as they were.  A partly applied action is worse than a
-    refused one: the reviewer cannot see which rows moved.
+    An edit that cannot become a correct shift is refused whole: a
+    bulk nudge that would push one event of thirty past midnight
+    leaves all thirty as they were.
 """
 
 # Imports - Python Standard Library
@@ -248,7 +241,7 @@ def _set_category(
 
         What the collection matched is left as it is, so the row can
         say it was changed and an undo has somewhere to put it back
-        to (D26).
+        to.
     """
 
     category = required(
@@ -286,7 +279,7 @@ def _unassign(
         unassigned is a state of.  A row the collection did match is
         refused: what such a row wants when it should create no shift
         is to be removed from the revision, and unassigning it would
-        leave a row behind blocking the whole run (D29).
+        leave a row behind blocking the whole run.
     """
 
     del operation
@@ -688,7 +681,7 @@ def edit(
 
         Below both halves, the way a send is: the service answers over
         HTTP and the command line answers from the same database in the
-        same process (D2), and an edit worked out twice would let one
+        same process, and an edit worked out twice would let one
         of them change something the other did not.
 
         The whole call is one transaction.  'apply' has already refused
@@ -707,7 +700,7 @@ def edit(
                 What the reviewer did, in order.
 
             principal_id (str):
-                Who did it (D13).
+                Who did it.
 
         Raises:
             ValidationError:

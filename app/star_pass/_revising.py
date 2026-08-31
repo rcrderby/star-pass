@@ -1,28 +1,23 @@
 #!/usr/bin/env python3
 """ Marking where a run has got to, and going back to a mark.
 
-    An edit changes the revision a run is working in, in place.  That
-    is what makes a revision worth sealing: it fixes what the run
-    holds now as something numbered and readable, and moves the work
-    to a new revision, so a reviewer who is about to try something can
-    come back to what they had.  Reverting is what coming back means.
+    An edit changes the revision a run is working in, in place.
+    Sealing fixes what the run holds now as something numbered and
+    readable and moves the work to a new revision, so a reviewer about
+    to try something can come back to what they had.  Reverting is
+    coming back.
 
     Both are forward steps and neither destroys anything.  Sealing
     adds a revision holding a copy of the current one; reverting adds
-    a revision holding a copy of an earlier one, and **one revision
-    per revert**: the revision that was current keeps its rows and
-    stays readable at its own number, so there is nothing to fix in
-    place first and a seal before a revert would only add a revision
-    holding an identical copy of the one before it.
+    a revision holding a copy of an earlier one, one per revert, and
+    the revision that was current stays readable at its own number.
 
-    The single exception, and the reason reverting is not sealing
-    pointed at a different number: reverting to the revision a
-    collection filled drops the events a person pulled in by hand,
-    because that revision is the run as the calendar gave it.
+    Reverting to the revision a collection filled drops the events a
+    person pulled in by hand, because that revision is the run as the
+    calendar gave it.
 
-    Nothing here decides what a caller is told.  In the core, not the
-    service: nothing about it is HTTP, and a revision means the same
-    thing to whoever asks for one.
+    In the core, not the service: a revision means the same thing to
+    whoever asks for one.
 """
 
 # Imports - Python Standard Library
@@ -53,7 +48,7 @@ def seal(
     """ Fix what a run holds now, and open a revision to work in.
 
         Who sealed it is recorded against the key the write was
-        claimed under (D13) rather than in the change log: the change
+        claimed under rather than in the change log: the change
         count on a revision is what was done *while it was current*,
         and an entry written as one opens would have every sealed
         revision starting at one change nobody made.

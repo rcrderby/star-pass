@@ -10,10 +10,9 @@
     **What cannot be expressed.**  An event holds one pair of shift
     times and a role per need ID, so a category whose need IDs disagree
     about their offsets describes two different shifts and cannot be
-    stored as one event.  This is the refusal D25 does *not* remove.
-    What D25 makes storable is two categories timing one Amplify
-    listing differently, which the roles now carry separately.  What
-    stays impossible is one event needing two pairs of shift times.
+    stored as one event.  Two categories timing one Amplify listing
+    differently are storable, because the roles carry their timing
+    separately; one event needing two pairs of shift times is not.
 
     A shift running past midnight cannot be read back either, because
     the times are stored as times of day.  Both are refused here, so a

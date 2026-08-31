@@ -1,27 +1,22 @@
 #!/usr/bin/env python3
 """ Running work in the background, and recording what it reported.
 
-    The core already describes what it is doing to a 'Reporter' the
-    caller supplies rather than printing it, which is what makes this
-    possible: 'JobReporter' is a reporter that writes those calls to
-    the job's event log, so progress becomes stored data without the
-    core knowing anything ran it.
+    The core describes what it is doing to a 'Reporter' the caller
+    supplies rather than printing it, so 'JobReporter' writes those
+    calls to the job's event log and progress becomes stored data.
 
     'JobRunner' owns the other half -- starting a job, running the
-    work, and recording how it ended -- so that a caller hands over a
+    work, and recording how it ended -- so a caller hands over a
     callable and gets an identifier back rather than waiting.
 
-    Both live in the core rather than in the service.  Nothing here is
-    about HTTP, and the command line client runs the same operations
-    locally (D2); putting them in the service would mean the CLI could
-    not reuse them.
+    Both live in the core rather than the service, because the command
+    line client runs the same operations locally.
 
-    **Threads and connections.** A SQLite connection belongs to the
-    thread that opened it, so the runner is given a way to open one
-    rather than a connection to share.  Each job opens its own and
-    closes it when it is done, which is also what lets a job write
-    while a request reads: the database is in write-ahead logging, so
-    a reader does not block the writer.
+    A SQLite connection belongs to the thread that opened it, so the
+    runner is given a way to open one rather than a connection to
+    share.  Each job opens its own and closes it when it is done; the
+    database is in write-ahead logging, so a job can write while a
+    request reads.
 """
 
 # Imports - Python Standard Library

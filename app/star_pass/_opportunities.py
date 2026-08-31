@@ -3,22 +3,16 @@
 
     Below every caller.  Collection resolves an opportunity's title
     once and stores it on the run, because every review row is
-    labelled with one and a lookup deferred to preview time would
-    leave the screen unable to name anything; the shift preview reads
-    the same title while reporting what it would create.  Asked in two
-    places, the two could disagree about what a missing title reads as.
+    labelled with one; the shift preview reads the same title while
+    reporting what it would create.
 
-    The shifts an opportunity already holds are read here for the same
-    reason and a stronger one.  The preview says which of a revision's
-    shifts Amplify already has, and the send re-asks inside its own
-    transaction so that nothing created between the two is sent twice
-    (D16).  Those two are the same question, and a second way of asking
-    it -- a different date format read, a different rule for a shift
-    whose end cannot be worked out -- would show up as a duplicate row
-    in a live volunteer system rather than as a disagreement anybody
-    could see.
+    The shifts an opportunity already holds are read here too.  The
+    preview says which of a revision's shifts Amplify already has, and
+    the send re-asks inside its own transaction so that nothing
+    created between the two is sent twice.  Both are the same
+    question, asked one way.
 
-    The address is built rather than read.  It is the public page a
+    The address is built rather than read: it is the public page a
     volunteer signs up on, which the API's own response does not
     carry, and it is one configured base plus the need ID.
 """
@@ -277,7 +271,7 @@ def shifts_in_amplify(
     """ Return which of a revision's shifts Amplify already holds.
 
         What the preview reports and what the send skips, asked the one
-        way (D16).
+        way.
 
         Args:
             events (Iterable[Event]):

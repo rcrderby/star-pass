@@ -1,29 +1,22 @@
 #!/usr/bin/env python3
 """ Progress and result reporting for the core.
 
-    The core describes what it is doing; something else decides how that
-    looks.  The CLI renders these calls as terminal text, and the API
-    service will record them as job steps and stream them to a browser.
-    Neither rendering belongs in the domain logic, and the service
-    cannot recover the data by reading text the core printed.
+    The core describes what it is doing; something else decides how
+    that looks.  The CLI renders these calls as terminal text, and the
+    API service records them as job steps and streams them to a
+    browser.
 
-    The methods are events, not messages: a caller says a step began, or
-    that a batch of shifts went to an opportunity and with what, and the
-    renderer decides how much of that to show.  Output verbosity is a
-    property of the renderer for the same reason -- how much detail to
-    display is not something the domain knows about.
+    The methods are events, not messages: a caller says a step began,
+    or that a batch of shifts went to an opportunity and with what,
+    and the renderer decides how much of that to show.  Verbosity is
+    the renderer's property for the same reason.
 
-    **A step is named, not described.**  The core says which step
-    began and each client decides what to call it, the same way it
-    publishes a blocker reason rather than a sentence about one: the
-    terminal words them in 'star_pass_cli._sending' and the browser in
-    'web/phrases.json', each held to 'STEPS' by a test.  A label built
-    here would be English in the job's event log, which is read back
-    over the API by clients that word everything else themselves.
+    A step is named, not described.  The core says which step began
+    and each client words it -- the terminal in
+    'star_pass_cli._sending' and the browser in 'web/phrases.json',
+    each held to 'STEPS' by a test.
 
-    'Reporter' itself does nothing, so the core can run unobserved: a
-    test, or a caller that only wants the return value, needs no
-    argument.
+    'Reporter' itself does nothing, so the core can run unobserved.
 """
 # Every method here accepts what a renderer needs and does nothing with
 # it: that is what makes this usable as the default.
@@ -187,7 +180,7 @@ class Reporter:
             asking Amplify about a run while the send is writing to
             it.  Reported by the send itself rather than recorded when
             the job was asked for, so a job resumed after an
-            interruption (D10) counts the opportunities it is about to
+            interruption counts the opportunities it is about to
             work through rather than the ones the first attempt was.
 
             Args:
@@ -242,21 +235,14 @@ class Reporter:
     ) -> None:
         """ One opportunity's turn in the send is over.
 
-            **Reported for every opportunity, including one that
-            needed nothing.**  A send reads each opportunity and
-            creates what it is missing, and an opportunity Amplify
-            already held every shift for is one the send finished with
-            rather than one it never reached.  Reported only when rows
-            were created, it would be indistinguishable from an
-            opportunity still being worked on -- so a screen drawing a
-            row per opportunity could never finish that row, and the
-            count of what is done would stop short of the total.
+            Reported for every opportunity, including one that needed
+            nothing, so a screen drawing a row per opportunity can
+            finish every row and its count reaches the total.
 
             Every field a renderer might show is passed, because
-            choosing between them is the renderer's job.  In check mode
-            the batch was not sent, and the caller reports it the same
-            way: what would have been created is what an operator is
-            checking.
+            choosing between them is the renderer's job.  In check
+            mode the caller reports the batch the same way: what would
+            have been created is what an operator is checking.
 
             Args:
                 batch (ShiftBatch):

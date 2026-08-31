@@ -71,7 +71,7 @@ def event_from(
             event (Event):
                 The event, with a role per need ID it serves, and a
                 record of the category it was matched to -- which is
-                where an undo puts it back (D26).
+                where an undo puts it back.
     """
 
     timings = role_timings(matched=matched, title=title)
@@ -125,7 +125,7 @@ def opportunity_read(
         here and is not stored here: how a shift is timed under a
         listing belongs to the role that creates the shift, because
         one listing can be named by categories that time it
-        differently (D25).
+        differently.
 
         Args:
             helpers (Helpers):

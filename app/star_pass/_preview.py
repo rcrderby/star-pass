@@ -68,7 +68,7 @@ class Blocker:
 class SkippedShift:
     """ One shift the revision asks for that Amplify already has.
 
-        Named per shift and never only counted (D16).  A count says how
+        Named per shift and never only counted.  A count says how
         many rows will not arrive; it does not say which, and the
         reader deciding whether that is right is deciding about
         particular days and times.
@@ -97,7 +97,7 @@ class SkippedShift:
 class PlannedShift:
     """ One shift a revision asks for, and what it asks Amplify for.
 
-        The first four fields are exactly a 'ShiftIdentity' (D16), so
+        The first four fields are exactly a 'ShiftIdentity', so
         'identity' is what decides whether Amplify already has this
         row.  The fifth is the only thing a send adds to it.
 

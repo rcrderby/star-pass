@@ -68,7 +68,7 @@ class SentShiftRepository(Repository):
 
         Nothing here deletes.  The record is what duplicate safety
         rests on, so it outlives the job logs and superseded revisions
-        that expire around it (D12).
+        that expire around it.
     """
 
     def record(
@@ -95,10 +95,10 @@ class SentShiftRepository(Repository):
                     end.
 
                 principal_id (str):
-                    Who sent them (D13).
+                    Who sent them.
 
                 idempotency_key (str):
-                    The key the send was made under (D13).
+                    The key the send was made under.
 
             Raises:
                 ValidationError:

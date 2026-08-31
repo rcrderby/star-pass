@@ -6,12 +6,10 @@
     import a logger without a cycle.  '_defaults' keeps the paths; this
     module reads what is at them.
 
-    The models are read on first use, not at import.  A module that
-    reads a file when it is imported cannot report the failure usefully:
-    it happens before logging is configured and before any caller exists
-    to catch it, which is why these used to print to stderr and exit.
-    Reading them on demand makes a bad model an ordinary
-    ConfigurationError, handled like any other.
+    The models are read on first use, not at import.  A file read at
+    import time fails before logging is configured and before any
+    caller exists to catch it; read on demand, a bad model is an
+    ordinary ConfigurationError.
 """
 
 # Imports - Python Standard Library

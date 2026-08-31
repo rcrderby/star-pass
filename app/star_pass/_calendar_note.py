@@ -8,7 +8,7 @@
     the same sentence.
 
     Converting here rather than in a client is what makes the value
-    safe wherever it is read (D30): what is stored is text, so a
+    safe wherever it is read: what is stored is text, so a
     reader has no markup to render even if it tried to.
 """
 
@@ -27,7 +27,7 @@ _BREAKS_AFTER = frozenset({
 })
 
 # The longest note stored.  A description may hold an agenda, and this
-# value crosses the wire on every read of every row of a run (D30).
+# value crosses the wire on every read of every row of a run.
 NOTE_LIMIT = 1000
 
 # Elements whose contents are not prose.  A description should never

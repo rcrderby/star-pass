@@ -3,15 +3,9 @@
 
     A question like "show me this run" is answered from four places:
     the run, the events of its current revision, the opportunities
-    labelling them, and the log of what was done to it.  Deciding
-    which four, and reading them on one connection, is the same
-    decision wherever the question is asked -- and it is asked twice,
-    once by the service and once by the command line client reading
-    the same database in the same process (D2).
-
-    So the read plan lives here, below both of them.  Two copies would
-    drift, and a mode that read one fewer thing than the other would
-    answer a question differently without anything saying so.
+    labelling them, and the log of what was done to it.  The read plan
+    lives here, below the service and the command line, so both answer
+    the question the same way.
 
     One connection per answer, not one per read: four reads on four
     connections would describe the run at four moments, and a caller

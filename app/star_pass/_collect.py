@@ -149,7 +149,7 @@ def carries_notes(
     """ Return whether this calendar's entries carry notes.
 
         Configuration rather than a name to test against, so that a
-        calendar added or renamed carries its own answer (D30).
+        calendar added or renamed carries its own answer.
 
         Args:
             calendar (str):
@@ -278,8 +278,8 @@ def _uncollected_from(
                 What the calendar's description said, already text,
                 or None where this calendar carries no notes.  Kept
                 here as well as on the event so that pulling this row
-                in by hand produces the event a collection would
-                (D30): adding reads this row and never the calendar.
+                in by hand produces the event a collection would:
+                adding reads this row and never the calendar.
 
         Returns:
             uncollected (UncollectedEvent):
@@ -561,7 +561,7 @@ def collect(
                 Where progress is described.
 
             principal_id (str):
-                Who asked for the collection (D13).  Recorded against
+                Who asked for the collection.  Recorded against
                 the titles it finds the data model has no match for.
 
         Raises:
@@ -660,7 +660,7 @@ def _into(
                 Where progress is described.
 
             principal_id (str):
-                Who asked for the collection (D13).
+                Who asked for the collection.
 
         Raises:
             ValidationError:
@@ -767,7 +767,7 @@ def _record_unmatched(
                 What the collection produced.
 
             principal_id (str):
-                Who asked for the collection (D13).
+                Who asked for the collection.
 
         Raises:
             UpstreamError:

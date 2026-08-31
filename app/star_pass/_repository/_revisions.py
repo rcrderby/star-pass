@@ -115,18 +115,13 @@ class RevisionRepository(Repository):
             An edit continues: the new revision holds a copy, so what
             was there is still there and only the edit differs.  A
             collection replaces: what the calendar says now is the
-            whole of it, and carrying the old events forward would
-            leave behind ones the calendar no longer has.
+            whole of it.  The first revision of a run has nothing to
+            copy either way.
 
-            The first revision of a run has nothing to copy either
-            way.
-
-            **What kind of revision it is is not a caller's to say.**
-            It follows from the two things this method already knows:
-            a revision that replaces is a collection's, and which
-            collection it was depends on whether the run held
-            anything.  A caller passing it as well would be a caller
-            that can disagree with what actually happened.
+            What kind of revision it is follows from what this method
+            already knows: a revision that replaces is a collection's,
+            and which collection it was depends on whether the run
+            held anything.
 
             Args:
                 run_id (str):
@@ -285,21 +280,16 @@ class RevisionRepository(Repository):
     ) -> int:
         """ Delete the middle revisions of runs nobody has touched.
 
-            Two are never removed, whatever the run's age.  The first
-            is the run as the calendar gave it, and reverting to it is
-            a published operation that also returns hand-added events
-            to what the collection left out; the current one is what
-            the run *is*.  What goes is the sealed revisions between
-            them, which are points somebody fixed while working and
-            which stop being worth coming back to once the work is
-            over.
+            Two are never removed, whatever the run's age: the first,
+            which is the run as the calendar gave it and a published
+            revert target, and the current one, which is what the run
+            is.  What goes is the sealed revisions between them.
 
-            A run is 'untouched' by the same reading the rest of the
+            A run is untouched by the same reading the rest of the
             service uses -- the last entry in its 'change_log', or its
-            collection when nothing has changed it -- rather than by
-            when a revision was created.  A revision is edited in
-            place, so its own timestamp says when the work started
-            rather than when it stopped.
+            collection when nothing has changed it.  A revision is
+            edited in place, so its own timestamp says when the work
+            started rather than when it stopped.
 
             Args:
                 cutoff (str):
