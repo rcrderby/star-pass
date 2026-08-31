@@ -21,6 +21,8 @@ from star_pass._records import (
     UNCOLLECTED_EXCLUDED,
     UNCOLLECTED_UNTITLED
 )
+from star_pass import gcal_data
+from star_pass._exceptions import ConfigurationError
 from star_pass.gcal_data import exclusion_reason, GCALData
 
 
@@ -246,6 +248,65 @@ class TestReadingAWindowWhole:
 
         assert queries == ['']
         assert read.everything == read.searched == [{'id': 'a'}]
+
+
+class TestACalendarWithoutAnIdentifier:
+    # 'GCAL_EVENTS_CAL_ID' and 'GCAL_PRACTICES_CAL_ID' carry no
+    # default, so a deployment that never set one has to be stopped
+    # here rather than sending Google a request for no calendar.
+
+    @pytest.mark.parametrize('missing', (None, ''))
+    def test_it_is_refused_however_it_is_missing(
+        self, monkeypatch, missing
+    ):
+        # Absent and present-but-empty are the same mistake, and the
+        # empty one is what a '.env' written from '.env.example' and
+        # never finished holds -- the template ships the key with no
+        # value, so this is the case a real deployment reaches.
+        gcal = GCALData(gcal_name='events')
+        monkeypatch.setitem(
+            gcal_data.GCAL_CALENDARS['events'], 'gcal_id', missing
+        )
+
+        with pytest.raises(ConfigurationError) as error:
+            gcal._calendar_settings()
+
+        assert 'events' in str(error.value)
+
+    def test_no_search_terms_is_a_setting_rather_than_a_fault(
+        self, monkeypatch
+    ):
+        # A query-string variable set to nothing reads as [], which
+        # '_get_env_list' documents as what an unset repository
+        # variable produces.  It is a calendar configured to search
+        # for nothing, not a calendar missing its configuration, so
+        # the identity test on this half is deliberate: loosening it
+        # to falsiness the way the identifier's was would refuse it.
+        gcal = GCALData(gcal_name='events')
+        monkeypatch.setitem(
+            gcal_data.GCAL_CALENDARS['events'], 'gcal_id', 'a-calendar'
+        )
+        monkeypatch.setitem(
+            gcal_data.GCAL_CALENDARS['events'], 'query_strings', []
+        )
+
+        gcal_id, query_strings = gcal._calendar_settings()
+
+        assert gcal_id == 'a-calendar'
+        assert query_strings == []
+
+    def test_an_identifier_that_is_there_is_used(self, monkeypatch):
+        # The other half: a guard that refused everything would pass
+        # the test above and collect nothing ever again.
+        gcal = GCALData(gcal_name='events')
+        monkeypatch.setitem(
+            gcal_data.GCAL_CALENDARS['events'], 'gcal_id', 'a-calendar'
+        )
+
+        gcal_id, query_strings = gcal._calendar_settings()
+
+        assert gcal_id == 'a-calendar'
+        assert query_strings is not None
 
 
 class TestGetGcalShiftData:
