@@ -525,7 +525,7 @@ button.picker-row:hover {
  * The times and the control that opens the note sit on one line, so
  * the control reads as belonging to them rather than as a third note
  * under the title.  It is drawn on every row of a calendar that
- * carries notes, including the rows with nothing to show (D30).
+ * carries notes, including the rows with nothing to show.
  */
 .row-note-line {
   align-items: center;

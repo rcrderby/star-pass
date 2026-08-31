@@ -119,7 +119,7 @@
 
 /* What the run holds, beside the tag saying where it is. The dialog
  * itself is `.confirm-card` from `sending.css`: one gate in front of
- * the things that cannot be undone (D11), drawn one way. */
+ * the things that cannot be undone, drawn one way. */
 .delete-holds {
   display: flex;
   gap: 10px;

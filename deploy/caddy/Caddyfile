@@ -1,12 +1,12 @@
 # The only process in this deployment with a published port.
 #
 # Everything reaches star-pass through here: Caddy terminates TLS and
-# passes plain HTTP to the frontend, on a network the API is not on
-# (D5, D6, D17).  Neither application service publishes a port, so
-# this file is the whole of the front door.
+# passes plain HTTP to the frontend, on a network the API is not on.
+# Neither application service publishes a port, so this file is the
+# whole of the front door.
 #
-# There is no ACME code in the application and none belongs there.
-# Certificates are this layer's business (plan section 3).
+# There is no ACME code in the application.  Certificates are this
+# layer's business.
 {
 	# Do not try to add the internal authority's root to this
 	# container's own trust store.  Nothing inside the container
@@ -21,11 +21,11 @@
 }
 
 {$STAR_PASS_SITE_ADDRESS:localhost} {
-	# Caddy's internal certificate authority by default (D14).  A
+	# Caddy's internal certificate authority by default.  A
 	# deployment that is genuinely public sets this to an email
 	# address to use Let's Encrypt instead; the default stays
 	# internal so that pointing this at a real name cannot start
-	# issuing public certificates by accident, which D14 rejected.
+	# issuing public certificates by accident.
 	#
 	# HTTP to HTTPS needs no directive: Caddy serves this name on 443
 	# and redirects 80 to it, and writing the redirect out by hand

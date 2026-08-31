@@ -159,7 +159,7 @@ async function start() {
     return getJob(run.activeJobId);
   }
 
-  /** Show the job the service stopped in the middle of (D10).
+  /** Show the job the service stopped in the middle of.
    *
    * Whichever screen that job's kind belongs to, which is the same
    * screen it would have been watched on: how far a send got is a

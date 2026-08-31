@@ -1,12 +1,11 @@
 ---
-# The deployment the plan has assumed since D5 and D17: two
-# application services on one host, behind Caddy, with nothing but
-# Caddy publishing a port.
+# The deployment: two application services on one host, behind Caddy,
+# with nothing but Caddy publishing a port.
 #
 # 'docker compose up' is the whole of local development. It builds one
-# image and runs it twice, which is what keeps the core and the API
-# from drifting apart (D17), and serves the page over HTTPS with
-# Caddy's internal certificate authority (D14).
+# image and runs it twice, which keeps the core and the API from
+# drifting apart, and serves the page over HTTPS with Caddy's internal
+# certificate authority.
 #
 # Run 'python3 scripts/setup_env.py' first. It writes '.env', which
 # Compose reads for the values interpolated below and the API service
@@ -26,17 +25,16 @@ services:
     # Which interface the front door is published on, and the only
     # place in this file that decides what can reach star-pass at all.
     #
-    # D14 decided this runs on a tailnet with no route out, and the
-    # Caddyfile leans on that decision throughout.  An unqualified
-    # "443:443" binds every interface, so on a host that also has a
-    # public one the site is published there too, and only the site's
+    # The deployment runs on a tailnet with no route out, and the
+    # Caddyfile leans on that throughout.  An unqualified "443:443"
+    # binds every interface, so on a host that also has a public one
+    # the site is published there too, and only the site's
     # name-matching stands between the internet and the frontend.
     #
     # The default is the loopback address, so a host that says nothing
     # publishes nothing beyond itself.  A tailnet deployment sets
     # STAR_PASS_BIND_ADDRESS to its tailnet address, which is what
-    # makes D14 something the deployment enforces rather than
-    # something it assumes.
+    # enforces the assumption rather than relying on it.
     ports:
       - "${STAR_PASS_BIND_ADDRESS:-127.0.0.1}:80:80"
       - "${STAR_PASS_BIND_ADDRESS:-127.0.0.1}:443:443"
@@ -84,9 +82,8 @@ services:
     pids_limit: 128
 
   # What a browser talks to. Holds the API token and the session
-  # signing value, and no Amplify credential of any kind: the
-  # internet-facing process never has that secret on its filesystem,
-  # which is the whole of D17.
+  # signing value, and no Amplify credential of any kind, so the
+  # internet-facing process never has that secret on its filesystem.
   frontend:
     build: .
     restart: unless-stopped
@@ -176,7 +173,7 @@ services:
       # Where the state that outlives the container is kept.
       STAR_PASS_DATABASE_PATH: /data/star_pass.db
     volumes:
-      # The credential mount, on this service and no other (D9, D17).
+      # The credential mount, on this service and no other.
       # A file rather than the environment, so the secret stays out of
       # 'docker inspect' and '/proc/<pid>/environ'.
       #

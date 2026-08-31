@@ -1,4 +1,4 @@
-/* What a deletion restates before it happens (D11, D24).
+/* What a deletion restates before it happens.
  *
  * The second thing that cannot be undone, and it is put the same way
  * as the first, through the same dialog: what is about to go is on

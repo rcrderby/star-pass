@@ -1,4 +1,4 @@
-/* Where the page is, said as a path (D28).
+/* Where the page is, said as a path.
  *
  * Every screen was drawn into one `<main>` and none of them had an
  * address: a reload came back to whatever `listRuns()` implied, Back

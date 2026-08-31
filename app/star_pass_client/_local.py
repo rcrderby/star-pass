@@ -120,8 +120,8 @@ UNAVAILABLE = {
     ): (
         'Reverting is done in the web interface, by a reviewer looking '
         'at what the run holds now and deciding it was better before. '
-        'The command line reads the revisions a run has been through '
-        '(D2).'
+        'The command line reads the revisions a run has been '
+        'through.'
     ),
     (
         'POST', '/v1/unmatched-titles'

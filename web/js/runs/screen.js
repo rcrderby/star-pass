@@ -230,7 +230,7 @@ export class RunsScreen {
     );
   }
 
-  /** Ask whether to delete a run (D11).
+  /** Ask whether to delete a run.
    *
    * @param {Object} run The run the control was pressed on.
    * @returns {void}

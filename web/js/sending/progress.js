@@ -93,7 +93,7 @@ const RECONNECTING = (
  * before it was recorded and everything after it was never reached. */
 const INTERRUPTED_LEDE = (
   'The service stopped while this send was running. The opportunity it '
-  + 'was working on may or may not have been created — Amplify is what '
+  + 'was working on may or may not have been created. Amplify is what '
   + 'knows, and resuming asks it. Every opportunity is read again '
   + 'immediately before it is written to, so resuming creates only '
   + 'what is missing and nothing can arrive twice.'

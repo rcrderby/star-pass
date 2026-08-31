@@ -5,7 +5,7 @@
 
   Self-hosted rather than loaded from a content delivery network,
   because the Content Security Policy is "default-src 'self'" and the
-  deployment is meant to work on a tailnet with no route out (D14).
+  deployment is meant to work on a tailnet with no route out.
   A sprite rather than the icon font: forty-seven glyphs out of a font
   is a two-hundred-kilobyte download and a codepoint map, and a symbol
   takes its colour from "currentColor" with no font loading to flash.
