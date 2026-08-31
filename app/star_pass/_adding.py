@@ -1,32 +1,23 @@
 #!/usr/bin/env python3
 """ Pulling into a run an event the search missed.
 
-    The one thing a reviewer can add to a revision, and it is not a
-    free hand: what may be pulled in is a row the collection already
-    stored, under the one reason that means nobody looked for the
-    event.  The other three reasons describe events that cannot become
-    a correct shift -- an excluded title, an all-day event, an untitled
-    one -- and they are refused here rather than by a disabled button,
-    because a button and the operation behind it would eventually
-    disagree.
+    The one thing a reviewer can add to a revision, and only a row the
+    collection already stored under the reason that means nobody
+    looked for the event.  The other three reasons describe events
+    that cannot become a correct shift -- an excluded title, an
+    all-day event, an untitled one -- and are refused here.
 
-    In the core, not the service.  Nothing here is about HTTP, and the
-    event it builds is the one a collection would have built, through
-    the same '_building' both call (D1).
+    In the core, not the service: it builds the event a collection
+    would have built, through the same '_building'.
 
-    **The row it came from stays.**  The event is added to the current
+    The row it came from stays.  The event is added to the current
     revision and the record of what the window left out is untouched,
-    which is what lets reverting to the first revision drop the
-    hand-added events and leave the reviewer looking at the list they
-    started from.  What keeps it off that list meanwhile is the
-    revision holding it, not the row being gone.
+    so reverting to the first revision drops the hand-added events and
+    leaves the reviewer the list they started from.
 
-    **A pulled-in event may name an opportunity the run has never
-    read.** Nobody searched for this event, so its category is not
-    necessarily one the collection met, and the run has to gain the
-    opportunity before it can label the row. That is the one upstream
-    request this operation makes, and it is made only for a need ID
-    the run does not already hold.
+    A pulled-in event may name an opportunity the run has never read,
+    so the run gains that opportunity before it can label the row.
+    That is the one upstream request this operation makes.
 """
 
 # Imports - Python Standard Library
@@ -197,7 +188,7 @@ def _opportunities_for(
         A need ID the run holds needs nothing else checked.  The event
         arriving with its own timing is not a disagreement to refuse:
         the timing is the role's, so an event added by hand may time a
-        listing differently from the events already in the run (D25).
+        listing differently from the events already in the run.
 
         Args:
             roles (List[EventRole]):
@@ -273,7 +264,7 @@ def _built(
     return (
         # The note comes off the stored row, which is the only place
         # it could: adding never reads the calendar, so an event
-        # pulled in by hand carries what the collection saw (D30).
+        # pulled in by hand carries what the collection saw.
         replace(
             event_from(
                 identifier=uncollected.id,
@@ -316,7 +307,7 @@ def add_event(
                 record of what it left out carries it.
 
             principal_id (str):
-                Who pulled it in (D13).
+                Who pulled it in.
 
         Raises:
             ValidationError:

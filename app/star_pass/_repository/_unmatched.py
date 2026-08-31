@@ -115,7 +115,7 @@ class UnmatchedTitleRepository(Repository):
                     The title, as the calendar gave it.
 
                 principal_id (str):
-                    Who recorded it (D13).
+                    Who recorded it.
 
                 run_id (str, optional):
                     The run it was noticed in, or None when it was not

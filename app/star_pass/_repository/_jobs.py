@@ -365,20 +365,18 @@ class JobRepository(Repository):
         """ End every unfinished job one holder was left with.
 
             Called while a process starts.  A job left queued or
-            running belongs to a process that no longer exists, so
-            without this it stays that way for good and a caller
-            watching it waits for something nothing is doing.
+            running belongs to a process that no longer exists, and a
+            caller watching it would wait for something nothing is
+            doing.
 
-            Scoped to one holder, and that is the whole point of the
-            column.  The service and the command line write into one
-            database (D2), so a sweep that took everything unfinished
-            would let a command line run mark a live send interrupted
-            -- and the run it belonged to would then accept a second
-            send while the first was still writing into Amplify.
+            Scoped to one holder.  The service and the command line
+            write into one database, so a sweep that took everything
+            unfinished would let a command line run mark a live send
+            interrupted.
 
-            Marked interrupted rather than failed: nothing observed a
-            failure, and rather than resumed, because resuming is a
-            human action (D10).
+            Marked interrupted rather than failed, because nothing
+            observed a failure, and not resumed, because resuming is a
+            human action.
 
             Args:
                 held_by (str, optional):
@@ -440,7 +438,7 @@ class JobRepository(Repository):
             job_id: str,
             held_by: str = JOB_HOLDER_SERVICE
     ) -> None:
-        """ Put an interrupted job back in the queue (D10).
+        """ Put an interrupted job back in the queue.
 
             Only an interrupted job.  A failed one was observed to
             fail and a succeeded one is over; queueing either again
@@ -567,7 +565,7 @@ class JobRepository(Repository):
         """ Delete the event logs of jobs that finished before a time.
 
             What the retention window is protecting is here rather
-            than on the job row (D12): an event log names volunteers
+            than on the job row: an event log names volunteers
             and the times they were asked to be somewhere, while the
             row says only that a job of some kind ran and how it
             ended.  So the log goes and the row stays, and a run's

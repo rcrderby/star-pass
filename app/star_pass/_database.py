@@ -1,29 +1,23 @@
 #!/usr/bin/env python3
 """ SQLite connection, schema and statement helpers.
 
-    The database is a backing service attached by an environment
-    variable, so a deployment can point it at a mounted volume without
-    a code change.  This module owns everything SQLite-specific that is
-    not a query: opening a connection, the pragmas that make one behave,
-    the schema, and the two helpers every query goes through.
+    Everything SQLite-specific that is not a query: opening a
+    connection, the pragmas that make one behave, the schema, and the
+    helpers every query goes through.  The database file is named by an
+    environment variable.
 
-    It is the lower half of the repository layer.  '_repository' holds
-    the statements and the records they produce; nothing above either
+    The lower half of the repository layer.  '_repository' holds the
+    statements and the records they produce; nothing above either
     module sees a cursor, a row or an exception from 'sqlite3'.
 
-    What the schema *is* lives here.  What carries an existing database
-    up to it lives in '_migrations', because the two grow at different
-    rates: the statements below are edited in place as the shape
-    changes, and a version's steps are a record that may never be
-    edited again once a release has run them.
+    What the schema is lives here; what carries an existing database up
+    to it lives in '_migrations'.
 
-    A failure here reaches a caller as one of the core's own exceptions,
-    chosen by what the caller can do about it: a database that cannot be
-    opened is a deployment to fix (ConfigurationError), a constraint the
-    values violated is data to correct (ValidationError), and anything
-    else is a backing service that failed (UpstreamError).  Those are
-    the same three distinctions the rest of the core already makes, so
-    the repository layer adds no exception of its own.
+    A failure reaches a caller as one of the core's own exceptions,
+    chosen by what the caller can do about it: a database that cannot
+    be opened is a deployment to fix (ConfigurationError), a constraint
+    the values violated is data to correct (ValidationError), and
+    anything else is a backing service that failed (UpstreamError).
 """
 
 # Imports - Python Standard Library
@@ -78,13 +72,9 @@ CONNECTION_PRAGMAS = (
 # league's own time zone rather than an instant.
 #
 # Only facts are stored.  A shift's length, whether an opportunity's
-# maximum shortened it, which events collide, and the counts on a run
-# are all derived from these columns by the code that reads them;
-# storing a derived value is storing a second copy that can disagree.
-# A run's current revision and the time it was last revised are derived
-# for the same reason: the highest revision number is by definition the
-# current one, and the newest change log entry is by definition the
-# last time anything changed.
+# maximum shortened it, which events collide, the counts on a run, a
+# run's current revision and when it was last revised are all derived
+# from these columns by the code that reads them.
 SCHEMA_STATEMENTS = (
     """
     CREATE TABLE IF NOT EXISTS runs (
@@ -245,15 +235,13 @@ SCHEMA_STATEMENTS = (
         ON job_events (job_id, id)
     """,
     # What a send put into Amplify.  The key is the four columns a
-    # shift is identified by plus the run, because that is the unit
-    # idempotency and duplicate safety work in (D16): a retry asks
-    # which rows it already created, and a count could not say which.
+    # shift is identified by plus the run, which is the unit
+    # idempotency and duplicate safety work in: a retry asks which rows
+    # it already created, and a count could not say which.
     #
-    # The reference to 'runs' deliberately does not cascade, unlike
-    # every other one above.  This record is never purged (D12), so a
-    # deletion that would take it away has to fail rather than succeed
-    # quietly; a cascade would make "never purged" a sentence in a
-    # document instead of something the database holds to.
+    # The reference to 'runs' does not cascade, unlike every other one
+    # above.  This record is never purged, so a deletion that would
+    # take it away fails rather than succeeding quietly.
     """
     CREATE TABLE IF NOT EXISTS sent_shifts (
         run_id           TEXT NOT NULL REFERENCES runs (id),
@@ -295,18 +283,13 @@ SCHEMA_STATEMENTS = (
     # Titles the data model did not match, kept for the next time the
     # model is edited.  A sighting rather than a title: the same title
     # seen in two runs is two rows, because how often something turns
-    # up is what says whether it is worth an alias, and one row
-    # overwritten would answer "once" forever.  One row per run per
-    # title, so that collecting a window again -- which is how a
-    # corrected model is picked up -- does not read as the title
-    # coming back.
+    # up says whether it is worth an alias.  One row per run per title,
+    # so collecting a window again does not read as the title coming
+    # back.
     #
-    # Belongs to no run.  A run is a window that was collected and is
-    # eventually superseded; what the model is missing outlives it,
-    # which is the whole reason for storing it somewhere else.  The
-    # run it was noticed in is recorded and does not cascade, for the
-    # same reason: deleting a run must not delete the reason somebody
-    # was going to edit the model.
+    # Belongs to no run, and the run it was noticed in does not
+    # cascade: what the model is missing outlives the run, so deleting
+    # one must not delete the reason to edit the model.
     """
     CREATE TABLE IF NOT EXISTS unmatched_titles (
         id            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -563,11 +546,8 @@ def _apply_schema(
     # Every statement above creates something only if it is not
     # already there, so running them all against an earlier database
     # adds what that version lacked and leaves the rest untouched.
-    #
-    # That carries a NEW table or index and nothing else.  A column
-    # added to a table that already exists is not created by a
-    # 'CREATE TABLE IF NOT EXISTS' -- the table is already there, so
-    # the statement does nothing -- which is what 'MIGRATIONS' is for.
+    # That carries a new table or index and nothing else; a column
+    # added to a table that already exists is what 'MIGRATIONS' is for.
     with transaction(connection=connection):
         for statement in SCHEMA_STATEMENTS:
             execute(
@@ -801,17 +781,13 @@ def _translated(
 ) -> StarPassError:
     """ Return the core exception a database failure belongs to.
 
-        A constraint violation says the values were wrong -- a run that
-        does not exist, a revision already used -- which the caller
-        fixes by supplying different ones.  Anything else says the
-        database itself failed, which the caller can only retry.  Those
-        are the two different actions, so they are two exceptions.
+        A constraint violation says the values were wrong -- a run
+        that does not exist, a revision already used -- which the
+        caller fixes by supplying different ones.  Anything else says
+        the database itself failed, which the caller can only retry.
 
-        The statement is left out of both messages deliberately.  A
-        message is written for the person running the command, and the
-        values bound to a statement here can include a volunteer's
-        name; the SQL itself is in this package and does not need
-        quoting back.
+        Neither message carries the statement: the values bound to one
+        can include a volunteer's name.
 
         Args:
             error (sqlite3.Error):

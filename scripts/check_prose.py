@@ -24,7 +24,7 @@ import re
 import subprocess  # nosec B404
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Set
 
 # Longest a module docstring may run.  The swept modules land under
 # this; the ones that do not are essays.
@@ -71,6 +71,11 @@ DECISION = re.compile(r'\(D\d+[^)]*\)|\bD\d+\b')
 
 # What silences one line, for the exception that is genuinely one.
 ESCAPE = 'prose-ok'
+
+# The nodes a docstring can open.
+DOCUMENTED = (
+    ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef
+)
 
 # What is read.  The generated client is not: its prose lives in the
 # generator that writes it.
@@ -247,6 +252,41 @@ def _comments_too_long(path: Path, text: str) -> List[str]:
     return problems
 
 
+def _docstring_lines(text: str) -> Set[int]:
+    """ Return the numbers of the lines inside a Python docstring.
+
+        A docstring's body is indented prose, so it opens with none of
+        the marks a comment does and has to be found through the tree.
+
+        Args:
+            text (str):
+                The file.
+
+        Returns:
+            numbers (Set[int]):
+                Every line a docstring occupies.
+    """
+
+    numbers: Set[int] = set()
+
+    for node in ast.walk(ast.parse(text)):
+        body = getattr(node, 'body', None)
+
+        if not isinstance(node, DOCUMENTED) or not body:
+            continue
+
+        first = body[0]
+
+        if (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        ):
+            numbers.update(range(first.lineno, first.end_lineno + 1))
+
+    return numbers
+
+
 def _narrates(path: Path, text: str) -> List[str]:
     """ Return the lines that narrate rather than state.
 
@@ -263,12 +303,13 @@ def _narrates(path: Path, text: str) -> List[str]:
     """
 
     problems = []
+    inside = _docstring_lines(text) if path.suffix == '.py' else set()
 
     for number, line in enumerate(text.splitlines(), 1):
         bare = line.lstrip()
 
         if not (
-            bare.startswith('#') or bare.startswith('*')
+            number in inside or bare.startswith('#') or bare.startswith('*')
             or bare.startswith('//') or bare.startswith('"""')
         ):
             continue

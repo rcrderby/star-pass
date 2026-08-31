@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """ What carries a database that already exists forward.
 
-    Separate from the schema statements beside it because those create
-    things and these change a thing that is already there: a
-    'CREATE TABLE IF NOT EXISTS' does nothing at all to a table that
+    Separate from the schema statements beside it: a
+    'CREATE TABLE IF NOT EXISTS' does nothing to a table that already
     exists, so a column added to one arrives here or not at all.
 
-    A version's steps are the record of one release's change to the
-    shape of the data, and nothing here may be edited after a release
-    has run it: a database already carried past a step will never run
-    it again, so a correction is a further step.
+    A version's steps are fixed once a release has run them.  A
+    database carried past a step never runs it again, so a correction
+    is a further step.
 """
 
 # Imports - Python Standard Library
@@ -20,12 +18,8 @@ from dataclasses import dataclass
 class Step:
     """ One statement that carries a database forward.
 
-        Most add a column, and their statement declares it exactly as
-        the create above declares it, so a database carried here and
-        one built here are the same database.  Some fill one instead:
-        a column added to rows that already exist arrives empty, and
-        what belongs in it is worked out from what those rows already
-        say.
+        A step adds a column, declared exactly as the create above
+        declares it, fills one that arrived empty, or removes one.
 
         Attributes:
             table (str):
@@ -33,21 +27,15 @@ class Step:
 
             column (str):
                 The column that says whether the step still has
-                something to do -- the one being added, the one a
-                filling step fills, or the one a step removes.  Every
-                step of a version is asked this before any of them
-                runs, which is what lets a fill be gated on the column
-                it fills rather than needing a test of its own.
+                something to do.  Every step of a version is asked
+                this before any of them runs, which lets a fill be
+                gated on the column it fills.
 
             removes (bool):
                 Which way the question reads.  A step that adds or
                 fills has something to do while its column is
                 **absent**; a step that removes one has something to
-                do while it is still **there**.  The same question
-                asked the other way round, and it is needed the
-                moment a version drops a column from a table other
-                than the one it adds to -- version 8 does, so a drop
-                cannot borrow the gate of the column that replaced it.
+                do while it is still **there**.
 
             statement (str):
                 What to run.
@@ -60,32 +48,21 @@ class Step:
 
 
 # What carries a database that already exists forward, by the version
-# each step raises it to.  Separate from the statements above because
-# those create things and these change a thing that is already there:
-# a 'CREATE TABLE IF NOT EXISTS' does nothing at all to a table that
-# exists, so a column added to one arrives here or not at all.
+# each step raises it to.  A step runs on a database below its version
+# whose table still lacks the column, so a database that predates the
+# table itself is given the current table by the statements above and
+# leaves the step nothing to add.
 #
-# A step runs on a database below its version whose table still lacks
-# the column.  The second half of that matters: a database from before
-# the table itself existed is given the current table by the
-# statements above, so there is nothing left for the step to add and
-# adding it again would fail.
-#
-# Nothing here may be edited after a release has run it, because a
-# database already carried past it will never run it again; a
-# correction is a further step.
+# A version's steps are fixed once a release has run them.
 MIGRATIONS = {
     4: (
         # Which process is holding a job, so a sweep of what a stopped
-        # process left behind can leave alone what it never held.  The
+        # process left behind leaves alone what it never held.  The
         # service and the command line share a database, and a sweep
         # that took everything unfinished would mark a live send
-        # interrupted.
-        #
-        # The default is what a job written before the column existed
-        # was held by: the service, which was the only thing writing
-        # jobs then.  It is a literal because a schema statement takes
-        # one, and it is the value of '_records.JOB_HOLDER_SERVICE'.
+        # interrupted.  The default is a literal because a schema
+        # statement takes one; it is the value of
+        # '_records.JOB_HOLDER_SERVICE'.
         Step(
             table='jobs',
             column='held_by',
@@ -97,16 +74,10 @@ MIGRATIONS = {
     ),
     7: (
         # How a revision came to exist, and the revision it was made
-        # from.  Both were one column of English written by the core
-        # and printed unchanged by every client, so neither client
-        # could word it and a change of wording would have left the
-        # revisions already recorded saying the old thing.
-        #
-        # The default is false of every row and is corrected by the
-        # four statements below, which run in the same transaction:
-        # SQLite cannot add a column that is NOT NULL without one, and
-        # a default that was true of some rows would be a guess about
-        # the rest.
+        # from, so that each client words them itself.  The empty
+        # default is what SQLite requires of a NOT NULL column added
+        # to a table that has rows; the four statements below correct
+        # it in the same transaction.
         Step(
             table='revisions',
             column='kind',
@@ -120,10 +91,9 @@ MIGRATIONS = {
             column='source',
             statement='ALTER TABLE revisions ADD COLUMN source INTEGER'
         ),
-        # The four sentences the core ever wrote, read back into what
-        # they were saying.  Gated on 'kind', which is asked about
-        # before any statement of this version runs and so is still
-        # absent when these are chosen.
+        # Each sentence the column holds, read back into what it says.
+        # Gated on 'kind', which every step of a version is asked
+        # about before any of them runs and so is still absent here.
         Step(
             table='revisions',
             column='kind',
@@ -162,10 +132,9 @@ MIGRATIONS = {
                 "WHERE label LIKE 'Reverted to revision %'"
             )
         ),
-        # And the sentence goes.  It has to: an insert now names
-        # 'kind' and 'source' and not 'label', so a NOT NULL column
-        # left behind would refuse every revision written after this.
-        # A column and not the table -- 'events' points at
+        # And the sentence goes: an insert names 'kind' and 'source'
+        # and not 'label', so a NOT NULL 'label' would refuse every
+        # revision.  A column and not the table -- 'events' points at
         # 'revisions' with a cascade, so rebuilding the table the
         # portable way would delete every event in the database.
         Step(
@@ -175,18 +144,13 @@ MIGRATIONS = {
         )
     ),
     8: (
-        # What a shift asks of its event moves from the run's
-        # opportunity to the event's role (D25).  One Amplify listing
-        # can be named by categories that time it differently -- need
-        # 905196 by three -- and a table keyed '(run_id, need_id)'
-        # can hold only one of them, which is why the 'events'
-        # calendar has never been collected successfully.
-        #
-        # The defaults are what a role written before these existed is
-        # timed by until the fill below corrects it: SQLite cannot add
-        # a NOT NULL column without one, and the create above declares
-        # these without a default because a role written now always
-        # carries its own.
+        # What a shift asks of its event, on the event's role rather
+        # than the run's opportunity.  One Amplify listing can be
+        # named by categories that time it differently -- need 905196
+        # by three -- and a table keyed '(run_id, need_id)' holds only
+        # one of them.  The defaults are what SQLite requires of a NOT
+        # NULL column added to a table that has rows; the fill below
+        # replaces them.
         Step(
             table='event_roles',
             column='offset_start',
@@ -219,13 +183,9 @@ MIGRATIONS = {
             )
         ),
         # Every role takes the timing of the opportunity it names,
-        # which is where that role's timing was recorded until now and
-        # so is exactly what it was collected with.  Gated on
-        # 'offset_start', which is asked about before any statement of
-        # this version runs and so is still absent when this is
-        # chosen.  'default_slots' falls back to what the role holds:
-        # a role whose opportunity is missing has no default recorded
-        # anywhere else, and what it holds is the nearest true thing.
+        # which is what that role was collected with.  'default_slots'
+        # falls back to what the role holds, the nearest true thing
+        # for a role whose opportunity is missing.
         Step(
             table='event_roles',
             column='offset_start',
@@ -255,13 +215,9 @@ MIGRATIONS = {
         ),
         # And the opportunity keeps what Amplify says about the
         # listing and nothing else.  These are gated the other way
-        # round -- there is something to do while the column is still
-        # there -- because the column that replaces each of them is on
-        # another table, so there is no companion gate to borrow.
-        #
-        # Columns and not the table: nothing references
-        # 'opportunities', but a rebuild is still the wrong habit in a
-        # file where 'events' points at 'revisions' with a cascade.
+        # round -- something to do while the column is still there --
+        # because each replacing column is on another table and offers
+        # no companion gate to borrow.
         Step(
             table='opportunities',
             column='max_length',
@@ -297,15 +253,9 @@ MIGRATIONS = {
     ),
     9: (
         # The category the collection matched, which is what an undo
-        # puts the event back under (D26).  An event stored only the
-        # category it is under now, so changing it left nothing
-        # saying what it had been: the change was invisible to
-        # 'was_edited' and there was nothing for an undo to restore.
-        #
-        # No default, and none is needed: the column is nullable
-        # because a collection matches nothing for some titles, and
-        # that is what an event of any age says about itself until
-        # the fill below.
+        # puts the event back under and what 'was_edited' compares
+        # against.  Nullable, because a collection matches nothing for
+        # some titles.
         Step(
             table='events',
             column='collected_category',
@@ -313,13 +263,10 @@ MIGRATIONS = {
                 'ALTER TABLE events ADD COLUMN collected_category TEXT'
             )
         ),
-        # Every event takes the category it is under, which is the
-        # nearest true thing a database can say about rows written
-        # before the column existed: an unedited event is under what
-        # it was collected under, and an edited one has nothing left
-        # that says what that was.  Gated on 'collected_category',
-        # which is asked about before any statement of this version
-        # runs and so is still absent when this is chosen.
+        # Every event takes the category it is under, the nearest true
+        # thing about a row that predates the column: an unedited
+        # event is under what it was collected under, and an edited
+        # one holds nothing else that says what that was.
         Step(
             table='events',
             column='collected_category',
@@ -328,19 +275,12 @@ MIGRATIONS = {
     ),
     10: (
         # What an edit did, as the operation it was and the values it
-        # carried, rather than as an English sentence written into a
-        # row (D27).  A sentence stored in a column cannot be reworded
-        # without rewriting every row already holding the old one, and
-        # this one was already wrong in the way a stored sentence
-        # cannot be corrected: it carried a raw category key.
-        #
-        # The defaults are what SQLite requires of a NOT NULL column
-        # added to a table that has rows.  Nothing fills them in
-        # afterwards: recovering an operation and its values from
-        # prose would be a migration written against English, for
-        # entries that carry nothing a later reader can act on.  An
-        # entry from before this version therefore says only when it
-        # was made, by whom, and in which revision.
+        # carried, so that each client words it itself.  The defaults
+        # are what SQLite requires of a NOT NULL column added to a
+        # table that has rows, and nothing fills them: recovering an
+        # operation from prose would be a migration written against
+        # English.  An entry that predates this version says only when
+        # it was made, by whom, and in which revision.
         Step(
             table='change_log',
             column='action',
@@ -387,12 +327,10 @@ MIGRATIONS = {
             column='need_id',
             statement='ALTER TABLE change_log ADD COLUMN need_id TEXT'
         ),
-        # And the sentence goes.  It has to: an insert now names
-        # 'action' and not 'entry', so a NOT NULL column left behind
-        # would refuse every entry written after this.  A column and
-        # not the table -- 'change_log' points at 'runs' with a
-        # cascade, so rebuilding it the portable way is the wrong
-        # habit in this file.
+        # And the sentence goes: an insert names 'action' and not
+        # 'entry', so a NOT NULL 'entry' would refuse every entry.  A
+        # column and not the table -- 'change_log' points at 'runs'
+        # with a cascade.
         Step(
             table='change_log',
             column='entry',
@@ -401,13 +339,11 @@ MIGRATIONS = {
         )
     ),
     11: (
-        # What the calendar's description said, on the event and on
-        # the row an event may be added from (D30).  Nullable and
-        # filled with nothing: a note can only come from reading the
-        # calendar, and the description of an event collected before
-        # this version is not recoverable from anything the run holds.
-        # Those rows read as having no note until the run is collected
-        # again, which is the same shape of cost version 10 accepted.
+        # What the calendar's description says, on the event and on
+        # the row an event may be added from.  Nullable and filled
+        # with nothing: a note comes only from reading the calendar,
+        # so a row that predates the column reads as having no note
+        # until its run is collected again.
         Step(
             table='events',
             column='calendar_note',

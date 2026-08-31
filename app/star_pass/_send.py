@@ -241,10 +241,10 @@ def _record(
                 The shifts Amplify has just been given.
 
             principal_id (str):
-                Who sent them (D13).
+                Who sent them.
 
             idempotency_key (str):
-                The key the send was made under (D13).
+                The key the send was made under.
 
         Raises:
             ValidationError:
@@ -314,7 +314,7 @@ def claim(
 
         Below both callers.  The service claims a key before queuing a
         job and the command line client claims one before running the
-        work in the call (D2), and a half that reserved without
+        work in the call, and a half that reserved without
         recording, or recorded without reserving, would be a mode where
         a send could happen twice.
 
@@ -333,7 +333,7 @@ def claim(
                 it, for comparing against a replay.
 
             principal_id (str):
-                Who asked (D13).
+                Who asked.
 
             held_by (str, optional):
                 Which of 'JOB_HOLDERS' will run the job.  Defaults to
@@ -418,10 +418,10 @@ class _Sending:
                 What each opportunity is called, by need ID.
 
             principal_id (str):
-                Who asked (D13).
+                Who asked.
 
             idempotency_key (str):
-                The key the send was made under (D13).
+                The key the send was made under.
     """
 
     connection: sqlite3.Connection
@@ -546,10 +546,10 @@ def send(
                 Where progress is described.
 
             principal_id (str):
-                Who asked (D13).
+                Who asked.
 
             idempotency_key (str):
-                The key the send was made under (D13).
+                The key the send was made under.
 
         Raises:
             ValidationError:

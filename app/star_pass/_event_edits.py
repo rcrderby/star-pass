@@ -14,7 +14,7 @@
     the category the collection matched, rather than storing a copy of
     it.  The category is the one thing an undo cannot recompute -- the
     title matched it under a data model that may since have changed --
-    so the event carries it (D26).
+    so the event carries it.
 """
 
 # Imports - Python Standard Library

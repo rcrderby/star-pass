@@ -144,7 +144,7 @@ class Run:
                 Identifier of the job the run's last one was, when it
                 was left interrupted, and None otherwise.  Derived,
                 and the other half of the same idea: resuming one is a
-                deliberate act (D10), and a caller cannot ask for what
+                deliberate act, and a caller cannot ask for what
                 it has no way to name.  Only the run's *last* job is
                 reported, because a send a later one has since
                 finished is not something to offer to resume.
@@ -364,7 +364,7 @@ class Event:
                 collection matched nothing, and an undo then puts the
                 event back to unassigned, which is where it began.
                 That row is also the only one that may be unassigned
-                by hand (D29).
+                by hand.
 
             match (Match, optional):
                 How the category was reached, or None when the event
@@ -378,7 +378,7 @@ class Event:
             calendar_note (str, optional):
                 What the calendar's description said, as text, or None
                 where the calendar carries no notes or this event had
-                none (D30).  Truth about the calendar rather than
+                none.  Truth about the calendar rather than
                 about the run, so an edit never moves it and it is no
                 part of what an undo compares.
 
@@ -511,7 +511,7 @@ class UncollectedEvent:
                 What the calendar's description said, as text, kept so
                 that an event pulled in by hand carries the note a
                 collected one carries: adding reads this row and never
-                the calendar (D30).
+                the calendar.
     """
 
     id: str
@@ -540,7 +540,7 @@ class LogEntry:
                 rather than the sentence it would make: a sentence
                 returned by a service is a wording mistake, and a
                 sentence written into a row is a wording mistake with
-                a migration attached (D27).  Each client words it.
+                a migration attached.  Each client words it.
 
             subject (str, optional):
                 Title of the event it was done to, or None when it
@@ -746,7 +746,7 @@ class Job:
                 One of 'JOB_STATUSES'.
 
             principal_id (str):
-                Who asked for it (D13).
+                Who asked for it.
 
             held_by (str):
                 Which of 'JOB_HOLDERS' is running it.  Separate from
@@ -844,14 +844,13 @@ class SentShift:
                 End time of the shift, in the league's own time zone.
 
             sent_at (str):
-                When it was created, as an ISO-8601 UTC timestamp
-                (D13).
+                When it was created, as an ISO-8601 UTC timestamp.
 
             principal_id (str):
-                Who sent it (D13).
+                Who sent it.
 
             idempotency_key (str):
-                The key the send was made under (D13).  Kept per shift
+                The key the send was made under.  Kept per shift
                 rather than only per request, so that the rows one
                 attempt created can be told from the rows another did.
     """
@@ -897,10 +896,10 @@ class IdempotencyRecord:
                 earned the first answer.
 
             principal_id (str):
-                Who asked (D13).
+                Who asked.
 
             created_at (str):
-                When they asked, as an ISO-8601 UTC timestamp (D13).
+                When they asked, as an ISO-8601 UTC timestamp.
 
             status_code (int, optional):
                 The status the write answered with, or None while it

@@ -84,6 +84,36 @@ class TestWhatItCatches:
             for problem in check.check(written(tmp_path, body))
         )
 
+    def test_narration_in_the_body_of_a_docstring(self, check, tmp_path):
+        # A docstring's body is indented prose, opening with none of
+        # the marks a comment does.
+        body = (
+            'def f():\n'
+            '    """ Title.\n\n'
+            '        The previous implementation did it differently.\n'
+            '    """\n'
+        )
+
+        assert any(
+            'previous version' in problem
+            for problem in check.check(written(tmp_path, body))
+        )
+
+    def test_a_decision_cited_in_the_body_of_a_docstring(
+            self, check, tmp_path
+    ):
+        body = (
+            'def f():\n'
+            '    """ Title.\n\n'
+            '        One run is one calendar (D5).\n'
+            '    """\n'
+        )
+
+        assert any(
+            'cites a decision' in problem
+            for problem in check.check(written(tmp_path, body))
+        )
+
 
 class TestWhatItLeavesAlone:
     def test_used_to_meaning_employed_to(self, check, tmp_path):
@@ -99,6 +129,16 @@ class TestWhatItLeavesAlone:
 
     def test_no_longer_about_the_world_not_the_code(self, check, tmp_path):
         body = '# The process that held the work no longer exists.\nX = 1\n'
+
+        assert check.check(written(tmp_path, body)) == []
+
+    def test_a_docstring_body_that_states(self, check, tmp_path):
+        body = (
+            'def f():\n'
+            '    """ Title.\n\n'
+            '        The separator used to group opportunity titles.\n'
+            '    """\n'
+        )
 
         assert check.check(written(tmp_path, body)) == []
 
@@ -135,6 +175,7 @@ class TestTheSweptFilesPass:
     @pytest.mark.parametrize(
         'name',
         [
+            'app/star_pass/_migrations.py',
             'app/star_pass/_records.py',
             'app/star_pass_contract/_views.py',
             'app/star_pass_bff/_sessions.py',

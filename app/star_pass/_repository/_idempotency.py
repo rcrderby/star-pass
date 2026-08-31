@@ -107,7 +107,7 @@ class IdempotencyRepository(Repository):
                     summarized it, for comparing against a replay.
 
                 principal_id (str):
-                    Who asked (D13).
+                    Who asked.
 
             Raises:
                 ValidationError:
