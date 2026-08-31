@@ -33,12 +33,13 @@ so the proxy reinforces the policy rather than providing it, and a
 test holds the two copies to each other. Run under bare `uvicorn` as
 above, the page still carries its policy.
 
-Four values are required and every service checks for the ones it
+Six values are required and every service checks for the ones it
 needs. The frontend needs `STAR_PASS_SESSION_SECRET` and
 `STAR_PASS_API_TOKEN`; the API needs `STAR_PASS_API_TOKEN`,
-`AMPLIFY_TOKEN` and `GCAL_TOKEN`. All four are commented out in
-`.env.example`, so a plain copy stops at startup naming whichever is
-missing rather than failing at the first request to Amplify. The
+`AMPLIFY_TOKEN`, `GCAL_TOKEN`, `GCAL_EVENTS_CAL_ID` and
+`GCAL_PRACTICES_CAL_ID`. None carries a value in `.env.example`, so a
+plain copy stops at startup naming whichever is missing rather than
+failing at the first request to Amplify. The
 frontend also refuses to start with no page to serve: it exists to
 give a browser one and to carry its session, so a proxy with nothing
 behind it would be reachable and unusable.

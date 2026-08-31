@@ -308,6 +308,53 @@ class TestACalendarWithoutAnIdentifier:
         assert gcal_id == 'a-calendar'
         assert query_strings is not None
 
+    def test_an_identifier_carrying_the_separator_is_refused(
+        self, monkeypatch
+    ):
+        # The separator is the URL's.  One in the value builds a path
+        # holding '//', which Google answers with a 404 that says
+        # nothing about the cause.
+        gcal = GCALData(gcal_name='events')
+        monkeypatch.setitem(
+            gcal_data.GCAL_CALENDARS['events'], 'gcal_id', '/a-calendar'
+        )
+
+        with pytest.raises(ConfigurationError) as error:
+            gcal._calendar_settings()
+
+        assert 'leading slash' in str(error.value)
+
+
+class TestTheAddressRead:
+    def test_the_separator_comes_from_the_url(self, monkeypatch):
+        # The configured value is the identifier Google shows, with no
+        # leading slash, so the path between the collection root and
+        # the identifier is built here.
+        gcal = GCALData(gcal_name='events')
+        monkeypatch.setitem(
+            gcal_data.GCAL_CALENDARS['events'], 'gcal_id', 'a-calendar'
+        )
+        asked = []
+
+        def fake_send(api_request_data, **_kwargs):
+            asked.append(api_request_data['url'])
+
+            return _mock_response({'items': []})
+
+        monkeypatch.setattr(gcal.helpers, 'send_api_request', fake_send)
+
+        gcal.get_gcal_shift_data(
+            timeMin='2099-01-01T00:00:00-00:00',
+            timeMax='2099-01-31T00:00:00-00:00'
+        )
+
+        assert asked
+        assert asked[0] == (
+            f'{gcal_data.BASE_GCAL_URL}/a-calendar'
+            f'{gcal_data.BASE_GCAL_ENDPOINT}'
+        )
+        assert '//' not in asked[0].partition('://')[2]
+
 
 class TestGetGcalShiftData:
     # The 'events' calendar has a single query string, which keeps the
