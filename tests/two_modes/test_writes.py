@@ -78,8 +78,8 @@ class TestTheTwoModesCollectTheSame:
         collecting_service: None,
         connection: sqlite3.Connection
     ) -> None:
-        # The column exists so that two writers can be told apart
-        # (D13), and a local run is not the service acting.
+        # The column exists so that two writers can be told apart,
+        # and a local run is not the service acting.
         del collecting_service
         answered = local_client.collect_run(body=A_COLLECTION)
 
@@ -432,7 +432,7 @@ class TestSendingInEitherMode:
         send_asked_of_both: dict
     ) -> None:
         # Two writers into one live volunteer system are two different
-        # people acting (D13).
+        # people acting.
         del sending_service
 
         local, remote = both.asked(**send_asked_of_both)
@@ -504,7 +504,7 @@ class TestSweepingUpAfterACommandThatStopped:
         collected: str,
         other_run_id: str
     ) -> None:
-        # The two write into one database (D2).  Ended here, a live
+        # The two write into one database.  Ended here, a live
         # send would look finished and the run would take a second one
         # while the first was still writing into Amplify.
         del collecting_service
@@ -648,7 +648,7 @@ class TestDeletingInEitherMode:
     ) -> None:
         # Read off 'sent_at' rather than off the status, because
         # 'mark_sent' writes it for both of the statuses that mean
-        # shifts reached Amplify (D24).
+        # shifts reached Amplify.
         del collecting_service
 
         for run_id in collected_in_both:
@@ -706,11 +706,11 @@ class TestDeletingInEitherMode:
         collected_in_both: Tuple[str, str],
         runs: RunRepository
     ) -> None:
-        # D24 asks for the two refusals separately on purpose: a
-        # caller told something is working on the run would wait and
-        # ask again, and a caller told the run has sent would stop.
-        # The test above shows the job refusal names its job; this
-        # shows the send refusal is the other answer and not that one.
+        # The two refusals are separate on purpose: a caller told
+        # something is working on the run would wait and ask again,
+        # and a caller told the run has sent would stop.  The test
+        # above shows the job refusal names its job; this shows the
+        # send refusal is the other answer.
         del collecting_service
         sent_run, _ = collected_in_both
 

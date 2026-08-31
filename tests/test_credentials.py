@@ -35,7 +35,7 @@ from star_pass._exceptions import UpstreamError
 CONFIGURED = 'test-amplify-token'
 
 # Written out rather than sliced from the value above: how much of a
-# credential may be shown is a decision (D8), and a test that took the
+# credential may be shown is a decision, and a test that took the
 # length from the code would agree with whatever the code did.
 SHOWN = 'oken'
 
@@ -88,7 +88,7 @@ class TestACredentialAmplifyAccepts:
     ) -> None:
         # The number is the decision, not an implementation detail:
         # four tell two credentials apart and are no use to anybody
-        # else (D8).
+        # else.
         del credential_accepted
 
         assert VISIBLE_CHARACTERS == 4

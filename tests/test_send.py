@@ -40,9 +40,9 @@ NEED_ID = '905196'
 OTHER_NEED_ID = '905197'
 IDENTITY = (NEED_ID, '2026-09-03', '19:15', '21:30')
 
-# Who a send is recorded as, and what one attempt to send is named
-# (D13).  Named rather than called a key: a constant whose name reads
-# as a credential is one the secret scanner stops on.
+# Who a send is recorded as, and what one attempt to send is named.
+# Named rather than called a key: a constant whose name reads as a
+# credential is one the secret scanner stops on.
 PRINCIPAL_ID = 'test-principal'
 SEND_ATTEMPT = 'send-attempt-one'
 

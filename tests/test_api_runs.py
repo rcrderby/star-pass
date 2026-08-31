@@ -164,7 +164,7 @@ class TestListingRuns:
         job_id: str
     ) -> None:
         # An interrupted job is finished, so the run reports nothing
-        # active -- and resuming one is a deliberate act (D10), which
+        # active -- and resuming one is a deliberate act, which
         # a caller with no way to name it could not carry out.
         del run_id
 
@@ -379,7 +379,7 @@ class TestTheEventsOfARun:
         collected: str
     ) -> None:
         # The timing is the role's, so it is returned with the role
-        # rather than with the run's opportunity (D25).
+        # rather than with the run's opportunity.
         assert first_event(collected)['roles'] == [ROLE_DOCUMENT]
 
     def test_how_a_title_matched_is_returned(
@@ -607,7 +607,7 @@ class TestWhatIsShownBesideARun:
 
 
 class TestWhetherARunMayBeDeleted:
-    """ The answer the list draws its delete control from (D24). """
+    """ The answer the list draws its delete control from. """
 
     def test_a_run_that_never_sent_may_go(
         self,
@@ -626,7 +626,7 @@ class TestWhetherARunMayBeDeleted:
     ) -> None:
         # Read off 'sent_at' rather than off the status, because
         # 'mark_sent' writes it for both of the statuses that mean
-        # shifts reached Amplify (D24).
+        # shifts reached Amplify.
         runs.mark_sent(run_id=collected, status=RUN_STATUS_SENT)
 
         assert running_client.get(RUNS_PATH).json()[0]['mayDelete'] is False

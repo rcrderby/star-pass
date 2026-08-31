@@ -40,16 +40,14 @@ EXPECTED_TABLES = {
 
 # Every version this application has written, and what the one after
 # it added: the tables, and the columns added to a table that already
-# existed.  Carrying a database forward is checked at each of them
+# existed.  Carrying a database forward is checked at each version
 # rather than only at the newest, because a release that skipped two
-# versions has to gain every set.
+# has to gain every set.
 #
-# A column is wound back as well as a table, because the two are
-# carried forward by different halves of the schema code: a table
-# arrives from a 'CREATE TABLE IF NOT EXISTS' that does nothing to one
-# already there, and a column can only arrive from a migration.  A
-# test that dropped only tables would pass against a release that had
-# forgotten the migration entirely.
+# A column is wound back as well as a table.  The two are carried
+# forward by different halves of the schema code, and a test that
+# dropped only tables would pass against a release with no migration
+# at all.
 EARLIER_VERSIONS = (
     (1, ('job_events', 'jobs'), ()),
     (2, ('idempotency_keys', 'sent_shifts'), ()),
@@ -853,11 +851,10 @@ class TestMakingRoomForWhatTheCalendarSaid:
         self,
         unnoted_database: Path
     ) -> None:
-        # Nothing is filled in.  A note can only come from reading the
-        # calendar, and the description of an event collected before
-        # this version is not recoverable from anything the run holds
-        # (D30).  Those rows read as having none until the run is
-        # collected again.
+        # Nothing is filled in.  A note can only come from reading
+        # the calendar, and nothing the run holds recovers it, so
+        # those rows read as having none until the run is collected
+        # again.
         connection = _database.connect(path=unnoted_database)
         row = _database.query_one(
             connection=connection,

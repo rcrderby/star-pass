@@ -278,7 +278,7 @@ class TestARestart:
     ) -> None:
         # Resuming is a human action: a send that resumed itself would
         # write to a live volunteer system from state rebuilt after a
-        # crash (D10).
+        # crash.
         jobs.start(job_id=job_id)
         jobs.interrupt_unfinished()
 

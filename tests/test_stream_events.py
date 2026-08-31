@@ -3,7 +3,7 @@
 
     The parsing is here rather than in the caller because the local
     half answers the same operation from the database and has no wire
-    syntax to produce (D2).  These tests hold the reading of the wire
+    syntax to produce.  These tests hold the reading of the wire
     format; that a caller gets the same record either way is held by
     the client's own tests.
 """

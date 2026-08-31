@@ -57,14 +57,11 @@ def fixture_answer_requests(
 
         Everything reaching the calendar or Amplify goes through
         'Helpers.send_api_request', which this replaces, so a test
-        using it makes no live request.  Here rather than beside any
-        one caller: how a scripted answer is built is the same
-        wherever one is scripted, and a second copy would be a second
-        thing to keep in step with what the code reads.
+        using it makes no live request.
 
-        The script is handed the whole request rather than its address,
-        because two reads of one calendar window differ only in the
-        query string they carry.
+        The script is handed the whole request rather than its
+        address, because two reads of one calendar window differ only
+        in the query string they carry.
 
         The list it returns is what was asked for, in order, so a test
         about what a send does to Amplify reads the requests rather

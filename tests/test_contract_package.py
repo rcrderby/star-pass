@@ -2,7 +2,7 @@
 """ The contract shapes cost a client nothing but the shapes.
 
     The command line client calls the core in-process by default and
-    must not acquire a server as a dependency to do it (D2).  It also
+    must not acquire a server as a dependency to do it.  It also
     has to answer with exactly what the service answers, which means
     using the service's shapes -- so those shapes cannot live in the
     package that builds the service, because importing anything from

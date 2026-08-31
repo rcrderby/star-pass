@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """ The two modes read a run the same way.
 
-    D2 says the command line works with no server running, and it only
-    holds while both modes answer the same question the same way.  So
-    every read is asked of both and the two answers are compared -- not
+    The command line works with no server running, which only holds
+    while both modes answer the same question the same way.  So every
+    read is asked of both and the two answers are compared -- not
     described and checked separately, which would compare two
     descriptions rather than two answers.
 
@@ -300,9 +300,9 @@ class TestWhatLocalModeCannotDo:
         self,
         local_client: LocalClient
     ) -> None:
-        # Not a gap to be filled in later: the command line covers what
-        # the web interface cannot, and parity with it is not a goal
-        # (D2).  The reason says where to go rather than "not yet".
+        # Not a gap to be filled in later: the command line covers
+        # what the web interface cannot, and parity with it is not a
+        # goal.  The reason says where to go rather than "not yet".
         with pytest.raises(LocalOperationUnavailable) as error:
             local_client.edit_events(
                 run_id='r-1',
@@ -318,7 +318,7 @@ class TestWhatLocalModeCannotDo:
     ) -> None:
         # Reading the list is troubleshooting and has a command;
         # pulling one off it is reviewing, and its home is the screen
-        # showing the list (D2).
+        # showing the list.
         with pytest.raises(LocalOperationUnavailable) as error:
             local_client.add_event(
                 run_id='r-1',
@@ -333,7 +333,7 @@ class TestWhatLocalModeCannotDo:
     ) -> None:
         # Reading the revisions a run has been through is
         # troubleshooting and has a command; sealing one is done from
-        # the screen about to change what it holds (D2).
+        # the screen about to change what it holds.
         with pytest.raises(LocalOperationUnavailable) as error:
             local_client.seal_revision(
                 run_id='r-1',
@@ -349,7 +349,7 @@ class TestWhatLocalModeCannotDo:
         local_client: LocalClient
     ) -> None:
         # A revert is a judgement about what the run held before,
-        # which is made by somebody looking at what it holds now (D2).
+        # which is made by somebody looking at what it holds now.
         with pytest.raises(LocalOperationUnavailable) as error:
             local_client.revert_revision(
                 run_id='r-1',
@@ -365,7 +365,7 @@ class TestWhatLocalModeCannotDo:
     ) -> None:
         # Reading the log is what happens before the model file is
         # edited, so it has a command; recording one is done from the
-        # screen showing the event the title blocked (D2).
+        # screen showing the event the title blocked.
         with pytest.raises(LocalOperationUnavailable) as error:
             local_client.record_unmatched_title(
                 body={'calendar': 'events', 'title': 'Something'}

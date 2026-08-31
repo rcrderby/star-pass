@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ Reading what an Amplify opportunity already holds.
 
-    This is the answer duplicate safety rests on (D16), so the tests
+    This is the answer duplicate safety rests on, so the tests
     are about what happens to a shift the read cannot make sense of as
     much as about the ones it can.  Amplify is reached through
     'Helpers.send_api_request', which the 'amplify_holds' fixture

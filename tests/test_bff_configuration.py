@@ -106,7 +106,7 @@ class TestWhatItStartsWith:
 class TestWhatItDoesNotImport:
     def test_nothing_of_the_domain(self) -> None:
         # The internet-facing process holds no domain logic and no
-        # credential mount (D17), and the import graph is where that
+        # credential mount, and the import graph is where that
         # stays true rather than being a coding convention.
         loaded = imported_modules(statement='import star_pass_bff')
 

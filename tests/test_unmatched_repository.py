@@ -28,7 +28,7 @@ OTHER_TITLE = 'Rat City Invitational'
 CALENDAR = 'events'
 OTHER_CALENDAR = 'practices'
 
-# Who recorded it (D13).
+# Who recorded it.
 RECORDED_BY = 'static-token'
 
 # Two moments a month apart.  Written rather than waited for: the

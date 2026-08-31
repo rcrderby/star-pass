@@ -79,7 +79,7 @@ class TestWhatACollectionWritesDown:
         connection: Any
     ) -> None:
         # Read from the row rather than from what is published: the
-        # entry a caller sees counts sightings, and D13 is about what
+        # entry a caller sees counts sightings, and this is about what
         # is stored against each one.
         collect_run(items=[an_item(summary=UNMATCHED_TITLE)])
 

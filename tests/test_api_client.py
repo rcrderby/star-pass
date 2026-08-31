@@ -129,7 +129,7 @@ class TestTheCommittedClient:
     def test_every_operation_has_a_method(self) -> None:
         # This is the whole point of generating it: an endpoint the
         # client cannot reach is a failing test rather than something
-        # nobody notices until the command line client needs it (D15).
+        # nobody notices until the command line client needs it.
         published = {
             operation['operationId']
             for verbs in _generator.specification()['paths'].values()
@@ -338,7 +338,7 @@ class TestFollowingAStream:
         make_client: Callable[..., Any]
     ) -> None:
         # The other half answers this operation from the database and
-        # has no wire syntax to hand on (D2), so neither half does.
+        # has no wire syntax to hand on, so neither half does.
         client, _ = make_client(
             media_type='text/event-stream',
             lines=['event: progress', 'data: {"done": 1}', '']

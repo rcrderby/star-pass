@@ -265,10 +265,8 @@ class TestResettingSlots:
     def test_a_role_the_run_holds_no_opportunity_for_still_resets(
         self, edit
     ):
-        # It used to be refused, because the number came from the
-        # run's opportunity and a role naming one the run does not
-        # hold had nowhere to read it. The role carries its own now
-        # (D25), so there is nothing left to refuse.
+        # The role carries its own default, so a reset reads it there
+        # rather than from an opportunity the run may not hold.
         stray = an_event(
             roles=(
                 a_role(

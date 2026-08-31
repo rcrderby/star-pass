@@ -45,7 +45,7 @@ from star_pass._repository import (
 from star_pass._retention import Swept, sweep
 
 # Constants
-# Somebody, for the columns that record who did a thing (D13).
+# Somebody, for the columns that record who did a thing.
 SOMEBODY = 'a-principal'
 
 # A title in the 'practices' calendar that no category matches, and
@@ -586,7 +586,7 @@ class TestTheWindowsAreConfigurable:
         monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # A deployment whose policy differs changes a setting rather
-        # than the code (D12).
+        # than the code.
         monkeypatch.setattr(_defaults, 'RETENTION_JOB_LOG_DAYS', 1)
 
         sweep(connection=connection, now=later(days=2))

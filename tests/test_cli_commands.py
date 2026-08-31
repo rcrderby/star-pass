@@ -100,7 +100,7 @@ class TestChoosingAMode:
         monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # Local by default, so the command line client never needs a
-        # server to be running (D2).
+        # server to be running.
         monkeypatch.delenv(_mode.API_URL_VARIABLE, raising=False)
 
         assert isinstance(_mode.client_for(), LocalClient)
@@ -270,7 +270,7 @@ class TestShowingARun:
         populated: str
     ) -> None:
         # This is where the identifier 'jobs resume' takes is read.
-        # Resuming is a deliberate act (D10), so nothing hands it over
+        # Resuming is a deliberate act, so nothing hands it over
         # unasked, and an interrupted job is never the active one.
         job = jobs.create(
             run_id=populated,
@@ -367,7 +367,7 @@ class TestPreviewingARun:
         populated: str
     ) -> None:
         # Named per shift rather than only counted, so a reader can
-        # check that the right rows are being left out (D16).
+        # check that the right rows are being left out.
         amplify_holds({NEED_ID: [make_amplify_shift()]})
 
         shown, (opportunity, skipped) = previewed(populated)
@@ -624,7 +624,7 @@ class TestWhatAnEventShows:
     ) -> None:
         # The timing is the role's, so it is shown with the role: two
         # events in one run can send to one listing on different
-        # offsets, and there is nowhere else to see that (D25).
+        # offsets, and there is nowhere else to see that.
         assert _render.roles_text(
             event=make_event_document()
         ) == '905196 (4) +15/+30'
@@ -646,8 +646,8 @@ class TestWhatAnEventShowsAboutItsTiming:
         self,
         make_event_document: Callable[..., Any]
     ) -> None:
-        # One Amplify listing named by two categories is what D25
-        # makes storable, and this is where a reader sees it.
+        # One Amplify listing named by two categories, which is what a
+        # reader sees here.
         event = make_event_document()
         first = event['roles'][0]
         event['roles'] = [
@@ -666,7 +666,7 @@ class TestWhatAnOpportunityShows:
     ) -> None:
         # How a shift is timed under a listing is the role's, so an
         # opportunity that named offsets would be claiming one set for
-        # a listing that can be timed several ways (D25).
+        # a listing that can be timed several ways.
         assert _render.OPPORTUNITY_HEADERS == ('NEED', 'TITLE')
         assert _render.opportunity_row(
             opportunity={
@@ -845,7 +845,7 @@ class TestTheCommandsOnOffer:
         build_parser: Callable[[], Any]
     ) -> None:
         # Held on a parent parser, so a command added later cannot be
-        # the one that forgets to offer the remote mode (D2).
+        # the one that forgets to offer the remote mode.
         for command in COMMANDS:
             args = build_parser().parse_args(
                 words_for(command=command)

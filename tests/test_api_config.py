@@ -119,7 +119,7 @@ class TestWhatTheServiceReports:
     ) -> None:
         # Read by whoever shows the note, so that the answer is the
         # calendar's configuration rather than a client testing the
-        # calendar's name (D30).  A calendar configured without the
+        # calendar's name.  A calendar configured without the
         # setting carries no notes, which is what the test above
         # asserts from the other side.
         assert configured(
@@ -352,7 +352,7 @@ class TestWhatTheEndpointDoesNotDo:
         self,
         authenticated_client: TestClient
     ) -> None:
-        # Read only by decision (D8): a value is changed by changing
+        # Read only by decision: a value is changed by changing
         # the environment and restarting, so the service cannot
         # rewrite what it is running on.
         for method in ('post', 'put', 'patch', 'delete'):
