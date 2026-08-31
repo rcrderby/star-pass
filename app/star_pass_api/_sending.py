@@ -68,10 +68,10 @@ async def _handed_over(
                 Run to send.
 
             principal_id (str):
-                Who asked (D13).
+                Who asked.
 
             key (str):
-                The key the send is made under (D13).
+                The key the send is made under.
 
         Returns:
             job (JobView):
@@ -182,7 +182,7 @@ async def send_run(
                 Identifier of the run to send.
 
             idempotency_key (str):
-                What this attempt is claimed under (D13, D16).
+                What this attempt is claimed under.
 
             principal (Principal):
                 The authenticated caller, which the dependency supplies

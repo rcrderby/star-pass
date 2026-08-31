@@ -227,7 +227,7 @@
                 "type": "null"
               }
             ],
-            "description": "The last four characters of the credential, which is enough to tell two apart and no use to whoever reads it. The credential itself is never published, and no endpoint replaces it: rotation is changing the secret and restarting (D8). Absent when none is configured.",
+            "description": "The last four characters of the credential, which is enough to tell two apart and no use to whoever reads it. The credential itself is never published, and no endpoint replaces it: rotation is changing the secret and restarting. Absent when none is configured.",
             "examples": [
               "4f2a"
             ],
@@ -427,7 +427,7 @@
         "type": "object"
       },
       "EventRoleView": {
-        "description": "One opportunity an event creates a shift for, and how it does.\n\nThe timing is the role's and not the opportunity's: one Amplify\nlisting can be named by categories that time it differently, so\ntwo events in a run may send to one listing on different\noffsets (D25).",
+        "description": "One opportunity an event creates a shift for, and how it does.\n\nThe timing is the role's and not the opportunity's: one Amplify\nlisting can be named by categories that time it differently, so\ntwo events in a run may send to one listing on different\noffsets.",
         "properties": {
           "defaultSlots": {
             "description": "Volunteers the category asked for, before any edit.",
@@ -909,7 +909,7 @@
         "type": "object"
       },
       "OpportunityView": {
-        "description": "An Amplify opportunity a run creates shifts under.\n\nWhat Amplify says about the listing, and nothing else. How a\nshift is timed under it belongs to the role that creates the\nshift (D25).",
+        "description": "An Amplify opportunity a run creates shifts under.\n\nWhat Amplify says about the listing, and nothing else. How a\nshift is timed under it belongs to the role that creates the\nshift.",
         "properties": {
           "needId": {
             "description": "Amplify need ID.",
@@ -1152,7 +1152,7 @@
             "type": "boolean"
           },
           "kind": {
-            "description": "How the revision came to exist: collected, recollected, continued, reverted. An identifier rather than a sentence, because a client that is handed the words cannot word it -- and the sentence used to be stored on the row, so a change of wording would have left every revision already recorded saying the old thing beside a new one saying the new.",
+            "description": "How the revision came to exist: collected, recollected, continued, reverted. An identifier rather than a sentence, so that each client words it.",
             "examples": [
               "reverted"
             ],
@@ -1279,7 +1279,7 @@
                 "type": "null"
               }
             ],
-            "description": "Identifier of the job this run last ran, when the service stopped while it was in hand, and null otherwise. Resuming one is a deliberate act and never automatic (D10), which means a caller has to be able to name it -- and an interrupted job is finished, so it is never the \"activeJobId\". Only the run's most recent job is reported here: a send that a later one has since carried out is not something to offer to resume.",
+            "description": "Identifier of the job this run last ran, when the service stopped while it was in hand, and null otherwise. Resuming one is a deliberate act and never automatic, which means a caller has to be able to name it -- and an interrupted job is finished, so it is never the \"activeJobId\". Only the run's most recent job is reported here: a send that a later one has since carried out is not something to offer to resume.",
             "title": "Interruptedjobid"
           },
           "log": {
@@ -1291,7 +1291,7 @@
             "type": "array"
           },
           "mayDelete": {
-            "description": "Whether this run may be deleted. False while something is working on it, and false for ever once its shifts reached Amplify, because the record of what it created is the only account of that anything here holds (D24). Answered here for the same reason `mayUnassign` is on an event: it is the rule the delete operation refuses by, and a caller working it out again would be a second opinion about what the operation will accept -- one that agrees until the rule changes and then disagrees quietly. Why it is false is not published: a caller that asks anyway is told by the refusal itself.",
+            "description": "Whether this run may be deleted. False while something is working on it, and false for ever once its shifts reached Amplify, because the record of what it created is the only account of that anything here holds. Answered here for the same reason `mayUnassign` is on an event: it is the rule the delete operation refuses by, and a caller working it out again would be a second opinion about what the operation will accept -- one that agrees until the rule changes and then disagrees quietly. Why it is false is not published: a caller that asks anyway is told by the refusal itself.",
             "title": "Maydelete",
             "type": "boolean"
           },
@@ -1395,11 +1395,11 @@
                 "type": "null"
               }
             ],
-            "description": "Identifier of the job this run last ran, when the service stopped while it was in hand, and null otherwise. Resuming one is a deliberate act and never automatic (D10), which means a caller has to be able to name it -- and an interrupted job is finished, so it is never the \"activeJobId\". Only the run's most recent job is reported here: a send that a later one has since carried out is not something to offer to resume.",
+            "description": "Identifier of the job this run last ran, when the service stopped while it was in hand, and null otherwise. Resuming one is a deliberate act and never automatic, which means a caller has to be able to name it -- and an interrupted job is finished, so it is never the \"activeJobId\". Only the run's most recent job is reported here: a send that a later one has since carried out is not something to offer to resume.",
             "title": "Interruptedjobid"
           },
           "mayDelete": {
-            "description": "Whether this run may be deleted. False while something is working on it, and false for ever once its shifts reached Amplify, because the record of what it created is the only account of that anything here holds (D24). Answered here for the same reason `mayUnassign` is on an event: it is the rule the delete operation refuses by, and a caller working it out again would be a second opinion about what the operation will accept -- one that agrees until the rule changes and then disagrees quietly. Why it is false is not published: a caller that asks anyway is told by the refusal itself.",
+            "description": "Whether this run may be deleted. False while something is working on it, and false for ever once its shifts reached Amplify, because the record of what it created is the only account of that anything here holds. Answered here for the same reason `mayUnassign` is on an event: it is the rule the delete operation refuses by, and a caller working it out again would be a second opinion about what the operation will accept -- one that agrees until the rule changes and then disagrees quietly. Why it is false is not published: a caller that asks anyway is told by the refusal itself.",
             "title": "Maydelete",
             "type": "boolean"
           },
@@ -1464,7 +1464,7 @@
         "type": "object"
       },
       "SkippedShiftView": {
-        "description": "One shift the revision asks for that Amplify already has.\n\nNamed per shift and never only counted (D16). A count says how\nmany rows will not arrive; it does not say which, and the\nreader deciding whether that is right is deciding about\nparticular days and times.",
+        "description": "One shift the revision asks for that Amplify already has.\n\nNamed per shift and never only counted. A count says how\nmany rows will not arrive; it does not say which, and the\nreader deciding whether that is right is deciding about\nparticular days and times.",
         "properties": {
           "date": {
             "description": "Day it falls on, as an ISO date.",
@@ -1723,7 +1723,7 @@
         "type": "object"
       },
       "WindowRequest": {
-        "description": "The days a collection is asked to cover.\n\nNo zone, unlike the window a run answers with.  The server's\nzone is the authoritative one, and a client that sent its own\nwould be deciding which days a run covers from wherever the\nperson happened to be sitting (D16).",
+        "description": "The days a collection is asked to cover.\n\nNo zone, unlike the window a run answers with.  The server's\nzone is the authoritative one, and a client that sent its own\nwould be deciding which days a run covers from wherever the\nperson happened to be sitting.",
         "properties": {
           "end": {
             "description": "Day after the last day to cover, as an ISO date. Exclusive, so a one-day window is two consecutive dates. There is no limit on how long a window may be.",
@@ -1803,7 +1803,7 @@
   "paths": {
     "/v1/config": {
       "get": {
-        "description": "The settings a collection is carried out under, as this process resolved them at startup. Read only: rotating a credential or changing a setting is a deployment operation, and no endpoint writes one (D8).\n\nThis is where a client learns which calendars a collection may name. Those keys belong to a deployment rather than to this contract, so a client that hard-coded them would be describing one installation.",
+        "description": "The settings a collection is carried out under, as this process resolved them at startup. Read only: rotating a credential or changing a setting is a deployment operation, and no endpoint writes one.\n\nThis is where a client learns which calendars a collection may name. Those keys belong to a deployment rather than to this contract, so a client that hard-coded them would be describing one installation.",
         "operationId": "get_config",
         "responses": {
           "200": {
@@ -1838,7 +1838,7 @@
     },
     "/v1/credentials/test": {
       "post": {
-        "description": "Sends one small authenticated read to Amplify and reports whether it was accepted, with the last four characters of the credential so two can be told apart. The credential itself is never published and no endpoint replaces it: rotation is changing the secret and restarting (D8).\n\nA credential Amplify would not take is an answer rather than a failure -- `working` is false and `reason` says what happened -- because whether it works is the question that was asked.\n\nRate-limited per caller. Asking too often is refused with a `429` and a `Retry-After` header, and the refusal sends nothing to Amplify.\n\nA `POST` rather than a `GET` because it is not free: every call reaches somebody else's service, which is not something to cache or repeat on a client's whim. It stores nothing and takes no idempotency key.",
+        "description": "Sends one small authenticated read to Amplify and reports whether it was accepted, with the last four characters of the credential so two can be told apart. The credential itself is never published and no endpoint replaces it: rotation is changing the secret and restarting.\n\nA credential Amplify would not take is an answer rather than a failure -- `working` is false and `reason` says what happened -- because whether it works is the question that was asked.\n\nRate-limited per caller. Asking too often is refused with a `429` and a `Retry-After` header, and the refusal sends nothing to Amplify.\n\nA `POST` rather than a `GET` because it is not free: every call reaches somebody else's service, which is not something to cache or repeat on a client's whim. It stores nothing and takes no idempotency key.",
         "operationId": "test_credential",
         "responses": {
           "200": {
@@ -1993,7 +1993,7 @@
     },
     "/v1/jobs/{job_id}/resume": {
       "post": {
-        "description": "Queues an interrupted job to be run again, and hands it back to a worker. A job left queued or running when the service stopped is marked interrupted at startup and never resumed on its own (D10): a send that resumed itself would write to a live volunteer system from state rebuilt after a crash.\n\nWhat runs is the ordinary work, pointed at a job that already exists. A resumed send reads every opportunity immediately before writing to it and creates exactly the rows the interrupted attempt did not, so resuming needs no record of how far that attempt got -- the question is answered by Amplify rather than by the job.\n\nThe job keeps its identifier and loses what the interrupted attempt recorded about itself: when it began, when it stopped, and why. Those described an attempt that is being made again, and leaving them would describe two runs of it at once.\n\nRefused for a job in any other state -- which is what stops a second click starting a second worker -- and while another job is working on the same run.",
+        "description": "Queues an interrupted job to be run again, and hands it back to a worker. A job left queued or running when the service stopped is marked interrupted at startup and never resumed on its own: a send that resumed itself would write to a live volunteer system from state rebuilt after a crash.\n\nWhat runs is the ordinary work, pointed at a job that already exists. A resumed send reads every opportunity immediately before writing to it and creates exactly the rows the interrupted attempt did not, so resuming needs no record of how far that attempt got -- the question is answered by Amplify rather than by the job.\n\nThe job keeps its identifier and loses what the interrupted attempt recorded about itself: when it began, when it stopped, and why. Those described an attempt that is being made again, and leaving them would describe two runs of it at once.\n\nRefused for a job in any other state -- which is what stops a second click starting a second worker -- and while another job is working on the same run.",
         "operationId": "resume_job",
         "parameters": [
           {

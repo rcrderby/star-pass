@@ -2,26 +2,22 @@
 """ The same operations, answered without a service.
 
     The command line client calls the core in-process by default and
-    reaches a service only when told to (D2).  This is the default
-    half: the operations the contract publishes, answered from the
-    database this process can already open.
+    reaches a service only when told to.  This is the default half:
+    the operations the contract publishes, answered from the database
+    this process can already open.
 
     It inherits the same generated operations the remote client does,
-    so the two cannot offer different methods -- the surface is
-    generated from the contract once and both halves supply a way to
-    answer it.  What differs is only how an answer is reached: one
-    sends a request, the other opens a connection.
+    so the two cannot offer different methods.  What differs is only
+    how an answer is reached: one sends a request, the other opens a
+    connection.
 
-    The answers themselves are built by 'star_pass_contract', the same
-    module the service builds its responses with, and returned in the
-    same shape a decoded response has.  That is what makes the two
-    modes comparable rather than merely similar, and
-    'tests/test_local_client.py' compares them.
+    The answers are built by 'star_pass_contract', the same module the
+    service builds its responses with, and returned in the shape a
+    decoded response has.  'tests/test_local_client.py' compares the
+    two modes.
 
     An operation with no local answer says so by name rather than
-    returning something plausible.  When a write endpoint arrives it
-    will appear here as a method that raises until it is implemented,
-    which is a failing test rather than a silent difference.
+    returning something plausible.
 """
 
 # Imports - Python Standard Library
@@ -110,14 +106,14 @@ UNAVAILABLE = {
     ): (
         'Editing a run is done in the web interface, which is what has '
         'the run in front of it. The command line collects, reads and '
-        'sends (D2).'
+        'sends.'
     ),
     (
         'POST', '/v1/runs/{run_id}/revisions'
     ): (
         'A revision is sealed from the screen that is about to change '
         'what it holds, which is the web interface. The command line '
-        'reads the revisions a run has been through (D2).'
+        'reads the revisions a run has been through.'
     ),
     (
         'POST', '/v1/runs/{run_id}/revisions/{number}/revert'
@@ -133,7 +129,7 @@ UNAVAILABLE = {
         'A title is recorded from the screen showing the event it '
         'blocked, which is where somebody is looking when they decide '
         'the model is missing one. The command line reads the log, '
-        'because reading it is what happens next to the file (D2).'
+        'because reading it is what happens next to the file.'
     ),
     (
         'POST', '/v1/runs/{run_id}/events'
@@ -141,7 +137,7 @@ UNAVAILABLE = {
         'Pulling an event in is done in the web interface, beside the '
         'list it is pulled from. The command line shows that list, '
         'because asking why an event is not in a run is '
-        'troubleshooting, and stops there (D2).'
+        'troubleshooting, and stops there.'
     )
 }
 
@@ -228,10 +224,9 @@ class LocalClient(OperationCaller, LocalWrites, Operations):
     ) -> Any:
         """ Answer one operation from the database.
 
-            Nothing here speaks HTTP, so the headers are handed to the
-            handler as values rather than sent: an idempotency key
-            means the same thing to a local write as to a remote one,
-            which is the point of D2.
+            Nothing here speaks HTTP, so the headers are handed to
+            the handler as values rather than sent.  An idempotency key
+            means the same thing to a local write as to a remote one.
 
             Args:
                 operation (Operation):
@@ -356,7 +351,7 @@ class LocalClient(OperationCaller, LocalWrites, Operations):
             Answered locally rather than declared unavailable: "which
             calendars can I collect, and why was this title left out"
             is a troubleshooting question, and troubleshooting is what
-            the command line is for (D2).  It opens no database
+            the command line is for.  It opens no database
             either, because a setting is not stored.
 
             Args:
@@ -379,7 +374,7 @@ class LocalClient(OperationCaller, LocalWrites, Operations):
 
             Answered locally because "is the credential still good" is
             the first question asked when a send fails, and asking it
-            is troubleshooting (D2).  It opens no database: a
+            is troubleshooting.  It opens no database: a
             credential is not stored.
 
             Not rate-limited here.  What the limit protects is a
@@ -409,7 +404,7 @@ class LocalClient(OperationCaller, LocalWrites, Operations):
 
             Answered locally because the list is read by whoever is
             about to edit the model, and editing it is a file on this
-            machine rather than anything the web interface does (D2).
+            machine rather than anything the web interface does.
 
             Args:
                 None.
@@ -560,7 +555,7 @@ class LocalClient(OperationCaller, LocalWrites, Operations):
 
             Answered locally rather than declared unavailable: "why is
             this event not in the run" is a troubleshooting question,
-            and troubleshooting is what the command line is for (D2).
+            and troubleshooting is what the command line is for.
             It costs nothing to answer either, because the collection
             already stored it.
 

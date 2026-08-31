@@ -3,8 +3,8 @@
 
     Read only, and there is no write beside it: a value here is
     changed by changing the environment and restarting, which is what
-    keeps the service unable to rewrite the settings it is running on
-    (D8).
+    keeps the service unable to rewrite the settings it is running
+    on.
 
     Nothing secret is published.  What a caller is shown is the zone
     dates are read in, the threshold a title match has to clear, the
@@ -34,7 +34,7 @@ router = APIRouter(tags=[_defaults.API_TAG_SERVICE])
         'The settings a collection is carried out under, as this '
         'process resolved them at startup. Read only: rotating a '
         'credential or changing a setting is a deployment operation, '
-        'and no endpoint writes one (D8).\n\n'
+        'and no endpoint writes one.\n\n'
         'This is where a client learns which calendars a collection '
         'may name. Those keys belong to a deployment rather than to '
         'this contract, so a client that hard-coded them would be '

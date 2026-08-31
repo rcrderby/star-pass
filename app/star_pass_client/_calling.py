@@ -10,8 +10,7 @@
     could not answer the same call.
 
     So the shape lives here and each half supplies only what it does
-    with it.  That difference is the whole of D2: one sends a request,
-    the other opens a connection.
+    with it: one sends a request, the other opens a connection.
 """
 
 # Imports - Python Standard Library

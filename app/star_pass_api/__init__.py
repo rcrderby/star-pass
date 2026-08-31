@@ -8,7 +8,7 @@
     the boundary is only real while they are separate imports.
 
     The command line client calls the core directly and needs no server
-    running (D2), so nothing here may become the only way to reach
+    running, so nothing here may become the only way to reach
     something the core can do.
 
     Run it with:

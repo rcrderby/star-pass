@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ Which of the two modes a command runs in.
 
-    Local by default and remote only when told (D2).  The command line
+    Local by default and remote only when told.  The command line
     client must not acquire a server as a dependency, so nothing here
     reaches for one unless an address was supplied -- and the default
     path opens a database rather than a socket.
@@ -27,7 +27,7 @@ API_URL_VARIABLE = 'STAR_PASS_API_URL'
 
 # What the client presents to it.  The same value the service checks
 # against: one principal holds every scope while the credential is a
-# static token (D3), so there is no second value to carry.
+# static token, so there is no second value to carry.
 API_TOKEN_VARIABLE = 'STAR_PASS_API_TOKEN'  # nosec B105
 
 # Module logger

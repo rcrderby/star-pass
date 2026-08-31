@@ -5,7 +5,7 @@
     no endpoint that replaces one: rotation is changing the secret and
     restarting, because an endpoint able to overwrite the service's
     own production credential is the highest-value target in the
-    system for the least benefit (D8).
+    system for the least benefit.
 
     What a caller gets is whether a request carrying it succeeded and
     the last four characters, which is enough to tell two credentials
@@ -57,7 +57,7 @@ TESTS = RateLimit(
         'whether it was accepted, with the last four characters of '
         'the credential so two can be told apart. The credential '
         'itself is never published and no endpoint replaces it: '
-        'rotation is changing the secret and restarting (D8).\n\n'
+        'rotation is changing the secret and restarting.\n\n'
         'A credential Amplify would not take is an answer rather than '
         'a failure -- `working` is false and `reason` says what '
         'happened -- because whether it works is the question that '

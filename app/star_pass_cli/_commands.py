@@ -657,14 +657,14 @@ def _delete(
     """ Ask whether to delete a run, and delete it if the answer is yes.
 
         The same shape as the send above and for the same reason
-        (D11): what is about to happen is restated, somebody reads it
+       : what is about to happen is restated, somebody reads it
         and answers, and no answer is not yes.  A deletion destroys
         nothing Amplify holds, because a run that sent anything is
-        refused one (D24) -- but what it destroys here is gone.
+        refused one -- but what it destroys here is gone.
 
         The run is read before the question so that the restatement
         can say what is in it.  Whether it may be deleted at all is
-        not decided here: that is the core's answer (D1), and a rule
+        not decided here: that is the core's answer, and a rule
         this client kept and the service did not would be a rule the
         system does not have.
 

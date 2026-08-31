@@ -2,7 +2,7 @@
 """ The generated specification, and where the committed copy lives.
 
     The document is generated from the running application and never
-    written by hand (D15).  A copy is committed so that a change to the
+    written by hand.  A copy is committed so that a change to the
     contract shows up in a diff and has to be looked at, and so that
     the command line client's remote client can be generated from a
     file rather than from a service someone has to start first.

@@ -2,29 +2,22 @@
 """ The numbered versions of a run's events, and moving between them.
 
     Its own module rather than three more endpoints beside the run
-    reads, because what a revision is for is its own subject: reading
-    them is history, and the two writes are the pair that makes the
-    history worth keeping.  Sealing fixes what the run holds now as
-    something to come back to; reverting is coming back to it.
+    reads.  Sealing fixes what the run holds now as something to come
+    back to; reverting is coming back to it.
 
-    **Neither destroys anything, so neither has to.**  Each adds a
-    revision holding a copy -- of the current one when sealing, of an
-    earlier one when reverting -- and everything below stays readable
-    at its own number.  That is why a revert opens **one** revision:
-    the revision it leaves is already safe, so sealing it first would
-    only add a revision holding an identical copy of the one before
-    it.
+    Neither destroys anything.  Each adds a revision holding a copy --
+    of the current one when sealing, of an earlier one when reverting
+    -- and everything below stays readable at its own number, so a
+    revert opens one revision rather than sealing first.
 
     Both take an 'Idempotency-Key', because neither is idempotent in
     itself: sealing twice is two revisions, and reverting twice is
-    two.  What the key remembers differs, and that is the whole
-    difference between them as requests -- a seal carries nothing, so
-    the operation is its own fingerprint, while a revert carries the
-    revision asked for.
+    two.  A seal carries nothing, so the operation is its own
+    fingerprint; a revert carries the revision asked for.
 
     What each does, and the order it does it in, is in
-    'star_pass_contract._deciding': the command line client answers
-    from the same database (D2), and the sequence is the decision.
+    'star_pass_contract._deciding', shared with the command line
+    client.
 """
 
 # Imports - Python Standard Library
@@ -164,7 +157,7 @@ async def seal_revision(
 
             idempotency_key (str):
                 What the seal is claimed under, so a retry opens no
-                second revision (D13, D16).
+                second revision.
 
             principal (Principal):
                 Who is sealing it, which the dependency supplies after
@@ -254,7 +247,7 @@ async def revert_revision(
 
             idempotency_key (str):
                 What the revert is claimed under, so a retry opens no
-                second revision (D13, D16).
+                second revision.
 
             principal (Principal):
                 Who is reverting it, which the dependency supplies

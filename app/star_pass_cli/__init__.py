@@ -4,7 +4,7 @@
     Separate from '__main__.py', which holds the Slack sign-up
     summary.  The contract deliberately publishes no summary, so that
     stays local; the commands in '_commands' are the ones a service can
-    answer as well (D2).
+    answer as well.
 
     '_maintenance' holds the one command that is neither.  It applies
     the retention policy to the local database, which the contract

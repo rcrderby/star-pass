@@ -2,32 +2,22 @@
 """ Changing the events in a run's current revision.
 
     A module of its own rather than another endpoint beside the run
-    reads.  This is the endpoint a reviewer uses most -- the review
-    screen saves as they work -- and what it needs is its own: the
-    idempotency key, the shapes an operation arrives in, and the
-    refusals.
-
-    **Answered in the request that asked for it.**  An edit is fast and
-    touches only this service's own database, so there is no job to
-    watch: the answer carries the revision as it now is and the entries
-    the edit wrote.  That is also why the key is worth having.  An edit
-    is not idempotent in itself -- a nudge applied twice moves a shift
-    twice -- so a retry after a lost answer has to be recognised rather
+    reads: the idempotency key, the shapes an operation arrives in,
+    and the refusals are its own.  An edit is answered in the request
+    that asked for it, because it touches only this service's own
+    database, so there is no job to watch.  The key is worth having
+    because an edit is not idempotent -- a nudge applied twice moves a
+    shift twice -- so a retry after a lost answer is recognised rather
     than carried out again.
 
     What the edit does, and the order it does it in, is in
-    'star_pass_contract._deciding': the command line client answers the
-    same operation from the same database (D2), and the sequence -- the
-    run read before the key is claimed, the key claimed before the
-    write, the answer recorded after it -- is the decision.
+    'star_pass_contract._deciding', shared with the command line
+    client: the run read before the key is claimed, the key claimed
+    before the write, the answer recorded after it.
 
-    **Pulling an event in needs no key.**  An event the revision
-    already holds is refused, so a second arrival of one request finds
-    the run holding what it asked for and says so -- which is the
-    guard a key would be standing in for, and a stronger one, for the
-    reason resuming a job needs no key either.  Both answer with the
-    revision as it now is, because the screen that asked is redrawn
-    from it.
+    Pulling an event in needs no key: an event the revision already
+    holds is refused, so a second arrival of one request is answered
+    by the refusal.
 """
 
 # Imports - Python Standard Library
@@ -122,7 +112,7 @@ async def edit_events(
                 Identifier of the run to edit.
 
             idempotency_key (str):
-                What this action is claimed under (D13, D16).
+                What this action is claimed under.
 
             principal (Principal):
                 The authenticated caller, which the dependency supplies
@@ -177,7 +167,7 @@ def _pulled_in(
                 The event to pull in.
 
             principal_id (str):
-                Who pulled it in (D13).
+                Who pulled it in.
 
         Raises:
             HTTPException:

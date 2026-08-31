@@ -4,7 +4,7 @@
     Here rather than in the routes because both things that speak the
     contract have to say it the same way.  The service answers a
     missing run with a problem document and the command line client
-    answers it from the same database in the same process (D2); a
+    answers it from the same database in the same process; a
     caller reading one message in one mode and another in the other
     would be reading a difference between the modes, which is the
     thing Step 5 exists to rule out.

@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """ The service, assembled.
 
-    A factory rather than a module level application object, so that a
-    test builds one per test and configuration is read when a server
-    starts rather than when something imports this module.  Importing a
-    module should not open sockets or read the environment; the CLI
-    imports the core the same way and must not acquire a server by
-    doing so (D2).
+    A factory rather than a module level application object, so a test
+    builds one per test and configuration is read when a server starts
+    rather than when something imports this module.  The command line
+    client imports the core the same way and does not acquire a server
+    by doing so.
 
     The routes carry no domain logic.  They call the core and turn what
-    it returns into a response, which is what keeps the command line
-    client and this service able to do the same things (D1).
+    it returns into a response, which keeps the command line client and
+    this service able to do the same things.
 
     What happens when the service starts is here too, because it is
     part of what the application is: a job the last process was holding
@@ -61,23 +60,17 @@ async def lifespan(
     """ End what the last process was holding, and run what comes next.
 
         A job left queued or running belongs to a process that no
-        longer exists.  Ending them here is what keeps a restart from
-        leaving a caller watching something nothing is doing, and it
-        happens before the service answers anything, so nobody reads a
-        status that is about to change (D10).
+        longer exists.  They are ended before the service answers
+        anything, so nobody reads a status that is about to change.
 
-        Nothing is resumed.  A job that was interrupted is picked up
-        again only when somebody asks, because a send that resumed
-        itself would write to a live volunteer system from state
-        rebuilt after a crash.
+        Nothing is resumed.  An interrupted job is picked up again
+        only when somebody asks, because a send that resumed itself
+        would write to a live volunteer system from state rebuilt
+        after a crash.
 
-        Retention is applied here as well, before anything is
-        answered, and then goes on being applied.  Both halves are
-        needed: at startup only would be almost never, because this is
-        a tool somebody uses once a month and the process can stand
-        for a year, and on the interval only would leave a service
-        that is restarted often never reaching its first sweep
-        (D12, D20).
+        Retention is applied here as well and then on an interval.
+        Both halves are needed: a process can stand for a year, and a
+        service restarted often would never reach an interval sweep.
 
         Args:
             api (FastAPI):

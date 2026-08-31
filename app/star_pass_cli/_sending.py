@@ -4,7 +4,7 @@
     The other half of the rendering, and a module of its own because
     it is the other half of the work: '_render' shows what a run holds
     and this shows what would become of it -- the preview, the
-    restatement the send is confirmed with (D11), and the job that
+    restatement the send is confirmed with, and the job that
     does it as it reports itself.
 
     The same two shapes and the same primitives, which are imported
@@ -51,7 +51,7 @@ PREVIEW_HEADERS = (
 
 # What a shift Amplify already has shows, in order.  Per shift rather
 # than as a count, so a reader checking whether the right rows are
-# being left out has the days and times to check (D16).
+# being left out has the days and times to check.
 SKIPPED_HEADERS = (
     'NEED',
     'DATE',
@@ -395,10 +395,10 @@ def send_restatement(
 ) -> str:
     """ Return what a send is about to do, for somebody to read.
 
-        The three things D11 asks a confirmation to restate: how many
-        shifts, over which days, and to which opportunities.  Built
-        from the same row renderer 'runs preview' uses, so what
-        somebody confirms is what they were shown.
+        The three things a confirmation restates: how many shifts,
+        over which days, and to which opportunities.  Built from the
+        same row renderer 'runs preview' uses, so what somebody
+        confirms is what they were shown.
 
         Args:
             run (Dict[str, Any]):

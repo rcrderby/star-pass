@@ -1,25 +1,22 @@
 #!/usr/bin/env python3
 """ The writes, answered without a service.
 
-    The other half of the local client, and a module of its own because
-    the two halves are two things: one answers a question about what is
-    stored, and this one changes it, starts a job, and reaches Amplify.
+    The other half of the local client, and a module of its own
+    because the two halves are two things: one answers a question
+    about what is stored, and this one changes it, starts a job, and
+    reaches Amplify.
 
-    **A local write runs in the call.**  The remote half answers as soon
-    as the job exists and leaves it running; the process that would run
-    a local one is the process about to return, so the work happens here
-    and the job is answered as it ended.  That is a difference in when,
-    not in what: the run, the job and every event the work reported are
-    written exactly as the service writes them, so reading the job
-    afterwards says the same things (D2).
+    A local write runs in the call.  The remote half answers as soon
+    as the job exists and leaves it running; here the work happens
+    before the answer, and the job is answered as it ended.  The run,
+    the job and its events are written as the service writes them.
 
     Every job written here is held by the command line rather than by
-    the service, which is what lets each of them sweep up after itself
-    without ending the other's work.
+    the service, so each sweeps up after itself without ending the
+    other's work.
 
     A mixin rather than a base: 'LocalClient' is one client answering
-    one contract, and splitting it into two classes a caller could hold
-    separately would invite a caller to hold one.
+    one contract.
 """
 
 # Imports - Python Standard Library
@@ -71,10 +68,10 @@ from ._client import ApiProblem
 # answers 202 with a job still running; this one answers 202 with a job
 # that has ended, because the process that would run it is the one
 # about to return.  The same status either way: a caller reading the
-# job afterwards is told the same things (D2).
+# job afterwards is told the same things.
 ACCEPTED = 202
 
-# Who a local write is recorded as (D13).  Distinct from the service's
+# Who a local write is recorded as.  Distinct from the service's
 # principal on purpose: the column exists so that two writers can be
 # told apart, and a local run and a run the service collected are two
 # different people acting.
@@ -105,25 +102,18 @@ class LocalWrites:
     def _writing(self) -> Iterator[sqlite3.Connection]:
         """ Open a connection for a write, after sweeping up.
 
-            A command line process that stopped part way through left a
-            job saying it is still running, and the run it worked on
-            saying something is still working on it -- so nothing can
-            be done with that run until somebody says what became of
-            the job.  Ending those is what the service does at startup
-            (D10), and this is the same sweep for the same reason.
+            A command line process that stopped part way through left
+            a job saying it is still running and a run saying something
+            is still working on it.  This is the sweep the service does
+            at startup.
 
-            **Only the jobs this half held.**  The service and the
-            command line write into one database (D2), so a sweep that
-            took everything unfinished would mark a live send
-            interrupted, and the run would then accept a second send
-            while the first was still writing into Amplify.  What makes
-            that possible is the holder on the job.
+            Only the jobs this half held.  The service and the command
+            line write into one database, so a sweep that took
+            everything unfinished would mark a live send interrupted;
+            the holder on the job keeps them apart.
 
-            Two command line processes at once are the case this does
-            not cover: the second would end the first's job.  A local
-            job runs inside the call that asked for it, so that means
-            two commands writing to one database at the same moment,
-            which is not something one operator at one terminal does.
+            Two command line processes at once are not covered: the
+            second would end the first's job.
 
             Args:
                 None.
@@ -258,7 +248,7 @@ class LocalWrites:
 
             The same two refusals the service makes, reported the same
             way, so a person who mistypes a calendar name is told the
-            same thing in either mode (D2).
+            same thing in either mode.
 
             Args:
                 asked (CollectRequest):
@@ -303,7 +293,7 @@ class LocalWrites:
 
             The same two refusals the service makes, for the same
             reasons, because housekeeping has to work with no server
-            running (D2, D24).
+            running.
 
             Args:
                 run_id (str):
@@ -343,8 +333,7 @@ class LocalWrites:
         """ Collect a run's window again, here and now.
 
             The same three refusals the service makes, and the same
-            work, run in the call for the same reason a first
-            collection is (D2).
+            work, run in the call as a first collection is.
 
             Args:
                 run_id (str):
@@ -424,10 +413,10 @@ class LocalWrites:
 
             The same four refusals the service makes, the same claim on
             the idempotency key, and the same work -- run in the call
-            for the reason a local collection is (D2).  A local send is
+            for the reason a local collection is.  A local send is
             recorded as 'local-cli' rather than as the service's
             principal, because two writers into one live volunteer
-            system are two different people acting (D13).
+            system are two different people acting.
 
             Args:
                 run_id (str):
@@ -514,7 +503,7 @@ class LocalWrites:
         """ Fail on a send the service would refuse.
 
             The decision is the shared one, so the two modes cannot
-            refuse different things about one run (D2).  Only what a
+            refuse different things about one run.  Only what a
             refusal is reported as belongs to this half.
 
             Args:
@@ -568,7 +557,7 @@ class LocalWrites:
                     Where the job records what it reported.
 
                 key (str):
-                    The key the send is made under (D13).
+                    The key the send is made under.
 
             Raises:
                 StarPassError:
@@ -593,11 +582,11 @@ class LocalWrites:
             self,
             job_id: str
     ) -> Dict[str, Any]:
-        """ Run an interrupted job again, here and now (D10).
+        """ Run an interrupted job again, here and now.
 
             The same two refusals the service makes, and the same work
             chosen the same way, run in the call for the reason a local
-            collection is (D2).  The job passes into this half's hands
+            collection is.  The job passes into this half's hands
             as it is queued, so a later sweep by this half recognizes
             it and one by the service leaves it alone.
 

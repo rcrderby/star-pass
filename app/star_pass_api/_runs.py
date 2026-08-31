@@ -13,7 +13,7 @@
     contract package turns
     what was read into what a caller is shown, because the command
     line client shows the same answers from the same database and the
-    two must not drift (D1, D2).
+    two must not drift.
 """
 
 # Imports - Python Standard Library
@@ -449,7 +449,7 @@ async def _handed_over(
                 Run to collect into.
 
             principal_id (str):
-                Who asked for it (D13).
+                Who asked for it.
 
         Returns:
             job (JobView):
@@ -581,7 +581,7 @@ def _started(
                 The first day and the day after the last.
 
             principal_id (str):
-                Who asked (D13).
+                Who asked.
 
         Raises:
             ValidationError:
@@ -824,7 +824,7 @@ def _restarted(
                 Run being collected again.
 
             principal_id (str):
-                Who asked (D13).
+                Who asked.
 
         Raises:
             ValidationError:

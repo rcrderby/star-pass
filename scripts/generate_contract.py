@@ -8,17 +8,14 @@
 
     Both artifacts are written by one command because the second is
     generated from the first: the client's operations come from the
-    specification, so writing the specification alone would leave a
-    client describing the service as it used to be. Two commands would
-    make that a thing to remember; one makes it impossible.
+    specification, so one command keeps the two in step.
 
-    The order matters for the same reason. The specification is
-    written from the running application, and the client is then
-    generated from the file that was just written.
+    The order follows. The specification is written from the running
+    application, and the client is generated from the file that was
+    just written.
 
     'tests/test_api_spec.py' and 'tests/test_api_client.py' fail while
-    either committed copy disagrees with what it came from, so a
-    forgotten run is caught rather than shipped.
+    either committed copy disagrees with what it came from.
 """
 
 # Imports - Python Standard Library
