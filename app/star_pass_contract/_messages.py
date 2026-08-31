@@ -241,25 +241,14 @@ def why_not_send(
 ) -> Optional[str]:
     """ Return why a run cannot be sent, if it cannot.
 
-        Four refusals, each a different thing being wrong.  A run
-        something is already working on would have two sends writing
-        into Amplify at once, which no amount of care afterwards can
-        take back.  A run still being collected has no settled revision
-        to send.  A run holding an event that cannot become a shift
-        sends nothing at all, because a missing shift is invisible
-        until volunteers cannot sign up.  And a count that has moved
-        says the caller confirmed against a page describing a run, or
-        an Amplify, that has since changed.
+        Four refusals: a run something is already working on would
+        have two sends writing into Amplify at once; a run still being
+        collected has no settled revision; a run holding an event that
+        cannot become a shift sends nothing; and a count that has moved
+        says the caller confirmed against something that has changed.
 
         In that order, because each earlier one makes the next
-        meaningless: the count of what a collecting run would create is
-        a count of a revision being replaced, and the count of what a
-        blocked run would create is a count of a send that will not
-        happen.
-
-        Here rather than in the route for the reason 'why_not_recollect'
-        is: both halves refuse, and two halves that each decided could
-        refuse different things about one run.
+        meaningless.
 
         Args:
             run (Run):
@@ -343,14 +332,12 @@ def why_not_resume(
 ) -> Optional[str]:
     """ Return why a job cannot be resumed, if it cannot.
 
-        Two refusals.  A job in any state but interrupted is not one
-        the question applies to.  And a run something else is already
-        working on would gain a second worker writing the same
-        revisions, or a second send writing into Amplify.
+        Two refusals: a job in any state but interrupted is not one
+        the question applies to, and a run something else is working on
+        would gain a second worker.
 
-        In that order: what the job is comes before what else is
-        happening to its run, because a reader told the run is busy
-        would come back to a job that was never resumable.
+        In that order, so a reader is not told the run is busy about a
+        job that was never resumable.
 
         Args:
             job (Job):
@@ -431,17 +418,11 @@ def replay(
 ) -> Tuple[str, Optional[str]]:
     """ Return what a request arriving on a used key is.
 
-        Three things it can be, and they are different answers.  A key
-        carrying a different request has broken the promise a key makes
-        and is refused.  A key whose first request has not answered yet
-        is one still in hand, and answering it with anything would be
-        inventing a result.  Anything else is the ordinary replay: the
-        first request's answer, returned rather than written again.
-
-        The choice is here rather than in each half for the reason
-        every choice in this module is: the service and the command
-        line client both make it, and two copies could classify one
-        request differently.
+        Three things it can be.  A key carrying a different request
+        has broken the promise a key makes and is refused.  A key whose
+        first request has not answered is still in hand.  Anything else
+        is the ordinary replay: the first answer, returned rather than
+        written again.
 
         Args:
             record (IdempotencyRecord):
@@ -500,19 +481,14 @@ def why_not_delete(
 ) -> Optional[str]:
     """ Return why a run cannot be deleted, if it cannot.
 
-        Two refusals, and they are different answers to the caller: a
-        run something is working on becomes deletable when the work
-        finishes, and a run that has sent never does.
+        Two refusals: a run something is working on becomes deletable
+        when the work finishes, and a run that has sent never does.
 
-        The send is read off 'sent_at' rather than off the status,
-        because 'mark_sent' writes it for both of the statuses that
-        mean shifts reached Amplify, and reading the timestamp keeps
-        the refusal correct for a status this list has not thought of
-        (D24).
+        The send is read off 'sent_at' rather than the status, so the
+        refusal stays correct for a status this list has not thought
+        of.
 
-        The job is answered first because it is the temporary one: a
-        caller told the run has sent would stop, and a caller told
-        something is working on it would wait and ask again.
+        The job is answered first because it is the temporary one.
 
         Args:
             run (Run):
@@ -542,17 +518,14 @@ def why_not_recollect(
 ) -> Optional[str]:
     """ Return why a run cannot be collected again, if it cannot.
 
-        Three refusals, each a different thing being wrong.  A run
-        something is already working on would have two jobs writing
-        the same revisions.  A run that has put shifts into Amplify
-        cannot have the events describing them replaced, and Amplify
-        has no way to take a shift back.  And a change count that has
-        moved says the caller confirmed against a page describing a
+        Three refusals: a run something is working on would have two
+        jobs writing the same revisions; a run that has put shifts into
+        Amplify cannot have the events describing them replaced; and a
+        change count that has moved says the caller confirmed against a
         run that no longer exists.
 
         In that order, because the first is temporary and the others
-        are not: a reader told the count has moved would go and read
-        it again, where the answer is that something is still running.
+        are not.
 
         Args:
             run (Run):
