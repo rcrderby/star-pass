@@ -75,17 +75,19 @@ export function runIdCallout(run, named) {
     icon('x')
   );
 
+  /* One line, in the order somebody reads it: what the value is, the
+   * value, and the two things to do with it.  The close control is
+   * last and in the flow rather than in a corner, because the box is
+   * only as wide as its contents now and a corner would sit over
+   * them. Where the row is too narrow to hold all of it -- the run
+   * picker's 372px panel -- it wraps rather than being cut. */
   const callout = el(
     'div',
     { class: 'run-id-callout', hidden: true },
-    close,
     el('span', { class: 'muted run-id-label', text: RUN_ID }),
-    el(
-      'span',
-      { class: 'run-id-line' },
-      el('span', { class: 'mono run-id-value', text: run.id }),
-      copy
-    )
+    el('span', { class: 'mono run-id-value', text: run.id }),
+    copy,
+    close
   );
 
   const info = el(
