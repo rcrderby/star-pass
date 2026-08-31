@@ -335,21 +335,18 @@ BASE_GCAL_PARAMS = {
     'timeMin': '',
     'timeMax': '',
 }
-GCAL_ID_PREFIX = '/rosecityrollers.com_'
-GCAL_EVENTS_CAL_ID = getenv(
-    'GCAL_EVENTS_CAL_ID',
-    (
-        f'{GCAL_ID_PREFIX}'
-        '2d35383436363030372d363035@resource.calendar.google.com'
-    )
-)
-GCAL_PRACTICES_CAL_ID = getenv(
-    'GCAL_PRACTICES_CAL_ID',
-    (
-        f'{GCAL_ID_PREFIX}'
-        '313938323232323331@resource.calendar.google.com'
-    )
-)
+# Which calendars this deployment reads.  **No default**, and the API
+# service will not start without both: a default here is one
+# organization's calendar, and an installation that forgot the variable
+# would collect somebody else's events and have no way to tell.  The
+# failure is a missing value at startup instead, named.
+#
+# Read here rather than raised here.  This module is imported by every
+# run mode including the Slack summary, which reads no calendar at all
+# and must not be stopped by their absence, so the requirement is
+# stated where a service that needs them is built.
+GCAL_EVENTS_CAL_ID = getenv('GCAL_EVENTS_CAL_ID')
+GCAL_PRACTICES_CAL_ID = getenv('GCAL_PRACTICES_CAL_ID')
 # 'notes' says whether this calendar's entries carry a description
 # worth keeping with the event (D30).  A property of the calendar
 # rather than of the interface: a client deciding it by the calendar's

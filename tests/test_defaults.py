@@ -211,13 +211,39 @@ class TestAListSetting:
         ) == ['a', 'b']
 
 
-class TestTheCalendarDefaults:
-    def test_they_are_written_the_same_way(self):
-        # Both reach Google, so a pair that disagreed would read as
-        # one of them being a mistake.
-        for calendar in (
-            _defaults.GCAL_EVENTS_CAL_ID,
-            _defaults.GCAL_PRACTICES_CAL_ID
-        ):
-            assert '@' in calendar
-            assert '%40' not in calendar
+class TestTheCalendarsCarryNoDefault:
+    def test_neither_falls_back_to_a_value(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The whole point of removing them: a default here is one
+        # organization's calendar, and a deployment that left the
+        # variable unset would collect somebody else's events without
+        # saying so.
+        #
+        # Read with the variables gone, which is the only arrangement
+        # that can show the difference.  This suite sets both, so
+        # comparing the module's value with the environment passes
+        # whether or not 'getenv' was handed something to fall back
+        # to -- the module has to be read again with nothing there.
+        monkeypatch.delenv('GCAL_EVENTS_CAL_ID', raising=False)
+        monkeypatch.delenv('GCAL_PRACTICES_CAL_ID', raising=False)
+
+        # Reloading re-runs the module's own 'load_dotenv', and
+        # 'ENV_FILE_PATH' is relative to the working directory.  The
+        # suite's stub keeps that from reaching a file, and this does
+        # not rely on it: the 'env_file' fixture above chdirs for the
+        # same reason, and a reload that found a real '.env' would put
+        # the variables back and fail only on a machine that has one.
+        monkeypatch.chdir(tmp_path)
+
+        try:
+            without = importlib.reload(_defaults)
+
+            assert without.GCAL_EVENTS_CAL_ID is None
+            assert without.GCAL_PRACTICES_CAL_ID is None
+        finally:
+            # Put the module back the way every other test found it.
+            monkeypatch.undo()
+            importlib.reload(_defaults)

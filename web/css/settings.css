@@ -10,6 +10,13 @@
  */
 
 .settings {
+  /* How wide a block of reading on this screen is.  The tables, the
+   * notes under them and the cards all answer to it, so that their
+   * right edges line up rather than each block ending wherever its
+   * own rule happens to say.  The column itself is wider, because a
+   * table's second value column can run past the prose. */
+  --settings-block: 720px;
+
   display: flex;
   flex-direction: column;
   gap: 34px;
@@ -41,7 +48,7 @@
 }
 
 .settings-note {
-  max-width: 720px;
+  max-width: var(--settings-block);
   margin: 0;
   text-wrap: pretty;
 }
@@ -64,6 +71,7 @@
 
 .settings-credential {
   gap: var(--space-2);
+  max-width: var(--settings-block);
   padding: 14px 16px;
 }
 
@@ -124,7 +132,7 @@
 /* — what was resolved — */
 
 .settings-table {
-  max-width: 720px;
+  max-width: var(--settings-block);
 }
 
 .settings-table th:first-child,
@@ -141,7 +149,7 @@
   display: flex;
   gap: 7px;
   align-items: flex-start;
-  max-width: 720px;
+  max-width: var(--settings-block);
   margin: 0;
   text-wrap: pretty;
 }
@@ -156,6 +164,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-width: var(--settings-block);
 }
 
 .settings-store {
@@ -180,6 +189,7 @@
   display: flex;
   gap: 14px;
   align-items: center;
+  max-width: var(--settings-block);
 }
 
 .settings-motion-label {
@@ -189,8 +199,9 @@
 
 /* — what is running — */
 
+/* Under the lede in the head, on its own line: the heading block is a
+ * column, and this is the third thing in it. */
 .settings-version {
-  display: flex;
-  gap: 6px;
-  margin: 0;
+  display: block;
+  margin-top: 2px;
 }

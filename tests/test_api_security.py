@@ -391,6 +391,26 @@ class TestStartupConfiguration:
 
         assert 'AMPLIFY_TOKEN' in str(error.value)
 
+    @pytest.mark.parametrize(
+        'name',
+        ('GCAL_EVENTS_CAL_ID', 'GCAL_PRACTICES_CAL_ID')
+    )
+    def test_a_missing_calendar_id_stops_the_service_starting(
+        self,
+        name: str,
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Neither carries a default, because a default is one
+        # organization's calendar: an installation that forgot the
+        # variable would collect somebody else's events and have
+        # nothing on any screen to say so.  Named at startup instead.
+        monkeypatch.delenv(name, raising=False)
+
+        with pytest.raises(ConfigurationError) as error:
+            create_app()
+
+        assert name in str(error.value)
+
     def test_a_missing_calendar_credential_stops_the_service_starting(
         self,
         monkeypatch: pytest.MonkeyPatch

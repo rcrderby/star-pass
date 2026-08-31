@@ -610,7 +610,26 @@ export class SettingsScreen {
         'div',
         {},
         el('h1', { class: 'screen-title', text: TITLE }),
-        el('span', { class: 'muted meta', text: LEDE })
+        el('span', { class: 'muted meta', text: LEDE }),
+
+        /* Under the lede rather than at the foot of the page.  This
+         * is the screen somebody opens to ask what the deployment is,
+         * and the version is the shortest answer to it -- read once,
+         * from a standing start, by somebody who will not scroll to
+         * the bottom of a settings page to find it.
+         *
+         * Drawn only once there is one: the head is on screen before
+         * the read that fetches it lands, and 'draw' refills the head
+         * as well as the body, so an empty line here would be a line
+         * of nothing until it arrives. */
+        this.state.version === ''
+          ? null
+          : el(
+            'span',
+            { class: 'settings-version muted micro' },
+            `${VERSION_LABEL} `,
+            el('span', { class: 'mono', text: this.state.version })
+          )
       )
     );
   }
@@ -651,12 +670,6 @@ export class SettingsScreen {
         },
         motionControl(this.appearance, (motion) => this.moveBy(motion))
       ),
-      el(
-        'p',
-        { class: 'settings-version muted micro' },
-        `${VERSION_LABEL} `,
-        el('span', { class: 'mono', text: this.state.version })
-      )
     ];
   }
 
