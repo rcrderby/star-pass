@@ -103,6 +103,66 @@ class TestWhatItStartsWith:
         assert check_configuration() is None
 
 
+class TestANumericSettingThatIsNotANumber:
+    # The two numeric settings are read at import, so a typo in one
+    # stops the service.  What it says when it does is the whole
+    # point: a bare 'int()' names neither the variable nor where to
+    # correct it, which reaches an operator as a traceback in a
+    # detached container's log.
+
+    @pytest.mark.parametrize(
+        'var_name, bad',
+        (
+            ('STAR_PASS_SESSION_MAX_AGE_SECONDS', '432O0'),
+            ('STAR_PASS_BFF_TIMEOUT_SECONDS', '12O')
+        )
+    )
+    def test_it_is_named_along_with_its_value(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        var_name: str,
+        bad: str
+    ) -> None:
+        monkeypatch.setenv(var_name, bad)
+
+        with pytest.raises(ConfigurationError) as error:
+            _defaults._number(
+                var_name=var_name,
+                default='1',
+                kind=int,
+                description='a whole number'
+            )
+
+        said = str(error.value)
+
+        assert var_name in said
+        assert bad in said
+        assert '.env' in said
+
+    def test_a_usable_value_is_read_as_its_kind(self) -> None:
+        # A guard that refused everything would pass the test above
+        # and stop the service starting at all.
+        assert _defaults._number(
+            var_name='STAR_PASS_NOT_SET_ANYWHERE',
+            default='90',
+            kind=int,
+            description='a whole number'
+        ) == 90
+
+        assert _defaults._number(
+            var_name='STAR_PASS_NOT_SET_ANYWHERE',
+            default='9.5',
+            kind=float,
+            description='a number'
+        ) == 9.5
+
+    def test_the_settings_themselves_are_numbers(self) -> None:
+        # The defaults have to survive the guard, or the service does
+        # not start on a deployment that overrode nothing.
+        assert isinstance(_defaults.SESSION_MAX_AGE_SECONDS, int)
+        assert isinstance(_defaults.REQUEST_TIMEOUT_SECONDS, float)
+
+
 class TestWhatItDoesNotImport:
     def test_nothing_of_the_domain(self) -> None:
         # The internet-facing process holds no domain logic and no

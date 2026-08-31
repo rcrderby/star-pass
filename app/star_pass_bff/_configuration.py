@@ -8,10 +8,7 @@
 
 # Imports - Local
 from . import _defaults
-
-
-class ConfigurationError(Exception):
-    """ The service cannot run on what it was given. """
+from ._exceptions import ConfigurationError
 
 
 def check_configuration() -> None:
