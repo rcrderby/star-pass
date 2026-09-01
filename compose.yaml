@@ -20,7 +20,11 @@ services:
   # to the credential-holding process rather than merely the intended
   # one.
   caddy:
-    image: caddy:2.10-alpine
+    # Pinned by digest, as the Dockerfile's base image is: a tag
+    # moves, and the process with the published port and the TLS keys
+    # is the last one to want a build that is not reproducible.
+    # Dependabot moves it and refreshes the comment beside it.
+    image: caddy:2.10-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
     restart: unless-stopped
     # Which interface the front door is published on, and the only
     # place in this file that decides what can reach star-pass at all.

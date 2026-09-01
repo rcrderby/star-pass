@@ -44,7 +44,7 @@ updates:
 
   # Base images. Scanning from the repository root reaches the
   # Dockerfile, which pins 'python' by digest, and 'compose.yaml',
-  # which names 'caddy' by tag. Watched so that a digest is a pin
+  # which pins 'caddy' the same way. Watched so that a digest is a pin
   # which stays current rather than one that stops moving.
   - package-ecosystem: docker
     directory: /
