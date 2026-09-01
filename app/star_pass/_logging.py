@@ -17,6 +17,7 @@ import sys
 
 # Imports - Local
 from . import _defaults
+from ._exceptions import ConfigurationError
 
 # Constants
 PACKAGE_LOGGER_NAME = 'star_pass'
@@ -34,6 +35,19 @@ APPLICATION_LOGGERS = (
     'star_pass_client',
     'star_pass_contract'
 )
+
+# The levels a deployment may ask for, by name.  A mapping rather than
+# a lookup on the 'logging' module: that module holds attributes in
+# capitals which are not levels -- 'BASIC_FORMAT' is a format string --
+# and a name it holds none of would fall back to a default with
+# nothing said about the typo.
+LEVELS = {
+    'CRITICAL': logging.CRITICAL,
+    'ERROR': logging.ERROR,
+    'WARNING': logging.WARNING,
+    'INFO': logging.INFO,
+    'DEBUG': logging.DEBUG
+}
 
 # The server's own, which arrive with handlers of their own and with
 # 'propagate' off.
@@ -99,21 +113,35 @@ def _resolve_level(
 ) -> int:
     """ Convert a level name to a 'logging' level value.
 
+        Configuration arrives from the environment, so it is untrusted
+        input, and 'LOG_LEVEL=INF' is a typo somebody makes once.  A
+        service that answered it by logging at INFO would be quieter
+        than asked for a month, which is the interval this tool runs
+        on, with nothing said about why.
+
         Args:
             level_name (str):
                 Case-insensitive level name (for example, 'INFO').
 
+        Raises:
+            ConfigurationError:
+                When the name is not a level.
+
         Returns:
             int:
-                The matching 'logging' level, or 'logging.INFO' when
-                'level_name' is not a recognized level.
+                The matching 'logging' level.
     """
 
-    return getattr(
-        logging,
-        level_name.strip().upper(),
-        logging.INFO
-    )
+    level = LEVELS.get(level_name.strip().upper())
+
+    if level is None:
+        raise ConfigurationError(
+            f'LOG_LEVEL must be one of {", ".join(LEVELS)}, and is '
+            f'{level_name!r}. It is read from the environment or the '
+            '.env file at the repository root (see .env.example).'
+        )
+
+    return level
 
 
 def configure_logging() -> logging.Logger:
