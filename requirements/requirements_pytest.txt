@@ -8,7 +8,7 @@ pyyaml==6.0.3
 python-Levenshtein==0.27.4
 thefuzz==0.22.1
 requests==2.34.2
-slack_sdk==3.43.0
+slack_sdk==3.44.0
 
 # Python testing
 # The Starlette test client uses httpx2; with httpx instead it
