@@ -20,7 +20,7 @@ dateparser==1.4.2
 # the contract.  Pinned here rather than arriving with FastAPI,
 # because the Slack image installs no FastAPI and would otherwise have
 # no Pydantic at all.
-pydantic==2.13.4
+pydantic==2.13.5
 
 # Python fuzzy string matching
 python-Levenshtein==0.27.4
