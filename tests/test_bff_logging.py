@@ -18,53 +18,29 @@
 import json
 import logging
 from sys import exc_info
-from typing import Callable, Tuple
 
 # Imports - Third-Party
-import httpx2
 import pytest
-from fastapi.testclient import TestClient
 
 # Imports - Local
-from star_pass_bff import _defaults, create_app
+from _bff_clients import opened
+from star_pass import _logging as core_logging
+from star_pass_bff import _defaults
 from star_pass_bff._exceptions import ConfigurationError
 from star_pass_bff._logging import (
     JSONFormatter,
     LEVELS,
-    resolve_level
+    resolve_level,
+    SERVER_LOGGERS
 )
 
 # Constants
 RUNS_PATH = f'{_defaults.API_PREFIX}/v1/runs'
 
 
-@pytest.fixture(name='opened')
-def fixture_opened() -> Callable[[], Tuple[TestClient, object]]:
-    """ Return a way to open a browser onto the front end. """
-
-    def answer(_request: httpx2.Request) -> httpx2.Response:
-        """ Answer anything the proxy forwards. """
-        return httpx2.Response(status_code=200, json={'runs': []})
-
-    def opened() -> Tuple[TestClient, object]:
-        """ Return a client and the application behind it. """
-        api = create_app()
-        client = TestClient(api)
-        client.__enter__()  # pylint: disable=unnecessary-dunder-call
-        api.state.api = httpx2.AsyncClient(
-            transport=httpx2.MockTransport(answer),
-            base_url=_defaults.API_URL
-        )
-
-        return client, api
-
-    return opened
-
-
 class TestWhatARefusalRecords:
     def test_a_read_without_a_session_is_logged(
         self,
-        opened: Callable[[], Tuple[TestClient, object]],
         caplog: pytest.LogCaptureFixture
     ) -> None:
         client, _api = opened()
@@ -77,7 +53,6 @@ class TestWhatARefusalRecords:
 
     def test_the_line_carries_the_document_reference(
         self,
-        opened: Callable[[], Tuple[TestClient, object]],
         caplog: pytest.LogCaptureFixture
     ) -> None:
         # What the caller is told to quote has to be findable in the
@@ -91,7 +66,6 @@ class TestWhatARefusalRecords:
 
     def test_the_line_names_the_method_and_the_path(
         self,
-        opened: Callable[[], Tuple[TestClient, object]],
         caplog: pytest.LogCaptureFixture
     ) -> None:
         client, _api = opened()
@@ -103,7 +77,6 @@ class TestWhatARefusalRecords:
 
     def test_a_write_without_the_token_is_logged_apart(
         self,
-        opened: Callable[[], Tuple[TestClient, object]],
         caplog: pytest.LogCaptureFixture
     ) -> None:
         # The point of the line: three refusals share a status code
@@ -140,15 +113,17 @@ class TestTheShapeOfALine:
             raise ValueError('the reason')
 
         except ValueError:
-            record = logging.LogRecord(
-                name='star_pass_bff',
-                level=logging.ERROR,
-                pathname=__file__,
-                lineno=1,
-                msg='something',
-                args=(),
-                exc_info=exc_info()
-            )
+            failure = exc_info()
+
+        record = logging.LogRecord(
+            name='star_pass_bff',
+            level=logging.ERROR,
+            pathname=__file__,
+            lineno=1,
+            msg='something',
+            args=(),
+            exc_info=failure
+        )
 
         written = json.loads(JSONFormatter().format(record))
 
@@ -177,3 +152,32 @@ class TestTheLevelADeploymentAsksFor:
         # on the module rather than on a mapping would return it.
         with pytest.raises(ConfigurationError):
             resolve_level('BASIC_FORMAT')
+
+
+class TestTheCopyOfTheCoresFormatter:
+    """ The front end cannot import the core, so it repeats it.
+
+        Two copies that can drift will, which is why the policy in
+        '_headers' is held to the Caddyfile's.  This is the same claim
+        for the same reason: a deployment reads both containers'
+        output together, and a field renamed on one side would be a
+        field missing from half the log.
+    """
+
+    def test_both_write_the_same_fields(self) -> None:
+        record = logging.LogRecord(
+            name='whichever',
+            level=logging.WARNING,
+            pathname=__file__,
+            lineno=1,
+            msg='a message',
+            args=(),
+            exc_info=None
+        )
+
+        assert json.loads(JSONFormatter().format(record)).keys() == json.loads(
+            core_logging.JSONFormatter().format(record)
+        ).keys()
+
+    def test_both_adopt_the_same_server_loggers(self) -> None:
+        assert SERVER_LOGGERS == core_logging.SERVER_LOGGERS

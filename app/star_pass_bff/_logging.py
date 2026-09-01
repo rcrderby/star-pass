@@ -13,7 +13,10 @@
 # one would mean importing the core, and
 # 'tests/test_bff_configuration.py' asserts the core never appears in
 # this package's import graph.  The repetition is what that boundary
-# costs.
+# costs, so this file is named in '.github/linters/.jscpd.json' as
+# well; 'tests/test_bff_logging.py' holds the two copies to each other,
+# for the reason 'test_bff_headers.py' holds the policy to the
+# Caddyfile's.
 # pylint: disable=duplicate-code
 
 # Imports - Python Standard Library
