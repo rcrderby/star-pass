@@ -183,5 +183,10 @@ class TestTheCopyOfTheCoresFormatter:
             core_logging.JSONFormatter().format(record)
         ).keys()
 
+    def test_both_name_the_same_levels(self) -> None:
+        # A level one service answers to and the other does not would
+        # be a deployment set to DEBUG hearing half of it.
+        assert LEVELS == core_logging.LEVELS
+
     def test_both_adopt_the_same_server_loggers(self) -> None:
         assert SERVER_LOGGERS == core_logging.SERVER_LOGGERS
