@@ -2,6 +2,7 @@
   "components": {
     "schemas": {
       "AddEventRequest": {
+        "additionalProperties": false,
         "description": "Which of the events nobody searched for to pull into the run. ",
         "properties": {
           "uncollectedId": {
@@ -136,6 +137,7 @@
         "type": "object"
       },
       "CollectRequest": {
+        "additionalProperties": false,
         "description": "Which calendar to collect, and over which days. ",
         "properties": {
           "calendar": {
@@ -264,6 +266,7 @@
         "type": "object"
       },
       "EditRequest": {
+        "additionalProperties": false,
         "description": "One user action, as the operations it is made of. ",
         "properties": {
           "operations": {
@@ -311,6 +314,7 @@
         "type": "object"
       },
       "EventOperationRequest": {
+        "additionalProperties": false,
         "description": "One thing a reviewer did, over one or more events. ",
         "properties": {
           "category": {
@@ -1079,6 +1083,7 @@
         "type": "object"
       },
       "RecollectRequest": {
+        "additionalProperties": false,
         "description": "What the operator was shown before asking to collect again. ",
         "properties": {
           "expectedChangeCount": {
@@ -1445,6 +1450,7 @@
         "type": "object"
       },
       "SendRequest": {
+        "additionalProperties": false,
         "description": "What the operator was shown before asking to send. ",
         "properties": {
           "expectedShiftCount": {
@@ -1605,6 +1611,7 @@
         "type": "object"
       },
       "UnmatchedTitleRequest": {
+        "additionalProperties": false,
         "description": "A title the data model did not match, to keep for later. ",
         "properties": {
           "calendar": {
@@ -1723,6 +1730,7 @@
         "type": "object"
       },
       "WindowRequest": {
+        "additionalProperties": false,
         "description": "The days a collection is asked to cover.\n\nNo zone, unlike the window a run answers with.  The server's\nzone is the authoritative one, and a client that sent its own\nwould be deciding which days a run covers from wherever the\nperson happened to be sitting.",
         "properties": {
           "end": {
