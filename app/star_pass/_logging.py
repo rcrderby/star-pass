@@ -65,11 +65,13 @@ class JSONFormatter(logging.Formatter):
         refusal to the line that produced it is a field rather than
         something to match with a regular expression.
 
-        **What is serialized is what the record already carries.**
-        The message arrives redacted, through 'redact_secrets' at the
-        call site.  Nothing else is - no 'extra', no arguments, no
-        attributes a caller might attach - because each is a way to
-        write a value that never passed that redaction.
+        **What is serialized is what the record already carries** -
+        no 'extra', no arguments, no attributes a caller might attach,
+        because each is a way to write a value no redaction saw.
+
+        The application redacts its own messages at the call site.  A
+        record adopted from the server is formatted as uvicorn
+        produced it, and passes through no redaction here.
 
         The exception text is the one addition, so a traceback is not
         dropped silently.

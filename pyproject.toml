@@ -68,8 +68,9 @@ dependencies = {file = [
 ]}
 
 [tool.coverage.run]
-# Measure the application only.  The previous '--cov=.' also measured
-# the test files themselves, which inflated the reported percentage.
+# Measure the application only.  Measuring the test files as well
+# would report their own coverage of themselves, which is total, and
+# inflate the figure the floor below is checked against.
 source = ["app"]
 
 [tool.coverage.report]
