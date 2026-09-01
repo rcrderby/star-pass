@@ -109,11 +109,15 @@ class TestTheShapeOfALine:
         assert json.loads(written)['message'].startswith('403')
 
     def test_a_traceback_is_not_dropped(self) -> None:
+        failure = None
+
         try:
             raise ValueError('the reason')
 
         except ValueError:
             failure = exc_info()
+
+        assert failure is not None
 
         record = logging.LogRecord(
             name='star_pass_bff',
