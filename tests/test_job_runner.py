@@ -12,8 +12,17 @@ from typing import Callable, Iterator, List
 import pytest
 
 # Imports - Local
-from star_pass._exceptions import UpstreamError, ValidationError
-from star_pass._job_runner import JobReporter, JobRunner, UNEXPECTED_DETAIL
+from star_pass._exceptions import (
+    ConfigurationError,
+    UpstreamError,
+    ValidationError
+)
+from star_pass._job_runner import (
+    CONFIGURATION_DETAIL,
+    JobReporter,
+    JobRunner,
+    UNEXPECTED_DETAIL
+)
 from star_pass._records import JOB_STATUS_FAILED, JOB_STATUS_SUCCEEDED
 from star_pass._reporting import (
     Reporter,
@@ -154,6 +163,47 @@ class TestWhenWorkFails:
         run_to_completion(runner=runner, job_id=job_id, work=work)
 
         assert jobs.get(job_id=job_id).detail == 'Amplify answered 503'
+
+    def test_a_configuration_fault_withholds_its_message(
+        self,
+        runner: JobRunner,
+        jobs: JobRepository,
+        job_id: str
+    ) -> None:
+        # A configuration fault describes the inside of the service --
+        # here the path a database could not be opened at -- and a
+        # request answers one by withholding it behind a 500.  A job
+        # publishes its detail to the same screens.
+        def work(reporter: Reporter) -> None:
+            del reporter
+            raise ConfigurationError(
+                'Cannot open the database "/data/star_pass.db"'
+            )
+
+        run_to_completion(runner=runner, job_id=job_id, work=work)
+        job = jobs.get(job_id=job_id)
+
+        assert job.status == JOB_STATUS_FAILED
+        assert job.detail == CONFIGURATION_DETAIL
+        assert '/data/star_pass.db' not in job.detail
+
+    def test_a_configuration_fault_is_logged_in_full(
+        self,
+        runner: JobRunner,
+        job_id: str,
+        caplog: pytest.LogCaptureFixture
+    ) -> None:
+        # Withheld from the caller, not from whoever has to fix it.
+        def work(reporter: Reporter) -> None:
+            del reporter
+            raise ConfigurationError(
+                'Cannot open the database "/data/star_pass.db"'
+            )
+
+        with caplog.at_level(logging.ERROR, logger='star_pass'):
+            run_to_completion(runner=runner, job_id=job_id, work=work)
+
+        assert '/data/star_pass.db' in caplog.text
 
     def test_a_defect_withholds_its_message(
         self,
