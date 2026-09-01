@@ -7,6 +7,7 @@
         "**/.bandit.yml",
         "**/.github/workflows/**",
         "**/__snapshots__/**",
+        "**/app/star_pass_bff/_logging.py",
         "**/app/star_pass_client/_operations.py",
         "**/data/json/**",
         "**/docs/api/**",

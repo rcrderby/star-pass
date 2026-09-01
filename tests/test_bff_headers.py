@@ -23,15 +23,13 @@
 # Imports - Python Standard Library
 from pathlib import Path
 from re import MULTILINE, search
-from typing import Callable, Tuple
 
 # Imports - Third-Party
-import httpx2
 import pytest
-from fastapi.testclient import TestClient
 
 # Imports - Local
-from star_pass_bff import _defaults, create_app
+from _bff_clients import opened
+from star_pass_bff import _defaults
 from star_pass_bff._headers import (
     CONTENT_SECURITY_POLICY,
     SECURITY_HEADERS
@@ -42,33 +40,6 @@ REPOSITORY_ROOT = Path(__file__).parent.parent
 CADDYFILE = REPOSITORY_ROOT / 'deploy' / 'caddy' / 'Caddyfile'
 RUNS_PATH = f'{_defaults.API_PREFIX}/v1/runs'
 HEADER_NAMES = sorted(SECURITY_HEADERS)
-
-
-@pytest.fixture(name='opened')
-def fixture_opened() -> Callable[[], Tuple[TestClient, object]]:
-    """ Return a way to open a browser onto the front end.
-
-        The connection to the API is replaced after the application
-        has started, because starting it is what opens the real one.
-    """
-
-    def answer(_request: httpx2.Request) -> httpx2.Response:
-        """ Answer anything the proxy forwards. """
-        return httpx2.Response(status_code=200, json={'runs': []})
-
-    def opened() -> Tuple[TestClient, object]:
-        """ Return a client and the application behind it. """
-        api = create_app()
-        client = TestClient(api)
-        client.__enter__()  # pylint: disable=unnecessary-dunder-call
-        api.state.api = httpx2.AsyncClient(
-            transport=httpx2.MockTransport(answer),
-            base_url=_defaults.API_URL
-        )
-
-        return client, api
-
-    return opened
 
 
 def _caddy_sets(name: str) -> str:
@@ -88,7 +59,6 @@ class TestWhatEveryAnswerCarries:
     @pytest.mark.parametrize('name', HEADER_NAMES)
     def test_the_page_carries_it(
         self,
-        opened: Callable[[], Tuple[TestClient, object]],
         name: str
     ) -> None:
         client, _api = opened()
@@ -98,7 +68,6 @@ class TestWhatEveryAnswerCarries:
     @pytest.mark.parametrize('name', HEADER_NAMES)
     def test_a_proxied_answer_carries_it(
         self,
-        opened: Callable[[], Tuple[TestClient, object]],
         name: str
     ) -> None:
         client, _api = opened()
@@ -110,10 +79,7 @@ class TestWhatEveryAnswerCarries:
         assert answer.status_code == 200
         assert answer.headers[name] == SECURITY_HEADERS[name]
 
-    def test_a_refusal_carries_the_policy(
-        self,
-        opened: Callable[[], Tuple[TestClient, object]]
-    ) -> None:
+    def test_a_refusal_carries_the_policy(self) -> None:
         # A refusal is a response a browser is given like any other,
         # and is the one an attacker is most likely to be looking at.
         client, _api = opened()

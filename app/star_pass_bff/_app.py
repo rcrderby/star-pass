@@ -33,6 +33,7 @@ from fastapi.staticfiles import StaticFiles
 from . import _defaults
 from ._configuration import check_configuration
 from ._headers import add_security_headers
+from ._logging import send_server_logs_the_same_way
 from ._problems import add_problem_handlers
 from ._proxy import router as proxy_router
 from ._sessions import session_of, started
@@ -42,7 +43,15 @@ from ._sessions import session_of, started
 async def _lifespan(
         api: FastAPI
 ) -> AsyncIterator[None]:
-    """ Hold one connection pool to the API for the process's life.
+    """ Adopt the server's log lines, and hold one connection pool.
+
+        The pool lasts the process's life: a client made per request
+        would open a connection per request and lose the pooling that
+        makes a proxy cheap.
+
+        Uvicorn configures its own loggers as it boots, which is after
+        this module is imported, so they are taken over here rather
+        than at import.
 
         Args:
             api (FastAPI):
@@ -52,6 +61,8 @@ async def _lifespan(
             None:
                 While the service is running.
     """
+
+    send_server_logs_the_same_way()
 
     async with httpx2.AsyncClient(
         base_url=_defaults.API_URL,
