@@ -94,9 +94,12 @@ class Principal:
 def api_token() -> str:
     """ Return the configured API token.
 
-        Read through a function rather than bound at import, so that
-        the value a request is checked against is the one configured
-        now.
+        Read through a function rather than off the module, so that
+        the two refusals below sit beside the check they belong to and
+        a test can supply a token by setting one attribute.
+
+        The value itself is bound when '_defaults' is imported, so
+        rotating the token means changing it and restarting.
 
         Args:
             None.

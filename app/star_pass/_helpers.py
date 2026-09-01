@@ -374,10 +374,9 @@ class Helpers:
                     plus the corresponding URL query string(s).
         """
 
-        # Check for a matching calendar ID.  Returning inside the 'try'
-        # keeps the name bound on the only path that reaches the return;
-        # the previous trailing return read as though 'gcal_id' were
-        # available after the lookup had failed.
+        # Check for a matching calendar ID.  The return is inside the
+        # 'try' because that is the only path which reaches one: a
+        # lookup that failed raises below.
         try:
             return GCAL_CALENDARS[gcal_name]
 

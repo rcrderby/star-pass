@@ -20,6 +20,7 @@ import pytest
 
 # Imports - Local
 from star_pass import _logging
+from star_pass._exceptions import ConfigurationError
 
 
 @pytest.fixture(name='formatter')
@@ -210,9 +211,9 @@ class TestWhereALineGoes:
 
 class TestEveryPackageIsHeard:
     def test_each_one_talks_at_the_configured_level(self):
-        # The API service's records used to inherit the root's
-        # WARNING, so everything it said at INFO was discarded before
-        # anything could format it.
+        # Every package is set to the level, not only 'star_pass'.
+        # One left at the root's WARNING would have everything it says
+        # at INFO discarded before anything could format it.
         _logging.configure_logging()
 
         for name in _logging.APPLICATION_LOGGERS:
@@ -243,7 +244,7 @@ class TestEveryPackageIsHeard:
         assert 'abc123' in line['message']
 
     def test_a_service_record_at_info_is_not_dropped(self, written):
-        # It used to inherit the root's WARNING, so this said nothing
+        # A package left at the root's WARNING would say nothing here
         # at all.
         logging.getLogger('star_pass_api._problems').info('still here')
 
@@ -286,3 +287,28 @@ class TestTheServerIsSentTheSameWay:
 
         assert line['logger'] == 'uvicorn.access'
         assert line['message'] == 'POST /v1/runs 202'
+
+
+class TestTheLevelADeploymentAsksFor:
+    @pytest.mark.parametrize('name', sorted(_logging.LEVELS))
+    def test_every_level_resolves(self, name):
+        assert _logging._resolve_level(name) == _logging.LEVELS[name]
+
+    def test_it_reads_a_name_in_any_case(self):
+        assert _logging._resolve_level('  debug ') == logging.DEBUG
+
+    def test_a_name_that_is_not_a_level_is_refused(self):
+        # Answering a typo by logging at INFO leaves a service quieter
+        # than it was asked to be, for the month until somebody looks.
+        with pytest.raises(ConfigurationError) as error:
+            _logging._resolve_level('INF')
+
+        assert 'LOG_LEVEL' in str(error.value)
+        assert 'INF' in str(error.value)
+
+    def test_an_attribute_of_the_logging_module_is_not_one(self):
+        # 'logging.BASIC_FORMAT' is a string in capitals, and a lookup
+        # on the module rather than on a mapping would return it, to be
+        # refused later by 'setLevel' and further from the cause.
+        with pytest.raises(ConfigurationError):
+            _logging._resolve_level('BASIC_FORMAT')

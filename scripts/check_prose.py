@@ -51,7 +51,8 @@ TAG = '@'
 # statements about the domain, not about the code, so the nouns are
 # named rather than the phrases alone.
 HISTORY = r'(?:approach|version|implementation|behaviou?r|code|' \
-          r'comment|sentence|docstring|one|rule|design)'
+          r'comment|sentence|docstring|one|rule|design|' \
+          r'return|call|name|value|column|test|line|file)'
 NARRATION = (
     # 'used to be', not 'used to': the latter also means  prose-ok
     # 'employed to', as in 'the separator used to group titles'.
