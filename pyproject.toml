@@ -17,13 +17,13 @@ classifiers = [
   "Topic :: Galaxy Digital Amplify :: Volunteer Management :: Automation",
   "License :: OSI Approved :: Apache Software License",
   "Private :: Do Not Upload",
-  "Programming Language :: Python :: 3.12"
+  "Programming Language :: Python :: 3.14"
 ]
 description = "Tool to automate manual volunteer management in Galaxy Digital Amplify."
 dynamic = ["dependencies", "version"]
 name = "star-pass"
 readme = "README.md"
-requires-python = ">= 3.12"
+requires-python = ">= 3.14"
 
 # A 'star-pass' console script is deliberately not declared yet.  The
 # entry point would be 'app.__main__:main', but that module imports
