@@ -7,19 +7,38 @@
     is built on the way out -- and neither reads the other, so the one
     module they shared was one that only ever grew.
 
-    Every one of these inherits 'ApiModel', so a caller may send
-    either spelling of a field name and the service publishes the camel
-    case one.
+    Every one of these inherits 'RequestModel' below, so a caller may
+    send either spelling of a field name and a field the service does
+    not know is refused rather than dropped.
 """
 
 # Imports - Python Standard Library
 from typing import Annotated, List, Optional
 
 # Imports - Third-Party
-from pydantic import Field, StringConstraints
+from pydantic import ConfigDict, Field, StringConstraints
 
 # Imports - Local
 from ._schemas import ApiModel
+
+
+class RequestModel(ApiModel):
+    """ The base every shape a caller sends is built on.
+
+        Unknown fields are refused rather than dropped.  A misspelled
+        one is otherwise answered with a success and no sign that what
+        was asked for did not happen, and the vocabulary is camel-cased
+        on the way in, which is where a spelling is easiest to get
+        wrong.
+
+        The views in '_schemas' deliberately do not do this.  Changes
+        within a version are additive, so a response may grow a field,
+        and a schema published as closed would be a promise this
+        service is not making.
+    """
+
+    model_config = ConfigDict(extra='forbid')
+
 
 # What a request may carry.  Every bound is well above what the page
 # sends, and none of them is absent.
@@ -38,7 +57,7 @@ Identifier = Annotated[
 ]
 
 
-class WindowRequest(ApiModel):
+class WindowRequest(RequestModel):
     """ The days a collection is asked to cover.
 
         No zone, unlike the window a run answers with.  The server's
@@ -66,7 +85,7 @@ class WindowRequest(ApiModel):
     )
 
 
-class CollectRequest(ApiModel):
+class CollectRequest(RequestModel):
     """ Which calendar to collect, and over which days. """
 
     calendar: str = Field(
@@ -85,7 +104,7 @@ class CollectRequest(ApiModel):
     )
 
 
-class RecollectRequest(ApiModel):
+class RecollectRequest(RequestModel):
     """ What the operator was shown before asking to collect again. """
 
     expected_change_count: int = Field(
@@ -107,7 +126,7 @@ class RecollectRequest(ApiModel):
     )
 
 
-class UnmatchedTitleRequest(ApiModel):
+class UnmatchedTitleRequest(RequestModel):
     """ A title the data model did not match, to keep for later. """
 
     calendar: str = Field(
@@ -144,7 +163,7 @@ class UnmatchedTitleRequest(ApiModel):
     )
 
 
-class SendRequest(ApiModel):
+class SendRequest(RequestModel):
     """ What the operator was shown before asking to send. """
 
     expected_shift_count: int = Field(
@@ -184,7 +203,7 @@ class SendRequest(ApiModel):
         return f'expected_shift_count={self.expected_shift_count}'
 
 
-class EventOperationRequest(ApiModel):
+class EventOperationRequest(RequestModel):
     """ One thing a reviewer did, over one or more events. """
 
     op: str = Field(
@@ -257,7 +276,7 @@ class EventOperationRequest(ApiModel):
     )
 
 
-class EditRequest(ApiModel):
+class EditRequest(RequestModel):
     """ One user action, as the operations it is made of. """
 
     operations: List[EventOperationRequest] = Field(
@@ -300,7 +319,7 @@ class EditRequest(ApiModel):
         )
 
 
-class AddEventRequest(ApiModel):
+class AddEventRequest(RequestModel):
     """ Which of the events nobody searched for to pull into the run. """
 
     uncollected_id: str = Field(
