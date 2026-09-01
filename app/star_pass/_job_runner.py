@@ -26,7 +26,7 @@ from typing import Any, Callable, Dict, List
 
 # Imports - Local
 from . import _defaults
-from ._exceptions import StarPassError
+from ._exceptions import ConfigurationError, StarPassError
 from ._logging import get_logger
 from ._records import (
     JOB_STATUS_FAILED,
@@ -43,13 +43,23 @@ JOB_WORKERS = _defaults.JOB_WORKERS
 THREAD_NAME_PREFIX = 'star-pass-job'
 
 # What a caller is told when a job failed for a reason that was not
-# written for them to read.  The core's own exceptions carry a message
-# meant for the person running the command and are safe to store;
-# anything else is a defect whose message can carry a credential, an
-# upstream body, or a volunteer's data, so it goes to the log and the
-# job records this instead.
+# written for them to read.  'ValidationError' and 'UpstreamError'
+# carry a message meant for the person running the command and are
+# safe to store; anything else is a defect whose message can carry a
+# credential, an upstream body, or a volunteer's data, so it goes to
+# the log and the job records this instead.
 UNEXPECTED_DETAIL = (
     'The job failed unexpectedly. The reason is in the service log.'
+)
+
+# What it is told when the deployment is at fault.  A configuration
+# fault describes the inside of the service -- the path a database
+# could not be opened at, the variable that is unset -- and
+# 'star_pass_api._problems' answers one in a request by withholding it
+# behind a 500.  A job publishes its detail to the same screens, so it
+# withholds the same thing; the reason is in the log either way.
+CONFIGURATION_DETAIL = (
+    'The service is misconfigured. The reason is in the service log.'
 )
 
 # Module logger
@@ -410,6 +420,18 @@ class JobRunner:
                     jobs=jobs,
                     job_id=job_id
                 )
+            )
+
+        except ConfigurationError as error:
+            # The deployment's to fix and not the caller's to read, so
+            # the reason is logged and the job records that there is
+            # one.
+            message = f'Job {job_id} failed on the configuration: {error}'
+            logger.error(message)
+            jobs.finish(
+                job_id=job_id,
+                status=JOB_STATUS_FAILED,
+                detail=CONFIGURATION_DETAIL
             )
 
         except StarPassError as error:
