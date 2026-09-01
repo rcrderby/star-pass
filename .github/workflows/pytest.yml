@@ -37,14 +37,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      # Pin the interpreter so the 'requires-python' floor is enforced
-      # and a runner image update cannot change it silently.
+      # Pin the interpreter to the one the image ships, so the suite
+      # runs on what a deployment runs and a runner image update
+      # cannot change it silently.  The Dockerfile's base image and
+      # this are raised together; a version tested here and not
+      # shipped, or shipped and not tested here, is the gap the pair
+      # exists to close.
       # setup-python action documentation
       # https://github.com/marketplace/actions/setup-python
       - name: Setup Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
-          python-version: '3.12'
+          python-version: '3.14'
 
       # Install pytest packages
       - name: Install pytest packages

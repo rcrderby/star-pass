@@ -15,7 +15,7 @@
 # and the import root.  No application dependency is installed here,
 # because which ones are installed is the whole difference between
 # them.
-# Pinned by digest rather than by tag.  '3.12-slim' moves, so two
+# Pinned by digest rather than by tag.  '3.14-slim' moves, so two
 # builds of one commit could differ in their base layer, which is
 # what a pinned requirements file exists to prevent one level up.
 # Dependabot's docker ecosystem raises this the way it raises a
