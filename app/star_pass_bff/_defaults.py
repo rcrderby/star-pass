@@ -124,6 +124,15 @@ COOKIES_ARE_SECURE = getenv(
     'true'
 ).strip().lower() not in ('false', 'no', '0')
 
+# How much the service says about what it is doing.  The same
+# variable the core reads, because a deployment sets one level and
+# both containers answer to it.  Resolved in '_logging', which refuses
+# a name that is not a level.
+LOG_LEVEL = getenv(
+    'LOG_LEVEL',
+    'INFO'
+)
+
 # Where the API is reached through this service.  One prefix, so what
 # is proxied is a statement rather than whatever a path happens to
 # match.
