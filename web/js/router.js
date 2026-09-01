@@ -1,9 +1,8 @@
 /* Where the page is, said as a path.
  *
- * Every screen was drawn into one `<main>` and none of them had an
- * address: a reload came back to whatever `listRuns()` implied, Back
- * left the application, and the two screens over one run could not be
- * told apart from outside the page.
+ * Every screen has an address, so a reload comes back to it, Back
+ * stays inside the application, and the two screens over one run can
+ * be told apart from outside the page.
  *
  * The History API rather than a fragment, so the path reaches the
  * service and the frontend can answer it with the page.  What the

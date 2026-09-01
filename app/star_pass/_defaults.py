@@ -561,10 +561,11 @@ RETENTION_ABANDONED_KEY_HOURS = int_env(
     '24'
 )
 
-# How often the service sweeps.  Once a day: every window above is
-# measured in months, so nothing is gained by looking more often, and
-# a sweep is a write against the database the service is answering
-# from.
+# How often the service sweeps.  Once a day: the shortest window
+# above is a day and the rest are months, so a reservation is
+# forgotten within a day of becoming eligible and nothing is gained by
+# looking more often.  A sweep is a write against the database the
+# service is answering from.
 RETENTION_SWEEP_HOURS = float_env(
     'STAR_PASS_RETENTION_SWEEP_HOURS',
     '24'

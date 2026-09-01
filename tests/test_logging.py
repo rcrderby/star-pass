@@ -211,9 +211,9 @@ class TestWhereALineGoes:
 
 class TestEveryPackageIsHeard:
     def test_each_one_talks_at_the_configured_level(self):
-        # The API service's records used to inherit the root's
-        # WARNING, so everything it said at INFO was discarded before
-        # anything could format it.
+        # Every package is set to the level, not only 'star_pass'.
+        # One left at the root's WARNING would have everything it says
+        # at INFO discarded before anything could format it.
         _logging.configure_logging()
 
         for name in _logging.APPLICATION_LOGGERS:
@@ -244,7 +244,7 @@ class TestEveryPackageIsHeard:
         assert 'abc123' in line['message']
 
     def test_a_service_record_at_info_is_not_dropped(self, written):
-        # It used to inherit the root's WARNING, so this said nothing
+        # A package left at the root's WARNING would say nothing here
         # at all.
         logging.getLogger('star_pass_api._problems').info('still here')
 
