@@ -18,7 +18,7 @@ requests==2.34.2
 # Python formatting
 autopep8==2.3.2
 flake8==7.3.0
-pylint==4.0.7
+pylint==4.0.8
 
 # The pre-push gate. '.pre-commit-config.yaml' runs gitleaks over what
 # is about to be committed, and without this the dev container has the
