@@ -20,7 +20,7 @@
 # what a pinned requirements file exists to prevent one level up.
 # Dependabot's docker ecosystem raises this the way it raises a
 # pinned package.
-FROM python:3.14-slim@sha256:cae66f2ef0ec51a9891263eeee7f987dacf0a9879e8aa9353d5606e0530619a5 AS base
+FROM python:3.14-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6 AS base
 
 # Set the working directory
 WORKDIR /app
