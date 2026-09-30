@@ -1,6 +1,6 @@
 # API service
 fastapi==0.141.1
-uvicorn==0.53.0
+uvicorn==0.54.0
 
 # .env file support
 python_dotenv==1.2.3
@@ -17,8 +17,8 @@ requests==2.34.2
 
 # Python formatting
 autopep8==2.3.2
-flake8==7.3.0
-pylint==4.0.8
+flake8==7.4.1
+pylint==4.0.9
 
 # The pre-push gate. '.pre-commit-config.yaml' runs gitleaks over what
 # is about to be committed, and without this the dev container has the
@@ -39,7 +39,7 @@ ipython==9.17.1
 bump==1.4.0
 
 # Python testing
-httpx2==2.13.0
+httpx2==2.13.1
 pytest==9.1.1
 pytest-cov==7.1.0
 
