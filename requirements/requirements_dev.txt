@@ -39,7 +39,7 @@ ipython==9.17.1
 bump==1.4.0
 
 # Python testing
-httpx2==2.13.0
+httpx2==2.13.1
 pytest==9.1.1
 pytest-cov==7.1.0
 
