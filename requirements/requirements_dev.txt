@@ -30,7 +30,7 @@ python-Levenshtein==0.27.5
 thefuzz==0.22.1
 
 # Slack Web API
-slack_sdk==3.44.1
+slack_sdk==3.45.0
 
 # Python interpreter
 ipython==9.17.1
