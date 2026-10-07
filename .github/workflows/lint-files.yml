@@ -51,7 +51,7 @@ jobs:
       # below is present in it.  Same commit as the standard action;
       # only the path differs.
       - name: Super Linter
-        uses: super-linter/super-linter/slim@4ce20838b8ab83717e78138c5b3a1407148e0918  # v8
+        uses: super-linter/super-linter/slim@2da136927bd4a73596db63044b504547c62cb854  # v9.0.0
         # Configuration settings
         env:
           # Report status checks
