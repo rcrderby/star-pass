@@ -1,7 +1,7 @@
 # Application runtime dependencies -- required to import the modules
 # under test. The CI pytest job installs only this file, so the runtime
 # packages must be listed here alongside the test tooling.
-fastapi==0.141.1
+fastapi==0.142.2
 python_dotenv==1.2.4
 dateparser==1.4.3
 pyyaml==6.0.3
