@@ -8,3 +8,4 @@ failure-threshold: info
 ignored:
   - DL3008  # Pin versions in apt get install
   - DL3013  # Pin versions in pip
+  - DL3066  # Numeric user ID in USER
