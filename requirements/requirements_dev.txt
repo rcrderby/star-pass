@@ -23,7 +23,7 @@ pylint==4.1.3
 # The pre-push gate. '.pre-commit-config.yaml' runs gitleaks over what
 # is about to be committed, and without this the dev container has the
 # configuration and not the thing that reads it.
-pre-commit==4.6.2
+pre-commit==4.7.0
 
 # Python fuzzy string matching
 python-Levenshtein==0.27.5
