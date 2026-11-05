@@ -15,8 +15,8 @@ name: Slack Sign-Up Summary
 # Events that trigger the action
 #
 # Times are UTC, which GitHub cron requires, so the local time shifts
-# by an hour at Daylight Saving: 19:12 UTC is 12:12 p.m. Pacific in
-# summer and 11:12 a.m. in winter.  Which calendar day a summary covers
+# by an hour at Daylight Saving: 18:12 UTC is 11:12 a.m. Pacific in
+# summer and 10:12 a.m. in winter.  Which calendar day a summary covers
 # is unaffected, because the application reads its clock from
 # LOCAL_TIMEZONE rather than from the runner.
 #
@@ -25,9 +25,9 @@ name: Slack Sign-Up Summary
 on:
   schedule:
     # Wednesday, covering Wednesday's own shifts.
-    - cron: '12 19 * * 3'
+    - cron: '12 18 * * 3'
     # Friday, covering Saturday and Sunday but not Friday.
-    - cron: '12 19 * * 5'
+    - cron: '12 18 * * 5'
   workflow_dispatch:
     inputs:
       days:
@@ -112,13 +112,13 @@ jobs:
           INPUT_CHANNEL: ${{ inputs.channel }}
         run: |
           case "${SCHEDULE}" in
-            '12 19 * * 5')
+            '12 18 * * 5')
               days=2
               start_in_days=1
               check_mode=false
               channel=prod
               ;;
-            '12 19 * * 3')
+            '12 18 * * 3')
               days=1
               start_in_days=0
               check_mode=false

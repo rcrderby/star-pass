@@ -64,7 +64,7 @@
   <rect x="60" y="752" width="230" height="76" rx="8" fill="#f6f7f9" stroke="#94a3b8" stroke-width="1.5"/>
   <text x="175" y="779" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">GitHub Actions</text>
   <text x="175" y="795" font-size="11" font-weight="400" fill="#475569" text-anchor="middle">Wednesday and Friday</text>
-  <text x="175" y="811" font-size="11" font-weight="400" fill="#475569" text-anchor="middle">19:12 UTC</text>
+  <text x="175" y="811" font-size="11" font-weight="400" fill="#475569" text-anchor="middle">18:12 UTC</text>
   <rect x="330" y="752" width="230" height="76" rx="8" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
   <text x="445" y="779" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">The slim image</text>
   <text x="445" y="795" font-size="11" font-weight="400" fill="#475569" text-anchor="middle">star-pass -s</text>
