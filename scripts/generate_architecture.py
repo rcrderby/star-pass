@@ -278,7 +278,7 @@ RUN_PATHS = Diagram(
             lines=(
                 'GitHub Actions',
                 'Wednesday and Friday',
-                '19:12 UTC'
+                '18:12 UTC'
             )
         ),
         Box(
