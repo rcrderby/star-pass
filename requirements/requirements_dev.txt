@@ -33,7 +33,7 @@ thefuzz==0.22.1
 slack_sdk==3.46.0
 
 # Python interpreter
-ipython==9.18.0
+ipython==9.18.1
 
 # Python package versioning
 bump==1.4.0
