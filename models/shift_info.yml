@@ -62,7 +62,7 @@ calendar:
             slots: 8
 
       junior_game_petals:
-        description: Rose Petals Games
+        description: Rose Petals HT Games
         group: juniors
         initiative: officiating
         type: game

@@ -150,7 +150,7 @@ class TestSearchShiftInfo:
             (
                 'events',
                 'G1: Petals Exhibition Bout',
-                'Rose Petals Games'
+                'Rose Petals HT Games'
             ),
             ('practices', 'Officials', 'Officials Practice'),
             (
@@ -163,7 +163,7 @@ class TestSearchShiftInfo:
             # Synthesized titles a human might reasonably use.
             ('events', 'Axles vs. Jet City', 'Adult Games'),
             ('practices', 'Officiating Practice', 'Officials Practice'),
-            ('events', 'PTT vs Cherry City', 'Rose Petals Games'),
+            ('events', 'PTT vs Cherry City', 'Rose Petals HT Games'),
             ('events', 'BB vs. JRD', 'Adult Games'),
             ('practices', 'Officials Training', 'Officials Practice'),
             # One category serves everybody, so a title naming a
@@ -198,9 +198,9 @@ class TestSearchShiftInfo:
             (
                 'events',
                 'Bad Apples vs Skaters of Doom',
-                'Rose Petals Games'
+                'Rose Petals HT Games'
             ),
-            ('events', 'Killer Bees v Bad Apples', 'Rose Petals Games'),
+            ('events', 'Killer Bees v Bad Apples', 'Rose Petals HT Games'),
             (
                 'events',
                 'Heartless Heathers vs High Rollers',
@@ -216,8 +216,8 @@ class TestSearchShiftInfo:
             # one cannot be found inside a longer word.
             ('events', 'UA v DSDD', 'Rose Buds HT Games'),
             ('events', 'BH vs RBB', 'Rose Buds HT Games'),
-            ('events', 'BA v SOD', 'Rose Petals Games'),
-            ('events', 'KB vs BA', 'Rose Petals Games'),
+            ('events', 'BA v SOD', 'Rose Petals HT Games'),
+            ('events', 'KB vs BA', 'Rose Petals HT Games'),
             ('events', 'BNB v HR', 'Adult Games'),
         ]
     )
