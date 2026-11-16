@@ -9,7 +9,7 @@ python_dotenv==1.2.4
 pyyaml==6.0.3
 
 # Date parsing
-dateparser==1.4.3
+dateparser==1.5.0
 
 # HTTP requests
 requests==2.34.2
