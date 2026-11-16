@@ -14,7 +14,7 @@ python_dotenv==1.2.4
 pyyaml==6.0.3
 
 # Date parsing
-dateparser==1.4.3
+dateparser==1.5.0
 
 # Request and response shapes, which the command line reads through
 # the contract.  Pinned here rather than arriving with FastAPI,
