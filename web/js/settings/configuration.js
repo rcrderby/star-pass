@@ -14,6 +14,7 @@
  */
 
 import { el, icon } from '../dom.js';
+import { counted } from '../format.js';
 
 /* What a calendar searched for nothing in particular is said to be
  * searched for.  An empty query string is a value rather than an
@@ -68,30 +69,31 @@ const SETTINGS = [
 const STORES = [
   {
     name: 'Job logs',
-    kept: (retention) => `${retention.jobLogDays} days after the job finished`,
+    kept: (retention) => `${counted(retention.jobLogDays, 'day')} after the `
+      + 'job finished',
     note: 'The job itself is not removed with its log. The record of '
       + 'when a run occurred and its outcome survives longer than the '
       + 'run data.'
   },
   {
     name: 'Revisions',
-    kept: (retention) => `${retention.revisionDays} days after the run `
-      + 'last experienced activity',
+    kept: (retention) => `${counted(retention.revisionDays, 'day')} after `
+      + 'the run last experienced activity',
     note: 'The first and current revisions persist indefinitely. '
       + 'Intermediate revisions expire.'
   },
   {
     name: 'Unmatched titles',
-    kept: (retention) => `${retention.unmatchedTitleDays} days after a `
-      + 'title was last seen',
+    kept: (retention) => `${counted(retention.unmatchedTitleDays, 'day')} `
+      + 'after a title was last seen',
     note: 'Unmatched titles expire if they are not added to the '
       + 'shift data model.'
   },
   {
     name: 'Sent shifts',
     kept: () => 'Indefinite',
-    note: 'Retaining shift data sent to Amplify supports preventing '
-      + 'attempts to create duplicate shifts.'
+    note: 'Shift data sent to Amplify is retained to prevent duplicate '
+      + 'shifts.'
   }
 ];
 

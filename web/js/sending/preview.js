@@ -47,8 +47,7 @@ const CHECK_FAILED = (
  * own sentence rather than a disabled button with no explanation,
  * because it is the one blocked state that is not a fault. */
 const NOTHING_TO_SEND = (
-  'Every shift in this run is already in Amplify. There is nothing '
-  + 'left to send.'
+  'Amplify already has shifts for each line in this run.'
 );
 
 /** Return the days a row's new shifts fall on.
@@ -76,13 +75,12 @@ function skippedNote(row) {
     return null;
   }
 
-  const shifts = counted(row.alreadyInAmplify, 'identical shift');
+  const shifts = counted(row.alreadyInAmplify, 'shift');
   const verb = row.alreadyInAmplify === 1 ? 'is' : 'are';
 
   return el('span', {
     class: 'preview-existing note',
-    text: `${shifts} ${verb} already in Amplify, so `
-      + `${row.alreadyInAmplify === 1 ? 'it' : 'they'} will be skipped`
+    text: `${shifts} ${verb} already in Amplify`
   });
 }
 
@@ -112,8 +110,8 @@ function previewRow(row) {
 
 /** Return the sentence under the heading.
  *
- * Says what a send would do and everything that changes that number,
- * in one place, because the table below it is grouped by opportunity
+ * Says what a send would do, what stops it and what Amplify already
+ * has, in one place, because the table below it is grouped by opportunity
  * and a reader counting rows would not arrive at the same figure.
  *
  * @param {Object} preview What the service answered.
@@ -128,11 +126,11 @@ export function summaryLine(preview) {
 
   if (totals.blockingEvents) {
     const events = counted(totals.blockingEvents, 'event');
-    const verb = totals.blockingEvents === 1 ? 'is' : 'are';
+    const become = totals.blockingEvents === 1 ? 'a shift' : 'shifts';
 
     parts.push(
-      `${events} cannot become a shift, so nothing ${verb} sent `
-      + 'until that is fixed.'
+      `${events} cannot become ${become}, so nothing is sent until that `
+      + 'is fixed.'
     );
   }
 
@@ -141,13 +139,6 @@ export function summaryLine(preview) {
     const verb = totals.alreadyInAmplify === 1 ? 'is' : 'are';
 
     parts.push(`${shifts} ${verb} already in Amplify and left out.`);
-  }
-
-  if (totals.repeatedRows) {
-    const rowsAsked = counted(totals.repeatedRows, 'shift');
-    const verb = totals.repeatedRows === 1 ? 'is' : 'are';
-
-    parts.push(`${rowsAsked} ${verb} asked for twice and created once.`);
   }
 
   return parts.join(' ');
@@ -237,15 +228,16 @@ export function checks(preview, run) {
       ? check(GOOD, 'None of these shifts is in Amplify yet')
       : check(
         NOTED,
-        `${totals.alreadyInAmplify} of these shifts `
+        `${counted(totals.alreadyInAmplify, 'shift')} `
         + `${totals.alreadyInAmplify === 1 ? 'is' : 'are'} already in `
-        + 'Amplify and will be skipped'
+        + 'Amplify'
       ),
     totals.blockingEvents === 0
       ? check(GOOD, 'Every event can become a shift')
       : check(
         BAD,
-        `${counted(totals.blockingEvents, 'event')} cannot become a shift`
+        `${counted(totals.blockingEvents, 'event')} cannot become `
+        + `${totals.blockingEvents === 1 ? 'a shift' : 'shifts'}`
       ),
     endsFirst === 0
       ? check(GOOD, 'Every shift ends after it starts')
@@ -259,8 +251,8 @@ export function checks(preview, run) {
       ? check(GOOD, 'No repeated rows')
       : check(
         NOTED,
-        `${counted(totals.repeatedRows, 'repeated row')} will be `
-        + 'created once, not twice',
+        `${counted(totals.repeatedRows, 'repeated row')} will not create `
+        + `${totals.repeatedRows === 1 ? 'a new shift' : 'new shifts'}`,
         'copy'
       ),
     capped === 0

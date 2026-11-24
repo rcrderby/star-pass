@@ -30,9 +30,9 @@ import { collectedAt, runLabel, runStatusTag } from './summary.js';
 /* The heading, and what the list is. */
 const TITLE = 'Runs';
 const LEDE = (
-  'One run is one collection, from one calendar, over one window of '
-  + 'league dates. Open one to review it; nothing reaches Amplify '
-  + 'until it is sent.'
+  'A run is a collection of events, from a single calendar, over a '
+  + 'specific range of league dates. Open a run to review its events '
+  + 'before sending them to Amplify as volunteer shifts.'
 );
 
 /* What the button above the list says. */

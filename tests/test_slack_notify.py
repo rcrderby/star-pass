@@ -635,8 +635,25 @@ class TestPostSummary:
         # Fallback text names the summary and the shift count.
         assert kwargs['text'] == (
             'Shift sign-ups for Wednesday, December 17 2025 - '
-            '6 shift(s)'
+            '6 shifts'
         )
+
+    def test_fallback_text_counts_one_shift_in_the_singular(
+        self,
+        summary
+    ):
+        summary['needs'] = summary['needs'][:1]
+        summary['needs'][0]['shifts'] = summary['needs'][0]['shifts'][:1]
+        client = Mock()
+        notifier = SlackNotifier(
+            channel='C123',
+            check_mode=False,
+            token=FAKE_XOXB,
+            client=client
+        )
+        notifier.post_summary(summary=summary)
+        _, kwargs = client.chat_postMessage.call_args
+        assert kwargs['text'].endswith(' - 1 shift')
 
 
 class TestPostSummarySkipsEmpty:

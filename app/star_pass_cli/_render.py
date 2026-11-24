@@ -22,7 +22,7 @@
 
 # Imports - Python Standard Library
 from datetime import date, timedelta
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 # Imports - Local
 from star_pass._records import (
@@ -145,14 +145,16 @@ REVISION_PHRASES = {
 # What fills each gap is what this client has to hand: a category and
 # an opportunity are shown by the identifiers the run's own tables
 # list them under, which is how every other column here names them.
+# '{slots}' and '{minutes}' are filled with their noun, so one reads
+# as '1 volunteer' and '1 minute'.
 LOG_ACTION_PHRASES = {
     OP_SET_CATEGORY: 'Set the opportunity for {subject} to {category}.',
     OP_UNASSIGN: 'Set {subject} back to unassigned.',
     OP_SET_START: 'Set the shift start of {subject} to {time}.',
     OP_SET_END: 'Set the shift end of {subject} to {time}.',
     OP_SET_SLOTS:
-        'Set {slots} volunteers wanted on {subject} for need {needId}.',
-    OP_NUDGE: 'Moved {subject} {minutes} minutes {direction}.',
+        'Set {slots} wanted on {subject} for need {needId}.',
+    OP_NUDGE: 'Moved {subject} {minutes} {direction}.',
     OP_RESET_SLOTS:
         'Reset the volunteers wanted on {subject} to what the '
         'opportunity asks for.',
@@ -271,6 +273,30 @@ def shown(
     """
 
     return NOTHING if value is None else str(value)
+
+
+def counted(
+        count: Optional[int],
+        noun: str
+) -> str:
+    """ Return a count with its noun, singular for one.
+
+        Args:
+            count (Optional[int]):
+                How many, which may be null.
+
+            noun (str):
+                The singular noun, made plural by adding an 's'.
+
+        Returns:
+            text (str):
+                Such as '1 minute' or '3 minutes', with 'NOTHING' in
+                place of a null count.
+    """
+
+    many = noun if count == 1 else f'{noun}s'
+
+    return f'{shown(value=count)} {many}'
 
 
 def table(
@@ -476,7 +502,8 @@ def event_notes(
         notes.append(f'repeats {event["duplicateOf"]}')
 
     if event['cappedAt'] is not None:
-        notes.append(f'capped at {event["cappedAt"]} minutes')
+        capped = counted(count=event['cappedAt'], noun='minute')
+        notes.append(f'capped at {capped}')
 
     if match is not None and match['kind'] == MATCH_KIND_FUZZY:
         notes.append(f'fuzzy match, scored {match["score"]}')
@@ -578,9 +605,12 @@ def log_words(
         subject=log_subject(entry=entry),
         category=shown(entry['category']),
         time=shown(entry['shiftTime']),
-        slots=shown(entry['slots']),
+        slots=counted(count=entry['slots'], noun='volunteer'),
         needId=shown(entry['needId']),
-        minutes=abs(minutes) if minutes is not None else NOTHING,
+        minutes=counted(
+            count=abs(minutes) if minutes is not None else None,
+            noun='minute'
+        ),
         direction=LOG_LATER if (minutes or 0) > 0 else LOG_EARLIER
     )
 

@@ -590,7 +590,9 @@ def _summary_fallback_text(
         for need in summary.get('needs', [])
     )
 
-    return f'{title} - {count} shift(s)'
+    shifts = 'shift' if count == 1 else 'shifts'
+
+    return f'{title} - {count} {shifts}'
 
 
 class SlackNotifier:

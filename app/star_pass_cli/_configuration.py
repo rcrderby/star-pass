@@ -24,7 +24,7 @@
 from typing import Any, Dict, List, Sequence
 
 # Imports - Local
-from ._render import labelled, NOTHING, table
+from ._render import counted, labelled, NOTHING, table
 
 # Constants
 # What a calendar's row shows, in order.
@@ -56,10 +56,10 @@ RETENTION_HEADING = 'RETENTION'
 # and no rendered text, so saying what each one is measured from is
 # this client's job -- and it is the half that makes the number mean
 # anything, since the three are measured from three different events.
-JOB_LOG_RETENTION = '{days} days after a job finishes'
-REVISION_RETENTION = '{days} days after a run is last changed'
+JOB_LOG_RETENTION = '{days} after a job finishes'
+REVISION_RETENTION = '{days} after a run is last changed'
 UNMATCHED_RETENTION = (
-    '{days} days after a title was last seen, or as soon as the '
+    '{days} after a title was last seen, or as soon as the '
     'model matches it'
 )
 
@@ -216,18 +216,23 @@ def retention_text(
         pairs=(
             (
                 'Job logs',
-                JOB_LOG_RETENTION.format(days=retention['jobLogDays'])
+                JOB_LOG_RETENTION.format(
+                    days=counted(count=retention['jobLogDays'], noun='day')
+                )
             ),
             (
                 'Revisions',
                 REVISION_RETENTION.format(
-                    days=retention['revisionDays']
+                    days=counted(count=retention['revisionDays'], noun='day')
                 )
             ),
             (
                 'Unmatched titles',
                 UNMATCHED_RETENTION.format(
-                    days=retention['unmatchedTitleDays']
+                    days=counted(
+                        count=retention['unmatchedTitleDays'],
+                        noun='day'
+                    )
                 )
             ),
             ('Sent shifts', SENT_RETENTION)

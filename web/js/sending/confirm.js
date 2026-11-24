@@ -27,15 +27,14 @@ import { el } from '../dom.js';
  * saying there is no undo and leaving the reader to work out what
  * that means for them. */
 const NO_UNDO = (
-  'This creates volunteer shifts in Amplify. They can only be changed '
-  + 'or removed afterwards in the Amplify administrative portal.'
+  'This action creates volunteer shifts in Amplify. They can only be '
+  + 'changed or removed afterwards in the Amplify administrative portal.'
 );
 
 /* Why the number can be trusted even though the screen behind this
  * was drawn a moment ago. */
 const CHECKED_AGAIN = (
-  'Amplify is checked once more as this starts, so nothing can be '
-  + 'created twice.'
+  'This action includes a final duplicate shift check.'
 );
 
 /** Return the sentence restating what is about to happen.

@@ -309,7 +309,7 @@ class TestCollectingARunAgain:
         # Both numbers, each in its own place: swapped, the message
         # would still hold the one the caller sent.
         assert response.status_code == 409
-        assert 'holds 0 change(s), not the 3' in response.json()['detail']
+        assert 'has 0 changes, not the 3' in response.json()['detail']
 
     def test_a_change_count_that_has_moved_collects_nothing(
         self,

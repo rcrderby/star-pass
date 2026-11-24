@@ -31,7 +31,7 @@ from star_pass._reporting import (
     STEP_READ_OPPORTUNITY
 )
 from star_pass._repository import RunRepository, SentShiftRepository
-from star_pass._send import send
+from star_pass._send import blocked_message, send
 
 # Constants
 # The opportunity the default event sends to, the row it would create
@@ -544,7 +544,10 @@ class TestWhatStopsASend:
         with pytest.raises(ValidationError) as refused:
             sending(collected)
 
-        assert '1 event(s)' in str(refused.value)
+        assert str(refused.value) == (
+            'The run was not sent because 1 event cannot become a shift. '
+            'Correct the event, then send the run again.'
+        )
         assert sent == []
 
     def test_an_unknown_run_is_refused(
@@ -558,3 +561,11 @@ class TestWhatStopsASend:
             sending('no-such-run')
 
         assert 'no-such-run' in str(refused.value)
+
+    def test_more_than_one_blocked_event_is_counted_in_the_plural(
+        self
+    ) -> None:
+        assert blocked_message(blocking=3) == (
+            'The run was not sent because 3 events cannot become shifts. '
+            'Correct the events, then send the run again.'
+        )

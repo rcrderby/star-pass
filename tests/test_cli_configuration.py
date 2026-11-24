@@ -46,6 +46,21 @@ class TestShowingTheConfiguration:
         assert 'Timezone         UTC' in shown
         assert 'Match threshold  55' in shown
 
+    def test_a_window_of_one_day_says_day(
+        self,
+        capsys: pytest.CaptureFixture,
+        cli: Callable[..., int],
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(SETTINGS_READ_IN + '.RETENTION_JOB_LOG_DAYS', 1)
+
+        status = cli('config', 'show')
+        shown = capsys.readouterr().out
+
+        assert status == 0
+        assert '1 day after a job finishes' in shown
+        assert '90 days after a run is last changed' in shown
+
     def test_each_calendar_is_shown_with_what_it_is_searched_for(
         self,
         capsys: pytest.CaptureFixture,

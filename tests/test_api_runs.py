@@ -630,6 +630,12 @@ class TestWhetherARunMayBeDeleted:
         runs.mark_sent(run_id=collected, status=RUN_STATUS_SENT)
 
         assert running_client.get(RUNS_PATH).json()[0]['mayDelete'] is False
+        assert running_client.delete(
+            run_path(run_id=collected)
+        ).json()['detail'] == (
+            f'Run ID {collected} sent shifts to Amplify. You may delete '
+            'runs that have not been sent to Amplify.'
+        )
 
     def test_a_run_with_a_job_in_hand_may_not(
         self,

@@ -54,17 +54,29 @@ const LEAVING_IS_SAFE = (
   + 'up.'
 );
 
-/* Said under the rows when the screen knows there are more
- * opportunities than it has rows for. A browser that joined a send in
- * progress learns an opportunity's identity from the send working on
- * it, so the ones not reached yet have no row -- and a send that
- * stopped at a failure never reached the rest at all. The count is
- * the total either way, so the difference is stated rather than left
- * as a bar that does not match the list. */
-const NOT_REACHED = (
-  '{n} of the {total} opportunities are not listed above: the send '
-  + 'had not reached them.'
-);
+/** Return what is said under the rows when the screen knows there
+ * are more opportunities than it has rows for. A browser that joined
+ * a send in progress learns an opportunity's identity from the send
+ * working on it, so the ones not reached yet have no row -- and a
+ * send that stopped at a failure never reached the rest at all. The
+ * count is the total either way, so the difference is stated rather
+ * than left as a bar that does not match the list.
+ *
+ * @param {number} missing How many opportunities have no row.
+ * @param {number} total How many the send covers.
+ * @returns {string} The line.
+ */
+function notReached(missing, total) {
+  if (missing === 1) {
+    return total === 1
+      ? 'The opportunity is not listed above: the send had not reached it.'
+      : `1 of the ${total} opportunities is not listed above: the send `
+        + 'had not reached it.';
+  }
+
+  return `${missing} of the ${total} opportunities are not listed above: `
+    + 'the send had not reached them.';
+}
 
 /* What a retry says while it is reading the preview again. Its own
  * line because that read is a request per opportunity and takes
@@ -92,11 +104,9 @@ const RECONNECTING = (
  * unfinished opportunity is the whole of the uncertainty: everything
  * before it was recorded and everything after it was never reached. */
 const INTERRUPTED_LEDE = (
-  'The service stopped while this send was running. The opportunity it '
-  + 'was working on may or may not have been created. Amplify is what '
-  + 'knows, and resuming asks it. Every opportunity is read again '
-  + 'immediately before it is written to, so resuming creates only '
-  + 'what is missing and nothing can arrive twice.'
+  'The service stopped while this send was running, and shifts for the '
+  + 'opportunity in progress may not have been created. Resuming the '
+  + 'send creates only the missing shifts.'
 );
 
 /* On the button that asks for it. */
@@ -159,14 +169,13 @@ export function outcomeText(state) {
   );
 
   if (failed === 0) {
-    return `${counted(created, 'shift')} created. Amplify has every `
-      + 'shift this run asked for.';
+    return `${counted(created, 'shift')} created. Amplify received `
+      + `${created === 1 ? 'the shift' : 'all shifts'} in this run.`;
   }
 
   return `${counted(created, 'shift')} created. `
     + `${counted(failed, 'opportunity', 'opportunities')} failed and `
-    + 'created nothing. Sending again covers only what is missing, so '
-    + 'nothing can be created twice.';
+    + 'created no shifts. Sending again creates only the missing shifts.';
 }
 
 /** Return the progress bar and the count beside it.
@@ -369,9 +378,7 @@ export function sendingScreen(state, handlers) {
       ? null
       : el('p', {
         class: 'muted note sending-unreached',
-        text: NOT_REACHED
-          .replace('{n}', String(state.total - state.rows.length))
-          .replace('{total}', String(state.total))
+        text: notReached(state.total - state.rows.length, state.total)
       }),
     retryStatus(state),
     el(

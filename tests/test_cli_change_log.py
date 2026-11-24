@@ -125,6 +125,13 @@ class TestWhatALineSays:
 
         assert line == 'Moved "Adult Scrimmages" 15 minutes earlier.'
 
+    def test_a_nudge_of_one_minute_says_minute(self) -> None:
+        line = _render.log_words(
+            entry=an_entry(action=OP_NUDGE, minutes=1)
+        )
+
+        assert line == 'Moved "Adult Scrimmages" 1 minute later.'
+
     def test_a_category_is_shown_by_the_key_the_run_names_it_by(
         self
     ) -> None:
@@ -152,6 +159,16 @@ class TestWhatALineSays:
 
         assert line == (
             'Set 4 volunteers wanted on "Adult Scrimmages" for '
+            'need 905196.'
+        )
+
+    def test_one_slot_says_volunteer(self) -> None:
+        line = _render.log_words(
+            entry=an_entry(action=OP_SET_SLOTS, slots=1, needId='905196')
+        )
+
+        assert line == (
+            'Set 1 volunteer wanted on "Adult Scrimmages" for '
             'need 905196.'
         )
 

@@ -151,8 +151,10 @@ def has_moved(
                 What to tell them.
     """
 
+    changes = 'change' if changed == 1 else 'changes'
+
     return (
-        f'Run "{run_id}" holds {changed} change(s), not the '
+        f'Run "{run_id}" has {changed} {changes}, not the '
         f'{expected} this request expected. It has been edited since '
         'the number you were shown was read. Read the run again and '
         'confirm against what it says now.'
@@ -174,9 +176,8 @@ def collection_failed(
     """
 
     return (
-        f'Run "{run_id}" holds nothing: its collection failed before it '
-        'stored anything, so there are no shifts to send. Collect its '
-        'window again, or delete the run.'
+        f'The event collection for run ID {run_id} was unsuccessful. '
+        'Try collecting events from the same date range again.'
     )
 
 
@@ -195,10 +196,9 @@ def still_collecting(
     """
 
     return (
-        f'Run "{run_id}" is still being collected, so what it holds is '
-        'not yet what it will hold. Wait for the collection to finish '
-        'and read the run again. A run left this way by a service that '
-        'stopped has an interrupted job to resume.'
+        f'Run ID {run_id} is still collecting events. Wait for the '
+        'collection to finish, then send the run again. If the service '
+        'stopped during collection, resume the collection first.'
     )
 
 
@@ -224,8 +224,10 @@ def shift_count_moved(
                 What to tell them.
     """
 
+    shifts = 'shift' if will_create == 1 else 'shifts'
+
     return (
-        f'Sending run "{run_id}" would create {will_create} shift(s), '
+        f'Sending run "{run_id}" would create {will_create} {shifts}, '
         f'not the {expected} this request expected. Either the run has '
         'been edited or Amplify has changed since the number you were '
         'shown was worked out. Read the preview again and confirm '
@@ -469,9 +471,8 @@ def sent_and_kept(
     """
 
     return (
-        f'Run "{run_id}" sent shifts to Amplify, and the record of what '
-        'it created is the only account of that anything here holds. It '
-        'cannot be deleted. A run that never sent can be.'
+        f'Run ID {run_id} sent shifts to Amplify. You may delete runs '
+        'that have not been sent to Amplify.'
     )
 
 

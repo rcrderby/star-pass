@@ -13,7 +13,7 @@
  */
 
 import { el, icon } from '../dom.js';
-import { moment } from '../format.js';
+import { counted, moment } from '../format.js';
 import { filled, phrase } from '../phrases.js';
 
 /* What the panel says when nothing has been done yet. A sentence
@@ -85,8 +85,9 @@ function wordsOf(entry, context) {
       ? opportunity.title
       : filled('logValue', 'unknownOpportunity', { needId: entry.needId }),
     time: entry.shiftTime,
-    slots: entry.slots,
-    minutes: Math.abs(entry.minutes),
+    /* Filled with their noun, so one reads as `1 volunteer`. */
+    slots: counted(entry.slots, 'volunteer'),
+    minutes: counted(Math.abs(entry.minutes), 'minute'),
     direction: phrase('logDirection', entry.minutes > 0 ? 'later' : 'earlier')
   });
 }
