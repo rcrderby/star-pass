@@ -8,6 +8,7 @@
  */
 
 import { el, icon } from '../dom.js';
+import { counted } from '../format.js';
 
 /* What each banner is drawn in. The alert one is the only thing on
  * this screen allowed the alert colour, which is what makes it read
@@ -147,14 +148,14 @@ export function reviewBanners(state, handlers) {
     banners.push(banner({
       tone: ALERT,
       glyph: 'warning-circle',
-      words: 'This run holds nothing: its collection stopped before it '
-        + 'stored anything. Collect its window again to try once more.'
+      words: 'This run has no events because its collection stopped '
+        + 'early. Try collecting events from the same date range again.'
     }));
   }
 
   /* Keyed on the status and not on `sent_at`, which `mark_sent`
    * writes for both of the statuses that mean shifts reached Amplify.
-   * A partly sent run told "This run has been sent" is a run
+   * A partly sent run told "The run was sent to Amplify" is a run
    * contradicting the tag one line above it, and the two states are
    * not the same news: one is a run that is done, the other a run
    * with work still in it. */
@@ -162,9 +163,8 @@ export function reviewBanners(state, handlers) {
     banners.push(banner({
       tone: ACCENT,
       glyph: 'circle-half-tilt',
-      words: 'Part of this run reached Amplify before the send '
-        + 'stopped. Sending again creates only what Amplify does not '
-        + 'already have.'
+      words: 'Some shifts in this run reached Amplify before the send '
+        + 'stopped. Sending again creates only the missing shifts.'
     }));
   }
 
@@ -172,8 +172,8 @@ export function reviewBanners(state, handlers) {
     banners.push(banner({
       tone: ACCENT,
       glyph: 'check-circle',
-      words: 'This run has been sent. Sending again creates only what '
-        + 'Amplify does not already have.'
+      words: 'The run was sent to Amplify. Sending again will not create '
+        + 'duplicate shifts.'
     }));
   }
 
@@ -181,8 +181,8 @@ export function reviewBanners(state, handlers) {
     banners.push(banner({
       tone: NOTICE,
       glyph: 'copy',
-      words: `${repeated.length} of these shifts would repeat another `
-        + 'row in this run. They will be created once.',
+      words: `${counted(repeated.length, 'repeated row')} will not create `
+        + `${repeated.length === 1 ? 'a new shift' : 'new shifts'}.`,
       action: showOnlyThese(filters.repeated, handlers.onToggleRepeated)
     }));
   }

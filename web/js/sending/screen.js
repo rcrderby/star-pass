@@ -71,8 +71,7 @@ const READING = 'Reading what a send would create, and asking Amplify '
  * still readable and still sendable from the preview, which is the
  * way out of a job that stayed interrupted with nothing to finish. */
 const RETRY_NOTHING = (
-  'Nothing was left to send: Amplify already holds every shift this '
-  + 'run asks for.'
+  'Amplify already has shifts for each line in this run.'
 );
 
 /** Return a row of the sending screen, before anything is known.

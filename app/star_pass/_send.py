@@ -287,12 +287,15 @@ def blocked_message(
                 What to tell the caller.
     """
 
+    if blocking == 1:
+        return (
+            'The run was not sent because 1 event cannot become a shift. '
+            'Correct the event, then send the run again.'
+        )
+
     return (
-        f'{blocking} event(s) in this run cannot become a shift, so '
-        'nothing is sent. A missing shift is invisible until '
-        'volunteers cannot sign up, so the run stops rather than '
-        'sending the rest. Read the preview, which names every one of '
-        'them and why.'
+        f'The run was not sent because {blocking} events cannot become '
+        'shifts. Correct the events, then send the run again.'
     )
 
 

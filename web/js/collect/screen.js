@@ -57,9 +57,8 @@ const LEDE = 'This action sends no data to Amplify.';
  * what trying again does, and it would do it under the identifier of
  * the attempt that stopped. */
 const INTERRUPTED_STOPPED = (
-  'The service stopped while this collection was running. Nothing '
-  + 'reaches Amplify from a collection, so nothing was left half-done '
-  + 'anywhere but here.'
+  'The service stopped during event collection. Try collecting events '
+  + 'from the same date range again.'
 );
 
 /* When the connection dropped. Not a failure of the collection: the

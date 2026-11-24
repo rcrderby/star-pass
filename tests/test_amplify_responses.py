@@ -633,11 +633,23 @@ class TestBuildSummary:
             'Running Today'
         ]
 
-    def test_strips_whitespace_from_titles(self, monkeypatch):
-        # Amplify titles are typed by hand; a stray trailing space would
-        # split a group in two and ride into the button text.
+    @pytest.mark.parametrize(
+        ('titled', 'expected'),
+        [
+            # Amplify titles are typed by hand; a stray trailing space
+            # would split a group in two and ride into the button text.
+            (
+                {'need_title': 'Adult Scrimmages: Non-Skating Officials '},
+                'Adult Scrimmages: Non-Skating Officials'
+            ),
+            # An opportunity with no title is named by its identifier.
+            ({}, 'Opportunity 1')
+        ],
+        ids=['strips-whitespace', 'untitled']
+    )
+    def test_names_each_need(self, monkeypatch, titled, expected):
         need = {
-            'need_title': 'Adult Scrimmages: Non-Skating Officials ',
+            **titled,
             'shifts': [
                 _shift('S1', '2026-07-14 19:00:00', '2026-07-14 20:00:00')
             ]
@@ -646,9 +658,7 @@ class TestBuildSummary:
 
         summary = reader.build_summary(need_ids=['1'], now=NOW)
 
-        assert summary['needs'][0]['title'] == (
-            'Adult Scrimmages: Non-Skating Officials'
-        )
+        assert summary['needs'][0]['title'] == expected
 
     def test_defaults_now_to_the_local_zone(self, monkeypatch):
         # Without this the day window follows the host clock, which is

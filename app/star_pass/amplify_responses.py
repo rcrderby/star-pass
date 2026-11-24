@@ -486,7 +486,7 @@ class AmplifyResponses:
                     # stray whitespace; an untrimmed one would split a
                     # group in two and ride into the button text.
                     'title': need.get(
-                        'need_title', f'Need {need_id}'
+                        'need_title', f'Opportunity {need_id}'
                     ).strip(),
                     'signup_url': (
                         f'{AMPLIFY_NEED_DETAIL_URL}?need_id={need_id}'

@@ -211,7 +211,9 @@ class TestWhatIsRefused:
         response, asked = sending(collected)
 
         assert response.status_code == 409
-        assert 'collected' in response.json()['detail']
+        assert response.json()['detail'].startswith(
+            f'Run ID {collected} is still collecting events.'
+        )
         assert asked == []
 
     def test_a_run_whose_collection_failed_is_refused(
@@ -230,7 +232,9 @@ class TestWhatIsRefused:
         response, asked = sending(collected)
 
         assert response.status_code == 409
-        assert 'failed' in response.json()['detail']
+        assert response.json()['detail'].startswith(
+            f'The event collection for run ID {collected} was unsuccessful.'
+        )
         assert asked == []
 
     def test_a_blocked_event_stops_the_send(
@@ -244,7 +248,7 @@ class TestWhatIsRefused:
         response, asked = sending(collected)
 
         assert response.status_code == 409
-        assert '1 event(s)' in response.json()['detail']
+        assert '1 event cannot become a shift' in response.json()['detail']
         assert asked == []
 
     def test_a_send_with_no_key_is_refused(
