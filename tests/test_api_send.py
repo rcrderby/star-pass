@@ -307,7 +307,7 @@ class TestAKeyThatIsAlreadyInUse:
         response, asked = sending(collected, expected=2)
 
         assert response.status_code == 422
-        assert 'different' in response.json()['detail']
+        assert 'does not match' in response.json()['detail']
         assert len(asked) == 1
 
     def test_a_send_still_running_is_not_answered_from(
@@ -335,7 +335,7 @@ class TestAKeyThatIsAlreadyInUse:
         )
 
         assert response.status_code == 409
-        assert 'not answered yet' in response.json()['detail']
+        assert 'already in progress' in response.json()['detail']
 
     def test_the_answer_is_recorded_against_the_key(
         self,

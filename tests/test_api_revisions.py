@@ -263,7 +263,7 @@ class TestWhatIsRefused:
         answer = seal(run_id=run_id)
 
         assert answer.status_code == 409
-        assert 'collected nothing' in answer.json()['detail']
+        assert 'has no revision to save' in answer.json()['detail']
 
     def test_an_unknown_run_is_not_found(
         self,

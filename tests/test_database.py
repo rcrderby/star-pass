@@ -417,7 +417,7 @@ class TestCarryingAnOlderDatabaseForward:
         with pytest.raises(ConfigurationError) as error:
             _database.connect(path=database_path)
 
-        assert 'newer than' in str(error.value)
+        assert 'This release reads version' in str(error.value)
 
 
 # The four sentences the core ever wrote into a revision's row, and

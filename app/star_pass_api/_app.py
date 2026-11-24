@@ -94,9 +94,10 @@ async def lifespan(
     )
 
     if interrupted:
+        jobs, them = ('job', 'it') if interrupted == 1 else ('jobs', 'them')
         message = (
-            f'Ended {interrupted} job(s) the previous process was '
-            'holding. Resume them from the interface.'
+            f'Ended {interrupted} interrupted {jobs} at startup. You may '
+            f'resume {them} from the web interface.'
         )
         logger.warning(message)
 

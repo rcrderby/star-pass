@@ -61,10 +61,7 @@ PROBLEM_TYPE_UNEXPECTED = f'{PROBLEM_TYPE_PREFIX}:unexpected'
 # seconds, as the header is defined.
 RETRY_AFTER_HEADER = 'Retry-After'
 
-INTERNAL_DETAIL = (
-    'The service could not complete the request. Quote the reference '
-    'when reporting it.'
-)
+INTERNAL_DETAIL = 'The service could not complete the request.'
 
 
 @dataclass(frozen=True)

@@ -183,9 +183,9 @@ def _identity(
 
     if ends is None:
         message = (
-            f'Opportunity {need_id} holds a shift whose times cannot '
-            f'be read: {shift.get("start")!r} to {shift.get("end")!r}. '
-            'It is not counted as one this run already sent.'
+            f'Opportunity {need_id} has a shift with unreadable times: '
+            f'{shift.get("start")!r} to {shift.get("end")!r}. It is not '
+            'included in this run.'
         )
         logger.warning(message)
 

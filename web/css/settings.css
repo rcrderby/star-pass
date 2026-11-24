@@ -129,6 +129,20 @@
   text-wrap: pretty;
 }
 
+/* What each calendar answered, under the League Calendar card. */
+.settings-calendars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-calendar .settings-reason {
+  margin-top: 6px;
+}
+
 /* — what was resolved — */
 
 .settings-table {
@@ -156,6 +170,12 @@
 
 .settings-table-note .icon {
   margin-top: 2px;
+}
+
+.settings-table-note-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 /* — where state lives — */

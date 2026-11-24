@@ -88,8 +88,8 @@ def seal(
         # labelled for what filled it. One opened here would be an
         # empty revision the collection then replaced.
         message = (
-            f'Run {run_id} has collected nothing yet, so there is no '
-            'revision to seal.'
+            f'Run ID {run_id} has no revision to save. Collect events '
+            'first.'
         )
         logger.error(message)
         raise ValidationError(message)

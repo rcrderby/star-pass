@@ -126,10 +126,9 @@ def api_token() -> str:
 
     if len(token) < _defaults.API_TOKEN_MINIMUM_LENGTH:
         message = (
-            'STAR_PASS_API_TOKEN is shorter than '
-            f'{_defaults.API_TOKEN_MINIMUM_LENGTH} characters. It is '
-            'the only thing standing in front of the service, so a '
-            'guessable one is the same as none.'
+            'STAR_PASS_API_TOKEN must be at least '
+            f'{_defaults.API_TOKEN_MINIMUM_LENGTH} characters. Generate '
+            'a new token and try again.'
         )
         logger.error(message)
         raise ConfigurationError(message)

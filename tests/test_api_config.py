@@ -347,6 +347,25 @@ class TestWhatIsSaidAboutRetention:
         ]
 
 
+class TestWhatIsSaidAboutCredentialTests:
+    def test_the_limit_comes_from_its_settings(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        configured: Callable[..., Dict[str, Any]]
+    ) -> None:
+        monkeypatch.setattr(_defaults, 'CREDENTIAL_TEST_ATTEMPTS', 7)
+        monkeypatch.setattr(
+            _defaults,
+            'CREDENTIAL_TEST_WINDOW_SECONDS',
+            120.0
+        )
+
+        assert configured()['credentialTestLimit'] == {
+            'attempts': 7,
+            'windowSeconds': 120
+        }
+
+
 class TestWhatTheEndpointDoesNotDo:
     def test_there_is_no_way_to_write_a_setting(
         self,

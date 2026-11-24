@@ -132,7 +132,7 @@ export function changeLogPanel(state, context, onClose) {
     el(
       'div',
       { class: 'log-panel-head' },
-      el('h2', { class: 'log-panel-title', text: 'Change log' }),
+      el('h2', { class: 'log-panel-title', text: 'Change Log' }),
       el(
         'button',
         {

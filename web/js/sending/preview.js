@@ -39,8 +39,8 @@ const NOTHING_LEFT = 'nothing left to create';
  * for both is how a reader is sent to look at the wrong service. */
 const CHECKING = 'Checking Amplify first';
 const CHECK_FAILED = (
-  'The check for shifts that already exist could not be made, so '
-  + 'sending is held back.'
+  'The check for existing shifts in Amplify was unsuccessful. You may '
+  + 'not send this run until the check succeeds.'
 );
 
 /* When the run asks for nothing Amplify does not already have. Its
@@ -126,11 +126,12 @@ export function summaryLine(preview) {
 
   if (totals.blockingEvents) {
     const events = counted(totals.blockingEvents, 'event');
-    const become = totals.blockingEvents === 1 ? 'a shift' : 'shifts';
+    const one = totals.blockingEvents === 1;
+    const become = one ? 'a shift' : 'shifts';
 
     parts.push(
-      `${events} cannot become ${become}, so nothing is sent until that `
-      + 'is fixed.'
+      `${events} cannot become ${become}. You may not send this run `
+      + `until ${one ? 'it is' : 'they are'} fixed.`
     );
   }
 
@@ -384,7 +385,7 @@ export function previewActions(state, handlers) {
             ? el(
               'span',
               { class: 'muted micro failure-reference' },
-              'Reference ',
+              'Reference ID ',
               el('span', { class: 'mono', text: failure.reference })
             )
             : null

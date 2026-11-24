@@ -91,7 +91,7 @@ class TestSettingTheShiftTimes:
                 )
             ])
 
-        assert 'ends no later than it starts' in str(error.value)
+        assert 'must end after it starts' in str(error.value)
 
     def test_a_time_that_is_not_a_time_is_refused(self, edit):
         with pytest.raises(ValidationError) as error:
@@ -109,7 +109,7 @@ class TestSettingTheShiftTimes:
         with pytest.raises(ValidationError) as error:
             edit([Operation(op=OP_SET_START, event_ids=('gcal-1',))])
 
-        assert 'needs a "time"' in str(error.value)
+        assert 'requires a "time"' in str(error.value)
 
 
 class TestNudging:
@@ -139,7 +139,7 @@ class TestNudging:
                 )
             ])
 
-        assert 'cannot cross midnight' in str(error.value)
+        assert 'cannot span multiple days' in str(error.value)
 
     def test_a_nudge_before_the_start_of_the_day_is_refused(self, edit):
         with pytest.raises(ValidationError) as error:
@@ -151,7 +151,7 @@ class TestNudging:
                 )
             ])
 
-        assert 'would leave its day' in str(error.value)
+        assert 'would move to another day' in str(error.value)
 
 
 class TestSettingSlots:
@@ -213,7 +213,7 @@ class TestSettingSlots:
                 )
             ])
 
-        assert 'does not create a shift under need 000000' in str(
+        assert 'has no shift for opportunity 000000' in str(
             error.value
         )
 
@@ -593,7 +593,7 @@ class TestRemoving:
                 )
             ])
 
-        assert 'no longer holds gcal-1' in str(error.value)
+        assert 'no longer contains gcal-1' in str(error.value)
 
 
 class TestWhatIsRefused:

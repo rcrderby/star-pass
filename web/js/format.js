@@ -91,10 +91,10 @@ export function shortDay(day, withYear = false) {
  * run covering a day it does not.
  *
  * @param {Object} window A run's window.
- * @returns {string} Such as `Aug 1 – Sep 7 2026`.
+ * @returns {string} Such as `Aug 1 to Sep 7 2026`.
  */
 export function windowText(window) {
-  return `${shortDay(window.start)} – ${shortDay(window.lastDay, true)}`;
+  return `${shortDay(window.start)} to ${shortDay(window.lastDay, true)}`;
 }
 
 /** Return a count with its noun, singular where it should be.

@@ -180,7 +180,7 @@ def resolve_window(
     resolved_start = parsed_start.isoformat()
     resolved_end = parsed_end.isoformat()
     message = (
-        f'Google Calendar search window: {resolved_start} to {resolved_end}'
+        f'League Calendar search window: {resolved_start} to {resolved_end}'
     )
     logger.info(message)
 

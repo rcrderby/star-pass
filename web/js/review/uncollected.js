@@ -22,8 +22,8 @@ import { phrase } from '../phrases.js';
 
 /* What the tab says above the groups. */
 const LEDE = (
-  'These events will not become volunteer shifts. Only events the '
-  + 'calendar search never looked for can be added to the run by hand.'
+  'These events will not become volunteer shifts. You may manually add '
+  + 'events that do not match a search term to the run.'
 );
 
 /* Said when the collection took everything its window held. */
@@ -34,10 +34,9 @@ const NOTHING_LEFT_OUT = (
 
 /* The heading over the titles kept for the next edit of the data
  * model, and what that list is. */
-const NOTED_HEADING = 'Noted for the model';
+const NOTED_HEADING = 'Noted for the Data Model';
 const NOTED_NOTE = (
-  'These events are recorded for the next update of the collection '
-  + 'model.'
+  'These events are recorded for the next update of the data model.'
 );
 const NOTHING_NOTED = (
   'No title has been noted yet, and no collection has found one.'
@@ -45,8 +44,8 @@ const NOTHING_NOTED = (
 
 /* What a row's two controls say. */
 const ADD = 'Add to run';
-const NOTE = 'Note for the model';
-const NOTED = 'Noted for the model';
+const NOTE = 'Note for the data model';
+const NOTED = 'Noted for the data model';
 
 /* Stood in for a value the calendar did not give. An untitled event
  * has no title and one whose date could not be read has no date,

@@ -113,16 +113,15 @@ def _addable(
 
     if uncollected.reason != UNCOLLECTED_SEARCH:
         raise _refuse(
-            f'"{event_id}" was left out of run {run_id} because it is '
-            f'{uncollected.reason}, which describes an event that '
-            'cannot become a correct shift. Only an event no '
-            'configured search returned may be pulled in.'
+            f'"{event_id}" was left out of run ID {run_id} because it '
+            f'is {uncollected.reason}. You may only add events that do '
+            'not match a search term.'
         )
 
     if not uncollected.title:
         raise _refuse(
-            f'"{event_id}" has no title to match to an opportunity, so '
-            'it cannot become a shift.'
+            f'"{event_id}" has no title. Events with no title cannot be '
+            'matched to an opportunity.'
         )
 
     return uncollected
@@ -158,9 +157,9 @@ def _moments(
         and uncollected.calendar_end
     ):
         raise _refuse(
-            f'"{uncollected.id}" does not carry a day and two times, '
-            'so there is nothing to build a shift from. Recollect the '
-            'run if the calendar has been corrected since.'
+            f'"{uncollected.id}" does not have a date with a start and '
+            'end time. Correct the event in the League Calendar, then '
+            'collect the run again.'
         )
 
     return (
@@ -335,8 +334,8 @@ def add_event(
 
     if revision == 0:
         raise _refuse(
-            f'Run {run_id} has collected nothing yet, so there is no '
-            'revision to add an event to.'
+            f'Run ID {run_id} has no revision to add an event to. '
+            'Collect events first.'
         )
 
     events = EventRepository(connection=connection)
@@ -347,8 +346,8 @@ def add_event(
         event_id=event_id
     ) is not None:
         raise _refuse(
-            f'Revision {revision} of run {run_id} already holds '
-            f'"{event_id}".'
+            f'"{event_id}" is already in revision {revision} of run ID '
+            f'{run_id}.'
         )
 
     uncollected = _addable(

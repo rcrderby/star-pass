@@ -88,7 +88,6 @@
   font: inherit;
   font-family: var(--font-heading);
   font-size: 15px;
-  text-transform: capitalize;
   cursor: pointer;
 }
 
@@ -225,10 +224,8 @@ button.picker-row:hover {
 }
 
 /* A calendar key is lower case in the configuration and a name on
- * screen. Here rather than on every picker row, because a revision's
- * label is a sentence the service wrote and title-casing one turns
- * "Continued from revision 1" into something nobody wrote. */
-.picker-row-calendar {
+ * screen. */
+.run-calendar {
   text-transform: capitalize;
 }
 

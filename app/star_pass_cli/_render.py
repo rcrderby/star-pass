@@ -153,14 +153,14 @@ LOG_ACTION_PHRASES = {
     OP_SET_START: 'Set the shift start of {subject} to {time}.',
     OP_SET_END: 'Set the shift end of {subject} to {time}.',
     OP_SET_SLOTS:
-        'Set {slots} wanted on {subject} for need {needId}.',
+        'Set {slots} wanted on {subject} for opportunity {needId}.',
     OP_NUDGE: 'Moved {subject} {minutes} {direction}.',
     OP_RESET_SLOTS:
         'Reset the volunteers wanted on {subject} to what the '
         'opportunity asks for.',
     OP_REMOVE: 'Removed {subject}.',
     OP_UNDO: 'Undid the changes to {subject}.',
-    LOG_ADDED: 'Added {subject}, which no configured search returned.'
+    LOG_ADDED: 'Added {subject} from the Not Collected tab.'
 }
 
 # How a change-log entry names what it was done to: one event by its
@@ -182,13 +182,15 @@ LOG_EARLIER = 'earlier'
 # the core publishes so that never happens quietly.
 UNCOLLECTED_PHRASES = {
     UNCOLLECTED_SEARCH:
-        'Nobody looked for these: no configured search term found them.',
+        'Outside the calendar search. These events did not match a '
+        'search term.',
     UNCOLLECTED_EXCLUDED:
-        'Never collected: the title carries a term this deployment excludes.',
+        'Excluded by title. These titles contain a filtered term.',
     UNCOLLECTED_ALL_DAY:
-        'All-day events, which carry no times to build a shift from.',
+        'All-day. These events have no start and end times for a shift.',
     UNCOLLECTED_UNTITLED:
-        'Untitled events, which cannot be matched to an opportunity.'
+        'Untitled. Events with no title cannot be matched to an '
+        'opportunity.'
 }
 
 
@@ -710,7 +712,7 @@ def run_detail(
                     event_row(event=event)
                     for event in answer['events']
                 ],
-                empty='This revision holds no events.'
+                empty='This revision has no events.'
             ),
             section(
                 heading='OPPORTUNITIES',

@@ -15,8 +15,8 @@ import { Popover } from '../popover.js';
 import { filled, phrase } from '../phrases.js';
 
 /* What the two tabs are called. The count belongs to the second. */
-const SHIFTS_TAB = 'Shifts to create';
-const UNCOLLECTED_TAB = 'Not collected';
+const SHIFTS_TAB = 'Shifts to Create';
+const UNCOLLECTED_TAB = 'Not Collected';
 
 /* The last entry in the run picker. */
 const NEW_RUN = 'Start a new run';
@@ -35,7 +35,7 @@ const REVERT = 'Revert';
 /* What the revision picker says under its list. */
 const ABOUT_REVISIONS = (
   'Reverting opens a new revision that duplicates the one you go '
-  + 'back to. Nothing is deleted, so a revert can itself be reverted.'
+  + 'back to. Nothing is deleted.'
 );
 
 /** Return the sentence under the run label.
@@ -63,6 +63,15 @@ export function metaText(run) {
     + ` · ${counted(events, 'event')}`
     + ` · ${counted(shifts, 'shift')}`
   );
+}
+
+/** Return a calendar's key, drawn as a name.
+ *
+ * @param {string} calendar The calendar's key, such as 'events'.
+ * @returns {HTMLElement} The name.
+ */
+function calendarName(calendar) {
+  return el('span', { class: 'run-calendar', text: calendar });
 }
 
 /** Return one run's line in the run picker.
@@ -102,10 +111,12 @@ function runLine(run, current, onOpen, events) {
           class: 'picker-row-main picker-row-open',
           onclick: () => onOpen(run.id)
         },
-        el('span', {
-          class: 'picker-row-label picker-row-calendar',
-          text: `${run.calendar} · ${windowText(run.window)}`
-        }),
+        el(
+          'span',
+          { class: 'picker-row-label' },
+          calendarName(run.calendar),
+          ` · ${windowText(run.window)}`
+        ),
         el('span', {
           class: 'picker-row-meta muted micro',
           text: `${moment(run.collectedAt, run.window.timezone)}`
@@ -223,7 +234,12 @@ function runPicker(state, onOpenRun, onCollectNew) {
   const trigger = el(
     'button',
     { type: 'button', class: 'run-picker' },
-    `${run.calendar} · ${windowText(run.window)}`,
+    el(
+      'span',
+      {},
+      calendarName(run.calendar),
+      ` · ${windowText(run.window)}`
+    ),
     icon('caret-down')
   );
 

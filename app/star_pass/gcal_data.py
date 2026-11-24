@@ -230,7 +230,7 @@ class GCALData:
         # setting.
         if not gcal_id or query_strings is None:
             # Log an error message and exit
-            message = f'Invalid Google Calendar data for "{self.gcal_name}"'
+            message = f'Invalid League Calendar data for "{self.gcal_name}"'
             logger.error(message)
             raise ConfigurationError(message)
 
@@ -240,9 +240,8 @@ class GCALData:
         # cause.
         if gcal_id.startswith('/'):
             message = (
-                f'The Google Calendar identifier for "{self.gcal_name}" '
-                'starts with "/".  Set it to the calendar identifier '
-                'alone, without a leading slash.'
+                f'The League Calendar ID for "{self.gcal_name}" starts '
+                'with "/". Remove the leading slash.'
             )
             logger.error(message)
             raise ConfigurationError(message)
@@ -508,7 +507,7 @@ class GCALData:
             # become shifts.
             if reason == UNCOLLECTED_UNTITLED:
                 message = (
-                    'Skipping a Google Calendar event with no title '
+                    'Skipping a League Calendar event with no title '
                     f'(starting {self._item_start(gcal_item)})'
                 )
                 logger.warning(message)

@@ -20,7 +20,11 @@
 from fastapi import APIRouter
 
 # Imports - Local
-from star_pass_contract import ConfigView, to_config_view
+from star_pass_contract import (
+    ConfigView,
+    CredentialTestLimitView,
+    to_config_view
+)
 from . import _defaults
 from ._security import Principal, requires, SCOPE_CONFIG_READ
 
@@ -59,4 +63,9 @@ async def get_config(
 
     del principal
 
-    return to_config_view()
+    return to_config_view(
+        credential_test_limit=CredentialTestLimitView(
+            attempts=_defaults.CREDENTIAL_TEST_ATTEMPTS,
+            window_seconds=int(_defaults.CREDENTIAL_TEST_WINDOW_SECONDS)
+        )
+    )

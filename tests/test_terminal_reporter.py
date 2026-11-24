@@ -139,7 +139,7 @@ class TestCollectionEvents:
         reporter.step_finished()
 
         assert capsys.readouterr().out == (
-            '\nReading data from the Google Calendar service...done.\n'
+            '\nReading League Calendar events...done.\n'
         )
 
     def test_a_step_after_the_read_gets_no_second_blank_line(
@@ -154,7 +154,7 @@ class TestCollectionEvents:
         reporter.step_finished()
 
         assert capsys.readouterr().out == (
-            '\nReading data from the Google Calendar service...done.\n'
+            '\nReading League Calendar events...done.\n'
             f'{step_text(step=STEP_FILTER_EVENTS)}...done.\n'
         )
 

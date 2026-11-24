@@ -151,6 +151,22 @@ The endpoint behind it is rate-limited per caller, because every call
 spends a request on somebody else's service. Locally there is no
 limit: that is the operator asking their own machine.
 
+## Testing the League Calendar credential
+
+```bash
+./app/__main__.py config calendar-credential
+```
+
+Reads one event from each configured calendar with the `GCAL_TOKEN`
+key and says whether each read was accepted, with the last four
+characters of the key. A key Google accepts can still be refused a
+calendar that is not shared with it, so each calendar is listed with
+its own answer. The key itself is never shown and nothing replaces it
+(D8). A refused key is an answer, and the command still succeeds.
+
+The endpoint behind it has its own rate limit, apart from the Amplify
+test's. Locally there is no limit.
+
 ## Retention
 
 Three windows, because the question "is this still worth keeping" has

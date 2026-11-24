@@ -27,7 +27,10 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
 # Imports - Local
 from __version__ import __version__
-from star_pass._credentials import check_credential
+from star_pass._credentials import (
+    check_calendar_credential,
+    check_credential
+)
 from star_pass._database import connect
 from star_pass._opportunities import shifts_in_amplify
 from star_pass._reading import (
@@ -45,6 +48,7 @@ from star_pass._repository import (
 from star_pass_contract import (
     no_such_job,
     no_such_run,
+    to_calendar_credential_view,
     to_config_view,
     to_credential_view,
     to_detail_view,
@@ -69,6 +73,7 @@ HANDLERS = {
     ('GET', '/v1/version'): '_version',
     ('GET', '/v1/config'): '_config',
     ('POST', '/v1/credentials/test'): '_credential',
+    ('POST', '/v1/credentials/calendar/test'): '_calendar_credential',
     ('GET', '/v1/unmatched-titles'): '_unmatched_titles',
     ('POST', '/v1/runs'): '_collect',
     ('DELETE', '/v1/runs/{run_id}'): '_delete',
@@ -91,9 +96,7 @@ UNAVAILABLE = {
     (
         'GET', '/v1/health'
     ): (
-        'Health reports that a service process is serving, for a proxy '
-        'deciding whether to route to it. Nothing is serving in local '
-        'mode, so there is nothing for it to report.'
+        'Health checks are not available in local mode.'
     ),
     (
         'GET', '/v1/jobs/{job_id}/events'
@@ -104,40 +107,33 @@ UNAVAILABLE = {
     (
         'PATCH', '/v1/runs/{run_id}/events'
     ): (
-        'Editing a run is done in the web interface, which is what has '
-        'the run in front of it. The command line collects, reads and '
-        'sends.'
+        'Editing a run is available in the web interface. The command '
+        'line interface collects, reads, and sends runs.'
     ),
     (
         'POST', '/v1/runs/{run_id}/revisions'
     ): (
-        'A revision is sealed from the screen that is about to change '
-        'what it holds, which is the web interface. The command line '
-        'reads the revisions a run has been through.'
+        'Saving a revision is available in the web interface. The '
+        'command line interface reads a run\'s revisions.'
     ),
     (
         'POST', '/v1/runs/{run_id}/revisions/{number}/revert'
     ): (
-        'Reverting is done in the web interface, by a reviewer looking '
-        'at what the run holds now and deciding it was better before. '
-        'The command line reads the revisions a run has been '
-        'through.'
+        'Reverting a revision is available in the web interface. The '
+        'command line interface reads a run\'s revisions.'
     ),
     (
         'POST', '/v1/unmatched-titles'
     ): (
-        'A title is recorded from the screen showing the event it '
-        'blocked, which is where somebody is looking when they decide '
-        'the model is missing one. The command line reads the log, '
-        'because reading it is what happens next to the file.'
+        'Noting an unmatched title is available in the web interface. '
+        'The command line interface reads the unmatched titles.'
     ),
     (
         'POST', '/v1/runs/{run_id}/events'
     ): (
-        'Pulling an event in is done in the web interface, beside the '
-        'list it is pulled from. The command line shows that list, '
-        'because asking why an event is not in a run is '
-        'troubleshooting, and stops there.'
+        'Adding an event to a run is available in the web interface. '
+        'The command line interface lists the events that were not '
+        'collected.'
     )
 }
 
@@ -394,6 +390,30 @@ class LocalClient(OperationCaller, LocalWrites, Operations):
 
         return to_credential_view(
             checked=check_credential()
+        ).model_dump(
+            by_alias=True,
+            mode='json'
+        )
+
+    def _calendar_credential(self) -> Dict[str, Any]:
+        """ Report whether each calendar accepts the configured key.
+
+            Answered locally and not rate-limited, for the reasons
+            '_credential' gives.
+
+            Args:
+                None.
+
+            Returns:
+                answer (Dict[str, Any]):
+                    Whether each calendar accepts it, and its last
+                    four characters.
+        """
+
+        del self
+
+        return to_calendar_credential_view(
+            checked=check_calendar_credential()
         ).model_dump(
             by_alias=True,
             mode='json'

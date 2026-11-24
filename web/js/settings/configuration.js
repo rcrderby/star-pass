@@ -32,16 +32,15 @@ const TERM_GAP = ', ';
  * window's dates are read in, and it belongs to the service rather
  * than to whoever is looking at this page. */
 const TIMEZONE_NOTE = (
-  'Runs read and display calendar data in the specified time zone, '
-  + 'never the time zone of the browser.'
+  'Runs use the configured time zone to read and display calendar data.'
 );
 
-/* The note under the calendars table. */
-const SEARCH_NOTE = (
-  'Each term requires a separate search request to the League '
-  + 'Calendar. Events that do not match a search term are classified '
-  + 'as Not collected, and they may be added to a run manually.'
-);
+/* The note under the calendars table, one line per sentence. */
+const SEARCH_NOTE = [
+  'Each search term requires a separate request to the League Calendar.',
+  'League Calendar events that do not match a search term are classified '
+    + 'as "Not Collected" and may be added to a run manually.'
+];
 
 /* What each row of the settings table is called and how its value is
  * worded.  A table rather than three builders, because the difference
@@ -68,7 +67,7 @@ const SETTINGS = [
  * them measures. */
 const STORES = [
   {
-    name: 'Job logs',
+    name: 'Job Logs',
     kept: (retention) => `${counted(retention.jobLogDays, 'day')} after the `
       + 'job finished',
     note: 'The job itself is not removed with its log. The record of '
@@ -83,14 +82,14 @@ const STORES = [
       + 'Intermediate revisions expire.'
   },
   {
-    name: 'Unmatched titles',
+    name: 'Unmatched Titles',
     kept: (retention) => `${counted(retention.unmatchedTitleDays, 'day')} `
       + 'after a title was last seen',
     note: 'Unmatched titles expire if they are not added to the '
       + 'shift data model.'
   },
   {
-    name: 'Sent shifts',
+    name: 'Sent Shifts',
     kept: () => 'Indefinite',
     note: 'Shift data sent to Amplify is retained to prevent duplicate '
       + 'shifts.'
@@ -151,17 +150,21 @@ function pairTable(heading, second, rows) {
   );
 }
 
-/** Return one line under a table, saying what it means.
+/** Return the note under a table, saying what it means.
  *
- * @param {string} words The sentence.
- * @returns {HTMLElement} The line.
+ * @param {...string} lines The sentences, each on its own line.
+ * @returns {HTMLElement} The note.
  */
-function tableNote(words) {
+function tableNote(...lines) {
   return el(
     'p',
     { class: 'settings-table-note muted note' },
     icon('info'),
-    el('span', { text: words })
+    el(
+      'span',
+      { class: 'settings-table-note-lines' },
+      lines.map((line) => el('span', { text: line }))
+    )
   );
 }
 
@@ -186,7 +189,7 @@ export function resolvedSettings(config) {
         (calendar) => [calendar.key, searchedFor(calendar)]
       )
     ),
-    tableNote(SEARCH_NOTE)
+    tableNote(...SEARCH_NOTE)
   ];
 }
 

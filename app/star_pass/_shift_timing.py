@@ -92,12 +92,9 @@ def role_timings(
 
     if len(offsets) > 1:
         message = (
-            f'The "{matched.category}" category, which "{title}" '
-            'matched, gives its need IDs different start and end '
-            'offsets. An event records one pair of shift times for '
-            'every role it serves, so those need IDs describe two '
-            'different shifts and cannot be collected as one event. '
-            'Give them the same offsets, or split them into separate '
+            f'"{title}" matched the "{matched.category}" category. Its '
+            'opportunities have different start and end offsets. Give '
+            'them the same offsets, or move them to separate '
             'categories.'
         )
         logger.error(message)
@@ -174,10 +171,8 @@ def shift_times(
 
     if started + minutes >= MINUTES_PER_DAY:
         message = (
-            f'"{title}" would create a shift running past the end of '
-            'the day. An event stores its times as times of day, so a '
-            'shift crossing midnight cannot be read back as the one '
-            'that was stored.'
+            f'"{title}" would create a shift that ends after midnight. '
+            'A shift cannot span multiple days.'
         )
         logger.error(message)
         raise ValidationError(message)

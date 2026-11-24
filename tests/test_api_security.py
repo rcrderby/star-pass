@@ -362,7 +362,7 @@ class TestStartupConfiguration:
         with pytest.raises(ConfigurationError) as error:
             create_app()
 
-        assert 'shorter than' in str(error.value)
+        assert 'must be at least' in str(error.value)
 
     def test_a_token_of_the_minimum_length_is_accepted(
         self,

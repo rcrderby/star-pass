@@ -25,8 +25,8 @@ const NUDGE_MINUTES = 15;
 /* Said in place of the slots controls when the selection shares no
  * opportunity to set. */
 const NO_SHARED_ROLE = (
-  'These rows serve no opportunity in common, so there is none to set '
-  + 'volunteers for. Select rows that share one.'
+  'These rows have no opportunity in common. Select rows that share an '
+  + 'opportunity to set volunteers wanted.'
 );
 
 /** Return the events the selection names.

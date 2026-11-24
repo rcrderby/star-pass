@@ -89,8 +89,8 @@ const RECHECKING = 'Checking Amplify before sending again';
  * the service's own sentence, for the reason the preview screen
  * states beside its own lead. */
 const RECHECK_FAILED = (
-  'The check for shifts that already exist could not be made, so '
-  + 'sending again is held back.'
+  'The check for existing shifts in Amplify was unsuccessful. You may '
+  + 'not send again until the check succeeds.'
 );
 
 /* When the connection dropped. Not a failure of the send: the browser
@@ -123,12 +123,12 @@ export function heading(state) {
   }
 
   if (state.interrupted) {
-    return 'Send interrupted';
+    return 'Send Interrupted';
   }
 
   return state.rows.some((row) => row.state === FAILED)
-    ? 'Partly sent'
-    : 'Everything sent';
+    ? 'Partly Sent'
+    : 'Everything Sent';
 }
 
 /** Return what the pill beside the heading says.
@@ -311,7 +311,7 @@ function retryStatus(state) {
             ? el(
               'span',
               { class: 'muted micro failure-reference' },
-              'Reference ',
+              'Reference ID ',
               el('span', { class: 'mono', text: state.failure.reference })
             )
             : null

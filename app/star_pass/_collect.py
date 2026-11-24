@@ -134,8 +134,8 @@ def _local_moment(
 
     if moment is None:
         message = (
-            f'The calendar gave "{value}", which is not a date and '
-            'time a shift can be built from.'
+            f'The League Calendar returned "{value}". A shift requires '
+            'a date and time.'
         )
         logger.error(message)
         raise ValidationError(message)

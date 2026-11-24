@@ -154,6 +154,10 @@ class TestTheTwoModesAgree:
     ) -> None:
         local, remote = both('get_config')
 
+        # Only the service limits credential tests, so only it
+        # publishes a limit.
+        assert local.pop('credentialTestLimit') is None
+        assert remote.pop('credentialTestLimit') is not None
         assert local == remote
         # Guard against both answering an empty document identically.
         assert local['timezone']
@@ -175,6 +179,21 @@ class TestTheTwoModesAgree:
         # Guard against both answering an empty document identically.
         assert local['working'] is True
         assert local['lastFour']
+
+    def test_the_calendar_key_tests_the_same(
+        self,
+        answer_requests: Callable[..., Any],
+        both: Callable[..., Tuple[Any, Any]]
+    ) -> None:
+        answer_requests(lambda _request: {'items': []})
+
+        local, remote = both('test_calendar_credential')
+
+        assert local == remote
+        assert [access['calendar'] for access in local['calendars']] == [
+            'events',
+            'practices'
+        ]
 
     def test_the_unmatched_titles_read_the_same(
         self,
@@ -285,7 +304,7 @@ class TestWhatLocalModeCannotDo:
         with pytest.raises(LocalOperationUnavailable) as error:
             local_client.get_health()
 
-        assert 'nothing is serving' in str(error.value).lower()
+        assert 'not available in local mode' in str(error.value)
 
     def test_following_a_job_says_why_it_has_no_local_answer(
         self,
@@ -331,25 +350,21 @@ class TestWhatLocalModeCannotDo:
         self,
         local_client: LocalClient
     ) -> None:
-        # Reading the revisions a run has been through is
-        # troubleshooting and has a command; sealing one is done from
-        # the screen about to change what it holds.
+        # Reading a run's revisions has a command; saving one is done
+        # in the web interface.
         with pytest.raises(LocalOperationUnavailable) as error:
             local_client.seal_revision(
                 run_id='r-1',
                 idempotency_key='an-attempt'
             )
 
-        # The reason says where it is done rather than "not yet",
-        # which is the difference between a decision and a gap.
-        assert 'sealed from the screen' in str(error.value)
+        assert 'web interface' in str(error.value)
 
     def test_reverting_says_who_decides_to_revert(
         self,
         local_client: LocalClient
     ) -> None:
-        # A revert is a judgement about what the run held before,
-        # which is made by somebody looking at what it holds now.
+        # Reverting is done in the web interface.
         with pytest.raises(LocalOperationUnavailable) as error:
             local_client.revert_revision(
                 run_id='r-1',
@@ -357,21 +372,20 @@ class TestWhatLocalModeCannotDo:
                 idempotency_key='an-attempt'
             )
 
-        assert 'looking at what the run holds now' in str(error.value)
+        assert 'web interface' in str(error.value)
 
     def test_recording_a_title_says_where_it_is_done(
         self,
         local_client: LocalClient
     ) -> None:
-        # Reading the log is what happens before the model file is
-        # edited, so it has a command; recording one is done from the
-        # screen showing the event the title blocked.
+        # Reading the unmatched titles has a command; noting one is
+        # done in the web interface.
         with pytest.raises(LocalOperationUnavailable) as error:
             local_client.record_unmatched_title(
                 body={'calendar': 'events', 'title': 'Something'}
             )
 
-        assert 'screen showing the event' in str(error.value)
+        assert 'web interface' in str(error.value)
 
     def test_the_two_clients_offer_the_same_operations(
         self,
