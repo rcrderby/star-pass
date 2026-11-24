@@ -376,4 +376,4 @@ class TestCollectingARunAgain:
         response = again()
 
         assert response.status_code == 409
-        assert 'cannot be taken back' in response.json()['detail']
+        assert 'may not be collected again' in response.json()['detail']

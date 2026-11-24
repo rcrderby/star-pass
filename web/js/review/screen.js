@@ -77,8 +77,8 @@ const NOTHING_MATCHES = (
  * happened, and the controls that answer either -- Not collected,
  * the revision picker, Collect again -- are already on screen. */
 const HOLDS_NOTHING = (
-  'This run holds no events. What its collection left out is under '
-  + 'Not collected.'
+  'This run has no events. Events excluded from this collection are in '
+  + 'the "Not Collected" tab.'
 );
 
 /* What the select-all control is called. It says "shown" because that

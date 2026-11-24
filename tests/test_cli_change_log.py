@@ -159,7 +159,7 @@ class TestWhatALineSays:
 
         assert line == (
             'Set 4 volunteers wanted on "Adult Scrimmages" for '
-            'need 905196.'
+            'opportunity 905196.'
         )
 
     def test_one_slot_says_volunteer(self) -> None:
@@ -169,7 +169,7 @@ class TestWhatALineSays:
 
         assert line == (
             'Set 1 volunteer wanted on "Adult Scrimmages" for '
-            'need 905196.'
+            'opportunity 905196.'
         )
 
     def test_an_action_with_no_wording_is_shown_as_itself(self) -> None:

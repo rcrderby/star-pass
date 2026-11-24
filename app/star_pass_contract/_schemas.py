@@ -824,39 +824,6 @@ class CalendarView(ApiModel):
     )
 
 
-class CredentialView(ApiModel):
-    """ What asking Amplify about the service's credential answered. """
-
-    working: bool = Field(
-        description=(
-            'Whether Amplify accepted a request carrying the '
-            'credential this service is running on. False also covers '
-            'a credential that is not configured at all, and the '
-            'reason says which.'
-        ),
-        examples=[True]
-    )
-    last_four: Optional[str] = Field(
-        default=None,
-        description=(
-            'The last four characters of the credential, which is '
-            'enough to tell two apart and no use to whoever reads it. '
-            'The credential itself is never published, and no '
-            'endpoint replaces it: rotation is changing the secret '
-            'and restarting. Absent when none is configured.'
-        ),
-        examples=['4f2a']
-    )
-    reason: Optional[str] = Field(
-        default=None,
-        description=(
-            'Why the credential did not work, written for a person. '
-            'Absent when it did.'
-        ),
-        examples=[None]
-    )
-
-
 class UnmatchedTitleView(ApiModel):
     """ A title the data model did not match, and how often. """
 
@@ -927,6 +894,19 @@ class RetentionView(ApiModel):
     )
 
 
+class CredentialTestLimitView(ApiModel):
+    """ How often each credential may be tested. """
+
+    attempts: int = Field(
+        description='Tests allowed per caller in each window.',
+        examples=[5]
+    )
+    window_seconds: int = Field(
+        description='The window\'s length, in seconds.',
+        examples=[60]
+    )
+
+
 class ConfigView(ApiModel):
     """ What the service resolved from its environment. """
 
@@ -976,5 +956,12 @@ class ConfigView(ApiModel):
             'to know which rows a run already created, so a window '
             'there would eventually have a run offering to create '
             'shifts Amplify already holds.'
+        )
+    )
+    credential_test_limit: Optional[CredentialTestLimitView] = Field(
+        default=None,
+        description=(
+            'How often each credential may be tested through the '
+            'service. Null where testing is not rate-limited.'
         )
     )

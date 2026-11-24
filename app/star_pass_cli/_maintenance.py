@@ -45,7 +45,7 @@ SWEEP_SUMMARY = (
 # answer and is worth saying rather than printing nothing: a command
 # that produced no output would leave the operator unsure it ran.
 NOTHING_REMOVED = (
-    'Nothing had passed its retention window, so nothing was removed.'
+    'No data was past its retention period. Nothing was removed.'
 )
 
 # Headed, because a reader of these three numbers is checking that the
@@ -62,8 +62,7 @@ UNMATCHED_LABEL = 'Unmatched title sightings'
 # Said under the counts, because the one thing a person running this
 # might fear is the one thing it cannot touch.
 SENT_UNTOUCHED = (
-    'The record of what a send created is never removed, so nothing '
-    'this did can cause a shift to be sent twice.'
+    'Shift data sent to Amplify is retained to prevent duplicate shifts.'
 )
 
 

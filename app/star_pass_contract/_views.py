@@ -20,7 +20,7 @@
 
 # Imports - Python Standard Library
 from datetime import date, timedelta
-from typing import AbstractSet, Dict, Iterable, List, Sequence
+from typing import AbstractSet, Dict, Iterable, List, Optional, Sequence
 
 # Imports - Local
 from star_pass._defaults import (
@@ -43,7 +43,7 @@ from star_pass._derived import (
     repeated,
     shift_length
 )
-from star_pass._credentials import CredentialCheck
+from star_pass._credentials import CalendarCredentialCheck, CredentialCheck
 from star_pass._preview import Preview, preview
 from star_pass._reading import RunDetail
 from star_pass._records import (
@@ -68,11 +68,16 @@ from ._preview_schemas import (
     PreviewView,
     SkippedShiftView
 )
+from ._credential_schemas import (
+    CalendarAccessView,
+    CalendarCredentialView,
+    CredentialView
+)
 from ._schemas import (
     CalendarView,
     CategoryView,
     ConfigView,
-    CredentialView,
+    CredentialTestLimitView,
     EditView,
     EventRoleView,
     EventView,
@@ -711,7 +716,9 @@ def to_operations(
     ]
 
 
-def to_config_view() -> ConfigView:
+def to_config_view(
+        credential_test_limit: Optional[CredentialTestLimitView] = None
+) -> ConfigView:
     """ Return what the deployment was configured with.
 
         Read from the settings rather than from a record.
@@ -721,7 +728,10 @@ def to_config_view() -> ConfigView:
         configuration rather than of how it was written down.
 
         Args:
-            None.
+            credential_test_limit (CredentialTestLimitView | None,
+                    optional):
+                How often each credential may be tested, or None
+                where testing is not rate-limited.  Defaults to None.
 
         Returns:
             view (ConfigView):
@@ -746,7 +756,8 @@ def to_config_view() -> ConfigView:
             job_log_days=RETENTION_JOB_LOG_DAYS,
             revision_days=RETENTION_REVISION_DAYS,
             unmatched_title_days=RETENTION_UNMATCHED_TITLE_DAYS
-        )
+        ),
+        credential_test_limit=credential_test_limit
     )
 
 
@@ -770,6 +781,35 @@ def to_credential_view(
         working=checked.working,
         last_four=checked.last_four,
         reason=checked.reason
+    )
+
+
+def to_calendar_credential_view(
+        checked: CalendarCredentialCheck
+) -> CalendarCredentialView:
+    """ Return what a League Calendar credential test answered.
+
+        Args:
+            checked (CalendarCredentialCheck):
+                What asking each calendar produced.
+
+        Returns:
+            view (CalendarCredentialView):
+                The answer a caller is shown, shaped for the contract.
+    """
+
+    return CalendarCredentialView(
+        working=checked.working,
+        last_four=checked.last_four,
+        reason=checked.reason,
+        calendars=[
+            CalendarAccessView(
+                calendar=access.calendar,
+                working=access.working,
+                reason=access.reason
+            )
+            for access in checked.calendars
+        ]
     )
 
 

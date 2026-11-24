@@ -380,6 +380,19 @@ export function testCredential(options = {}) {
   return ask('/credentials/test', { ...options, method: 'POST' });
 }
 
+/** Ask each configured calendar whether the League Calendar key works.
+ *
+ * Rate-limited separately from the Amplify test, and shaped like it,
+ * with what each calendar answered under `calendars`.
+ *
+ * @param {Object} [options] Passed through to the request.
+ * @returns {Promise<Object>} Whether every calendar accepts it, its
+ *     last four characters, and each calendar's answer.
+ */
+export function testCalendarCredential(options = {}) {
+  return ask('/credentials/calendar/test', { ...options, method: 'POST' });
+}
+
 /** Apply one thing somebody did to a run's current revision.
  *
  * **One call per user action, not per event.**  A nudge over thirty

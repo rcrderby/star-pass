@@ -70,9 +70,8 @@ def amplify_headers() -> Dict[str, str]:
 
     if not credential:
         message = (
-            'AMPLIFY_TOKEN is not set, so a request to Amplify would '
-            'carry no credential.  Add the value to the .env file at '
-            'the repository root (see .env.example).'
+            'AMPLIFY_TOKEN is not set. Add it to the .env file at the '
+            'repository root (see .env.example).'
         )
         logger.error(message)
         raise ConfigurationError(message)

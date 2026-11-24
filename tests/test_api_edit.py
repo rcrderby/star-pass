@@ -392,7 +392,7 @@ class TestWhatIsRefused:
         )
 
         assert answer.status_code == 409
-        assert 'leave its day' in answer.json()['detail']
+        assert 'would move to another day' in answer.json()['detail']
 
     def test_a_refused_call_writes_nothing(
         self, edit, collected, connection

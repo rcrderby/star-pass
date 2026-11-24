@@ -21,7 +21,7 @@ import { el, icon } from './dom.js';
  * drawn in capitals by the CSS, which is what the collecting screen
  * does with the same label -- they share the class, so there is one
  * answer to what it looks like. */
-const RUN_ID = 'Run id';
+const RUN_ID = 'Run ID';
 
 /* On the control that copies, and what it says once it has. */
 const COPY = 'Copy';

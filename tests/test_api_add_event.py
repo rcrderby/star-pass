@@ -313,7 +313,7 @@ class TestWhatIsRefused:
         answer = add(run_id=collected)
 
         assert answer.status_code == 422
-        assert 'already holds' in answer.json()['detail']
+        assert 'is already in revision' in answer.json()['detail']
 
     def test_an_identifier_the_run_left_nothing_out_under_is_refused(
         self,

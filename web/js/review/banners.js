@@ -192,8 +192,9 @@ export function reviewBanners(state, handlers) {
       tone: ALERT,
       glyph: 'warning-circle',
       words: `${blocking.length} event`
-        + `${blocking.length === 1 ? ' has' : 's have'} no opportunity `
-        + 'to create a shift under, which stops the run being sent.',
+        + `${blocking.length === 1 ? ' has' : 's have'} no opportunity. `
+        + 'You may not send this run until each event has a matching '
+        + 'opportunity.',
       action: showOnlyThese(filters.blocking, handlers.onToggleBlocking)
     }));
   }
@@ -203,8 +204,8 @@ export function reviewBanners(state, handlers) {
       tone: SECONDARY,
       glyph: 'magic-wand',
       words: `${fuzzy.length} event`
-        + `${fuzzy.length === 1 ? ' was' : 's were'} matched by wording `
-        + 'rather than a keyword',
+        + `${fuzzy.length === 1 ? ' was' : 's were'} matched by title `
+        + 'wording, not by a keyword',
       action: showOnlyThese(filters.fuzzy, handlers.onToggleFuzzy)
     }));
   }

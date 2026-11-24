@@ -12,7 +12,7 @@
     "match_events": "Matching event titles to opportunity titles",
     "read_opportunities": "Reading existing Amplify opportunities",
     "store_events": "Storing the collected events",
-    "read_opportunity": "Reading what opportunity {subject} already holds"
+    "read_opportunity": "Reading existing shifts for opportunity {subject}"
   },
   "blocker": {
     "no_opportunity": "no opportunity to create a shift under",
@@ -37,16 +37,16 @@
     "noCalendarNote": "No calendar note found."
   },
   "uncollected": {
-    "search": "Outside the calendar search",
-    "excluded": "Excluded by title",
-    "allday": "All-day",
+    "search": "Outside the Calendar Search",
+    "excluded": "Excluded by Title",
+    "allday": "All-Day",
     "untitled": "Untitled"
   },
   "uncollectedNote": {
-    "search": "No configured search term found these events, so they were excluded. You may note these events to improve the collection model and add these events to the run.",
-    "excluded": "The title carries a term the deployment excludes. You may note these events to improve the collection model, although you may not add them to the run.",
+    "search": "These events did not match a search term. You may note them for the data model and add them to the run.",
+    "excluded": "These titles contain a filtered term. You may note these events for the data model. You may not add them to the run.",
     "allday": "You may not add these events to the run.",
-    "untitled": "No title, so there is nothing to match an opportunity on, and nothing to note for the model either. These cannot be added to a run."
+    "untitled": "Events with no title cannot be matched to an opportunity or noted for the data model. You may not add them to the run."
   },
   "revision": {
     "collected": "Collected",
@@ -64,7 +64,7 @@
     "reset_slots": "Reset the volunteers wanted on {subject} to what the opportunity asks for.",
     "remove": "Removed {subject}.",
     "undo": "Undid the changes to {subject}.",
-    "added": "Added {subject}, which no configured search returned."
+    "added": "Added {subject} from the Not Collected tab."
   },
   "logSubject": {
     "one": "\"{title}\"",
@@ -75,6 +75,6 @@
     "earlier": "earlier"
   },
   "logValue": {
-    "unknownOpportunity": "need {needId}"
+    "unknownOpportunity": "opportunity {needId}"
   }
 }

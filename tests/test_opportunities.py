@@ -180,7 +180,7 @@ class TestTheShiftsAnOpportunityHolds:
         )
 
         assert held_by(helpers=helpers) == set()
-        assert 'cannot' in caplog.text
+        assert 'unreadable times' in caplog.text
         assert NEED_ID in caplog.text
 
     def test_one_unreadable_shift_does_not_hide_the_others(

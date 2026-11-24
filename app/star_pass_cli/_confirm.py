@@ -39,14 +39,12 @@ CHOICES = '[y/N]'
 # asked about, because a caller told the wrong reason would go looking
 # for a send that is not there.
 NO_TERMINAL_TO_SEND = (
-    'This command writes to Amplify and cannot be undone, so it asks '
-    'first -- and there is no terminal here to ask. Run it where '
-    'somebody can answer.'
+    'This command writes to Amplify and requires confirmation. Run it '
+    'in an interactive terminal.'
 )
 NO_TERMINAL_TO_DELETE = (
-    'This command deletes a run and cannot be undone, so it asks '
-    'first -- and there is no terminal here to ask. Run it where '
-    'somebody can answer.'
+    'This command deletes a run and requires confirmation. Run it in '
+    'an interactive terminal.'
 )
 
 

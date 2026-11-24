@@ -122,10 +122,8 @@ def already_sent(
     """
 
     return (
-        f'Run "{run_id}" has already sent shifts to Amplify, which '
-        'cannot be taken back. Collecting it again would replace the '
-        'events that describe what was sent. Collect a new run '
-        'instead.'
+        f'Run ID {run_id} sent shifts to Amplify and may not be '
+        'collected again. Start a new run to collect events.'
     )
 
 
@@ -227,11 +225,10 @@ def shift_count_moved(
     shifts = 'shift' if will_create == 1 else 'shifts'
 
     return (
-        f'Sending run "{run_id}" would create {will_create} {shifts}, '
-        f'not the {expected} this request expected. Either the run has '
-        'been edited or Amplify has changed since the number you were '
-        'shown was worked out. Read the preview again and confirm '
-        'against what it says now.'
+        f'Sending run ID {run_id} would create {will_create} {shifts}, '
+        f'not the {expected} shown in the preview. The run or Amplify '
+        'changed after the preview loaded. Review the preview again and '
+        'confirm before sending.'
     )
 
 
@@ -319,11 +316,8 @@ def not_interrupted(
     """
 
     return (
-        f'Job "{job_id}" is {status}, and only an interrupted job may '
-        'be resumed. A job that succeeded is over; one that failed was '
-        'observed to fail, and collecting or sending again is a new '
-        'request rather than the same one continued; and one queued or '
-        'running has something doing it.'
+        f'Job ID {job_id} is {status}. You may only resume an '
+        'interrupted job.'
     )
 
 
@@ -380,12 +374,8 @@ def key_used_differently(
     """
 
     return (
-        f'This idempotency key already claimed a send of run '
-        f'"{run_id}", and this request is not that one -- a different '
-        'run, or a different number of shifts. A key is a promise that '
-        'the request is the one already made, so this is refused '
-        'rather than answered with the first request\'s result. Send '
-        'again with a new key.'
+        f'This request does not match the earlier send of run ID '
+        f'{run_id} with the same key. Send again with a new key.'
     )
 
 
@@ -404,11 +394,8 @@ def send_in_flight(
     """
 
     return (
-        f'This idempotency key already claimed a send of run '
-        f'"{run_id}", and that request has not answered yet. Read the '
-        'run to find the job it started rather than asking again: two '
-        'sends of one run would both write into Amplify, which cannot '
-        'take a shift back.'
+        f'A send of run ID {run_id} is already in progress. Try again '
+        'when the send completes.'
     )
 
 

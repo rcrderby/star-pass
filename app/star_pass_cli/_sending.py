@@ -96,13 +96,13 @@ EVENT_PHRASES = {
 # would eventually call one step two things.  A test holds this to
 # what the core publishes.
 STEP_PHRASES = {
-    STEP_READ_CALENDAR: 'Reading data from the Google Calendar service',
+    STEP_READ_CALENDAR: 'Reading League Calendar events',
     STEP_FILTER_EVENTS: 'Filtering event data',
     STEP_MATCH_EVENTS: 'Matching events to opportunities',
     STEP_READ_OPPORTUNITIES: 'Reading the Amplify opportunities',
     STEP_STORE_EVENTS: 'Storing the collected events',
     STEP_READ_OPPORTUNITY: (
-        'Reading what opportunity {subject} already holds'
+        'Reading existing shifts for opportunity {subject}'
     )
 }
 

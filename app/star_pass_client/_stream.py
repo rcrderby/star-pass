@@ -133,8 +133,8 @@ def _parsed_identifier(
 
     except ValueError as error:
         raise StreamProtocolError(
-            f'The stream sent "{identifier}" as an event identifier, '
-            'which is not a number to resume from.'
+            f'The stream sent "{identifier}" as an event identifier. '
+            'An event identifier must be a number.'
         ) from error
 
 

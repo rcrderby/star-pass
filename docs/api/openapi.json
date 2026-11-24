@@ -43,6 +43,105 @@
         "title": "BlockerView",
         "type": "object"
       },
+      "CalendarAccessView": {
+        "description": "What one configured calendar answered to the key. ",
+        "properties": {
+          "calendar": {
+            "description": "Which configured calendar was read.",
+            "examples": [
+              "events"
+            ],
+            "title": "Calendar",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the read did not succeed, written for a person. Absent when it did.",
+            "examples": [
+              null
+            ],
+            "title": "Reason"
+          },
+          "working": {
+            "description": "Whether a read of it carrying the key succeeded.",
+            "examples": [
+              true
+            ],
+            "title": "Working",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "calendar",
+          "working"
+        ],
+        "title": "CalendarAccessView",
+        "type": "object"
+      },
+      "CalendarCredentialView": {
+        "description": "What asking the League Calendar about the key answered. ",
+        "properties": {
+          "calendars": {
+            "description": "What each configured calendar answered, in the order they are configured. Empty when no calendar was read.",
+            "items": {
+              "$ref": "#/components/schemas/CalendarAccessView"
+            },
+            "title": "Calendars",
+            "type": "array"
+          },
+          "lastFour": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last four characters of the key, which is enough to tell two apart and no use to whoever reads it. The key itself is never published, and no endpoint replaces it: rotation is changing the secret and restarting. Absent when none is configured.",
+            "examples": [
+              "9c1e"
+            ],
+            "title": "Lastfour"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why no calendar was read, written for a person. Absent when the calendars were read, and each one's own reason is under calendars.",
+            "examples": [
+              null
+            ],
+            "title": "Reason"
+          },
+          "working": {
+            "description": "Whether every configured calendar accepted a read carrying the key this service is running on. False also covers a key that is not configured at all, and the reason says which.",
+            "examples": [
+              true
+            ],
+            "title": "Working",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "working",
+          "calendars"
+        ],
+        "title": "CalendarCredentialView",
+        "type": "object"
+      },
       "CalendarView": {
         "description": "One calendar a run may be collected from. ",
         "properties": {
@@ -172,6 +271,17 @@
             "title": "Calendars",
             "type": "array"
           },
+          "credentialTestLimit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CredentialTestLimitView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How often each credential may be tested through the service. Null where testing is not rate-limited."
+          },
           "excludedTitleTerms": {
             "description": "Terms this deployment never collects. An event whose title contains one of them anywhere is left out of a run with the \"excluded\" reason instead of becoming a shift, and no editing brings it back.",
             "examples": [
@@ -215,6 +325,33 @@
           "retention"
         ],
         "title": "ConfigView",
+        "type": "object"
+      },
+      "CredentialTestLimitView": {
+        "description": "How often each credential may be tested. ",
+        "properties": {
+          "attempts": {
+            "description": "Tests allowed per caller in each window.",
+            "examples": [
+              5
+            ],
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "windowSeconds": {
+            "description": "The window's length, in seconds.",
+            "examples": [
+              60
+            ],
+            "title": "Windowseconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "attempts",
+          "windowSeconds"
+        ],
+        "title": "CredentialTestLimitView",
         "type": "object"
       },
       "CredentialView": {
@@ -1839,6 +1976,41 @@
           }
         ],
         "summary": "Report what the service was configured with",
+        "tags": [
+          "service"
+        ]
+      }
+    },
+    "/v1/credentials/calendar/test": {
+      "post": {
+        "description": "Reads one event from each configured calendar with the key and reports whether each read was accepted, with the last four characters of the key so two can be told apart. The key itself is never published and no endpoint replaces it: rotation is changing the secret and restarting.\n\nEach calendar is answered for on its own, because a key Google accepts can still be refused a calendar that is not shared with it. `working` is true only when every calendar accepted the read.\n\nRate-limited per caller, separately from the Amplify test. Asking too often is refused with a `429` and a `Retry-After` header, and the refusal sends nothing to Google.\n\nA `POST` for the reason the Amplify test is one. It stores nothing and takes no idempotency key.",
+        "operationId": "test_calendar_credential",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarCredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {}
+            },
+            "description": "A problem document (RFC 9457)."
+          }
+        },
+        "security": [
+          {
+            "Bearer token": [
+              "config:read"
+            ]
+          }
+        ],
+        "summary": "Test the League Calendar key this service is running on",
         "tags": [
           "service"
         ]

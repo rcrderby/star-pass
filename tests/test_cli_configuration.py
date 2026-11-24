@@ -19,8 +19,10 @@ from typing import Any, Callable
 
 # Imports - Third-Party
 import pytest
+from requests import Response
 
 # Imports - Local
+from star_pass._exceptions import UpstreamError
 from star_pass_cli import _configuration, _render
 
 # Constants
@@ -43,8 +45,8 @@ class TestShowingTheConfiguration:
         shown = capsys.readouterr().out
 
         assert status == 0
-        assert 'Timezone         UTC' in shown
-        assert 'Match threshold  55' in shown
+        assert 'Timezone               UTC' in shown
+        assert 'Match threshold        55' in shown
 
     def test_a_window_of_one_day_says_day(
         self,
@@ -183,3 +185,31 @@ class TestListingUnmatchedTitles:
 
         assert status == 0
         assert _configuration.NOTHING_UNMATCHED in capsys.readouterr().out
+
+
+class TestTestingTheCalendarKey:
+    def test_each_calendar_is_listed_with_what_it_answered(
+        self,
+        capsys: pytest.CaptureFixture,
+        cli: Callable[..., int],
+        monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def answer(_self: Any, api_request_data: dict, **_ignored: Any):
+            if 'practices' in api_request_data['url']:
+                raise UpstreamError('Not Found')
+            return Response()
+
+        monkeypatch.setattr(
+            'star_pass._helpers.Helpers.send_api_request',
+            answer
+        )
+
+        status = cli('config', 'calendar-credential')
+        shown = capsys.readouterr().out
+
+        assert status == 0
+        assert 'League Calendar credential  not working' in shown
+        assert 'events calendar     working' in shown
+        assert 'practices calendar  not working' in shown
+        assert 'practices calendar: Not Found' in shown
+        assert 'test-gcal-token' not in shown

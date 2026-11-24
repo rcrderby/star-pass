@@ -39,7 +39,7 @@ const PRESETS = [
   { key: CUSTOM, words: 'Custom', ahead: null }
 ];
 
-const TITLE = 'Collect League Calendar events';
+const TITLE = 'Collect League Calendar Events';
 const LEDE = 'Creates a list of events to review. No data is sent to '
   + 'Amplify.';
 
@@ -89,7 +89,7 @@ function windowNotes(excluded) {
       'funnel',
       `Events that include words like ${terms}, events with no titles, `
       + 'and all-day events are automatically filtered and listed in a '
-      + '"Not collected" tab.'
+      + '"Not Collected" tab.'
     ]
   ];
 }
@@ -654,7 +654,7 @@ export class CollectDrawer {
               ? el(
                 'span',
                 { class: 'drawer-failure-reference muted micro' },
-                'Reference ',
+                'Reference ID ',
                 el('span', { class: 'mono', text: failure.reference })
               )
               : null

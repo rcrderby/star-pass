@@ -101,7 +101,7 @@ function heading(state) {
     return [
       state.running ? 'Collecting from the ' : 'Collected from the ',
       el('span', { class: 'collect-calendar', text: state.calendar }),
-      ' calendar'
+      ' Calendar'
     ];
   }
 
@@ -342,7 +342,7 @@ export class CollectingScreen {
     return el(
       'div',
       { class: 'collect-run' },
-      el('span', { class: 'muted run-id-label', text: 'Run id' }),
+      el('span', { class: 'muted run-id-label', text: 'Run ID' }),
       el('span', { class: 'mono collect-run-id', text: this.state.job.runId })
     );
   }

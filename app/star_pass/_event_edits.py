@@ -159,8 +159,7 @@ def timed(
     if ended <= started:
         message = (
             f'"{event.title}" would create a shift from {shift_start} '
-            f'to {shift_end}, which ends no later than it starts. A '
-            'shift ends after it starts.'
+            f'to {shift_end}. A shift must end after it starts.'
         )
         logger.error(message)
         raise ValidationError(message)
@@ -366,7 +365,7 @@ def required(
     """
 
     if value is None:
-        message = f'A "{op}" operation needs a "{name}".'
+        message = f'A "{op}" operation requires a "{name}".'
         logger.error(message)
         raise ValidationError(message)
 
@@ -401,10 +400,9 @@ def nudged(
     if started + minutes < 0 or ended + minutes >= MINUTES_PER_DAY:
         moved = 'later' if minutes > 0 else 'earlier'
         message = (
-            f'"{event.title}" would leave its day if it moved '
-            f'{abs(minutes)} minutes {moved}. An event stores its '
-            'times as times of day, so a shift cannot cross midnight '
-            'in either direction.'
+            f'"{event.title}" would move to another day if moved '
+            f'{abs(minutes)} minutes {moved}. A shift cannot span '
+            'multiple days.'
         )
         logger.error(message)
         raise ValidationError(message)
@@ -453,8 +451,8 @@ def with_slots(
 
     if need_id not in {role.need_id for role in event.roles}:
         message = (
-            f'"{event.title}" does not create a shift under need '
-            f'{need_id}, so there are no volunteers to set for it.'
+            f'"{event.title}" has no shift for opportunity {need_id}. '
+            'You may not set volunteers without an opportunity.'
         )
         logger.error(message)
         raise ValidationError(message)

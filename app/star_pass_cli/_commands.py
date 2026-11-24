@@ -36,6 +36,7 @@ from ._confirm import (
     NO_TERMINAL_TO_SEND
 )
 from ._configuration import (
+    calendar_credential_text,
     config_text,
     credential_text,
     unmatched_text
@@ -402,6 +403,16 @@ COMMANDS = (
         ),
         operation='test_credential',
         render=credential_text
+    ),
+    Command(
+        group='config',
+        word='calendar-credential',
+        summary=(
+            'Test the League Calendar key against each calendar and '
+            'show its last four characters.'
+        ),
+        operation='test_calendar_credential',
+        render=calendar_credential_text
     ),
     Command(
         group='config',

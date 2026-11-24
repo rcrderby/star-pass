@@ -207,7 +207,7 @@ class TestWhatCannotBeSealed:
         with pytest.raises(ValidationError) as error:
             sealing(run_id)
 
-        assert 'collected nothing' in str(error.value)
+        assert 'has no revision to save' in str(error.value)
 
     def test_a_refused_run_gains_no_revision(
         self,
@@ -249,7 +249,7 @@ class TestWhatIsLogged:
         with pytest.raises(ValidationError):
             sealing(run_id)
 
-        assert 'collected nothing' in caplog.text
+        assert 'has no revision to save' in caplog.text
 
 
 class TestWhatTheCollectionsRevisionHolds:

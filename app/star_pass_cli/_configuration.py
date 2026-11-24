@@ -67,12 +67,15 @@ UNMATCHED_RETENTION = (
 # listed three windows and stopped would read as though everything
 # expires.  Why it is kept is the point: a run that forgot what it had
 # created would offer to create it again.
-SENT_RETENTION = 'kept, so nothing a run created is ever sent twice'
+SENT_RETENTION = 'retained to prevent duplicate shifts'
 
 # What a tested credential is said to be.  A whole word each way: the
 # line is read at a glance and a tick and a cross are not one.
 WORKING = 'working'
 NOT_WORKING = 'not working'
+
+# How each calendar is named in a League Calendar credential test.
+CALENDAR_LABEL = '{calendar} calendar'
 
 # How the four published characters are shown.  Said as an ending
 # rather than printed alone, so nobody reads them as the credential.
@@ -179,7 +182,7 @@ def config_text(
                     ('Timezone', answer['timezone']),
                     ('Match threshold', str(answer['matchThreshold'])),
                     (
-                        'Never collected',
+                        'Filtered event titles',
                         excluded_text(terms=answer['excludedTitleTerms'])
                     )
                 )
@@ -272,6 +275,62 @@ def credential_text(
         return lines
 
     return f'{lines}\n\n{answer["reason"]}'
+
+
+def calendar_credential_text(
+        answer: Dict[str, Any]
+) -> str:
+    """ Return whether the League Calendar key works for each calendar.
+
+        Args:
+            answer (Dict[str, Any]):
+                What a League Calendar credential test answered.
+
+        Returns:
+            text (str):
+                Whether it works and which one it is, a line for each
+                calendar, and the reason for each one that failed.
+    """
+
+    parts = [
+        labelled(
+            pairs=(
+                (
+                    'League Calendar credential',
+                    WORKING if answer['working'] else NOT_WORKING
+                ),
+                (
+                    'Ends with',
+                    answer['lastFour'] or NOTHING
+                )
+            )
+        )
+    ]
+
+    if answer['reason'] is not None:
+        parts.append(answer['reason'])
+
+    if answer['calendars']:
+        parts.append(
+            labelled(
+                pairs=tuple(
+                    (
+                        CALENDAR_LABEL.format(calendar=access['calendar']),
+                        WORKING if access['working'] else NOT_WORKING
+                    )
+                    for access in answer['calendars']
+                )
+            )
+        )
+
+    parts.extend(
+        f'{CALENDAR_LABEL.format(calendar=access["calendar"])}: '
+        f'{access["reason"]}'
+        for access in answer['calendars']
+        if access['reason'] is not None
+    )
+
+    return '\n\n'.join(parts)
 
 
 def unmatched_row(

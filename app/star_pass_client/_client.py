@@ -104,7 +104,7 @@ class ApiProblem(Exception):
         super().__init__(
             f'{status} {self.title}'
             + (f': {self.detail}' if self.detail else '')
-            + (f' (reference {self.reference})' if self.reference else '')
+            + (f' (reference ID {self.reference})' if self.reference else '')
         )
 
 

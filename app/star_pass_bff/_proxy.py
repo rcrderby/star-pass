@@ -70,7 +70,7 @@ STREAM_MEDIA_TYPE = 'text/event-stream'
 # would only help whoever was trying it.
 NOT_OURS = (
     'This request did not come from the star-pass page in this '
-    'browser session. Reload the page and try again.'
+    'browser session. Reload the page to try again.'
 )
 
 # What it is told when the session is missing entirely, which is a
@@ -85,8 +85,8 @@ TOO_LARGE = (
 )
 
 NO_SESSION = (
-    'This browser has no star-pass session. Load the page first, '
-    'then try again.'
+    'The browser has no star-pass session. Reload the page to try '
+    'again.'
 )
 
 

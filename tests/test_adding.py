@@ -443,7 +443,7 @@ class TestWhatMayNotBePulledIn:
         with pytest.raises(ValidationError) as error:
             add()
 
-        assert 'already holds' in str(error.value)
+        assert 'is already in revision' in str(error.value)
 
     def test_a_row_without_times_is_refused(
         self,
@@ -455,7 +455,7 @@ class TestWhatMayNotBePulledIn:
         with pytest.raises(ValidationError) as error:
             add()
 
-        assert 'nothing to build a shift from' in str(error.value)
+        assert 'a start and end time' in str(error.value)
 
     def test_a_row_without_a_title_is_refused(
         self,
@@ -505,7 +505,7 @@ class TestWhatMayNotBePulledIn:
                 principal_id=SOMEBODY
             )
 
-        assert 'collected nothing yet' in str(error.value)
+        assert 'has no revision to add an event to' in str(error.value)
 
     def test_an_unknown_run_is_reported_as_nothing_rather_than_refused(
         self,

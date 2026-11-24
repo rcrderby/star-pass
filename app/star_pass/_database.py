@@ -536,9 +536,8 @@ def _apply_schema(
     if version > SCHEMA_VERSION:
         message = (
             f'The database "{database_path}" is at schema version '
-            f'{version}, which is newer than the version '
-            f'{SCHEMA_VERSION} this release reads. Run the release '
-            'that wrote it.'
+            f'{version}. This release reads version {SCHEMA_VERSION}. '
+            'Run the release that created the database.'
         )
         logger.error(message)
         raise ConfigurationError(message)

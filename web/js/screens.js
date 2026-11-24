@@ -49,7 +49,7 @@ export function emptyState(onCollect) {
       'div',
       { class: 'empty-inner' },
       icon('calendar-plus'),
-      el('h1', { text: 'No runs yet' }),
+      el('h1', { text: 'No Runs Yet' }),
       el('p', { class: 'empty-lede muted meta', text: LEDE }),
       el(
         'div',
@@ -102,7 +102,7 @@ export function failureState(error, heading = NO_RUNS, onRetry = null) {
       ? el(
         'p',
         { class: 'failure-reference muted' },
-        'Reference ',
+        'Reference ID ',
         el('span', { class: 'mono', text: error.reference })
       )
       : null,

@@ -157,6 +157,31 @@ class TestAskingTooOften:
             _defaults.CREDENTIAL_TEST_WINDOW_SECONDS
         )
 
+    def test_the_refusal_states_the_limit(
+        self,
+        asked_too_often: Any
+    ) -> None:
+        assert asked_too_often.json()['detail'] == (
+            'Maximum test attempts exceeded '
+            f'({_defaults.CREDENTIAL_TEST_ATTEMPTS} per minute).'
+        )
+
+    @pytest.mark.parametrize(
+        ('seconds', 'window'),
+        [
+            (60.0, 'minute'),
+            (120.0, '2 minutes'),
+            (30.0, '30 seconds'),
+            (90.0, '90 seconds')
+        ]
+    )
+    def test_the_window_is_named_in_minutes_where_it_can_be(
+        self,
+        seconds: float,
+        window: str
+    ) -> None:
+        assert _credentials.per_window(seconds) == window
+
     def test_a_refused_attempt_reaches_nothing_upstream(
         self,
         credential_accepted: List[Dict[str, Any]],

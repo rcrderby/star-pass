@@ -358,7 +358,7 @@ class TestHowAJobsReportsAreShown:
         )
 
         assert line == (
-            'Started: Reading what opportunity 905196 already holds'
+            'Started: Reading existing shifts for opportunity 905196'
         )
 
     def test_a_finished_opportunity_names_itself(self) -> None:
@@ -468,7 +468,7 @@ class TestWatchingAndResumingAJob:
         status = cli('jobs', 'resume', job_id)
 
         assert status == 1
-        assert 'resumed' in capsys.readouterr().out
+        assert 'resume an interrupted job' in capsys.readouterr().out
 
 
 @pytest.fixture(name='sending_locally')
@@ -673,7 +673,7 @@ class TestConfirmingASend:
         status, shown = asking_to_send()
 
         assert status == 1
-        assert 'no terminal' in shown
+        assert 'interactive terminal' in shown
         assert jobs.list_for_run(run_id=collected) == []
 
     def test_a_run_with_nothing_left_to_send_is_not_asked_about(

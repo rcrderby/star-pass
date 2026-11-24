@@ -70,13 +70,18 @@ from ._preview_schemas import (
     PreviewView,
     SkippedShiftView
 )
+from ._credential_schemas import (
+    CalendarAccessView,
+    CalendarCredentialView,
+    CredentialView
+)
 from ._schemas import (
     ApiModel,
     IDEMPOTENCY_KEY_HEADER,
     CalendarView,
     ConfigView,
+    CredentialTestLimitView,
     RetentionView,
-    CredentialView,
     EventRoleView,
     EventView,
     JobView,
@@ -95,6 +100,7 @@ from ._schemas import (
 )
 from ._views import (
     previewed,
+    to_calendar_credential_view,
     to_config_view,
     to_credential_view,
     to_detail_view,
@@ -118,9 +124,12 @@ __all__ = [
     'REPLAY_KINDS',
     'REPLAY_RUNNING',
     'BlockerView',
+    'CalendarAccessView',
+    'CalendarCredentialView',
     'CalendarView',
     'CollectRequest',
     'ConfigView',
+    'CredentialTestLimitView',
     'RetentionView',
     'CredentialView',
     'EventRoleView',
@@ -170,6 +179,7 @@ __all__ = [
     'send_in_flight',
     'shift_count_moved',
     'still_collecting',
+    'to_calendar_credential_view',
     'to_config_view',
     'to_credential_view',
     'to_detail_view',

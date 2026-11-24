@@ -43,7 +43,7 @@ export function refusalNotice({ said, failure }) {
         ? el(
           'span',
           { class: 'muted micro failure-reference' },
-          'Reference ',
+          'Reference ID ',
           el('span', { class: 'mono', text: failure.reference })
         )
         : null

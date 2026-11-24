@@ -662,7 +662,7 @@ def _selected(
         # A stale tab is the ordinary way here: the reviewer is looking
         # at a list an earlier edit already changed.
         message = (
-            f'This revision no longer holds {", ".join(missing)}. '
+            f'This revision no longer contains {", ".join(missing)}. '
             'Reload the run and try again.'
         )
         logger.error(message)
