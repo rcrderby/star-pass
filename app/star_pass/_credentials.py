@@ -2,23 +2,15 @@
 """ Asking Amplify and the League Calendar whether the credentials
     this process holds still work.
 
-    The only thing the tool publishes about its own credentials.  No
-    endpoint replaces one: rotation is changing the secret and
-    restarting.
-
-    The answer is whether a request carrying it succeeded, plus the
-    last four characters, which tell two credentials apart without
-    carrying either.  Never more of the credential, and nothing about
-    the account it belongs to.
+    The answer is whether a request carrying the credential succeeded,
+    plus its last four characters.  Never more of the credential, and
+    nothing about the account it belongs to.  No endpoint replaces a
+    credential: rotation is changing the secret and restarting.
 
     The Amplify request is a one-row read of what Amplify already
-    holds: one Amplify authenticates, that creates nothing, and that
-    does not depend on the data model.  The row is discarded unread.
-
-    The League Calendar request is a one-event read of each configured
-    calendar.  A key Google accepts can still be refused a calendar
-    that is not shared with it, so each calendar is answered for on
-    its own.  The event is discarded unread.
+    holds.  The League Calendar request is a one-event read of each
+    configured calendar, and each calendar answers on its own.  Both
+    bodies are discarded unread.
 """
 
 # Imports - Python Standard Library
