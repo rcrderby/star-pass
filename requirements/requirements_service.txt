@@ -8,11 +8,11 @@
 # 'requirements.txt' is the entry point that reads both.
 
 # API service
-fastapi==0.163.0
+fastapi==0.165.0
 uvicorn==0.54.0
 
 # The front end's connection to the API service. Async, and it passes
 # an event stream through as it arrives rather than at the end, which
 # is what watching a job needs.
-httpx2==2.16.0
+httpx2==2.16.2
 
