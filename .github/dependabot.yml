@@ -13,6 +13,12 @@
 # So every ecosystem that holds a pin is watched below. One that is
 # not watched is a pin that only goes stale.
 
+# Minor and patch updates are grouped into one pull request per
+# ecosystem, and '.github/workflows/dependabot-auto-merge.yml' merges
+# them once the required checks pass. Major updates get their own pull
+# requests and are reviewed. A release is proposed only once it is
+# seven days old, so a bad release can be withdrawn before it is merged.
+
 version: 2
 
 updates:
@@ -24,11 +30,18 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     commit-message:
       prefix: build
     labels:
       - dependencies
+    groups:
+      pip-minor-and-patch:
+        update-types:
+          - minor
+          - patch
 
   # GitHub Actions. Dependabot updates a SHA pin in place and refreshes
   # the version comment beside it, so pinning does not mean going stale.
@@ -36,22 +49,83 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     commit-message:
       prefix: ci
     labels:
       - dependencies
+    groups:
+      github-actions-minor-and-patch:
+        update-types:
+          - minor
+          - patch
 
-  # Base images. Scanning from the repository root reaches the
-  # Dockerfile, which pins 'python' by digest, and 'compose.yaml',
-  # which pins 'caddy' the same way. Watched so that a digest is a pin
-  # which stays current rather than one that stops moving.
+  # Base images. Scanning from the repository root reaches
+  # 'Dockerfile', which pins 'python' by digest, and 'Dockerfile.dev',
+  # which names the same tag. Watched so that a digest is a pin which
+  # stays current rather than one that stops moving.
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     commit-message:
       prefix: build
     labels:
       - dependencies
+    groups:
+      docker-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    # A new Python release in the tag ('3.14-slim' to '3.15-slim') is a
+    # minor update, which the group would merge unreviewed. The Python
+    # version is changed by hand; digest updates to the current tag
+    # still arrive.
+    ignore:
+      - dependency-name: python
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+
+  # The Caddy image in 'compose.yaml', pinned by digest. Compose files
+  # are their own ecosystem: the docker ecosystem reads Dockerfiles
+  # only.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+    labels:
+      - dependencies
+    groups:
+      docker-compose-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # The hooks in '.pre-commit-config.yaml', pinned by tag.
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+    labels:
+      - dependencies
+    groups:
+      pre-commit-minor-and-patch:
+        update-types:
+          - minor
+          - patch
