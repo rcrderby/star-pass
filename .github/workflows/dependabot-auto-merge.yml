@@ -1,0 +1,47 @@
+---
+# Turn on auto-merge for Dependabot minor and patch updates
+## https://docs.github.com/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions
+
+# GitHub merges the pull request only after the required checks on
+# main pass, so this needs "Allow auto-merge" and a branch protection
+# rule (or ruleset) on main. Major updates are left for review.
+
+# Name of the action
+name: Dependabot auto-merge
+
+# Events that trigger the action
+on:
+  pull_request:
+
+# No permissions by default; the job below is granted what it needs
+permissions: {}
+
+jobs:
+  auto-merge:
+    name: Enable auto-merge for minor and patch updates
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.repository == 'rcrderby/star-pass'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    # Job permissions
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      # fetch-metadata action documentation
+      # https://github.com/dependabot/fetch-metadata
+      - name: Read the Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98  # v3.1.0
+
+      - name: Enable auto-merge
+        if: >-
+          steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-patch'
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

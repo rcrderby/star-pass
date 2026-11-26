@@ -210,3 +210,21 @@ Automated tests will fail if a committed file does not match what its command ge
 | `docs/api/openapi.json` | The API specification | Routes, models, scopes, and version in the API | `python scripts/generate_contract.py` |
 | `app/star_pass_client/_operations.py` | The command line's API client | `docs/api/openapi.json` | `python scripts/generate_contract.py` |
 | `docs/architecture/*.svg` | The diagrams in `docs/architecture.md` | `scripts/generate_architecture.py` and `scripts/_drawing.py` | `python scripts/generate_architecture.py` |
+
+### Dependencies
+
+Dependencies are pinned, and Dependabot proposes updates to them weekly.
+
+| File | Contents | Updated by |
+| --- | --- | --- |
+| `requirements/*.txt` | Python packages, pinned with `==` | Dependabot |
+| `Dockerfile`, `Dockerfile.dev` | The `python` base image. `Dockerfile` pins it by digest | Dependabot, except new Python versions |
+| `compose.yaml` | The `caddy` image, pinned by digest | Dependabot |
+| `.pre-commit-config.yaml` | pre-commit hooks | Dependabot |
+| `.github/workflows/*.yml` | GitHub Actions, pinned by commit SHA | Dependabot |
+
+Dependabot groups minor and patch updates into one pull request per ecosystem, and `.github/workflows/dependabot-auto-merge.yml` merges them after the required checks pass.
+Major updates get their own pull requests and need review.
+Dependabot waits seven days after a release before proposing it.
+
+To change the Python version, edit the `python` image tag in `Dockerfile` and `Dockerfile.dev`, and the `python-version` in `.github/workflows/*.yml`.
