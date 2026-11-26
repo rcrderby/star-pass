@@ -39,7 +39,7 @@ CALENDAR_HEADERS = (
 # therefore returns everything, so nothing in its window can be missed
 # for want of a term -- which is what a reader of this column came to
 # find out.
-EVERYTHING = 'everything in the window'
+EVERYTHING = 'all events'
 
 # How the terms a calendar is searched for are joined.
 TERM_GAP = ', '
@@ -59,8 +59,8 @@ RETENTION_HEADING = 'RETENTION'
 JOB_LOG_RETENTION = '{days} after a job finishes'
 REVISION_RETENTION = '{days} after a run is last changed'
 UNMATCHED_RETENTION = (
-    '{days} after a title was last seen, or as soon as the '
-    'model matches it'
+    '{days} after a title was last seen, or after the data model '
+    'matches it'
 )
 
 # Said of the one store with no window, because a settings screen that
@@ -95,8 +95,7 @@ UNMATCHED_HEADERS = (
 # Said when the log holds nothing, which is a finding rather than an
 # empty screen: every title anybody recorded matched a category.
 NOTHING_UNMATCHED = (
-    'No unmatched titles have been recorded. Every title anybody has '
-    'recorded matched a category.'
+    'No unmatched titles recorded.'
 )
 
 

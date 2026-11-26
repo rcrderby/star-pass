@@ -28,8 +28,8 @@ const LEDE = (
 
 /* Said when the collection took everything its window held. */
 const NOTHING_LEFT_OUT = (
-  'Nothing in this window was left out. Every event the search '
-  + 'returned became a row on the other tab.'
+  'The search collected all events within the date range. Each event '
+  + 'is in the "Shifts to Create" tab.'
 );
 
 /* The heading over the titles kept for the next edit of the data

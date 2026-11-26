@@ -21,7 +21,7 @@ from ._schemas import ApiModel
 
 
 class CredentialView(ApiModel):
-    """ What asking Amplify about the service's credential answered. """
+    """ The result of the Amplify token test. """
 
     working: bool = Field(
         description=(
@@ -35,11 +35,8 @@ class CredentialView(ApiModel):
     last_four: Optional[str] = Field(
         default=None,
         description=(
-            'The last four characters of the credential, which is '
-            'enough to tell two apart and no use to whoever reads it. '
-            'The credential itself is never published, and no '
-            'endpoint replaces it: rotation is changing the secret '
-            'and restarting. Absent when none is configured.'
+            'The token\'s last four characters. The token itself is '
+            'not visible. Absent when no token is configured.'
         ),
         examples=['4f2a']
     )
@@ -54,7 +51,7 @@ class CredentialView(ApiModel):
 
 
 class CalendarAccessView(ApiModel):
-    """ What one configured calendar answered to the key. """
+    """ The result of the League Calendar key test for one calendar. """
 
     calendar: str = Field(
         description='Which configured calendar was read.',
@@ -75,7 +72,7 @@ class CalendarAccessView(ApiModel):
 
 
 class CalendarCredentialView(ApiModel):
-    """ What asking the League Calendar about the key answered. """
+    """ The result of the League Calendar key test. """
 
     working: bool = Field(
         description=(
@@ -89,11 +86,8 @@ class CalendarCredentialView(ApiModel):
     last_four: Optional[str] = Field(
         default=None,
         description=(
-            'The last four characters of the key, which is enough to '
-            'tell two apart and no use to whoever reads it. The key '
-            'itself is never published, and no endpoint replaces it: '
-            'rotation is changing the secret and restarting. Absent '
-            'when none is configured.'
+            'The key\'s last four characters. The key itself is not '
+            'visible. Absent when no key is configured.'
         ),
         examples=['9c1e']
     )

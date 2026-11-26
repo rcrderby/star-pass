@@ -1,7 +1,6 @@
 /* The Nocturne design system's tokens, and the typeface they name.
  *
- * Values rather than choices: these are the design handoff's, and
- * `docs/design/README.md` is where a change to one is argued.  Night is
+ * Values rather than choices: these are the design handoff's.  Night is
  * the default and Day overrides it, which is the way round the handoff
  * states and the reason every surface reads correctly before a theme
  * has been resolved.

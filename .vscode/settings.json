@@ -11,10 +11,12 @@
         "mechatroner",
         "nosborn",
         "pylint",
+        "rcfile",
         "rosecityrollers",
         "setuptools",
         "SHFMT",
-        "thefuzz"
+        "thefuzz",
+        "venv"
     ],
     "python-envs.defaultEnvManager": "ms-python.python:system",
     "python-envs.pythonProjects": []

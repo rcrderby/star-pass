@@ -114,11 +114,9 @@ REFUSALS = WriteRefusals(
     '/runs',
     summary='List the runs, newest first',
     description=(
-        'Every run the service holds, most recently collected first, '
-        'including one still being collected. Each carries what its '
-        'current revision holds and the job still working on it, so '
-        'the list is enough to decide what to open without reading '
-        'each run in turn.'
+        'All runs, newest to oldest, including runs being collected. '
+        'Each run includes its current revision\'s counts and the job '
+        'working on it, if any.'
     ),
     response_model=List[RunView]
 )
@@ -206,20 +204,14 @@ async def get_run(
 @router.delete(
     '/runs/{run_id}',
     status_code=status.HTTP_204_NO_CONTENT,
-    summary='Delete a run that never sent',
+    summary='Delete a run that has not sent shifts',
     description=(
-        'Removes the run and everything that hangs off it: its '
-        'revisions, their events and roles, its opportunities, its '
-        'change log, its jobs and what the window left out.\n\n'
-        '**Refused for a run that has sent shifts**, whether all of '
-        'them or some, because the record of what a send created is '
-        'the only account of that anything here holds. Refused '
-        'separately, and with its own reason, while a job is working '
-        'on the run: that one becomes deletable when the work '
-        'finishes.\n\n'
-        'What does not go is the run\'s unmatched-title sightings. '
-        'What the data model is missing outlives the window that '
-        'revealed it.'
+        'Deletes the run, and removes its revisions, events, '
+        'opportunities, change log, jobs, and uncollected events. Any '
+        'unmatched titles from the run remain in the unmatched title '
+        'log.\n\nYou may not delete a run that is collecting events, '
+        'is sending shifts to Amplify, or already sent shifts to '
+        'Amplify.'
     ),
     response_class=Response
 )
@@ -276,25 +268,19 @@ async def delete_run(
 
 @router.get(
     '/runs/{run_id}/uncollected',
-    summary='List what the window held and the run did not collect',
+    summary=(
+        'List the events in a run\'s date range that the run did not '
+        'collect'
+    ),
     description=(
-        'Everything the run\'s window held that did not become one of '
-        'its events, grouped by the reason it was left out and '
-        'earliest first within each group. A reason nothing was left '
-        'out for is not published, so the groups are what there is to '
-        'look at.\n\n'
-        'Answered from what the collection stored, never from a '
-        'calendar read. This is read on every load of the screen, and '
-        'a live read would cost a Google request per look and give '
-        'the run a second opinion about its own window. It therefore '
-        'describes the window as the collection found it, not as the '
-        'calendar stands now; recollecting is what refreshes it.\n\n'
-        '"search" means no configured query string returned the '
-        'event, so nobody looked for it, and it is the only reason an '
-        'event may be pulled into the run under. The other three '
-        'describe events that cannot become a correct shift, and each '
-        'event says which it is rather than leaving a client to work '
-        'it out from the reason.'
+        'Events in the run\'s date range that are not in the run, '
+        'grouped by reason: outside the calendar search, excluded by '
+        'title, all-day event, or untitled. Earliest first within each '
+        'group. Only reasons with events are included.\n\nAnswered '
+        'from the data stored at collection, not from a new League '
+        'Calendar read. To update it, collect the run again.\n\nYou '
+        'may only add events outside the calendar search (`search`) to '
+        'the run.'
     ),
     response_model=List[UncollectedGroupView]
 )
@@ -347,23 +333,15 @@ async def list_uncollected(
     '/runs/{run_id}/preview',
     summary='Report what sending this run would create',
     description=(
-        'What a send would do, grouped by Amplify opportunity and '
-        'never by category: several categories share one listing, so '
-        'grouping by category would show it twice under two names and '
-        'split a total the reader is about to check against Amplify.\n\n'
-        'Shifts are counted by identity -- need ID, date, start and '
-        'end -- so two events asking for the same row count once, and '
-        'a reader is told how many rows repeat rather than left to '
-        'wonder why the total is below what they can see.\n\n'
-        'An event that cannot become a shift stops the whole send and '
-        'is named with every reason it cannot, so fixing one does not '
-        'reveal another.\n\n'
-        'Every opportunity the revision touches is read from Amplify '
-        'while this is answered, so a shift that is already there is '
-        'reported as skipped rather than counted in what would be '
-        'created. The send asks the same question again inside its own '
-        'transaction, which is what makes the total shown here the '
-        'number of rows that arrive.'
+        'Shifts a send would create in Amplify for each opportunity, '
+        'the shifts already in Amplify, and the reasons any events may '
+        'not be sent to Amplify. Several categories may share one '
+        'opportunity.\n\nShifts are counted by need ID, date, start, '
+        'and end. Two events that would create the same shift count '
+        'once.\n\nAn event that cannot become a shift blocks the '
+        'entire send. A blocking event is listed once for each '
+        'reason.\n\nThe service reads every opportunity from Amplify '
+        'to answer. A send checks Amplify again before it writes.'
     ),
     response_model=PreviewView
 )
@@ -547,8 +525,8 @@ def _checked_window(
         resolve_window(
             start=window.window.start,
             end=window.window.end,
-            start_name='The window start',
-            end_name='the window end'
+            start_name='The first day',
+            end_name='the last day'
         )
 
     except ValueError as error:
@@ -610,23 +588,19 @@ def _started(
 @router.post(
     '/runs',
     status_code=status.HTTP_202_ACCEPTED,
-    summary='Collect a calendar window into a new run',
+    summary=(
+        'Collect a calendar\'s events within a date range into a new '
+        'run'
+    ),
     description=(
-        'Reads the calendar over the days given and stores what it '
-        'finds as a new run, ready to review. The identifier is minted '
-        'here and is never the path of a file.\n\n'
-        'Answers as soon as the run exists, with the job doing the '
-        'work: reading a calendar and naming every opportunity it '
-        'finds takes longer than a request should be held open. Read '
-        'the job, or follow its events, to see how far it has got. The '
-        'run is in the list from the moment this answers, so a person '
-        'who closed the page can find it again.\n\n'
-        'The window is a first day and the day after the last, read in '
-        'the server\'s time zone, and there is no limit on its length. '
-        'An event that cannot become a correct shift does not stop the '
-        'collection: it is stored, named as unmatched, and stops the '
-        '**send** instead, so a reviewer sees everything the calendar '
-        'held rather than a run with holes in it.'
+        'Collects a calendar\'s events in a date range into a new run, '
+        'ready to review.\n\nAnswers when the run is created, with the '
+        'job that collects the events. To follow its progress, read '
+        'the job or its event stream. The run appears in the run list '
+        'immediately.\n\nThe date range is a first day and the day '
+        'after the last day, in the service\'s time zone, with no '
+        'length limit. An event with no opportunity is collected, and '
+        'blocks the send.'
     ),
     response_model=JobView
 )
@@ -716,21 +690,19 @@ def _current_change_count(
 @router.post(
     '/runs/{run_id}/recollect',
     status_code=status.HTTP_202_ACCEPTED,
-    summary='Collect a run\'s calendar window again',
+    summary='Collect a run\'s events again',
     description=(
-        'Reads the same calendar over the same days and replaces what '
-        'the run holds with what is there now. The run keeps its '
-        'identifier and its window; a new revision holds the fresh '
-        'events, and the revisions before it stay readable, so what '
-        'was replaced is still there to look at.\n\n'
-        '**Editing done since the run was collected is left behind.** '
-        'That is what `expectedChangeCount` is for: the operator is '
-        'shown how much would be discarded and sends the number back, '
-        'and a number that no longer matches means they were looking '
-        'at a page describing a run that has moved on.\n\n'
-        'Refused while another job is working on the run, and refused '
-        'for a run that has sent shifts, which Amplify cannot take '
-        'back.'
+        'Replaces the run\'s events with the current League Calendar '
+        'events, from the same calendar and date range. The run keeps '
+        'its identifier and date range. A new revision contains the '
+        'new events, and earlier revisions remain readable.\n\n'
+        '**Collecting a run again discards any changes made to it '
+        'since it was collected.** Set `expectedChangeCount` to the '
+        'number of changes `GET /v1/runs/{run_id}/revisions` reports '
+        'for the current revision. If the number does not match, the '
+        'run is not collected again.\n\nYou may not collect a run '
+        'again while another job is working on it, or after it sent '
+        'shifts to Amplify.'
     ),
     response_model=JobView
 )

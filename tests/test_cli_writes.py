@@ -644,7 +644,7 @@ class TestConfirmingASend:
         status, shown = asking_to_send()
 
         assert status == 0
-        assert 'Nothing was sent' in shown
+        assert 'Send canceled.' in shown
         assert jobs.list_for_run(run_id=collected) == []
 
     def test_pressing_return_sends_nothing(
@@ -659,7 +659,7 @@ class TestConfirmingASend:
 
         _status, shown = asking_to_send()
 
-        assert 'Nothing was sent' in shown
+        assert 'Send canceled.' in shown
         assert jobs.list_for_run(run_id=collected) == []
 
     def test_no_terminal_is_not_a_yes(
@@ -690,7 +690,7 @@ class TestConfirmingASend:
         status, shown = asking_to_send()
 
         assert status == 0
-        assert 'already has every shift' in shown
+        assert 'already in Amplify. No shifts were created.' in shown
 
     def test_the_count_restated_is_the_count_that_would_arrive(
         self,
@@ -804,7 +804,7 @@ class TestConfirmingADeletion:
         status, shown = asking_to_delete()
 
         assert status == 0
-        assert 'Nothing was deleted.' in shown
+        assert 'Delete canceled.' in shown
         assert runs.get(run_id=collected) is not None
 
     def test_an_answer_of_yes_deletes(
@@ -819,7 +819,7 @@ class TestConfirmingADeletion:
         status, shown = asking_to_delete()
 
         assert status == 0
-        assert 'Deleted.' in shown
+        assert 'The run was deleted.' in shown
         assert runs.get(run_id=collected) is None
 
     @pytest.mark.parametrize('answer', ['', 'no', 'later', 'Y E S'])

@@ -300,6 +300,6 @@ class TestSlackEvents:
         reporter.summary_skipped()
 
         assert capsys.readouterr().out == (
-            'No shifts in the summary window; skipped posting to '
-            'Slack.\n'
+            'No shifts fall in the summary\'s dates. The summary was '
+            'not posted to Slack.\n'
         )

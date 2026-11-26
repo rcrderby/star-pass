@@ -204,8 +204,8 @@ export function reviewBanners(state, handlers) {
       tone: SECONDARY,
       glyph: 'magic-wand',
       words: `${fuzzy.length} event`
-        + `${fuzzy.length === 1 ? ' was' : 's were'} matched by title `
-        + 'wording, not by a keyword',
+        + `${fuzzy.length === 1 ? ' was' : 's were'} matched by `
+        + 'similarity, not by a keyword',
       action: showOnlyThese(filters.fuzzy, handlers.onToggleFuzzy)
     }));
   }

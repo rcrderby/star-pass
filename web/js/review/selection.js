@@ -17,6 +17,7 @@
  */
 
 import { chooser, el, icon } from '../dom.js';
+import { counted } from '../format.js';
 
 /* How far the two nudges move a shift. The design's wording names the
  * number, so the two agree by construction. */
@@ -25,8 +26,8 @@ const NUDGE_MINUTES = 15;
 /* Said in place of the slots controls when the selection shares no
  * opportunity to set. */
 const NO_SHARED_ROLE = (
-  'These rows have no opportunity in common. Select rows that share an '
-  + 'opportunity to set volunteers wanted.'
+  'These rows do not have a common opportunity. To set the volunteer '
+  + 'count, select rows that share an opportunity.'
 );
 
 /** Return the events the selection names.
@@ -108,7 +109,7 @@ function slotsControls(shared, opportunities, busy, onSetSlots) {
       class: 'input slots-role',
       disabled: busy || none,
       title: none ? NO_SHARED_ROLE : null,
-      'aria-label': 'Which opportunity to set volunteers for'
+      'aria-label': 'Opportunity to set the volunteer count for'
     },
     none
       ? el('option', { value: '', text: 'No shared opportunity' })
@@ -128,7 +129,7 @@ function slotsControls(shared, opportunities, busy, onSetSlots) {
     inputMode: 'numeric',
     disabled: busy || none,
     placeholder: '0',
-    'aria-label': 'Volunteers wanted for every selected row',
+    'aria-label': 'Volunteer count for selected rows',
     onchange: (event) => {
       const count = Number(event.target.value);
 
@@ -251,9 +252,9 @@ export function selectionToolbar(state, context, handlers, hidden = 0) {
         class: 'btn btn-secondary',
         disabled: busy || undoing === 0,
         title: undoing === 0
-          ? 'Nothing in this selection has been edited'
-          : `Put ${undoing} of these rows back as they were collected`
-            + ' - opportunity, shift times and volunteers alike',
+          ? 'The selected rows have no edits'
+          : 'Restore the collected opportunity, shift times, and '
+            + `volunteer count for ${counted(undoing, 'row')}`,
         onclick: handlers.onUndo
       },
       icon('arrow-counter-clockwise'),

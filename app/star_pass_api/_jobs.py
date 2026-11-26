@@ -297,12 +297,11 @@ async def _events(
     summary='Follow what a job reports, as it reports it',
     description=(
         'A server-sent event stream. Each frame is named for what the '
-        'job reported and carries what that report held. The stream '
-        'ends with a "job_finished" frame when the job is over.\n\n'
-        'It is reattachable: a client that reconnects sends the '
-        'identifier of the last frame it saw in "Last-Event-ID", and '
-        'is given what it missed rather than what it already has. A '
-        'browser sends that header itself.'
+        'job reported, and contains that report. The stream ends with '
+        'a `job_finished` frame.\n\nTo reconnect, send the identifier '
+        'of the last frame received in `Last-Event-ID`. The stream '
+        'continues after that frame. A browser sends this header '
+        'automatically.'
     ),
     response_class=StreamingResponse,
     responses={
@@ -377,25 +376,14 @@ async def stream_job_events(
     status_code=status.HTTP_202_ACCEPTED,
     summary='Run an interrupted job again',
     description=(
-        'Queues an interrupted job to be run again, and hands it back '
-        'to a worker. A job left queued or running when the service '
-        'stopped is marked interrupted at startup and never resumed on '
-        'its own: a send that resumed itself would write to a '
-        'live volunteer system from state rebuilt after a crash.\n\n'
-        'What runs is the ordinary work, pointed at a job that already '
-        'exists. A resumed send reads every opportunity immediately '
-        'before writing to it and creates exactly the rows the '
-        'interrupted attempt did not, so resuming needs no record of '
-        'how far that attempt got -- the question is answered by '
-        'Amplify rather than by the job.\n\n'
-        'The job keeps its identifier and loses what the interrupted '
-        'attempt recorded about itself: when it began, when it '
-        'stopped, and why. Those described an attempt that is being '
-        'made again, and leaving them would describe two runs of it at '
-        'once.\n\n'
-        'Refused for a job in any other state -- which is what stops a '
-        'second click starting a second worker -- and while another '
-        'job is working on the same run.'
+        'Runs an interrupted job again. A job is interrupted when the '
+        'process running it stops before the job ends. When the '
+        'service starts, it marks any queued or running job as '
+        'interrupted.\n\nYou may only resume an interrupted job, and '
+        'only while no other job is working on the same run.\n\nA '
+        'resumed send creates only the shifts Amplify does not have. '
+        'The job keeps its identifier. Its start time, end time, and '
+        'failure reason are cleared.'
     ),
     response_model=JobView
 )

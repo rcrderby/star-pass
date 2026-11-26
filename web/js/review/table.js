@@ -259,7 +259,7 @@ function roleRow(event, role, context) {
         inputMode: 'numeric',
         value: String(role.slots),
         disabled: context.busy,
-        'aria-label': `Volunteers wanted for ${
+        'aria-label': `Volunteer count for ${
           opportunity ? opportunity.title : role.needId
         }`,
         onchange: (changed) => {
@@ -491,9 +491,8 @@ function eventRows(event, context) {
             type: 'button',
             class: 'btn btn-ghost micro',
             disabled: context.busy,
-            title: 'Put this row back as it was collected - its '
-              + 'opportunity, its shift times and the volunteers '
-              + 'each opportunity asks for',
+            title: 'Restore this row\'s collected opportunity, shift '
+              + 'times, and volunteer count',
             onclick: () => context.onEdit({
               op: 'undo',
               eventIds: [event.id]

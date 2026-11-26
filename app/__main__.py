@@ -206,7 +206,8 @@ class TerminalReporter(Reporter):
         """
 
         write(
-            'No shifts in the summary window; skipped posting to Slack.'
+            'No shifts fall in the summary\'s dates. The summary was '
+            'not posted to Slack.'
         )
 
         return None
@@ -420,9 +421,9 @@ def build_parser() -> argparse.ArgumentParser:
         action='append',
         default=None,
         help=(
-            'Amplify need ID to summarize; repeat or comma-separate for '
-            'several, or pass "-" to read IDs from stdin.  Defaults to '
-            'SLACK_SUMMARY_NEED_IDS.'
+            'The need ID to summarize. Separate multiple need IDs with '
+            'commas, or pass "-" to read IDs from standard input. '
+            'Defaults to SLACK_SUMMARY_NEED_IDS.'
         )
     )
     slack_group.add_argument(
@@ -447,7 +448,7 @@ def build_parser() -> argparse.ArgumentParser:
     slack_group.add_argument(
         '-t', '--slack-title',
         default=None,
-        help='Message title (default: the summary window dates).'
+        help='The message title. Defaults to the summary\'s dates.'
     )
     slack_group.add_argument(
         '-k', '--slack-channel',

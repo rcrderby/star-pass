@@ -29,7 +29,7 @@ const HEADERS = ['Opportunity', 'New shifts', 'Dates'];
 /* What the row's date cell says when a send would create nothing
  * under this opportunity, which is what an opportunity Amplify
  * already holds every shift for looks like. */
-const NOTHING_LEFT = 'nothing left to create';
+const NOTHING_LEFT = 'Already in Amplify';
 
 /* While the preview is being read, and when it could not be.  The
  * lead says what this screen knows -- the check did not happen, so
@@ -148,8 +148,7 @@ export function summaryLine(preview) {
 /** Return why the send button is not available.
  *
  * Reasons are the ones the preview published, worded here and grouped
- * so that three events missing an opportunity is one clause rather
- * than three.
+ * into one sentence for each reason.
  *
  * @param {Object} preview What the service answered.
  * @returns {string} The line, or an empty string when nothing blocks.
@@ -167,11 +166,12 @@ export function blockedReason(preview) {
 
   return [...byReason]
     .map(([reason, count]) => {
-      const events = counted(count, 'event');
+      const verb = count === 1 ? 'has' : 'have';
 
-      return `${events} with ${phrase('blocker', reason)}`;
+      return `${counted(count, 'event')} ${verb} `
+        + `${phrase('blocker', reason)}.`;
     })
-    .join(', ');
+    .join(' ');
 }
 
 /* What a line of the Checks card can be. **A finding is not a

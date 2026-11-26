@@ -758,7 +758,7 @@ class TestShowingWhatARunLeftOut:
         status = cli('runs', 'uncollected', populated)
 
         assert status == 0
-        assert 'was collected' in capsys.readouterr().out
+        assert 'collected all events' in capsys.readouterr().out
 
     def test_every_reason_the_core_publishes_is_worded(self) -> None:
         # A reason with no wording heads its group as its identifier,

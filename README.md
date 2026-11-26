@@ -15,7 +15,7 @@
 League Calendar, a set of public Google Calendars.
 
 The public calendars list practices, scrimmages, and games. Volunteers sign up for shifts to support events in the Amplify volunteer management platform.
-`star-pass` gathers events from a date range in the League Calendar, identifies the volunteer shifts that each event needs,
+`star-pass` gathers events from a date range in the League Calendar, identifies the volunteer shifts that each event requires,
 and allows you to bulk-create shifts in Amplify.
 
 ## How It Works
@@ -28,13 +28,13 @@ Each run goes through four steps:
 
 1. **Collect.** Read the League Calendar events within the date range and match each title
    to a category in the data model. The categories prepare Amplify
-   opportunities, their shift times, and the number of volunteer slots.
+   opportunities, their shift times, and the volunteer count.
 2. **Review.** Check each event. Change the Amplify opportunities `star-pass` assigned, their start and end times,
-   their number of volunteer slots, or remove them. Each change is tracked, and you may revert to any saved revision.
+   their volunteer count, or remove them. Each change is tracked, and you may revert to any saved revision.
 3. **Preview.** Compare the run's shifts with the volunteer shifts already in Amplify, to avoid creating duplicates.
 4. **Send.** Create the shifts in Amplify. `star-pass` sends volunteer shifts to Amplify and displays the shifts it creates.
 
-Each step is available in the web UI and from the CLI.
+Each function is available in the web UI. Collecting, previewing, and sending are also available from the CLI.
 
 ### Slack Summary Posts
 
@@ -46,16 +46,16 @@ volunteer shift data from Amplify and runs in scheduled GitHub Actions.
 | Term | Meaning |
 | --- | --- |
 | Event | An entry on the League Calendar |
-| Category | A kind of event, such as an adult game, defined in a data model |
+| Category | A type of event, such as an adult game, defined in a data model |
 | Alias | A keyword that identifies a category in an event title |
 | Opportunity | An Amplify listing volunteers sign up through, such as "Adult Games - NSOs". Amplify's API calls it a "need", and its ID a "need ID" |
-| Shift | One date and time in an opportunity, with a specific number of volunteer slots |
+| Shift | One date and time in an opportunity, with a specific volunteer count |
 | Run | The events from one calendar and date range, converted to Amplify shifts |
 | Revision | A saved version of a run |
 
 ## The Data Model
 
-A data model for volunteer shifts determines the opportunity or opportunities each event from the League Calendar should match, plus certain details that apply those shifts. The model is at `models/shift_info.yml`.
+A data model for volunteer shifts determines the opportunity or opportunities each event from the League Calendar should match, plus certain details that apply to those shifts. The data model is at `models/shift_info.yml`.
 
 ### Data Model Example
 
@@ -75,16 +75,16 @@ adult_game:
 ```
 
 An event with `axles` or `wheels` in its title is in the `adult_game` category. It
-gets a volunteer shift in opportunity 879609 with 12 volunteer slots. The shift starts 15
+gets a volunteer shift in opportunity 879609 with a volunteer count of 12. The shift starts 15
 minutes before and ends 30 minutes after the League Calendar event times. It has a maximum length of 165 minutes, from its start time.
 
 | Field | Meaning |
 | --- | --- |
 | `aliases` | Title keywords for each category. When a title contains aliases from more than one category, the longest alias match wins |
-| `need_ids[].id` | The Amplify opportunity ID |
+| `need_ids[].id` | The Amplify need ID |
 | `offset_start`, `offset_end` | Minutes added to the event's start and end times. A negative number moves the time earlier |
 | `max_length` | The maximum length of a shift, in minutes |
-| `slots` | How many volunteer slots a shift has |
+| `slots` | A shift's volunteer count |
 
 ## Requirements
 
@@ -127,16 +127,19 @@ docker compose ps
 
 ### 3. Open It
 
-Open `https://localhost`. Your browser displays a warning about the certificate because star-pass signs it with its own certificate authority.
-[`docs/deployment.md`](docs/deployment.md) explains how to trust the certificate, or
-use a certificate from a public certification authority, or reach `star-pass` from another machine.
+Open `https://localhost`. Your browser displays a warning about the certificate because `star-pass` signs it with its own certificate authority.
+[`docs/deployment.md`](docs/deployment.md) explains how to:
+
+- Trust the certificate
+- Use a certificate from a public certificate authority
+- Connect to `star-pass` from another device
 
 Before your first run, in the web UI, navigate to **Settings** to test the
 Amplify and League Calendar credentials.
 
 ## Command Line Interface
 
-The command line interface allows you to perform the same actions available in the web UI:
+The command line interface allows you to collect, read, and send runs:
 
 ```bash
 docker compose exec api python /app/__main__.py --help
@@ -176,18 +179,18 @@ python -m bandit -rc .bandit.yml app tests
 python scripts/check_prose.py --changed origin/main
 ```
 
-The tests make no network calls and need no `.env` file.
+The tests make no network calls and do not require a `.env` file.
 
 ### Code Layout
 
 | Path | Contents |
 | --- | --- |
 | `app/__main__.py` | The command line entry point |
-| `app/star_pass/` | The core: collecting, reviewing, previewing and sending runs, and the SQLite database |
+| `app/star_pass/` | The core: collecting, reviewing, previewing, and sending runs, and the SQLite database |
 | `app/star_pass_api/` | The API service (FastAPI) |
 | `app/star_pass_bff/` | The frontend service. Serves the web UI and forwards its requests to the API |
 | `app/star_pass_cli/` | The command line commands |
-| `app/star_pass_client/` | The API client the CLI uses. Its operations are generated from the API specification. |
+| `app/star_pass_client/` | The API client the CLI uses. Its operations are generated from the API specification |
 | `app/star_pass_contract/` | The data shapes the API and the command line both return |
 | `web/` | The web UI |
 | `models/` | The data model and Slack role labels |
@@ -204,6 +207,6 @@ Automated tests will fail if a committed file does not match what its command ge
 
 | File | Contents | Generated From | Command |
 | --- | --- | --- | --- |
-| `docs/api/openapi.json` | The API specification | Routes, models, scopes and version in the API | `python scripts/generate_contract.py` |
+| `docs/api/openapi.json` | The API specification | Routes, models, scopes, and version in the API | `python scripts/generate_contract.py` |
 | `app/star_pass_client/_operations.py` | The command line's API client | `docs/api/openapi.json` | `python scripts/generate_contract.py` |
 | `docs/architecture/*.svg` | The diagrams in `docs/architecture.md` | `scripts/generate_architecture.py` and `scripts/_drawing.py` | `python scripts/generate_architecture.py` |

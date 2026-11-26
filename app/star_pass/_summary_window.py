@@ -131,7 +131,7 @@ def _window_end(
 
     if days < 1:
         raise ValueError(
-            f'Summary window must cover at least one day, got {days}.'
+            f'The summary must cover at least 1 day, not {days}.'
         )
 
     last_day = now + timedelta(days=days - 1)
@@ -173,8 +173,8 @@ def _window_start(
 
     if start_in_days < 0:
         raise ValueError(
-            'Summary window cannot start in the past, got '
-            f'{start_in_days}.'
+            'The summary may not start before today. Set '
+            f'-D/--start-in-days to 0 or more, not {start_in_days}.'
         )
 
     if start_in_days == 0:

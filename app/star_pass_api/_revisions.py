@@ -53,15 +53,10 @@ router = APIRouter(tags=[_defaults.API_TAG_RUNS])
     '/runs/{run_id}/revisions',
     summary='List a run\'s revisions, oldest first',
     description=(
-        'Every numbered version of the run\'s events, in the order '
-        'they were made. Everything below the current revision is '
-        'history and is never written to again: editing adds a '
-        'revision holding a copy, and reverting does the same rather '
-        'than deleting anything, so the record of what was done '
-        'survives being undone.\n\n'
-        'Each carries how many changes were made while it was '
-        'current, which is what says whether a revision is worth '
-        'looking at.'
+        'Every revision of the run, oldest to newest. Only the current '
+        'revision changes. Editing and reverting add a new revision, '
+        'and do not change earlier revisions.\n\nEach revision '
+        'includes the number of changes made while it was current.'
     ),
     response_model=List[RevisionView]
 )
@@ -114,23 +109,13 @@ async def list_revisions(
     status_code=status.HTTP_201_CREATED,
     summary='Seal the revision being worked in and open the next',
     description=(
-        'Fixes what the run holds now as a numbered revision and '
-        'moves the work to a new one holding a copy of it. Editing '
-        'changes the revision a run is working in as it goes, so this '
-        'is what makes a point in that work something to come back '
-        'to.\n\n'
-        'Nothing is deleted and nothing is lost: the revision that '
-        'was current keeps its rows and stays readable at its own '
-        'number, which is what reverting to it later reads.\n\n'
-        'A run that has collected nothing is refused. The first '
-        'revision belongs to the collection, which labels it for what '
-        'filled it.\n\n'
-        'Requires an `Idempotency-Key` header. Sealing is not '
-        'idempotent in itself -- twice is two revisions -- so a retry '
-        'after a lost answer is given the first answer rather than '
-        'opening a second one. The request carries nothing else, so a '
-        'key already used on this run is a replay whatever it is sent '
-        'with.'
+        'Saves the run\'s current events as a numbered revision, and '
+        'continues editing in a new revision that copies it. The saved '
+        'revision does not change, and you may revert to it later.\n\n'
+        'Refused for a run with no collected events.\n\nRequires an '
+        '`Idempotency-Key` header. A retry with the same key receives '
+        'the first answer. A key already used on this run is treated '
+        'as a retry.'
     ),
     response_model=RevisionView
 )
@@ -191,26 +176,15 @@ async def seal_revision(
     '/runs/{run_id}/revisions/{number}/revert',
     summary='Take the run back to what an earlier revision held',
     description=(
-        'Puts the run back to the events one of its earlier '
-        'revisions holds, by adding a revision holding a copy of '
-        'that one. The work carries on there.\n\n'
-        'One revision per revert, and nothing between the two is '
-        'touched: every revision the run has been through stays '
-        'readable at its own number, so a revert can itself be '
-        'reverted by going back to the revision that was current '
-        'before it.\n\n'
-        'Reverting to revision 1 also drops the events somebody '
-        'pulled in by hand, because revision 1 is the run as the '
-        'calendar gave it. Those events return to the list of what '
-        'the collection left out, ready to be pulled in again -- the '
-        'rows describing them were never deleted.\n\n'
-        'Answers with the run in full, because every row on the '
-        'screen that asked has changed.\n\n'
-        'Requires an `Idempotency-Key` header. Reverting twice is two '
-        'revisions, so a retry after a lost answer is given the first '
-        'answer rather than opening a second one. The key remembers '
-        'which revision was asked for: sent again naming a different '
-        'one, it is refused rather than answered from the first.'
+        'Restores the events of an earlier revision by adding a new '
+        'revision that copies it. Editing continues in the new '
+        'revision.\n\nReverting does not change any other revision. To '
+        'undo a revert, revert to the revision that was current before '
+        'it.\n\nReverting to revision 1 removes manually added events '
+        'and returns them to the run\'s uncollected list.\n\nAnswers '
+        'with the full run.\n\nRequires an `Idempotency-Key` header. A '
+        'retry with the same key receives the first answer. A key sent '
+        'with a different revision number is refused.'
     ),
     response_model=RunDetailView
 )

@@ -71,13 +71,14 @@ SEND_QUESTION = 'Create these shifts in Amplify? This cannot be undone.'
 # What a send says when there is nothing to ask about, and when the
 # answer was no.
 NOTHING_TO_SEND = (
-    'Amplify already has every shift this run asks for. Nothing sent.'
+    'Every shift in this run is already in Amplify. No shifts were '
+    'created.'
 )
-NOT_SENT = 'Nothing was sent.'
+NOT_SENT = 'Send canceled.'
 DELETE_QUESTION = (
     'Delete this run and everything in it? This cannot be undone.'
 )
-NOT_DELETED = 'Nothing was deleted.'
+NOT_DELETED = 'Delete canceled.'
 
 # The word each group of commands is selected by, and what it covers.
 GROUPS = {
@@ -258,7 +259,10 @@ COMMANDS = (
     Command(
         group='runs',
         word='show',
-        summary='Show one run, what it holds and what changed it.',
+        summary=(
+            'Show one run, its events, its Amplify opportunities, '
+            'and its changes.'
+        ),
         operation='get_run',
         render=run_detail,
         argument='run_id'
@@ -275,8 +279,7 @@ COMMANDS = (
         group='runs',
         word='uncollected',
         summary=(
-            'Show what a run\'s window held and the run did not '
-            'collect.'
+            'Show the uncollected events in a run\'s date range.'
         ),
         operation='list_uncollected',
         render=uncollected_text,
@@ -285,7 +288,7 @@ COMMANDS = (
     Command(
         group='runs',
         word='delete',
-        summary='Delete a run that never sent shifts to Amplify.',
+        summary='Delete a run that has not sent shifts to Amplify.',
         operation='delete_run',
         render=deleted_text,
         argument='run_id',
@@ -302,7 +305,10 @@ COMMANDS = (
     Command(
         group='runs',
         word='collect',
-        summary='Collect a calendar window into a new run.',
+        summary=(
+            'Collect a calendar\'s events within a date range into '
+            'a new run.'
+        ),
         operation='collect_run',
         render=job_text,
         options=(
@@ -330,7 +336,10 @@ COMMANDS = (
     Command(
         group='runs',
         word='recollect',
-        summary='Collect a run\'s window again, replacing what it holds.',
+        summary=(
+            'Collect a run again, replacing its events with the '
+            'current League Calendar events.'
+        ),
         operation='recollect_run',
         render=job_text,
         argument='run_id',

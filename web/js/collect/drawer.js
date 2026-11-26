@@ -54,8 +54,8 @@ const DAYS_NEEDED = 'A first day and a last day are both needed.';
 /* Said when the window is the run's rather than one being asked
  * for. Nothing is converted and nothing is sent. */
 const THE_RUNS_OWN_WINDOW = (
-  'Collecting again reads the same calendar over the same days, and '
-  + 'the run keeps this window. A different window is a different '
+  'Collecting events again reads the same calendar and date range. '
+  + 'To collect from a different calendar or date range, start a new '
   + 'run.'
 );
 

@@ -36,16 +36,13 @@ MAINTENANCE_GROUP = 'retention'
 SWEEP_WORD = 'sweep'
 
 GROUP_SUMMARY = 'Apply the retention policy to the local database.'
-SWEEP_SUMMARY = (
-    'Forget the job logs, revisions and unmatched titles the '
-    'retention policy no longer keeps.'
-)
+SWEEP_SUMMARY = 'Apply the retention policy to the local database.'
 
 # What it says when the policy had nothing to do, which is the usual
 # answer and is worth saying rather than printing nothing: a command
 # that produced no output would leave the operator unsure it ran.
 NOTHING_REMOVED = (
-    'No data was past its retention period. Nothing was removed.'
+    'No data was past its retention period.'
 )
 
 # Headed, because a reader of these three numbers is checking that the

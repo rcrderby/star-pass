@@ -11,7 +11,7 @@
 """
 
 # Imports - Python Standard Library
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from os import getenv
 from typing import Tuple
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -109,6 +109,47 @@ def _parse_gcal_time(
     return parsed
 
 
+def _order_message(
+        start: str,
+        end: str,
+        start_name: str,
+        end_name: str
+) -> str:
+    """ Return what to say about a window that does not move forward.
+
+        Args:
+            start (str):
+                First moment the window covers.
+
+            end (str):
+                Moment the window stops covering, exclusive.
+
+            start_name (str):
+                What to call the first value.
+
+            end_name (str):
+                What to call the second value.
+
+        Returns:
+            message (str):
+                For a plain date end, the message names the last day
+                the window covers.
+    """
+
+    try:
+        last_day = date.fromisoformat(end) - timedelta(days=1)
+    except ValueError:
+        return (
+            f'{start_name} ({start}) must be earlier than '
+            f'{end_name} ({end}).'
+        )
+
+    return (
+        f'{start_name} ({start}) must be on or before '
+        f'{end_name} ({last_day.isoformat()}).'
+    )
+
+
 def resolve_window(
         start: str,
         end: str,
@@ -129,7 +170,9 @@ def resolve_window(
                 datetime.
 
             end (str):
-                Moment the window stops covering, exclusive.
+                Moment the window stops covering, exclusive.  When it
+                is a plain date, a message names the day before it,
+                the last day the window covers.
 
             start_name (str):
                 What to call the first value in a message, so a reader
@@ -167,10 +210,11 @@ def resolve_window(
     # Compare the resolved instants, so a window mixing a local value
     # with an offset value is ordered correctly.
     if parsed_start >= parsed_end:
-        message = (
-            f'{start_name} ({start}) must be earlier than '
-            f'{end_name} ({end}); the current values select an '
-            'empty search window.'
+        message = _order_message(
+            start=start,
+            end=end,
+            start_name=start_name,
+            end_name=end_name
         )
         logger.error(message)
         raise ValueError(message)
@@ -180,7 +224,7 @@ def resolve_window(
     resolved_start = parsed_start.isoformat()
     resolved_end = parsed_end.isoformat()
     message = (
-        f'League Calendar search window: {resolved_start} to {resolved_end}'
+        f'League Calendar date range: {resolved_start} to {resolved_end}'
     )
     logger.info(message)
 

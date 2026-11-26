@@ -51,18 +51,13 @@ router = APIRouter(tags=[_defaults.API_TAG_SERVICE])
     '/unmatched-titles',
     summary='List titles the data model has not matched',
     description=(
-        'One entry per title in a calendar, with how many sightings '
-        'have been recorded -- one per run it turned up in, plus any '
-        'recorded by hand -- and when the first and most recent were. '
-        'Newest sighting first, so a title that has just started '
-        'turning up is read before one somebody has already decided '
-        'about.\n\n'
-        'What it is for: the next edit of the shift data model. A '
-        'title seen every month is a category the model is missing; '
-        'one seen once is an event that happened once, and the count '
-        'is what tells them apart.\n\n'
-        'Belongs to no run. A run is a window that is eventually '
-        'superseded, and what the model is missing outlives it.'
+        'One entry per title and calendar, newest to oldest, with the '
+        'number of sightings and when the title was first and last '
+        'seen. Each run the title appears in adds one sighting, and so '
+        'does each manually recorded sighting.\n\nA title that appears '
+        'routinely is likely a category missing from the data model. A '
+        'title seen once may be a one-time event.\n\nAny unmatched '
+        'titles from a run remain in the log after the run is deleted.'
     ),
     response_model=List[UnmatchedTitleView]
 )
@@ -97,23 +92,14 @@ async def list_unmatched_titles(
     status_code=status.HTTP_201_CREATED,
     summary='Record a title the data model did not match',
     description=(
-        'Adds one sighting, for a title noticed outside a '
-        'collection: collections record what they find themselves.\n\n'
-        'A title recorded twice against no run is two sightings and '
-        'one entry, because how often a title turns up is what says '
-        'whether it is worth an alias and an entry overwritten would '
-        'answer "once" forever. A run counts once however often it is '
-        'named, so a retry adds nothing.\n\n'
-        'Answers with the entry as the log now holds it, this '
-        'sighting counted.\n\n'
-        'The calendar has to be one the deployment configured, '
-        'because the categories a title is matched against belong to '
-        'a calendar. The run is optional provenance: the log outlives '
-        'the run, and deleting one does not take the reason somebody '
-        'was going to edit the model.\n\n'
-        'No `Idempotency-Key`. A request naming a run is already '
-        'answered the same way twice, and one naming none records '
-        'that the title was seen again, which is true.'
+        'Records one sighting of a title found outside a collection. '
+        'Collections record their own sightings.\n\nA title recorded '
+        'twice with no run is two sightings in one entry. A run counts '
+        'each title once, so a retry that names the same run adds no '
+        'sighting.\n\nAnswers with the updated entry.\n\nThe calendar '
+        'must be one the deployment configured. The run is optional. '
+        'Any unmatched titles from a run remain in the log after the '
+        'run is deleted.\n\nTakes no `Idempotency-Key`.'
     ),
     response_model=UnmatchedTitleView
 )

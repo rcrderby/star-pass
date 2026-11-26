@@ -68,7 +68,10 @@ BLOCKER_HEADERS = (
 # Said once, above the rows, when anything is blocked.  A preview whose
 # totals a reader skims should not let them think the blocked events
 # below cost them only those shifts.
-NOTHING_SENDABLE = 'Nothing can be sent while an event is blocked.'
+NOTHING_SENDABLE = (
+    'The run cannot send shifts to Amplify while there are blocking '
+    'events.'
+)
 
 # How each reason an event cannot be sent is put to a reader.  The
 # contract publishes the reasons as identifiers, which is right for
@@ -117,9 +120,11 @@ EVENT_DETAIL_FIELDS = (
 )
 
 BLOCKER_PHRASES = {
-    BLOCKER_NO_OPPORTUNITY: 'No opportunity to create a shift under.',
-    BLOCKER_ENDS_BEFORE_START: 'The shift ends before it starts.',
-    BLOCKER_NO_SLOTS: 'No volunteers are wanted.'
+    BLOCKER_NO_OPPORTUNITY: 'No opportunity assigned.',
+    BLOCKER_ENDS_BEFORE_START: (
+        'Shift end time is before the shift start time.'
+    ),
+    BLOCKER_NO_SLOTS: 'Volunteer count is 0.'
 }
 
 
@@ -246,7 +251,7 @@ def preview_text(
             heading='OPPORTUNITIES',
             headers=PREVIEW_HEADERS,
             rows=[preview_row(row=row) for row in answer['rows']],
-            empty='Nothing would be created.'
+            empty='This run will create no shifts.'
         )
     )
     parts.append(
@@ -268,7 +273,7 @@ def preview_text(
                 blocker_row(blocker=blocker)
                 for blocker in answer['blockers']
             ],
-            empty='Nothing is blocked.'
+            empty='No blocking events.'
         )
     )
 
@@ -420,7 +425,7 @@ def send_restatement(
                 pairs=(
                     ('Run', run['id']),
                     ('Calendar', run['calendar']),
-                    ('Window', window_text(window=run['window'])),
+                    ('Date range', window_text(window=run['window'])),
                     ('Would create', str(totals['willCreate'])),
                     (
                         'Already in Amplify',
@@ -434,7 +439,7 @@ def send_restatement(
                 rows=[
                     preview_row(row=row) for row in preview['rows']
                 ],
-                empty='Nothing would be created.'
+                empty='This run will create no shifts.'
             )
         )
     )

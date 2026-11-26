@@ -51,8 +51,8 @@ def _resolve(start: str, end: str):
     return resolve_window(
         start=start,
         end=end,
-        start_name='the window start',
-        end_name='the window end'
+        start_name='The first day',
+        end_name='the last day'
     )
 
 
@@ -161,7 +161,7 @@ class TestFuzzyMatchThreshold:
             )
 
         assert result['need_ids'][0]['id'] == ''
-        assert 'no confident shift-info match' in caplog.text.lower()
+        assert 'no category matches' in caplog.text.lower()
 
     def test_the_threshold_is_what_rejects_the_match(
         self, monkeypatch, helpers

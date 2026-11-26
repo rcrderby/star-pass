@@ -258,7 +258,7 @@ class TestWhatAnEditAnswers:
 
         assert answer.status_code == 409
         assert answer.headers['content-type'] == PROBLEM_MEDIA_TYPE
-        assert 'cannot be unassigned' in answer.json()['detail']
+        assert 'may not be unassigned' in answer.json()['detail']
 
     def test_the_log_carries_one_entry_per_operation(
         self, edit, collected

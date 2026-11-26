@@ -1,47 +1,55 @@
-# Posting the Slack sign-up summary
+# Slack Sign-Up Summary
 
-Live counts per shift, posted to Slack. This is the one thing star-pass
-does that the API deliberately does not publish: it is selected by a run
-mode flag, `-s`/`--post-slack-summary`, rather than by a command word.
+`star-pass` posts a summary of volunteer sign-ups to Slack, with a count
+for each role in each shift. The summary only reads Amplify. It uses the
+`-s`/`--post-slack-summary` flag, not a command. The other commands are
+in [`docs/cli.md`](cli.md).
 
-The command line reference is in [`cli.md`](cli.md); this file covers
-the summary alone.
+A GitHub Actions workflow, `.github/workflows/slack-summary.yml`, posts
+the summary on Wednesdays and Fridays.
 
-## The commands
+## Commands
 
-Live counts per shift, for **today** by default:
+By default, the summary covers today:
 
 ```bash
-# Dry run (default): build and print the Block Kit message, no send
+# Check mode (the default): build and print the message without posting it
 ./app/__main__.py -s -N 879610
 
-# Several opportunities in one message; repeat -N or comma-separate
+# Several opportunities in one message: repeat -N or separate with commas
 ./app/__main__.py -s -N 879610,879611 -N 879612
 
-# Cover today and tomorrow instead of just today
+# Today and tomorrow
 ./app/__main__.py -s -N 879610 -d 2
 
-# Posted on a Friday, covering Saturday and Sunday only
+# Saturday and Sunday, posted on a Friday
 ./app/__main__.py -s -N 879610 -D 1 -d 2
 
-# Read the IDs from another command
+# Read the need IDs from another command
 printf '879610 879611' | ./app/__main__.py -s -N -
 
-# Post live (needs SLACK_BOT_TOKEN); -k overrides the default
-# channel (SLACK_CHANNEL_ID, else SLACK_DEV_CHANNEL_ID)
+# Post to Slack
 ./app/__main__.py --post-slack-summary \
     --need-id 879610 \
     --slack-channel C0123ABC456 \
     --check-mode false
 ```
 
-**Which opportunities.** `-N`/`--need-id` may be repeated,
-comma-separated, or given as `-` to read IDs from stdin. With no `-N`
-at all the IDs come from `SLACK_SUMMARY_NEED_IDS` in `.env`, so an
-unattended run needs no arguments.
+| Option | Sets | Default |
+| --- | --- | --- |
+| `-N`, `--need-id` | The need IDs to summarize. Repeat it, separate need IDs with commas, or pass `-` to read them from standard input | `SLACK_SUMMARY_NEED_IDS` |
+| `-d`, `--days` | How many days to cover, counting the first day as one | `SLACK_SUMMARY_DAYS`, else 1 |
+| `-D`, `--start-in-days` | How many days from today the summary starts. `0` is today, and `1` is tomorrow | `SLACK_SUMMARY_START_IN_DAYS`, else 0 |
+| `-t`, `--slack-title` | The message title | The summary's dates |
+| `-k`, `--slack-channel` | The Slack channel ID to post to | `SLACK_CHANNEL_ID`, else `SLACK_DEV_CHANNEL_ID` |
+| `-C`, `--check-mode` | `true` builds the message without posting it. `false` posts it | `true` |
 
-**How the message reads.** One row per event and time, with a line
-per role beneath it:
+Posting to Slack requires `SLACK_BOT_TOKEN` and a channel ID in `.env`.
+See `.env.example`.
+
+## The Message
+
+The message has one row per event and time, with a line for each role:
 
 ```text
 Juniors Scrimmages 6:00-7:00 p.m.
@@ -53,92 +61,60 @@ Adult Scrimmages 7:00-8:00 p.m.
 4 x SOs
 ```
 
-Role labels are shortened using `models/slack_role_labels.yml`, so
-a summary reads `4 x NSOs` rather than
-`4 x Non-Skating Officials`. Entries are keyed on the **role**, not
-the opportunity, so a new opportunity using an existing role needs
-no change there. A role with no entry keeps its full text. An
-opportunity whose title has no role at all uses that file's
-`default` label, so "Officials Practice" reads `1 x Official`.
+The event name and the role come from the opportunity's title in
+Amplify. The text before `SLACK_TITLE_SEPARATOR` (a colon and a space,
+by default) is the event, and the text after it is the role. For
+example, "Adult Scrimmages: Skating Officials" adds a "Skating
+Officials" line to the "Adult Scrimmages" row. A title with no separator
+is the row's heading by itself, and its line only shows a count.
 
-Each opportunity gets a sign-up button at the end, filled rather
-than outlined so it reads as a control on a phone, and ending in an
-arrow because it opens the opportunity in a browser rather than
-acting inside Slack. Set `SLACK_SIGN_UP_BUTTON_STYLE` to change the
-style, or to empty for outlined buttons, and
-`SLACK_SIGN_UP_BUTTON_SUFFIX` to change the arrow. Slack truncates
-a button that outgrows its width, which is why the role is
-shortened there too.
+`models/slack_role_labels.yml` shortens role names. For example,
+"Non-Skating Officials" becomes "NSOs". The file's entries are keyed by
+role, not by opportunity, and a new opportunity with an existing role
+does not require a new entry. A role with no entry keeps its full name. A title
+with no role uses the file's `default` label. For example, "Officials
+Practice" reads `1 x Official`. A count of one uses the singular label.
 
-A count of exactly one reads as a singular label ("1 x NSO"). Rows appear in chronological order, and so do the
-sign-up buttons at the end, so the message reads top to bottom as
-the day happens. When two events run at the same time, they follow
-the order their IDs were given in `-N` or `SLACK_SUMMARY_NEED_IDS`.
+Rows are in time order. Events at the same time follow the order of the
+need IDs in `-N` or `SLACK_SUMMARY_NEED_IDS`. A summary of more
+than one day has a date heading for each day. A one-day summary has no
+date headings, and its title names the day.
 
-When the window covers more than one day, each day's rows sit under
-a date heading. A single-day summary has none, because the title
-already names the day.
+Each opportunity has a sign-up button at the end of the message, in the
+same order as the rows. The button opens the opportunity in a browser.
+`SLACK_SIGN_UP_BUTTON_STYLE` sets the button's style. To display an
+outlined button, set it to an empty value. `SLACK_SIGN_UP_BUTTON_SUFFIX`
+sets the arrow at the end of the button's text.
 
-Most of a run is spent waiting on Amplify, because the responses
-endpoint has no server-side need or shift-date filter and the whole
-domain's recent sign-ups have to be paged. A spinner reports
-progress while that happens (`Reading recent sign-ups (page 4)`,
-then `Reading opportunity 2 of 5`). It writes to stderr and only
-when stderr is a terminal, so a scheduled run's log stays clean.
+## Dates and Times
 
-The event heading and the shortened role labels are derived from the
-opportunity titles themselves, with no mapping file to maintain:
-everything before `SLACK_TITLE_SEPARATOR` (a colon and a space by
-default) becomes the
-event, and what follows becomes the role label, so "Adult
-Scrimmages: Skating Officials" contributes a "Skating Officials"
-line to an "Adult Scrimmages" row. An opportunity whose title has no
-separator keeps its full title as the row heading, and its lines
-report a bare count.
+Times and dates are in `LOCAL_TIMEZONE`, not the host's time zone.
 
-Requires `SLACK_BOT_TOKEN` and a destination channel (`SLACK_CHANNEL_ID` or `SLACK_DEV_CHANNEL_ID`, or `-k`) in your `.env`; see `.env.example`.
+The summary leaves out shifts that have already started. For example, a
+summary posted at noon only lists the rest of the day's shifts. A
+summary that starts on a later day covers that entire day.
 
-Times, and the calendar day the window covers, are read in
-`LOCAL_TIMEZONE` rather than from the host clock: a container or a
-CI runner usually runs in UTC, where a Portland evening is already
-the next day, which would summarize the wrong day.
+If no shifts fall in the summary's dates, the summary is not posted,
+and the log says so.
 
-**The day window.** `-d`/`--days` sets how many calendar days the
-summary covers, counting today as day one: `1` (the default) is today
-only, `2` adds tomorrow. Set `SLACK_SUMMARY_DAYS` in `.env` to change
-the default. Shifts that already started never appear, so a summary
-posted at noon lists only what is still to come that day.
+## Reading Amplify
 
-`-D`/`--start-in-days` moves where the window begins: `0` (the
-default) starts today, `1` starts tomorrow. This is what a notice
-posted ahead of its shifts needs, so a Friday post covering the
-weekend uses `-D 1 -d 2` and lists Saturday and Sunday without
-Friday's own shifts. A window that starts on a later day carries
-that day whole, from midnight. Set `SLACK_SUMMARY_START_IN_DAYS` in
-`.env` to change the default.
+Reading recent sign-ups from Amplify takes most of a summary's run
+time. When standard error is a terminal, the summary displays its
+progress there: `Reading recent sign-ups (page 4)`, then
+`Reading opportunity 2 of 5`.
 
-When nothing falls inside the window, the run logs that and posts
-nothing. A day with no shifts is routine, so an empty summary is not
-an error and does not produce a message.
+`AMPLIFY_RESPONSES_SINCE_DAYS` (default 90) sets how far back to read
+sign-ups, and a sign-up made before then is not counted. This setting is
+separate from `-d`. It limits when a sign-up was made, not when its
+shift starts. The log reports how close the oldest counted sign-up is to
+the limit, and displays a warning when it is close.
 
-Counts come from the Amplify `/responses`
-endpoint, which has no server-side filter for a need or for a shift's
-date, so the run reads the domain's recent responses and filters them
-to the need. `AMPLIFY_RESPONSES_SINCE_DAYS` (default 90) bounds how far
-back that read goes: a sign-up cannot predate the shift it is for, so a
-90-day window comfortably covers sign-ups for upcoming shifts. Each run
-logs how much margin the window had, and warns when it gets thin.
-Note this is unrelated to `-d`/`--days`: it bounds when a *sign-up*
-was created, not when a *shift* starts, so narrowing the day window
-does not shorten that read.
+## Running the Summary from a Container
 
-## Running the summary from a container
-
-The summary has a container image of its own, carrying what the `-s`
-path imports and nothing else: no API service, no frontend, no
-database, and no page to serve. It is what the scheduled post runs
-on, and it is the way to run a summary by hand without bringing a
-deployment up.
+The summary has its own image, with only what the summary requires: no API
+service, frontend, or database. The scheduled post runs on this image.
+To build and run it:
 
 ```bash
 docker build --target slack -t star-pass:slack .
@@ -149,9 +125,8 @@ docker run --rm \
   star-pass:slack
 ```
 
-Given no command it builds the message and posts nothing, because
-check mode is the default. Name a command to choose the window or to
-post it for real:
+With no command, the image runs the summary in check mode, without
+posting it. To choose the dates or to post, add the command:
 
 ```bash
 docker run --rm \
@@ -161,13 +136,11 @@ docker run --rm \
   python /app/__main__.py -s -D 1 -d 2 -C false
 ```
 
-One Dockerfile builds both images, so they cannot drift apart on the
-base image or the Python version. A build naming no target gets the
-full one, which is what the deployment runs.
+The same Dockerfile builds both images. A build with no target builds
+the full image the deployment runs.
 
-The scheduled post does not build anything. It pulls
-`ghcr.io/rcrderby/star-pass:slack`, which the build workflow publishes
-from `main` alongside a second tag naming the commit it came from, so
-a post can be traced to what produced it. The package is private, so
-pulling it outside a workflow needs a login with `read:packages`;
-building the target locally, as above, needs nothing.
+The scheduled post pulls `ghcr.io/rcrderby/star-pass:slack`. The build
+workflow publishes the image from `main`, with a second tag,
+`slack-<commit>`, for the commit it was built from. The package is
+private, and pulling it outside a workflow requires a GitHub login with
+the `read:packages` scope. Building the image locally requires no login.

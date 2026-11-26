@@ -10,6 +10,7 @@ from uuid import uuid4
 # Imports - Local
 from .._database import execute, query, query_one
 from .._logging import get_logger
+from .._wording import counted
 from .._records import (
     Job,
     JobEvent,
@@ -426,8 +427,8 @@ class JobRepository(Repository):
 
         if count:
             message = (
-                f'Marked {count} unfinished job(s) held by {held_by} '
-                'interrupted'
+                f'Marked {counted(count=count, noun="job")} from '
+                f'{held_by} as interrupted'
             )
             logger.warning(message)
 

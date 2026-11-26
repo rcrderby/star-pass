@@ -26,7 +26,7 @@ router = APIRouter(tags=[API_TAG_SERVICE])
 
 
 class Health(BaseModel):
-    """ The service's answer about itself. """
+    """ The service's status. """
 
     status: str = Field(
         description='Always "ok": a reply at all is the health report.',

@@ -30,6 +30,7 @@ from ._derived import minutes_between
 from ._exceptions import ValidationError
 from ._helpers import amplify_headers, Helpers
 from ._logging import get_logger
+from ._wording import counted
 from ._opportunities import read_need, shifts_in, UNKNOWN_TITLE
 from ._preview import asked_for, PlannedShift, split_by_existing
 from ._reading import read_run_for_send
@@ -666,9 +667,14 @@ def _finished(
     if asked_of:
         runs.mark_sent(run_id=run_id, status=RUN_STATUS_SENT)
 
+    opportunities = counted(
+        count=len(asked_of),
+        noun='opportunity',
+        plural='opportunities'
+    )
     message = (
-        f'Sent {created} shift(s) for run {run_id} across '
-        f'{len(asked_of)} opportunity(s)'
+        f'Sent {counted(count=created, noun="shift")} for run ID '
+        f'{run_id} across {opportunities}'
     )
     logger.info(message)
 

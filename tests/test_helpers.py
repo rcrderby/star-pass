@@ -242,7 +242,7 @@ class TestSearchShiftInfo:
 
         assert result['description'] == 'Unknown Game'
         assert result['need_ids'][0]['id'] == ''
-        assert 'review' in caplog.text.lower()
+        assert 'has no opportunity' in caplog.text.lower()
 
 
 class TestMatchShiftInfo:

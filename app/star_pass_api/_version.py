@@ -31,6 +31,7 @@ class Version(BaseModel):
 @router.get(
     '/version',
     summary='Report the running version',
+    description='The running version of the application.',
     response_model=Version
 )
 async def get_version(
