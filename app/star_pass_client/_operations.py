@@ -72,7 +72,7 @@ class Operations:
             self,
             body: Dict[str, Any]
     ) -> Any:
-        """ Collect a calendar window into a new run.
+        """ Collect a calendar's events within a date range into a new run.
 
             Args:
                 body (Dict[str, Any]):
@@ -98,7 +98,7 @@ class Operations:
             self,
             run_id: str
     ) -> Any:
-        """ Delete a run that never sent.
+        """ Delete a run that has not sent shifts.
 
             Args:
                 run_id (str):
@@ -347,7 +347,7 @@ class Operations:
             self,
             run_id: str
     ) -> Any:
-        """ List what the window held and the run did not collect.
+        """ List the events in a run's date range that the run did not collect.
 
             Args:
                 run_id (str):
@@ -395,7 +395,7 @@ class Operations:
             body: Dict[str, Any],
             run_id: str
     ) -> Any:
-        """ Collect a run's calendar window again.
+        """ Collect a run's events again.
 
             Args:
                 body (Dict[str, Any]):

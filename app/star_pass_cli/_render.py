@@ -56,7 +56,7 @@ COLUMN_GAP = '  '
 RUN_HEADERS = (
     'ID',
     'CALENDAR',
-    'WINDOW',
+    'DATE RANGE',
     'STATUS',
     'EVENTS',
     'SHIFTS',
@@ -156,8 +156,8 @@ LOG_ACTION_PHRASES = {
         'Set {slots} wanted on {subject} for opportunity {needId}.',
     OP_NUDGE: 'Moved {subject} {minutes} {direction}.',
     OP_RESET_SLOTS:
-        'Reset the volunteers wanted on {subject} to what the '
-        'opportunity asks for.',
+        'Reset the volunteer count on {subject} to the '
+        'opportunity\'s default.',
     OP_REMOVE: 'Removed {subject}.',
     OP_UNDO: 'Undid the changes to {subject}.',
     LOG_ADDED: 'Added {subject} from the Not Collected tab.'
@@ -508,7 +508,7 @@ def event_notes(
         notes.append(f'capped at {capped}')
 
     if match is not None and match['kind'] == MATCH_KIND_FUZZY:
-        notes.append(f'fuzzy match, scored {match["score"]}')
+        notes.append(f'similarity match, scored {match["score"]} of 100')
 
     if event['addedByHand']:
         notes.append('added by hand')
@@ -668,7 +668,7 @@ def run_summary(
         pairs=(
             ('Run', run['id']),
             ('Calendar', run['calendar']),
-            ('Window', window_text(window=run['window'])),
+            ('Date range', window_text(window=run['window'])),
             ('Timezone', run['window']['timezone']),
             ('Status', run['status']),
             ('Collected', run['collectedAt']),
@@ -730,7 +730,7 @@ def run_detail(
                     log_row(entry=entry)
                     for entry in answer['log']
                 ],
-                empty='Nothing has been changed.'
+                empty='This run has no changes.'
             )
         )
     )
@@ -814,7 +814,7 @@ def delete_restatement(
         pairs=(
             ('Run', run['id']),
             ('Calendar', run['calendar']),
-            ('Window', window_text(window=run['window'])),
+            ('Date range', window_text(window=run['window'])),
             ('Status', run['status']),
             ('Revisions', str(run['currentRevision'])),
             ('Events', str(counts['events'])),
@@ -843,9 +843,9 @@ def deleted_text(
     del answer
 
     return (
-        'Deleted. Its revisions, events, opportunities, change log and '
-        'jobs went with it; the titles its window did not match did '
-        'not.'
+        'The run was deleted. Its revisions, events, opportunities, '
+        'change log, and jobs were also deleted. Its unmatched titles '
+        'persist in the unmatched title log.'
     )
 
 
@@ -921,7 +921,7 @@ def uncollected_text(
     """
 
     if not answer:
-        return 'Everything this run\'s window held was collected.'
+        return 'The run collected all events within its date range.'
 
     return '\n\n'.join(
         '\n'.join(

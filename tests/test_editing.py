@@ -436,8 +436,8 @@ class TestUnassigning:
         with pytest.raises(ValidationError) as error:
             edit([Operation(op=OP_UNASSIGN, event_ids=('gcal-1',))])
 
-        assert 'cannot be unassigned' in str(error.value)
-        assert 'Remove the event' in str(error.value)
+        assert 'may not be unassigned' in str(error.value)
+        assert 'remove it from the run' in str(error.value)
 
     def test_one_matched_row_refuses_the_whole_selection(self, edit):
         # A call is applied whole or not at all, and a bulk unassign

@@ -20,9 +20,7 @@ import { filled, phrase } from '../phrases.js';
  * rather than an empty card, because an empty card reads as a panel
  * that failed to load. */
 const NOTHING_YET = (
-  'Nothing has been changed in this run yet. Every edit you make is '
-  + 'listed here, with when it was made and which revision it belongs '
-  + 'to.'
+  'This run has no changes. Your edits will display here.'
 );
 
 /** Return how many changes were made in the revision being edited.

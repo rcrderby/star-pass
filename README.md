@@ -1,4 +1,4 @@
-# Star Pass Repository
+# star-pass
 
 <!-- GitHub Actions status badges -->
 [![Build](https://github.com/rcrderby/star-pass/actions/workflows/build.yml/badge.svg)](https://github.com/rcrderby/star-pass/actions/workflows/build.yml)
@@ -11,50 +11,92 @@
 
 ## Overview
 
-star-pass automates volunteer shift creation on the Galaxy Digital
-Amplify platform. A window of a Google Calendar is collected into a
-**run**; the run is reviewed row by row, previewed against what Amplify
-already holds, and sent. A send writes one request per opportunity, skips
-what Amplify already has, and can be resumed if it is interrupted.
+`star-pass` automates Amplify volunteer shift management using events in the
+League Calendar, a set of public Google Calendars.
 
-Two pictures in [`docs/architecture.md`](docs/architecture.md) show what
-a deployment is made of and what a run does across it. They are the
-quickest way to see the shape of the thing before reading any of this.
+The public calendars list practices, scrimmages, and games. Volunteers sign up for shifts to support events in the Amplify volunteer management platform.
+`star-pass` gathers events from a date range in the League Calendar, identifies the volunteer shifts that each event requires,
+and allows you to bulk-create shifts in Amplify.
 
-## Capabilities
+## How It Works
 
-- **Collect** practices, scrimmages and games from Google Calendars into
-  a run, matching each event title against a category in
-  `models/shift_info.yml` to find the Amplify opportunities it serves.
-- **Review** a run in a browser or from the command line: change an
-  opportunity, move a shift's times, set how many volunteers are wanted,
-  act on many rows at once, and undo any of it.
-- **Revise** a run. Every edit is recorded, revisions can be saved, and a
-  run can be reverted to any of them.
-- **Preview** a send against live Amplify data, which is also the
-  duplicate check: a shift Amplify already holds is not offered again.
-- **Send** the run, creating the shifts. Sending is idempotent, asks
-  before it acts, and an interrupted send resumes without duplicating
-  anything.
-- **Post a Slack sign-up summary** of live shift counts, on a schedule or
-  by hand.
+### Volunteer Shift Management
 
-The interface has no login and the deployment publishes one port. That is
-deliberate, and [`docs/design/decisions.md`](docs/design/decisions.md)
-records why.
+`star-pass` uses a concept of **runs**. A run contains events collected from the League Calendar within a date range.
+A run attempts to match League Calendar events to Amplify volunteer shifts, allowing you to review and bulk-create shifts.
+Each run goes through four steps:
+
+1. **Collect.** Read the League Calendar events within the date range and match each title
+   to a category in the data model. The categories prepare Amplify
+   opportunities, their shift times, and the volunteer count.
+2. **Review.** Check each event. Change the Amplify opportunities `star-pass` assigned, their start and end times,
+   their volunteer count, or remove them. Each change is tracked, and you may revert to any saved revision.
+3. **Preview.** Compare the run's shifts with the volunteer shifts already in Amplify, to avoid creating duplicates.
+4. **Send.** Create the shifts in Amplify. `star-pass` sends volunteer shifts to Amplify and displays the shifts it creates.
+
+Each function is available in the web UI. Collecting, previewing, and sending are also available from the CLI.
+
+### Slack Summary Posts
+
+`star-pass` posts summaries of volunteer sign-ups to Slack. It reads
+volunteer shift data from Amplify and runs in scheduled GitHub Actions.
+
+## Terms
+
+| Term | Meaning |
+| --- | --- |
+| Event | An entry on the League Calendar |
+| Category | A type of event, such as an adult game, defined in a data model |
+| Alias | A keyword that identifies a category in an event title |
+| Opportunity | An Amplify listing volunteers sign up through, such as "Adult Games - NSOs". Amplify's API calls it a "need", and its ID a "need ID" |
+| Shift | One date and time in an opportunity, with a specific volunteer count |
+| Run | The events from one calendar and date range, converted to Amplify shifts |
+| Revision | A saved version of a run |
+
+## The Data Model
+
+A data model for volunteer shifts determines the opportunity or opportunities each event from the League Calendar should match, plus certain details that apply to those shifts. The data model is at `models/shift_info.yml`.
+
+### Data Model Example
+
+```yaml
+adult_game:
+  description: Adult Games
+  aliases:
+    - axles
+    - wheels
+  need_ids:
+    - description: NSOs
+      id: 879609
+      offset_start: -15
+      offset_end: 30
+      max_length: 165
+      slots: 12
+```
+
+An event with `axles` or `wheels` in its title is in the `adult_game` category. It
+gets a volunteer shift in opportunity 879609 with a volunteer count of 12. The shift starts 15
+minutes before and ends 30 minutes after the League Calendar event times. It has a maximum length of 165 minutes, from its start time.
+
+| Field | Meaning |
+| --- | --- |
+| `aliases` | Title keywords for each category. When a title contains aliases from more than one category, the longest alias match wins |
+| `need_ids[].id` | The Amplify need ID |
+| `offset_start`, `offset_end` | Minutes added to the event's start and end times. A negative number moves the time earlier |
+| `max_length` | The maximum length of a shift, in minutes |
+| `slots` | A shift's volunteer count |
 
 ## Requirements
 
-- Docker Desktop, or any Docker with Compose v2
-- Git
-- A Google Calendar API token and an Amplify API token
+- Docker with Compose v2
+- Python 3, to run the setup script
+- An Amplify API token
+- A Google API key that can read the League Calendar, and the IDs of
+  the `events` and `practices` calendars
 
-## Getting started
+## Setup
 
-Three steps to a running deployment. No development container is needed:
-this is the deployment, not the development environment.
-
-### 1. Clone the repository and write `.env`
+### 1. Write `.env`
 
 ```bash
 git clone https://github.com/rcrderby/star-pass.git
@@ -62,141 +104,109 @@ cd star-pass
 python3 scripts/setup_env.py
 ```
 
-The script writes `.env` from `.env.example`. It **generates** the two
-values this deployment signs with, `STAR_PASS_API_TOKEN` and
-`STAR_PASS_SESSION_SECRET` - the API authenticates the frontend with the
-first, and the frontend signs your browser session with the second and
-derives that session's CSRF token from it. **Both services refuse to
-start without them**, which is a hard stop rather than a subtle failure.
+The script asks for an Amplify token, a Google API key for the League Calendar, and
+the applicable calendar IDs. It also generates two secrets the application services use to
+authenticate each other. You may run the script again to fill in a missing value. It
+does not overwrite existing values.
 
-It then asks for your `AMPLIFY_TOKEN` and your `GCAL_TOKEN`, without
-echoing what you type and without printing either back.
+If `id -g` does not print `1000`, add `STAR_PASS_ENV_GID=` followed by
+what it prints to `.env`.
 
-It also asks for the two calendar IDs, `GCAL_EVENTS_CAL_ID` and
-`GCAL_PRACTICES_CAL_ID`, and **does** echo those: a calendar
-identifier is not a secret, and one typed blind is one nobody can
-check. Neither has a default, and the API service names whichever is
-missing and refuses to start. A default would be one organization's
-calendars, so a deployment that left them unset would collect somebody
-else's events without anything on any screen to say so.
+Every other setting has a default, listed in `.env.example`.
 
-Give the identifier as Google shows it under the calendar's settings,
-with **no leading slash** - the address is built around it. A Google
-Workspace resource calendar looks like
-`example.com_2d3534@resource.calendar.google.com`.
-
-**Six values in all**, and the API service checks for every one of
-them at startup.
-
-Every other setting has a working default; `.env.example` documents all
-of them.
-
-Run it again whenever a value is missing: it refuses to overwrite one
-already set, and writes the file readable by you and your group.
-
-The group matters: the API container bind-mounts `.env`, which keeps
-the host file's mode, and the image runs as UID 1000. Where your
-account is not the first on the machine, set `STAR_PASS_ENV_GID` to
-the output of `id -g` so the container is in the group that can read
-it. A file private to its owner alone cannot be read there, and making
-it readable to everyone would give away the thing keeping it a file.
-
-Copying `.env.example` by hand is not a substitute. Every credential
-in it is commented out, so a copy starts the service with none and
-stops it at the first one, which is the loud failure rather than the
-plausible one.
-
-`.env` holds live credentials and is git-ignored. Keep it out of any
-directory that synchronises off the machine.
-
-### 2. Build and start
+### 2. Start `star-pass`
 
 ```bash
 docker compose build
 docker compose up -d
-```
-
-One image, built once and run twice, as the API and as the frontend,
-which is what stops the two drifting apart. Three containers start in
-order, each waiting for the one below it to report healthy:
-
-```bash
 docker compose ps
 ```
 
-### 3. Open it
+`star-pass` is ready when the `api` and `frontend` containers show
+`healthy`.
 
-Open **`https://localhost`**.
+### 3. Open It
 
-Your browser will warn about the certificate, which is expected out of
-the box. [`docs/deployment.md`](docs/deployment.md) says why, what to do
-about it, and how to serve a real name instead.
+Open `https://localhost`. Your browser displays a warning about the certificate because `star-pass` signs it with its own certificate authority.
+[`docs/deployment.md`](docs/deployment.md) explains how to:
 
-**On this host only, until you say otherwise.** Caddy publishes 80 and
-443 on the loopback address, so nothing else on the network reaches
-star-pass. To serve it to a tailnet, set `STAR_PASS_BIND_ADDRESS` to
-that host's tailnet address and bring the stack back up:
+- Trust the certificate
+- Use a certificate from a public certificate authority
+- Connect to `star-pass` from another device
 
-```bash
-docker compose up -d
-```
+Before your first run, in the web UI, navigate to **Settings** to test the
+Amplify and League Calendar credentials.
 
-The deployment is meant to run with no route out, and binding the
-address is what enforces that rather than assuming it. `0.0.0.0`
-publishes on every interface, which on a host with a public one means
-the internet.
+## Command Line Interface
 
-Then confirm the Amplify credential before doing anything else, from
-**Settings** in the page or from the command line:
+The command line interface allows you to collect, read, and send runs:
 
 ```bash
-docker compose exec api python /app/__main__.py config credential
+docker compose exec api python /app/__main__.py --help
 ```
 
-## Where to go next
+See [`docs/cli.md`](docs/cli.md).
 
-| Document | What it covers |
+## Documentation
+
+| Document | Contents |
 | --- | --- |
-| [`docs/cli.md`](docs/cli.md) | Every command line word: collecting, reviewing, previewing, sending, watching a job, retention, and the unmatched-title log |
-| [`docs/slack-summary.md`](docs/slack-summary.md) | The Slack sign-up summary, its window, its wording, and running it from its own container |
-| [`docs/deployment.md`](docs/deployment.md) | The two processes, the two networks, TLS, the addresses the page serves, and reading the API specification |
-| [`docs/architecture.md`](docs/architecture.md) | The deployment and a run, drawn |
-| [`docs/design/decisions.md`](docs/design/decisions.md) | Every design decision and its reasoning |
+| [`docs/cli.md`](docs/cli.md) | Every command |
+| [`docs/slack-summary.md`](docs/slack-summary.md) | The Slack sign-up summary |
+| [`docs/deployment.md`](docs/deployment.md) | The application containers and networks, TLS configuration, the web UI addresses, and the API specification |
+| [`docs/architecture.md`](docs/architecture.md) | Diagrams of the deployment and of a run |
+| [`docs/api/openapi.json`](docs/api/openapi.json) | The API specification |
 
 ## Development
 
-The repository carries a development container, which is the shortest
-way to an environment with the tooling already in it: open the
-repository in Visual Studio Code and reopen it in the container
-(`.devcontainer/devcontainer.json`, built from `Dockerfile.dev`). It is
-for working on the code, and is not how the application is deployed -
-`docs/deployment.md` is that.
-
-Without it:
+The repository includes a development container
+(`.devcontainer/devcontainer.json`) for Visual Studio Code. If you prefer to use your own development environment, install Python 3.14 or later and run these commands:
 
 ```bash
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements/requirements_dev.txt
+pre-commit install
 ```
 
-Run the tests and the linters that continuous integration runs:
+To locally run the tests and the checks that GitHub Actions performs:
 
 ```bash
 python -m pytest
 python -m flake8 --config .github/linters/.flake8 app tests
 python -m pylint --rcfile .github/linters/.python-lint app tests
 python -m bandit -rc .bandit.yml app tests
+python scripts/check_prose.py --changed origin/main
 ```
 
-Tests are hermetic: they make no network calls and require no `.env`
-file. `tests/conftest.py` sets dummy credentials before the package is
-imported.
+The tests make no network calls and do not require a `.env` file.
 
-Secrets live in `.env`, which is git-ignored and scanned by gitleaks in
-continuous integration and by a pre-commit hook. Install the hook once
-with:
+### Code Layout
 
-```bash
-pip install pre-commit && pre-commit install
-```
+| Path | Contents |
+| --- | --- |
+| `app/__main__.py` | The command line entry point |
+| `app/star_pass/` | The core: collecting, reviewing, previewing, and sending runs, and the SQLite database |
+| `app/star_pass_api/` | The API service (FastAPI) |
+| `app/star_pass_bff/` | The frontend service. Serves the web UI and forwards its requests to the API |
+| `app/star_pass_cli/` | The command line commands |
+| `app/star_pass_client/` | The API client the CLI uses. Its operations are generated from the API specification |
+| `app/star_pass_contract/` | The data shapes the API and the command line both return |
+| `web/` | The web UI |
+| `models/` | The data model and Slack role labels |
+| `deploy/caddy/` | The Caddy configuration |
+| `scripts/` | Setup, code generation, and comment style check |
+| `tests/` | Repository tests |
+
+### Generated Files
+
+The files listed in the table below are generated by the scripts in `scripts/` and stored in the Git repository.
+If you want to make changes to the contents of the generated files, do so by making changes to the "Generated From" files.
+After making changes, run each file's corresponding command and commit the resulting changes to Git.
+Automated tests will fail if a committed file does not match what its command generates.
+
+| File | Contents | Generated From | Command |
+| --- | --- | --- | --- |
+| `docs/api/openapi.json` | The API specification | Routes, models, scopes, and version in the API | `python scripts/generate_contract.py` |
+| `app/star_pass_client/_operations.py` | The command line's API client | `docs/api/openapi.json` | `python scripts/generate_contract.py` |
+| `docs/architecture/*.svg` | The diagrams in `docs/architecture.md` | `scripts/generate_architecture.py` and `scripts/_drawing.py` | `python scripts/generate_architecture.py` |

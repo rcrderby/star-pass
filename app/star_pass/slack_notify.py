@@ -768,8 +768,8 @@ class SlackNotifier:
         # mode too keeps a dry run an accurate preview of a live run.
         if not summary.get('needs'):
             message = (
-                'No shifts in the summary window; skipped posting to '
-                'Slack.'
+                'No shifts fall in the summary\'s dates. The summary '
+                'was not posted to Slack.'
             )
             logger.info(message)
             self.reporter.summary_skipped()

@@ -533,7 +533,7 @@ export class SendingScreen {
           this.state.run.sentAt === null
             ? el('span', {
               class: 'tag tag-outline',
-              text: 'Nothing sent yet'
+              text: 'Not sent'
             })
             : el('span', {
               class: 'tag tag-accent',

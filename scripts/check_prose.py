@@ -6,8 +6,8 @@
 
     A comment states what the code does now, simply.  It does not
     narrate how the code came to be this way, argue for the decision
-    behind it, or run to an essay.  Reasoning belongs in
-    'docs/design/decisions.md' or outside the repository.
+    behind it, or run to an essay.  Reasoning belongs outside the
+    repository.
 
     Checks what can be measured: how long a docstring or a comment
     run is, and whether it uses the phrasings that introduce history.
@@ -65,9 +65,8 @@ NARRATION = (
     (r'\blessons? learned\b', 'records a lesson rather than a fact'),
 )
 
-# A decision is cited by number in 'docs/design/decisions.md' and
-# nowhere else: a number in the code goes stale where nothing checks
-# it.
+# A decision cited by number in the code goes stale where nothing
+# checks it.
 DECISION = re.compile(r'\(D\d+[^)]*\)|\bD\d+\b')
 
 # What a line of prose opens with.  '/*' and '/**' are here because a
@@ -416,8 +415,8 @@ def main(argv: List[str]) -> int:
 
     if problems:
         print(f'\n{len(problems)} problem(s) in {len(paths)} file(s).')
-        print('Comments state what the code does now.  Reasoning goes in')
-        print("docs/design/decisions.md, or out of the repository.")
+        print('Comments state what the code does now.  Reasoning goes')
+        print('out of the repository.')
         return 1
 
     print(f'{len(paths)} file(s) within the style.')

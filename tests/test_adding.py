@@ -428,7 +428,7 @@ class TestWhatMayNotBePulledIn:
         with pytest.raises(ValidationError) as error:
             add()
 
-        assert 'left nothing out' in str(error.value)
+        assert 'has no uncollected event' in str(error.value)
 
     def test_an_event_the_revision_already_holds_is_refused(
         self,

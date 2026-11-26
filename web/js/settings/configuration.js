@@ -84,9 +84,8 @@ const STORES = [
   {
     name: 'Unmatched Titles',
     kept: (retention) => `${counted(retention.unmatchedTitleDays, 'day')} `
-      + 'after a title was last seen',
-    note: 'Unmatched titles expire if they are not added to the '
-      + 'shift data model.'
+      + 'after a title was last seen, or after the data model matches it',
+    note: 'Add an alias for a title to models/shift_info.yml to match it.'
   },
   {
     name: 'Sent Shifts',

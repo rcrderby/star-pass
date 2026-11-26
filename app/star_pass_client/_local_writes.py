@@ -31,6 +31,7 @@ from star_pass._defaults import GCAL_CALENDARS
 from star_pass._gcal_time import resolve_window
 from star_pass._job_runner import JobRunner
 from star_pass._logging import get_logger
+from star_pass._wording import counted
 from star_pass._reading import changes_in_current
 from star_pass._records import (
     JOB_HOLDER_LOCAL,
@@ -134,9 +135,10 @@ class LocalWrites:
                 ).interrupt_unfinished(held_by=JOB_HOLDER_LOCAL)
 
             if ended:
+                them = 'it' if ended == 1 else 'them'
                 message = (
-                    f'Ended {ended} job(s) an earlier command left '
-                    'unfinished. Resume them with "jobs resume".'
+                    f'Ended {counted(count=ended, noun="interrupted job")}. '
+                    f'You may resume {them} with "jobs resume".'
                 )
                 logger.warning(message)
 
@@ -276,8 +278,8 @@ class LocalWrites:
             resolve_window(
                 start=asked.window.start,
                 end=asked.window.end,
-                start_name='The window start',
-                end_name='the window end'
+                start_name='The first day',
+                end_name='the last day'
             )
 
         except ValueError as error:

@@ -43,10 +43,10 @@ TOPOLOGY = Diagram(
     description=(
         'A browser reaches Caddy, the only service publishing a port. '
         'Caddy proxies to the frontend on the edge network. The '
-        'frontend proxies to the API on the backend network, which '
-        'Caddy is not on. The API alone holds the Amplify credential '
-        'and the database, and alone reaches Amplify and Google '
-        'Calendar.'
+        'frontend proxies to the API on the backend network. Caddy is '
+        'not on the backend network. Only the API has the Amplify '
+        'token and the database, and only the API reaches Amplify '
+        'and the League Calendar.'
     ),
     size=(1060, 470),
     frames=(
@@ -79,7 +79,7 @@ TOPOLOGY = Diagram(
                 'Frontend',
                 'adds the API token',
                 'checks the origin',
-                'no Amplify credential'
+                'no Amplify token'
             )
         ),
         Box(
@@ -88,7 +88,7 @@ TOPOLOGY = Diagram(
             at=(644, 156, 180, 98),
             lines=(
                 'API',
-                'holds AMPLIFY_TOKEN',
+                'has AMPLIFY_TOKEN',
                 'reads ./.env read-only',
                 'owns the database'
             )
@@ -109,7 +109,7 @@ TOPOLOGY = Diagram(
             name='calendar',
             kind='external',
             at=(884, 225, 150, 58),
-            lines=('Google Calendar', 'read at collection')
+            lines=('League Calendar', 'read at collection')
         )
     ),
     edges=(
@@ -132,18 +132,17 @@ TOPOLOGY = Diagram(
         Note(
             at=(24, 424),
             text=(
-                'Caddy is absent from the backend network, so the '
-                'frontend is the only path to the process holding the '
-                'Amplify credential, rather than merely the intended '
-                'one.'
+                'Caddy is not on the backend network. The frontend is '
+                'the only path to the API, the service with the Amplify '
+                'token.'
             )
         ),
         Note(
             at=(24, 444),
             text=(
-                'Neither application service publishes a port, which '
-                'is why the documentation the API serves at /docs and '
-                '/redoc cannot be reached from the host.'
+                'Neither application service publishes a port. The API '
+                'documentation at /docs and /redoc may not be reached '
+                'from the host.'
             )
         )
     )
@@ -156,12 +155,12 @@ RUN_PATHS = Diagram(
     name='run-paths',
     title='A run, and what each step touches',
     description=(
-        'A run collects a window, is reviewed, is previewed and is '
-        'sent. Every step reads and writes the database. Collecting '
-        'reads Google Calendar and the Amplify listings; the preview '
-        'and the send read and write Amplify. Collecting and sending '
-        'run as jobs, watched over the job stream. The scheduled '
-        'Slack post runs elsewhere and touches none of it.'
+        'A run collects a date range, is reviewed, is previewed and is '
+        'sent. Every step reads the database. Collecting reads the '
+        'League Calendar and the Amplify listings. The preview reads '
+        'Amplify, and the send reads and writes it. Collecting and '
+        'sending run as jobs, watched over the job stream. The '
+        'scheduled Slack post runs elsewhere and touches none of it.'
     ),
     size=(1060, 870),
     frames=(),
@@ -171,7 +170,7 @@ RUN_PATHS = Diagram(
             kind='actor',
             at=(300, 64, 360, 56),
             lines=(
-                'The page in the browser',
+                'The web UI in the browser',
                 'every call below goes through Caddy and the frontend'
             )
         ),
@@ -221,7 +220,7 @@ RUN_PATHS = Diagram(
                 '3. Preview',
                 'GET /v1/runs/{id}/preview',
                 'reads Amplify before it answers',
-                'writes nothing at all'
+                'read only'
             )
         ),
         Box(
@@ -250,8 +249,8 @@ RUN_PATHS = Diagram(
             kind='external',
             at=(710, 88, 320, 76),
             lines=(
-                'Google Calendar',
-                'the events in the window',
+                'League Calendar',
+                'the events in the date range',
                 'read once, at collection'
             )
         ),
@@ -262,13 +261,13 @@ RUN_PATHS = Diagram(
             lines=(
                 'Amplify',
                 'the listings, read at collection',
-                'the shifts it already holds,',
+                'the shifts it already has,',
                 'read again at preview and',
                 'once more per opportunity',
                 'as a send writes to it',
                 '',
                 'the only service outside',
-                'this host that a run reaches'
+                'this host a run writes to'
             )
         ),
         Box(
@@ -288,14 +287,14 @@ RUN_PATHS = Diagram(
             lines=(
                 'The slim image',
                 'star-pass -s',
-                'no database, no page'
+                'no database, no web UI'
             )
         ),
         Box(
             name='upstream',
             kind='external',
             at=(600, 752, 190, 76),
-            lines=('Amplify', 'read, never written')
+            lines=('Amplify', 'read only')
         ),
         Box(
             name='slack',
@@ -356,17 +355,16 @@ RUN_PATHS = Diagram(
     notes=(
         Note(
             at=(24, 722),
-            text='The scheduled Slack post, which none of the above '
-                 'reaches and which reaches none of it',
+            text='The scheduled Slack post, separate from everything '
+                 'above',
             style='section'
         ),
         Note(
             at=(24, 852),
             text=(
-                'It runs on a machine GitHub creates and destroys, '
-                'from an image holding what the -s run mode imports '
-                'and nothing else: no API service, no frontend, no '
-                'database and no page to serve.'
+                'It runs on a temporary GitHub machine, from an image '
+                'with only what the summary needs: no API service, '
+                'frontend, database or web UI.'
             )
         )
     ),

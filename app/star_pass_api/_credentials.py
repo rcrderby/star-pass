@@ -120,22 +120,15 @@ def claim_or_refuse(
     '/credentials/test',
     summary='Test the Amplify credential this service is running on',
     description=(
-        'Sends one small authenticated read to Amplify and reports '
-        'whether it was accepted, with the last four characters of '
-        'the credential so two can be told apart. The credential '
-        'itself is never published and no endpoint replaces it: '
-        'rotation is changing the secret and restarting.\n\n'
-        'A credential Amplify would not take is an answer rather than '
-        'a failure -- `working` is false and `reason` says what '
-        'happened -- because whether it works is the question that '
-        'was asked.\n\n'
-        'Rate-limited per caller. Asking too often is refused with a '
-        '`429` and a `Retry-After` header, and the refusal sends '
-        'nothing to Amplify.\n\n'
-        'A `POST` rather than a `GET` because it is not free: every '
-        'call reaches somebody else\'s service, which is not '
-        'something to cache or repeat on a client\'s whim. It stores '
-        'nothing and takes no idempotency key.'
+        'Sends one read request to Amplify, and indicates whether or '
+        'not Amplify accepted the token. The token\'s last four '
+        'characters are visible in the response. To change the token, '
+        'edit its value in your `.env` file and restart '
+        '`star-pass`.\n\nA refused token is a result, not an '
+        'application error.\n\nThe API rate limits this test per '
+        'caller. A request over the limit receives a `429` with a '
+        '`Retry-After` header, and does not reach Amplify.\n\nStores '
+        'no data and takes no idempotency key.'
     ),
     response_model=CredentialView
 )
@@ -172,20 +165,18 @@ async def test_credential(
     '/credentials/calendar/test',
     summary='Test the League Calendar key this service is running on',
     description=(
-        'Reads one event from each configured calendar with the key '
-        'and reports whether each read was accepted, with the last '
-        'four characters of the key so two can be told apart. The key '
-        'itself is never published and no endpoint replaces it: '
-        'rotation is changing the secret and restarting.\n\n'
-        'Each calendar is answered for on its own, because a key '
-        'Google accepts can still be refused a calendar that is not '
-        'shared with it. `working` is true only when every calendar '
-        'accepted the read.\n\n'
-        'Rate-limited per caller, separately from the Amplify test. '
-        'Asking too often is refused with a `429` and a `Retry-After` '
-        'header, and the refusal sends nothing to Google.\n\n'
-        'A `POST` for the reason the Amplify test is one. It stores '
-        'nothing and takes no idempotency key.'
+        'Reads one event from each configured calendar, and indicates '
+        'whether or not each read was successful. The key\'s last four '
+        'characters are visible in the response. To change the key, '
+        'edit its value in your `.env` file and restart '
+        '`star-pass`.\n\nEach calendar produces its own result because '
+        'Google\'s API may successfully authenticate a key and '
+        'determine the key is not authorized for a calendar. A refused '
+        'key is a result, not an error.\n\nThe API rate limits this '
+        'test per caller, separately from the Amplify test. A request '
+        'over the limit receives a `429` with a `Retry-After` header, '
+        'and does not reach Google.\n\nStores no data and takes no '
+        'idempotency key.'
     ),
     response_model=CalendarCredentialView
 )

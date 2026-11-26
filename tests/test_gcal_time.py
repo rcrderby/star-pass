@@ -17,8 +17,8 @@ from star_pass._gcal_time import resolve_window
 
 # What a caller names its two bounds.  'star_pass._collect' passes
 # these, so a message a test asserts is one an operator would read.
-START_NAME = 'the window start'
-END_NAME = 'the window end'
+START_NAME = 'The first day'
+END_NAME = 'the last day'
 
 
 def _resolve(start: str, end: str):
@@ -120,14 +120,20 @@ class TestAWindowThatCannotBeUsed:
     def test_raises_when_the_window_does_not_move_forward(self, monkeypatch):
         monkeypatch.delenv('GCAL_TIMEZONE', raising=False)
 
-        with pytest.raises(ValueError, match='must be earlier than'):
+        with pytest.raises(ValueError) as error:
             _resolve('2099-02-01', '2099-01-01')
+
+        # The message names the last day, the day before the stored end.
+        assert str(error.value) == (
+            'The first day (2099-02-01) must be on or before the last '
+            'day (2098-12-31).'
+        )
 
     def test_raises_when_the_window_is_empty(self, monkeypatch):
         # Equal bounds select nothing, which collects zero events.
         monkeypatch.delenv('GCAL_TIMEZONE', raising=False)
 
-        with pytest.raises(ValueError, match='must be earlier than'):
+        with pytest.raises(ValueError, match='must be on or before'):
             _resolve('2099-01-01', '2099-01-01')
 
     def test_orders_a_window_that_mixes_local_and_offset_values(

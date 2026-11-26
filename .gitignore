@@ -160,3 +160,6 @@ cython_debug/
 data/*.db
 data/*.db-shm
 data/*.db-wal
+
+# Claude Code settings
+.claude/

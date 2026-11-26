@@ -35,14 +35,10 @@ router = APIRouter(tags=[_defaults.API_TAG_SERVICE])
     '/config',
     summary='Report what the service was configured with',
     description=(
-        'The settings a collection is carried out under, as this '
-        'process resolved them at startup. Read only: rotating a '
-        'credential or changing a setting is a deployment operation, '
-        'and no endpoint writes one.\n\n'
-        'This is where a client learns which calendars a collection '
-        'may name. Those keys belong to a deployment rather than to '
-        'this contract, so a client that hard-coded them would be '
-        'describing one installation.'
+        'The settings collections use, as the service read them at '
+        'startup. To change a setting or a credential, edit its value '
+        'in your `.env` file and restart `star-pass`.\n\nLists the '
+        'calendars a collection request may name.'
     ),
     response_model=ConfigView
 )

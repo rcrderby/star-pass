@@ -288,11 +288,9 @@ def _unassign(
 
     if matched:
         message = (
-            f'{_named(matched)} cannot be unassigned, because the '
-            'collection matched an opportunity for it. Unassigned is '
-            'where a row starts when nothing matched, not somewhere a '
-            'row can be put. Remove the event from the run if it '
-            'should create no shift.'
+            f'{_named(matched)} may not be unassigned because the '
+            'collection matched an opportunity. To create no shift for '
+            'this event, remove it from the run.'
         )
         logger.error(message)
         raise ValidationError(message)

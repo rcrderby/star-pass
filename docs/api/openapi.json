@@ -3,10 +3,10 @@
     "schemas": {
       "AddEventRequest": {
         "additionalProperties": false,
-        "description": "Which of the events nobody searched for to pull into the run. ",
+        "description": "The uncollected event to add to the run. ",
         "properties": {
           "uncollectedId": {
-            "description": "Identifier of the event to pull in, as the run's record of what it did not collect carries it. Only an event that record marks addable may be named: the other reasons describe events that cannot become a correct shift, and naming one is refused here rather than left to a client to avoid.",
+            "description": "Identifier of the event to add, from the run's uncollected list. Only an event whose `addable` is true may be added.",
             "examples": [
               "1a2b3c4d5e6f7g8h9i0j"
             ],
@@ -23,7 +23,7 @@
         "type": "object"
       },
       "BlockerView": {
-        "description": "One reason one event cannot become a shift. ",
+        "description": "One reason an event cannot become a shift. ",
         "properties": {
           "eventId": {
             "description": "Event that cannot be sent.",
@@ -31,7 +31,7 @@
             "type": "string"
           },
           "reason": {
-            "description": "Why: no_opportunity, ends_before_start, no_slots. An event with two things wrong with it appears once for each, so fixing one does not reveal another.",
+            "description": "Why: no_opportunity, ends_before_start, no_slots. An event with two reasons is listed twice.",
             "title": "Reason",
             "type": "string"
           }
@@ -44,7 +44,7 @@
         "type": "object"
       },
       "CalendarAccessView": {
-        "description": "What one configured calendar answered to the key. ",
+        "description": "The result of the League Calendar key test for one calendar. ",
         "properties": {
           "calendar": {
             "description": "Which configured calendar was read.",
@@ -86,7 +86,7 @@
         "type": "object"
       },
       "CalendarCredentialView": {
-        "description": "What asking the League Calendar about the key answered. ",
+        "description": "The result of the League Calendar key test. ",
         "properties": {
           "calendars": {
             "description": "What each configured calendar answered, in the order they are configured. Empty when no calendar was read.",
@@ -105,7 +105,7 @@
                 "type": "null"
               }
             ],
-            "description": "The last four characters of the key, which is enough to tell two apart and no use to whoever reads it. The key itself is never published, and no endpoint replaces it: rotation is changing the secret and restarting. Absent when none is configured.",
+            "description": "The key's last four characters. The key itself is not visible. Absent when no key is configured.",
             "examples": [
               "9c1e"
             ],
@@ -146,7 +146,7 @@
         "description": "One calendar a run may be collected from. ",
         "properties": {
           "categories": {
-            "description": "The categories this calendar's data model offers, which are what a \"set_category\" edit may name. The fallback the model uses when a title matches nothing is not among them: its need IDs are empty on purpose, so an event put under it could not become a shift, and offering it would be offering a choice the write refuses.",
+            "description": "The categories a `set_category` operation may name for this calendar. The fallback for a title with no match is not included.",
             "items": {
               "$ref": "#/components/schemas/CategoryView"
             },
@@ -154,7 +154,7 @@
             "type": "array"
           },
           "key": {
-            "description": "What a collection names this calendar by, which is what the \"calendar\" field of a collection request takes.",
+            "description": "The calendar's key. A collection request names the calendar by this key.",
             "examples": [
               "practices"
             ],
@@ -162,7 +162,7 @@
             "type": "string"
           },
           "notes": {
-            "description": "Whether entries on this calendar carry a description worth keeping with the event. Where it is true, an event of a run collected from this calendar publishes \"calendarNote\", which is null when that event had no description; where it is false, nothing is stored and the field is null on every event. A client showing the note reads this rather than testing the calendar's name.",
+            "description": "Whether this calendar's event descriptions are kept with their events. When true, each event in a run from this calendar has a `calendarNote`, null for an event with no description. When false, `calendarNote` is null on every event.",
             "examples": [
               true
             ],
@@ -170,7 +170,7 @@
             "type": "boolean"
           },
           "searchTerms": {
-            "description": "The query strings this calendar's window is searched with, one request each. An empty string searches for nothing in particular and so returns the whole window, which is what makes a search miss impossible on a calendar configured with one: an event left out of a run for the \"search\" reason is an event none of these returned.",
+            "description": "The search terms for this calendar, one League Calendar request each. A calendar with no search terms lists one empty term, `\"\"`. An empty term collects all events in the date range. In a calendar with search terms, events that do not match a search term are not collected, and are uncollected with the `search` reason.",
             "examples": [
               [
                 "officials",
@@ -194,10 +194,10 @@
         "type": "object"
       },
       "CategoryView": {
-        "description": "One category of the data model, for a calendar that offers it.\n\nWhat a reviewer chooses from when an event matched nothing, or\nmatched the wrong thing.  The identifier is what an edit\nsends; the label is what the data model calls it, and a\nclient shows the Amplify titles for the need IDs where it has\nthem, because those are what a shift is created under.",
+        "description": "One data model category a calendar offers.\n\nA reviewer chooses from these to assign an event's opportunity.\nAn edit sends the category's key. The label is the data model's\nname for the category. Clients display the Amplify titles for\nits need IDs.",
         "properties": {
           "key": {
-            "description": "What an edit names this category by, which is what the \"category\" field of a \"set_category\" operation takes.",
+            "description": "The category's key. A `set_category` operation names the category by this key.",
             "examples": [
               "adult_game"
             ],
@@ -205,7 +205,7 @@
             "type": "string"
           },
           "label": {
-            "description": "What the data model calls this category. Written for a person, and not an Amplify opportunity title: one category can create shifts under more than one need.",
+            "description": "The category's name in the data model. This is not an Amplify opportunity title. One category may create shifts for more than one opportunity.",
             "examples": [
               "Adult Games"
             ],
@@ -213,7 +213,7 @@
             "type": "string"
           },
           "needIds": {
-            "description": "Amplify need IDs an event in this category creates a shift under, one each. More than one is ordinary -- an event serving skating and non-skating officials creates two shifts -- and several categories may share a need.",
+            "description": "The Amplify need IDs an event in this category creates shifts for, one shift each. An event with skating and non-skating officials creates two shifts. Several categories may share a need ID.",
             "examples": [
               [
                 "879609",
@@ -237,10 +237,10 @@
       },
       "CollectRequest": {
         "additionalProperties": false,
-        "description": "Which calendar to collect, and over which days. ",
+        "description": "The calendar and date range to collect. ",
         "properties": {
           "calendar": {
-            "description": "Which configured calendar to read. One the deployment has configured; the names are not part of this contract, because they are a property of a deployment rather than of the API. A name that is not configured is refused, and the refusal lists the ones that are.",
+            "description": "The configured calendar to read. `GET /v1/config` lists the configured calendars. A calendar that is not configured is refused, and the refusal lists the configured calendars.",
             "examples": [
               "events"
             ],
@@ -261,10 +261,10 @@
         "type": "object"
       },
       "ConfigView": {
-        "description": "What the service resolved from its environment. ",
+        "description": "The settings the service read from its environment at startup. ",
         "properties": {
           "calendars": {
-            "description": "The calendars a run may be collected from, by key. This is where a client learns which keys a collection request accepts, because the keys belong to a deployment rather than to this contract. The calendar identifiers themselves are not published: nothing a caller does names one.",
+            "description": "The calendars a run may be collected from, by key. Calendar identifiers are not published.",
             "items": {
               "$ref": "#/components/schemas/CalendarView"
             },
@@ -283,7 +283,7 @@
             "description": "How often each credential may be tested through the service. Null where testing is not rate-limited."
           },
           "excludedTitleTerms": {
-            "description": "Terms this deployment never collects. An event whose title contains one of them anywhere is left out of a run with the \"excluded\" reason instead of becoming a shift, and no editing brings it back.",
+            "description": "Filtered terms. An event whose title contains a filtered term is not collected. It is uncollected with the `excluded` reason, and may not be added to a run.",
             "examples": [
               [
                 "canceled",
@@ -297,7 +297,7 @@
             "type": "array"
           },
           "matchThreshold": {
-            "description": "Confidence out of 100 a fuzzy title match has to reach when no alias appears in an event title. Below it the title is left unmatched, which blocks the send rather than guessing at an opportunity.",
+            "description": "The lowest similarity score, from 0 to 100, for a match. When a title contains no alias, the alias with the highest score matches if its score is at least this value. A title with no match has no opportunity, and blocks the send.",
             "examples": [
               80
             ],
@@ -306,10 +306,10 @@
           },
           "retention": {
             "$ref": "#/components/schemas/RetentionView",
-            "description": "How long what a run leaves behind is kept. The record of what a send put into Amplify is deliberately absent, because it is never removed: duplicate safety reads it to know which rows a run already created, so a window there would eventually have a run offering to create shifts Amplify already holds."
+            "description": "How long the service retains each type of run data. Shifts sent to Amplify are retained indefinitely to prevent duplicate shifts, and have no entry."
           },
           "timezone": {
-            "description": "IANA zone a calendar window's dates are read in when they carry no UTC offset. The server's zone is the authoritative one: a client displays it rather than working a window out in the zone of whoever is looking at it.",
+            "description": "The IANA time zone for dates in a date range that have no UTC offset. Clients display dates in this zone.",
             "examples": [
               "America/Los_Angeles"
             ],
@@ -331,7 +331,7 @@
         "description": "How often each credential may be tested. ",
         "properties": {
           "attempts": {
-            "description": "Tests allowed per caller in each window.",
+            "description": "Tests allowed per caller in each `windowSeconds` period.",
             "examples": [
               5
             ],
@@ -339,7 +339,7 @@
             "type": "integer"
           },
           "windowSeconds": {
-            "description": "The window's length, in seconds.",
+            "description": "The length of the rate limit period, in seconds.",
             "examples": [
               60
             ],
@@ -355,7 +355,7 @@
         "type": "object"
       },
       "CredentialView": {
-        "description": "What asking Amplify about the service's credential answered. ",
+        "description": "The result of the Amplify token test. ",
         "properties": {
           "lastFour": {
             "anyOf": [
@@ -366,7 +366,7 @@
                 "type": "null"
               }
             ],
-            "description": "The last four characters of the credential, which is enough to tell two apart and no use to whoever reads it. The credential itself is never published, and no endpoint replaces it: rotation is changing the secret and restarting. Absent when none is configured.",
+            "description": "The token's last four characters. The token itself is not visible. Absent when no token is configured.",
             "examples": [
               "4f2a"
             ],
@@ -404,10 +404,10 @@
       },
       "EditRequest": {
         "additionalProperties": false,
-        "description": "One user action, as the operations it is made of. ",
+        "description": "One user action, as a list of operations. ",
         "properties": {
           "operations": {
-            "description": "What to do, in order. Each one sees what the one before it produced.\n\nThe whole list is applied or none of it is: an operation that would leave an event unable to become a correct shift refuses the call, and nothing is written. A partly applied action is worse than a refused one, because the reviewer cannot see which rows moved.",
+            "description": "The operations, in order. Each sees the result of the previous operation.\n\nThe service applies the entire list or none of it. If an operation would leave an event unable to become a correct shift, the service refuses the request and writes no changes.",
             "items": {
               "$ref": "#/components/schemas/EventOperationRequest"
             },
@@ -424,10 +424,10 @@
         "type": "object"
       },
       "EditView": {
-        "description": "A revision after a change, and what the change wrote down. ",
+        "description": "The revision after an edit, and the change log entries the edit\nadded.",
         "properties": {
           "events": {
-            "description": "The revision's events as they now are, in the order they are stored. Every event, not only the ones that changed: a reviewer's screen is redrawn from this, and a partial list would leave it guessing what it still holds.",
+            "description": "Every event in the revision, in stored order, including events that did not change.",
             "items": {
               "$ref": "#/components/schemas/EventView"
             },
@@ -435,7 +435,7 @@
             "type": "array"
           },
           "log": {
-            "description": "The entries this call added to the run's change log, one per operation. Written server-side, so the log survives a reload and reads the same in a browser and a terminal.",
+            "description": "The change log entries this request added, one per operation.",
             "items": {
               "$ref": "#/components/schemas/LogEntryView"
             },
@@ -452,7 +452,7 @@
       },
       "EventOperationRequest": {
         "additionalProperties": false,
-        "description": "One thing a reviewer did, over one or more events. ",
+        "description": "One operation, applied to one or more events. ",
         "properties": {
           "category": {
             "anyOf": [
@@ -471,7 +471,7 @@
             "title": "Category"
           },
           "eventIds": {
-            "description": "The events this applies to. A selection of thirty rows is one operation naming thirty, which is one log entry rather than thirty.",
+            "description": "The events this operation applies to. An operation on several events is one change log entry.",
             "examples": [
               [
                 "gcal-1",
@@ -512,14 +512,14 @@
                 "type": "null"
               }
             ],
-            "description": "Which of an event's roles to set, for `set_slots`. A role rather than the event, because an event serving skating and non-skating officials wants different numbers of each.",
+            "description": "The need ID of the role to set, for `set_slots`. Each role of an event has its own volunteer count.",
             "examples": [
               "879609"
             ],
             "title": "Needid"
           },
           "op": {
-            "description": "What was done. One of: `set_category`, `unassign`, `set_start`, `set_end`, `set_slots`, `nudge`, `reset_slots`, `remove`, `undo`.\n\n`set_start` and `set_end` name the **shift** times, which are what reaches Amplify. An event's calendar times never move: they are what the calendar said, and they are what `undo` works back from.\n\n`unassign` puts a row back to having no opportunity, and is refused for any event whose `mayUnassign` is false - unassigned is where a row starts when the collection matched nothing, not somewhere a matched row can be put. A matched row that should create no shift is `remove`d.",
+            "description": "The operation. One of: `set_category`, `unassign`, `set_start`, `set_end`, `set_slots`, `nudge`, `reset_slots`, `remove`, `undo`.\n\n`set_start` and `set_end` set the **shift** times sent to Amplify. `undo` restores an event's collected opportunity, shift times, and volunteer count.\n\n`unassign` removes an event's opportunity, and is refused for an event whose `mayUnassign` is false. To create no shift for a matched event, use `remove`.",
             "examples": [
               "nudge"
             ],
@@ -568,7 +568,7 @@
         "type": "object"
       },
       "EventRoleView": {
-        "description": "One opportunity an event creates a shift for, and how it does.\n\nThe timing is the role's and not the opportunity's: one Amplify\nlisting can be named by categories that time it differently, so\ntwo events in a run may send to one listing on different\noffsets.",
+        "description": "One opportunity an event creates a shift for, and the shift's\ntiming. Two events may create shifts for the same opportunity\nwith different offsets.",
         "properties": {
           "defaultSlots": {
             "description": "Volunteers the category asked for, before any edit.",
@@ -576,7 +576,7 @@
             "type": "integer"
           },
           "edited": {
-            "description": "Whether a person changed the count from 'defaultSlots'. Recorded rather than compared against the default now, because an event collected again can arrive with another.",
+            "description": "Whether a person changed the volunteer count from `defaultSlots`.",
             "title": "Edited",
             "type": "boolean"
           },
@@ -593,7 +593,7 @@
             "title": "Maxlength"
           },
           "needId": {
-            "description": "Amplify need ID the shift is created under.",
+            "description": "The Amplify need ID for the shift.",
             "title": "Needid",
             "type": "string"
           },
@@ -625,15 +625,15 @@
         "type": "object"
       },
       "EventView": {
-        "description": "One calendar event, as the current revision holds it. ",
+        "description": "One event in the current revision. ",
         "properties": {
           "addedByHand": {
-            "description": "Whether a person pulled the event in rather than the search finding it.",
+            "description": "Whether the event was manually added from the uncollected list.",
             "title": "Addedbyhand",
             "type": "boolean"
           },
           "blocking": {
-            "description": "Whether this event stops the run being sent. True when it has no opportunity to create a shift under. The run stops rather than dropping it, because a missing shift is invisible until volunteers cannot sign up.",
+            "description": "Whether this event blocks the send. True when the event has no opportunity.",
             "title": "Blocking",
             "type": "boolean"
           },
@@ -651,7 +651,7 @@
                 "type": "null"
               }
             ],
-            "description": "What the calendar's description said about this event, as text, or null where the calendar carries no notes or the event had none. Converted from whatever the calendar held - a description arrives as HTML about as often as not - so what is published is text and holds no markup. Capped at 1000 characters. An event collected before schema version 11 has none until its run is collected again.",
+            "description": "The event's League Calendar description, as text, or null when the calendar has no notes or the event has none. HTML is converted to text. Up to 1,000 characters. An event collected before schema version 11 has no note until its run is collected again.",
             "examples": [
               "Doors at 6 PM, Game at 7 PM"
             ],
@@ -671,7 +671,7 @@
                 "type": "null"
               }
             ],
-            "description": "The opportunity maximum that shortened this shift, or null when nothing did. Present so a reader is told which number decided the length rather than left wondering why the shift is shorter than the event.",
+            "description": "The opportunity's maximum length, when it shortened this shift, and null otherwise.",
             "title": "Cappedat"
           },
           "category": {
@@ -683,7 +683,7 @@
                 "type": "null"
               }
             ],
-            "description": "Data model category the title matched, or null when nothing matched.",
+            "description": "The data model category the title matched, or null when the title matched no category.",
             "title": "Category"
           },
           "date": {
@@ -700,11 +700,11 @@
                 "type": "null"
               }
             ],
-            "description": "Identifier of an earlier event in this revision that would create the same shift, or null when none would. Sameness is the row Amplify receives -- need ID, date, start and end -- so two events at one hour under different opportunities are two shifts, not a repeat.",
+            "description": "Identifier of an earlier event in this revision that would create the same shift, or null. The same shift means the same need ID, date, start, and end. Two events at the same time under different opportunities are two shifts.",
             "title": "Duplicateof"
           },
           "edited": {
-            "description": "Whether undoing the changes to this event would change it. True when its shift times no longer follow from the calendar times and the category's offsets, or when a role wants a number of volunteers somebody set. Answered here because nothing stored says it: the calendar times never move, so only the data model says what the shift times would have been, and a caller working that out would be a second copy of the timing rules. False as well when the undo could not be carried out -- a category that has left the data model -- because that is the refusal the operation itself would raise, and a row said to be editable is a row offered a control that fails.",
+            "description": "Whether undoing this event's changes would change it. True when its shift times differ from its calendar times plus the category's offsets, or when a person set a role's volunteer count. False when the undo would be refused, such as when the data model does not have the event's category.",
             "title": "Edited",
             "type": "boolean"
           },
@@ -714,7 +714,7 @@
             "type": "string"
           },
           "lengthMinutes": {
-            "description": "How long the shift lasts, which is the duration Amplify is given. Not above zero means the shift ends before it starts, which blocks the send.",
+            "description": "The shift's length in minutes, as sent to Amplify. A length of 0 or less means the shift ends before it starts, and blocks the send.",
             "title": "Lengthminutes",
             "type": "integer"
           },
@@ -727,10 +727,10 @@
                 "type": "null"
               }
             ],
-            "description": "How the category was reached, or null when the event was added by hand or matched nothing. Stored as it happened, because the data model can change between the day a run is collected and the day it is read."
+            "description": "How the title matched its category, or null for a manually added event or a title with no match. Stored at collection."
           },
           "mayUnassign": {
-            "description": "Whether this event may be put back to having no opportunity. True where the collection matched no category for it, which is the only row unassigned is a state of: it is where that row began, so returning it there is putting it back rather than breaking it. Answered here rather than worked out by a caller for the same reason `edited` is - the rule is the one the `unassign` operation refuses by, and a control offered where the operation would refuse is a control that fails. A matched row that should create no shift is removed from the run instead.",
+            "description": "Whether the event's opportunity may be removed. True only when the collection matched no category for the event. To create no shift for a matched event, remove it from the run.",
             "title": "Mayunassign",
             "type": "boolean"
           },
@@ -748,7 +748,7 @@
             "type": "string"
           },
           "shiftStart": {
-            "description": "Start time of the shift to create, which is the calendar time plus the opportunity's offset.",
+            "description": "Start time of the shift to create: the calendar start time plus the opportunity's offset.",
             "title": "Shiftstart",
             "type": "string"
           },
@@ -777,7 +777,7 @@
         "type": "object"
       },
       "Health": {
-        "description": "The service's answer about itself. ",
+        "description": "The service's status. ",
         "properties": {
           "status": {
             "description": "Always \"ok\": a reply at all is the health report.",
@@ -795,7 +795,7 @@
         "type": "object"
       },
       "JobView": {
-        "description": "A long operation, as a caller sees it. ",
+        "description": "A job that collects or sends a run. ",
         "properties": {
           "createdAt": {
             "description": "When it was asked for, as an ISO-8601 UTC time.",
@@ -811,7 +811,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why it failed, when it did and when the reason is one a caller can act on. A failure the service did not expect says so without its reason, which is in the service log against the job.",
+            "description": "Why the job failed, when the reason is one a caller can act on. For an unexpected failure, the reason is in the service log.",
             "title": "Detail"
           },
           "finishedAt": {
@@ -854,7 +854,7 @@
             "title": "Startedat"
           },
           "status": {
-            "description": "Where it is: queued, running, succeeded, failed, interrupted. \"interrupted\" means the service stopped while it was in hand, so how far it got is unknown; resuming one is a deliberate action, never automatic.",
+            "description": "Where it is: queued, running, succeeded, failed, interrupted. `interrupted` means the process running the job stopped before the job ended. You may resume an interrupted job with `POST /v1/jobs/{job_id}/resume`.",
             "title": "Status",
             "type": "string"
           }
@@ -873,7 +873,7 @@
         "description": "One line of a run's change log. ",
         "properties": {
           "action": {
-            "description": "What was done. One of the operations an edit may carry, or `added` for an event pulled in off the not-collected list. An identifier rather than a sentence: a client words it, the way it words a run status or a revision kind, so the wording can change without every entry already recorded still saying the old thing.",
+            "description": "The action. One of the edit operations, or `added` for an event added from the uncollected list. Clients word the action.",
             "examples": [
               "set_category"
             ],
@@ -889,7 +889,7 @@
                 "type": "null"
               }
             ],
-            "description": "The category a `set_category` put them under, as the data model names it, or null for every other action. The key rather than the label: what a category is called belongs to whoever is showing it, and `GET /v1/config` publishes the labels.",
+            "description": "The category key a `set_category` assigned, or null for other actions. `GET /v1/config` lists each category's label.",
             "examples": [
               "junior_scrimmage"
             ],
@@ -914,7 +914,7 @@
                 "type": "null"
               }
             ],
-            "description": "How far a `nudge` moved them, negative for earlier, or null for every other action. Signed rather than split into a size and a direction, which is a wording each client makes for itself.",
+            "description": "How many minutes a `nudge` moved the shifts, negative for earlier, or null for other actions.",
             "examples": [
               -15
             ],
@@ -929,7 +929,7 @@
                 "type": "null"
               }
             ],
-            "description": "The opportunity a `set_slots` was about, or null for every other action. The identifier rather than the Amplify title, which a reader of the run already holds beside it.",
+            "description": "The need ID a `set_slots` applied to, or null for other actions.",
             "examples": [
               "905196"
             ],
@@ -984,7 +984,7 @@
                 "type": "null"
               }
             ],
-            "description": "Title of the event this was done to, or null when it named more than one. One event is worth naming and a selection is worth counting, so read this beside `subjectCount`.",
+            "description": "Title of the event the action applied to, or null when it applied to more than one. Read with `subjectCount`.",
             "examples": [
               "Adult Scrimmages"
             ],
@@ -1039,7 +1039,7 @@
                 "type": "null"
               }
             ],
-            "description": "Fuzzy confidence from 0 to 100, or null for a keyword match, which is not scored.",
+            "description": "Similarity score from 0 to 100, or null for a keyword match.",
             "title": "Score"
           }
         },
@@ -1050,7 +1050,7 @@
         "type": "object"
       },
       "OpportunityView": {
-        "description": "An Amplify opportunity a run creates shifts under.\n\nWhat Amplify says about the listing, and nothing else. How a\nshift is timed under it belongs to the role that creates the\nshift.",
+        "description": "An Amplify opportunity a run creates shifts for, as Amplify\ndescribes it. Each event's role sets the shift's timing.",
         "properties": {
           "needId": {
             "description": "Amplify need ID.",
@@ -1080,7 +1080,7 @@
         "description": "What one Amplify opportunity would receive. ",
         "properties": {
           "alreadyInAmplify": {
-            "description": "Shifts this opportunity is asked for that it already holds, and which a send would skip. A row where this is the whole ask and `willCreate` is zero is an opportunity a send has nothing left to do for.",
+            "description": "Shifts this opportunity already has. A send skips them. When `willCreate` is 0, a send creates no shifts for this opportunity.",
             "title": "Alreadyinamplify",
             "type": "integer"
           },
@@ -1109,12 +1109,12 @@
             "title": "Lastdate"
           },
           "needId": {
-            "description": "Amplify need ID the shifts would be created under.",
+            "description": "The Amplify need ID for the shifts.",
             "title": "Needid",
             "type": "string"
           },
           "slots": {
-            "description": "Volunteers wanted across the shifts that would be created. A skipped shift asks for nobody: it exists already, wanting whatever it was created wanting.",
+            "description": "Volunteer count across the shifts a send would create. Skipped shifts are not included.",
             "title": "Slots",
             "type": "integer"
           },
@@ -1127,11 +1127,11 @@
                 "type": "null"
               }
             ],
-            "description": "The opportunity's title, or null when the run stored no opportunity for this need ID, which means collection did not resolve one.",
+            "description": "The opportunity's title, or null when the collection did not read a title for this need ID.",
             "title": "Title"
           },
           "willCreate": {
-            "description": "Shifts this opportunity would receive, without the ones it already holds.",
+            "description": "Shifts this opportunity would receive, not including shifts it already has.",
             "title": "Willcreate",
             "type": "integer"
           }
@@ -1146,25 +1146,25 @@
         "type": "object"
       },
       "PreviewTotalsView": {
-        "description": "What a send would do, totalled over the whole revision. ",
+        "description": "What a send would do, totaled over the entire revision. ",
         "properties": {
           "alreadyInAmplify": {
-            "description": "Shifts the revision asks for that Amplify already has, read live from the opportunities themselves rather than from any record of what this run sent. They are skipped rather than created again; `skipped` names them.",
+            "description": "Shifts in the revision that Amplify already has, read from the opportunities in Amplify. A send skips them.",
             "title": "Alreadyinamplify",
             "type": "integer"
           },
           "blockingEvents": {
-            "description": "Events that cannot be sent. Above zero means nothing can be sent at all: the run stops and names them rather than dropping them, because a missing shift is invisible until volunteers cannot sign up.",
+            "description": "Events that cannot be sent. While this is above 0, the run may not be sent.",
             "title": "Blockingevents",
             "type": "integer"
           },
           "repeatedRows": {
-            "description": "How many shifts the revision asks for more than once. They create one shift, not several; the figure is here so a reader is told rather than left to wonder why the total is below the number of rows they can see.",
+            "description": "How many shifts the revision includes more than once. Each repeated shift is created once.",
             "title": "Repeatedrows",
             "type": "integer"
           },
           "willCreate": {
-            "description": "Shifts that would be created. Counted by identity -- need ID, date, start and end -- so two events asking for the same row count once, and without the ones Amplify already holds. This is the number of rows that will arrive, and the number a send confirms against.",
+            "description": "Shifts a send would create, not including shifts already in Amplify. Counted by need ID, date, start, and end. Two events that would create the same shift count once. A send confirms against this number.",
             "title": "Willcreate",
             "type": "integer"
           }
@@ -1179,7 +1179,7 @@
         "type": "object"
       },
       "PreviewView": {
-        "description": "What sending the current revision would create.\n\nGrouped by opportunity and never by category: several\ncategories share one Amplify listing, so grouping by category\nwould show that listing twice under two names and split a\ntotal the reader is about to check against Amplify.\n\nEvery opportunity the revision touches is read live while this\nis answered, so the totals are net of what Amplify already\nholds. The send re-reads the same way inside its own\ntransaction, which is what makes the number shown here the\nnumber of rows that arrive.",
+        "description": "What sending the current revision would create, grouped by\nAmplify opportunity. Several categories may share one\nopportunity.\n\nThe service reads every opportunity from Amplify to answer. The\ntotals do not include shifts already in Amplify. A send checks\nAmplify again before it writes.",
         "properties": {
           "blockers": {
             "description": "Every reason an event cannot be sent, in the order the events are shown.",
@@ -1190,7 +1190,7 @@
             "type": "array"
           },
           "rows": {
-            "description": "One per opportunity the revision asks for a shift under, by title, and by need ID where Amplify gave no title or two share one. Ordered by what a client draws rather than by the need ID, which is on no screen. An opportunity the run resolved but asks nothing of has no row; one whose shifts Amplify already holds keeps its row and says so.",
+            "description": "One row per opportunity the revision creates shifts for, by title, and by need ID when Amplify gave no title or two opportunities share one. In the order a client displays them. An opportunity with no shifts in the revision has no row. An opportunity whose shifts are all in Amplify keeps its row.",
             "items": {
               "$ref": "#/components/schemas/PreviewRowView"
             },
@@ -1198,7 +1198,7 @@
             "type": "array"
           },
           "skipped": {
-            "description": "Every shift Amplify already has, by need ID and then by when it falls. A send skips exactly these.",
+            "description": "Every shift Amplify already has, by need ID and then by time. A send skips these shifts.",
             "items": {
               "$ref": "#/components/schemas/SkippedShiftView"
             },
@@ -1207,7 +1207,7 @@
           },
           "totals": {
             "$ref": "#/components/schemas/PreviewTotalsView",
-            "description": "What a send would do, totalled over the whole revision rather than per opportunity."
+            "description": "What a send would do, totaled over the entire revision."
           }
         },
         "required": [
@@ -1221,10 +1221,10 @@
       },
       "RecollectRequest": {
         "additionalProperties": false,
-        "description": "What the operator was shown before asking to collect again. ",
+        "description": "The number of changes collecting the run again discards. ",
         "properties": {
           "expectedChangeCount": {
-            "description": "How many changes the operator was told a recollection would discard. Collecting again replaces the run's events with what the calendar has now, so any editing done since it was collected is left behind in the revision it was done in.\n\nThe service refuses when this does not match what the run actually holds. That is the stale-tab case: a number read from a page somebody left open describes a run that has moved on, and a confirmation dialog cannot tell the difference. Read the run again and ask again with what it says now.",
+            "description": "The number of changes collecting the run again discards, as `GET /v1/runs/{run_id}/revisions` reports for the current revision. Collecting a run again discards any changes made to it since it was collected.\n\nIf the number does not match, the run is not collected again. Read the revisions again, then send the current number.",
             "examples": [
               0
             ],
@@ -1240,10 +1240,10 @@
         "type": "object"
       },
       "RetentionView": {
-        "description": "How long what a run leaves behind is kept. ",
+        "description": "How long the service retains each type of run data. ",
         "properties": {
           "jobLogDays": {
-            "description": "How long a job's event log is kept after the job finished. The job itself is not removed with it: that a send ran on a date and how it ended outlives the log of what it did, which is the part naming volunteers and the times they were asked to be somewhere.",
+            "description": "How long a job's event log is retained after the job finishes. The job itself remains.",
             "examples": [
               90
             ],
@@ -1251,7 +1251,7 @@
             "type": "integer"
           },
           "revisionDays": {
-            "description": "How long a run may go untouched before the revisions between its first and its current one are removed. Neither of those two is ever removed: the first is the run as the calendar gave it, which reverting to is a published operation, and the current one is what the run holds now.",
+            "description": "How long a run may go unchanged before its revisions are removed. The first revision and the current revision remain.",
             "examples": [
               90
             ],
@@ -1259,7 +1259,7 @@
             "type": "integer"
           },
           "unmatchedTitleDays": {
-            "description": "The longest a title the data model did not match is kept without being seen again. A backstop rather than the rule: what usually removes a title is the model coming to match it, since that is what recording one is for. Measured from the most recent sighting, so a title still turning up keeps its whole count.",
+            "description": "How long an unmatched title is retained after it was last seen. A title is also removed after the data model matches it.",
             "examples": [
               365
             ],
@@ -1279,7 +1279,7 @@
         "description": "One numbered version of a run's events. ",
         "properties": {
           "changes": {
-            "description": "How many changes were made while this revision was the current one. Zero means it was sealed and left, which is what tells a reader which revision in a list is worth looking at.",
+            "description": "How many changes were made while this revision was current. 0 means the revision was saved with no further edits.",
             "title": "Changes",
             "type": "integer"
           },
@@ -1289,12 +1289,12 @@
             "type": "string"
           },
           "current": {
-            "description": "Whether this is the revision being edited now. Exactly one revision of a run is current, and it is the last: everything below it is history and is never written to again.",
+            "description": "Whether this is the revision being edited. A run has one current revision, the latest. Earlier revisions do not change.",
             "title": "Current",
             "type": "boolean"
           },
           "kind": {
-            "description": "How the revision came to exist: collected, recollected, continued, reverted. An identifier rather than a sentence, so that each client words it.",
+            "description": "How the revision was created: collected, recollected, continued, reverted. Clients word the kind.",
             "examples": [
               "reverted"
             ],
@@ -1315,7 +1315,7 @@
                 "type": "null"
               }
             ],
-            "description": "The revision this one was made from, which is the revision its rows were copied from. The one a revert went back to, or the one a seal fixed; null for the two a collection fills, which are made from a calendar and not from a revision.",
+            "description": "The revision this one copies: the revision a revert restored, or the revision a save saved. Null for the revisions a collection creates.",
             "examples": [
               1
             ],
@@ -1333,7 +1333,7 @@
         "type": "object"
       },
       "RunCountsView": {
-        "description": "What the run's current revision holds. ",
+        "description": "The current revision's counts. ",
         "properties": {
           "events": {
             "description": "Events in the current revision.",
@@ -1341,17 +1341,17 @@
             "type": "integer"
           },
           "shifts": {
-            "description": "Shifts a send would create. Counted per role rather than per event, because an event serving both skating and non-skating officials creates two.",
+            "description": "Shifts a send would create, counted per role. An event with skating and non-skating officials creates two shifts.",
             "title": "Shifts",
             "type": "integer"
           },
           "uncollected": {
-            "description": "Things the run's window held that did not become events. Counted over the run rather than the current revision, because it describes the window the collection read and editing the events does not change it.",
+            "description": "Events in the run's date range that are not in the run. Counted over the run, not the current revision. Editing events does not change this count.",
             "title": "Uncollected",
             "type": "integer"
           },
           "unmatched": {
-            "description": "Events that would create no shift at all, and so stop the run being sent. A title that matched nothing has no opportunity to create a shift under, and a category that resolved to no need ID leaves the same absence.",
+            "description": "Events that would create no shift, and block the send. An event has no opportunity when its title matched no category, or its category has no need ID.",
             "title": "Unmatched",
             "type": "integer"
           }
@@ -1366,7 +1366,7 @@
         "type": "object"
       },
       "RunDetailView": {
-        "description": "A run with everything the review screen reads at once.\n\nThe events, the opportunities labelling them and the change\nlog arrive together because a screen showing one shows all\nthree, and reading them separately would let them disagree:\neach read would see the state at a different moment.",
+        "description": "A run with its events, opportunities, and change log, read\ntogether.",
         "properties": {
           "activeJobId": {
             "anyOf": [
@@ -1377,7 +1377,7 @@
                 "type": "null"
               }
             ],
-            "description": "Identifier of the job still working on this run, or null when nothing is. What makes a run somebody walked away from reattachable: read the job, or follow its events.",
+            "description": "Identifier of the job working on this run, or null. To follow it, read the job or its event stream.",
             "title": "Activejobid"
           },
           "calendar": {
@@ -1392,7 +1392,7 @@
           },
           "counts": {
             "$ref": "#/components/schemas/RunCountsView",
-            "description": "What the current revision holds."
+            "description": "The current revision's counts."
           },
           "currentRevision": {
             "description": "Number of the revision now being edited, or 0 before the first one exists.",
@@ -1408,7 +1408,7 @@
             "type": "array"
           },
           "id": {
-            "description": "Identifier the run is addressed by. Minted by the server, and never the path of a file the run produced.",
+            "description": "The run's identifier, created by the service.",
             "title": "Id",
             "type": "string"
           },
@@ -1421,11 +1421,11 @@
                 "type": "null"
               }
             ],
-            "description": "Identifier of the job this run last ran, when the service stopped while it was in hand, and null otherwise. Resuming one is a deliberate act and never automatic, which means a caller has to be able to name it -- and an interrupted job is finished, so it is never the \"activeJobId\". Only the run's most recent job is reported here: a send that a later one has since carried out is not something to offer to resume.",
+            "description": "Identifier of the run's most recent job when it was interrupted, and null otherwise. A job is interrupted when the process running it stops before the job ends. You may resume it with `POST /v1/jobs/{job_id}/resume`.",
             "title": "Interruptedjobid"
           },
           "log": {
-            "description": "Every change made to the run, oldest first. Written where the change is made rather than assembled by whatever displays it, so it survives a reload and reads the same in a browser and a terminal.",
+            "description": "Every change made to the run, oldest first.",
             "items": {
               "$ref": "#/components/schemas/LogEntryView"
             },
@@ -1433,12 +1433,12 @@
             "type": "array"
           },
           "mayDelete": {
-            "description": "Whether this run may be deleted. False while something is working on it, and false for ever once its shifts reached Amplify, because the record of what it created is the only account of that anything here holds. Answered here for the same reason `mayUnassign` is on an event: it is the rule the delete operation refuses by, and a caller working it out again would be a second opinion about what the operation will accept -- one that agrees until the rule changes and then disagrees quietly. Why it is false is not published: a caller that asks anyway is told by the refusal itself.",
+            "description": "Whether this run may be deleted. False while the run is collecting events or sending shifts to Amplify, and after it sent shifts to Amplify.",
             "title": "Maydelete",
             "type": "boolean"
           },
           "opportunities": {
-            "description": "Amplify titles for every need ID this run touches, resolved while the run was collected and stored with it. Every review row is labelled with one, so they are not a lookup deferred to preview time.",
+            "description": "Amplify titles for every need ID in the run, read when the run was collected.",
             "items": {
               "$ref": "#/components/schemas/OpportunityView"
             },
@@ -1446,7 +1446,7 @@
             "type": "array"
           },
           "revisedAt": {
-            "description": "When it last changed, as an ISO-8601 UTC time. The time it was collected, for a run nothing has changed yet.",
+            "description": "When the run last changed, as an ISO 8601 UTC time. For a run with no changes, the time it was collected.",
             "title": "Revisedat",
             "type": "string"
           },
@@ -1490,7 +1490,7 @@
         "type": "object"
       },
       "RunView": {
-        "description": "One collection of calendar events, as a caller sees it. ",
+        "description": "A run: one collection of League Calendar events. ",
         "properties": {
           "activeJobId": {
             "anyOf": [
@@ -1501,7 +1501,7 @@
                 "type": "null"
               }
             ],
-            "description": "Identifier of the job still working on this run, or null when nothing is. What makes a run somebody walked away from reattachable: read the job, or follow its events.",
+            "description": "Identifier of the job working on this run, or null. To follow it, read the job or its event stream.",
             "title": "Activejobid"
           },
           "calendar": {
@@ -1516,7 +1516,7 @@
           },
           "counts": {
             "$ref": "#/components/schemas/RunCountsView",
-            "description": "What the current revision holds."
+            "description": "The current revision's counts."
           },
           "currentRevision": {
             "description": "Number of the revision now being edited, or 0 before the first one exists.",
@@ -1524,7 +1524,7 @@
             "type": "integer"
           },
           "id": {
-            "description": "Identifier the run is addressed by. Minted by the server, and never the path of a file the run produced.",
+            "description": "The run's identifier, created by the service.",
             "title": "Id",
             "type": "string"
           },
@@ -1537,16 +1537,16 @@
                 "type": "null"
               }
             ],
-            "description": "Identifier of the job this run last ran, when the service stopped while it was in hand, and null otherwise. Resuming one is a deliberate act and never automatic, which means a caller has to be able to name it -- and an interrupted job is finished, so it is never the \"activeJobId\". Only the run's most recent job is reported here: a send that a later one has since carried out is not something to offer to resume.",
+            "description": "Identifier of the run's most recent job when it was interrupted, and null otherwise. A job is interrupted when the process running it stops before the job ends. You may resume it with `POST /v1/jobs/{job_id}/resume`.",
             "title": "Interruptedjobid"
           },
           "mayDelete": {
-            "description": "Whether this run may be deleted. False while something is working on it, and false for ever once its shifts reached Amplify, because the record of what it created is the only account of that anything here holds. Answered here for the same reason `mayUnassign` is on an event: it is the rule the delete operation refuses by, and a caller working it out again would be a second opinion about what the operation will accept -- one that agrees until the rule changes and then disagrees quietly. Why it is false is not published: a caller that asks anyway is told by the refusal itself.",
+            "description": "Whether this run may be deleted. False while the run is collecting events or sending shifts to Amplify, and after it sent shifts to Amplify.",
             "title": "Maydelete",
             "type": "boolean"
           },
           "revisedAt": {
-            "description": "When it last changed, as an ISO-8601 UTC time. The time it was collected, for a run nothing has changed yet.",
+            "description": "When the run last changed, as an ISO 8601 UTC time. For a run with no changes, the time it was collected.",
             "title": "Revisedat",
             "type": "string"
           },
@@ -1588,10 +1588,10 @@
       },
       "SendRequest": {
         "additionalProperties": false,
-        "description": "What the operator was shown before asking to send. ",
+        "description": "The number of shifts the preview reported a send would create. ",
         "properties": {
           "expectedShiftCount": {
-            "description": "How many shifts the operator was told a send would create. This is the preview's `totals.willCreate`, which is net of what Amplify already holds -- the number of rows that will arrive, and so the number the confirmation restates.\n\nThe service refuses when this does not match what a send would create now. Two things move it: the run being edited, and Amplify itself gaining or losing a shift. Both mean the number somebody confirmed against described a moment that has passed. Read the preview again and ask again with what it says now.",
+            "description": "The number of shifts the preview reports a send would create: `totals.willCreate`. It does not include shifts already in Amplify.\n\nIf there are changes to the run or Amplify shifts after the preview, the send is refused. Read the preview again, then send the current number.",
             "examples": [
               12
             ],
@@ -1607,7 +1607,7 @@
         "type": "object"
       },
       "SkippedShiftView": {
-        "description": "One shift the revision asks for that Amplify already has.\n\nNamed per shift and never only counted. A count says how\nmany rows will not arrive; it does not say which, and the\nreader deciding whether that is right is deciding about\nparticular days and times.",
+        "description": "One shift in the revision that Amplify already has. Each skipped\nshift is listed by date and time.",
         "properties": {
           "date": {
             "description": "Day it falls on, as an ISO date.",
@@ -1640,10 +1640,10 @@
         "type": "object"
       },
       "UncollectedEventView": {
-        "description": "One thing a run's window held that did not become an event. ",
+        "description": "One event in the run's date range that is not in the run. ",
         "properties": {
           "addable": {
-            "description": "Whether this event may be pulled into the run. The server's answer rather than the client's, so that a button and the endpoint behind it cannot disagree: an event nobody searched for is addable until the run holds it, and one that cannot become a correct shift is refused here as well as there.\n\nAn event already pulled in keeps its entry here and stops being addable. The entry is what a revert gives back: reverting to the first revision drops the hand-added events, and this list is where they return to.",
+            "description": "Whether this event may be added to the run. True for an event with the `search` reason until it is added.\n\nAn added event stays in this list, and is not addable. Reverting to revision 1 removes added events, and they become addable again.",
             "title": "Addable",
             "type": "boolean"
           },
@@ -1668,7 +1668,7 @@
                 "type": "null"
               }
             ],
-            "description": "What the calendar's description said about this event, as text, or null where the calendar carries no notes or the event had none. Kept so that an event pulled in from here carries the note a collected one carries.",
+            "description": "The event's League Calendar description, as text, or null when the calendar has no notes or the event has none. An event added to the run keeps this note.",
             "examples": [
               "Doors at 6 PM, Game at 7 PM"
             ],
@@ -1683,7 +1683,7 @@
                 "type": "null"
               }
             ],
-            "description": "Start time on the calendar, or null for an all-day event, which has none.",
+            "description": "Start time on the calendar, or null for an all-day event.",
             "title": "Calendarstart"
           },
           "date": {
@@ -1699,7 +1699,7 @@
             "title": "Date"
           },
           "id": {
-            "description": "Calendar identifier of the event. The same identifier an event of the run carries, which is what names one when it is pulled in.",
+            "description": "The event's League Calendar identifier. An event added to the run keeps this identifier.",
             "title": "Id",
             "type": "string"
           },
@@ -1724,7 +1724,7 @@
         "type": "object"
       },
       "UncollectedGroupView": {
-        "description": "What a run's window held and the run left out, by reason. ",
+        "description": "The uncollected events in a run's date range, grouped by reason. ",
         "properties": {
           "events": {
             "description": "The events left out for this reason, earliest first.",
@@ -1735,7 +1735,7 @@
             "type": "array"
           },
           "reason": {
-            "description": "Why these were left out: search, excluded, allday, untitled. \"search\" is the one no calendar event can carry -- it means no configured query string returned it, so nobody looked for it -- and it is the only reason an event may be pulled in under. The other three describe events that cannot become a correct shift.",
+            "description": "Why these events were not collected: search, excluded, allday, untitled. `search` means no search term returned the event. Only events with this reason may be added to the run. The other reasons describe events that cannot become a correct shift.",
             "title": "Reason",
             "type": "string"
           }
@@ -1749,10 +1749,10 @@
       },
       "UnmatchedTitleRequest": {
         "additionalProperties": false,
-        "description": "A title the data model did not match, to keep for later. ",
+        "description": "A title the data model did not match, to record in the unmatched\ntitle log.",
         "properties": {
           "calendar": {
-            "description": "Which configured calendar the title was seen in. Part of what a title is, rather than a note beside it: the categories a title is matched against belong to a calendar, so the same title can be matched in one and unmatched in another.",
+            "description": "The configured calendar the title was seen in. A title may match in one calendar and not in another.",
             "examples": [
               "events"
             ],
@@ -1770,14 +1770,14 @@
                 "type": "null"
               }
             ],
-            "description": "The run the title was noticed in, when it was noticed in one. Kept as provenance and nothing more: the log outlives the run, and deleting a run does not take the reason somebody was going to edit the model with it.",
+            "description": "The run the title was found in, if any. Any unmatched titles from a run remain in the log after the run is deleted.",
             "examples": [
               "3f2b1c..."
             ],
             "title": "Runid"
           },
           "title": {
-            "description": "The title, as the calendar gave it. Recorded as it was written, because what the model has to match is the thing somebody typed.",
+            "description": "The title, exactly as the calendar gave it.",
             "examples": [
               "Jet City vs Cherry City"
             ],
@@ -1795,7 +1795,7 @@
         "type": "object"
       },
       "UnmatchedTitleView": {
-        "description": "A title the data model did not match, and how often. ",
+        "description": "A title the data model did not match, and how often it was seen. ",
         "properties": {
           "calendar": {
             "description": "Which configured calendar it was seen in.",
@@ -1822,7 +1822,7 @@
             "type": "string"
           },
           "timesSeen": {
-            "description": "How many runs this title turned up in, plus any sightings recorded by hand. What says whether a title is worth an alias: one that turns up every month is a category the model is missing, and one seen once is an event that happened once. A run counts once however many events carry the title and however often its window is collected again.",
+            "description": "The number of runs the title appeared in, plus manually recorded sightings. A run counts each title once, no matter how many events have the title or how many times the run is re-collected.",
             "examples": [
               3
             ],
@@ -1868,10 +1868,10 @@
       },
       "WindowRequest": {
         "additionalProperties": false,
-        "description": "The days a collection is asked to cover.\n\nNo zone, unlike the window a run answers with.  The server's\nzone is the authoritative one, and a client that sent its own\nwould be deciding which days a run covers from wherever the\nperson happened to be sitting.",
+        "description": "The days a collection covers. The service reads the dates in its\nown time zone.",
         "properties": {
           "end": {
-            "description": "Day after the last day to cover, as an ISO date. Exclusive, so a one-day window is two consecutive dates. There is no limit on how long a window may be.",
+            "description": "Day after the last day to cover, as an ISO date. A one-day date range is two consecutive dates. The date range has no length limit.",
             "examples": [
               "2026-10-01"
             ],
@@ -1897,15 +1897,15 @@
         "type": "object"
       },
       "WindowView": {
-        "description": "The days a run covers, and the zone they are read in. ",
+        "description": "A run's date range and time zone. ",
         "properties": {
           "end": {
-            "description": "Day after the last day the run covers, as an ISO date. Exclusive, so a run covering one day carries two consecutive dates. This is the authoritative value: it is what is stored, sent and compared, and \"lastDay\" is the same window said the way a reader means it.",
+            "description": "Day after the last day the run covers, as an ISO date. A one-day run has two consecutive dates. The service stores, sends, and compares this value. `lastDay` gives the same date range by its last day.",
             "title": "End",
             "type": "string"
           },
           "lastDay": {
-            "description": "Last day the run covers, as an ISO date, and as a reader means it -- the day before \"end\". Published rather than worked out by each client, because every client that shows a window has to say it this way and a second implementation of one subtraction is a client that can disagree with the server about which days a run covers.",
+            "description": "Last day the run covers, as an ISO date: the day before `end`. Clients display this value.",
             "title": "Lastday",
             "type": "string"
           },
@@ -1915,7 +1915,7 @@
             "type": "string"
           },
           "timezone": {
-            "description": "Zone the two dates are read in, which is the zone the calendar is read in and the one the configuration reports. The server's zone is the authoritative one: a client displays these dates and never works a window out in the zone of whoever is looking at it.",
+            "description": "The time zone of the two dates. It is the zone the calendar is read in, and the zone the configuration reports. Clients display the dates in this zone.",
             "title": "Timezone",
             "type": "string"
           }
@@ -1948,7 +1948,7 @@
   "paths": {
     "/v1/config": {
       "get": {
-        "description": "The settings a collection is carried out under, as this process resolved them at startup. Read only: rotating a credential or changing a setting is a deployment operation, and no endpoint writes one.\n\nThis is where a client learns which calendars a collection may name. Those keys belong to a deployment rather than to this contract, so a client that hard-coded them would be describing one installation.",
+        "description": "The settings collections use, as the service read them at startup. To change a setting or a credential, edit its value in your `.env` file and restart `star-pass`.\n\nLists the calendars a collection request may name.",
         "operationId": "get_config",
         "responses": {
           "200": {
@@ -1983,7 +1983,7 @@
     },
     "/v1/credentials/calendar/test": {
       "post": {
-        "description": "Reads one event from each configured calendar with the key and reports whether each read was accepted, with the last four characters of the key so two can be told apart. The key itself is never published and no endpoint replaces it: rotation is changing the secret and restarting.\n\nEach calendar is answered for on its own, because a key Google accepts can still be refused a calendar that is not shared with it. `working` is true only when every calendar accepted the read.\n\nRate-limited per caller, separately from the Amplify test. Asking too often is refused with a `429` and a `Retry-After` header, and the refusal sends nothing to Google.\n\nA `POST` for the reason the Amplify test is one. It stores nothing and takes no idempotency key.",
+        "description": "Reads one event from each configured calendar, and indicates whether or not each read was successful. The key's last four characters are visible in the response. To change the key, edit its value in your `.env` file and restart `star-pass`.\n\nEach calendar produces its own result because Google's API may successfully authenticate a key and determine the key is not authorized for a calendar. A refused key is a result, not an error.\n\nThe API rate limits this test per caller, separately from the Amplify test. A request over the limit receives a `429` with a `Retry-After` header, and does not reach Google.\n\nStores no data and takes no idempotency key.",
         "operationId": "test_calendar_credential",
         "responses": {
           "200": {
@@ -2018,7 +2018,7 @@
     },
     "/v1/credentials/test": {
       "post": {
-        "description": "Sends one small authenticated read to Amplify and reports whether it was accepted, with the last four characters of the credential so two can be told apart. The credential itself is never published and no endpoint replaces it: rotation is changing the secret and restarting.\n\nA credential Amplify would not take is an answer rather than a failure -- `working` is false and `reason` says what happened -- because whether it works is the question that was asked.\n\nRate-limited per caller. Asking too often is refused with a `429` and a `Retry-After` header, and the refusal sends nothing to Amplify.\n\nA `POST` rather than a `GET` because it is not free: every call reaches somebody else's service, which is not something to cache or repeat on a client's whim. It stores nothing and takes no idempotency key.",
+        "description": "Sends one read request to Amplify, and indicates whether or not Amplify accepted the token. The token's last four characters are visible in the response. To change the token, edit its value in your `.env` file and restart `star-pass`.\n\nA refused token is a result, not an application error.\n\nThe API rate limits this test per caller. A request over the limit receives a `429` with a `Retry-After` header, and does not reach Amplify.\n\nStores no data and takes no idempotency key.",
         "operationId": "test_credential",
         "responses": {
           "200": {
@@ -2129,7 +2129,7 @@
     },
     "/v1/jobs/{job_id}/events": {
       "get": {
-        "description": "A server-sent event stream. Each frame is named for what the job reported and carries what that report held. The stream ends with a \"job_finished\" frame when the job is over.\n\nIt is reattachable: a client that reconnects sends the identifier of the last frame it saw in \"Last-Event-ID\", and is given what it missed rather than what it already has. A browser sends that header itself.",
+        "description": "A server-sent event stream. Each frame is named for what the job reported, and contains that report. The stream ends with a `job_finished` frame.\n\nTo reconnect, send the identifier of the last frame received in `Last-Event-ID`. The stream continues after that frame. A browser sends this header automatically.",
         "operationId": "stream_job_events",
         "parameters": [
           {
@@ -2173,7 +2173,7 @@
     },
     "/v1/jobs/{job_id}/resume": {
       "post": {
-        "description": "Queues an interrupted job to be run again, and hands it back to a worker. A job left queued or running when the service stopped is marked interrupted at startup and never resumed on its own: a send that resumed itself would write to a live volunteer system from state rebuilt after a crash.\n\nWhat runs is the ordinary work, pointed at a job that already exists. A resumed send reads every opportunity immediately before writing to it and creates exactly the rows the interrupted attempt did not, so resuming needs no record of how far that attempt got -- the question is answered by Amplify rather than by the job.\n\nThe job keeps its identifier and loses what the interrupted attempt recorded about itself: when it began, when it stopped, and why. Those described an attempt that is being made again, and leaving them would describe two runs of it at once.\n\nRefused for a job in any other state -- which is what stops a second click starting a second worker -- and while another job is working on the same run.",
+        "description": "Runs an interrupted job again. A job is interrupted when the process running it stops before the job ends. When the service starts, it marks any queued or running job as interrupted.\n\nYou may only resume an interrupted job, and only while no other job is working on the same run.\n\nA resumed send creates only the shifts Amplify does not have. The job keeps its identifier. Its start time, end time, and failure reason are cleared.",
         "operationId": "resume_job",
         "parameters": [
           {
@@ -2221,7 +2221,7 @@
     },
     "/v1/runs": {
       "get": {
-        "description": "Every run the service holds, most recently collected first, including one still being collected. Each carries what its current revision holds and the job still working on it, so the list is enough to decide what to open without reading each run in turn.",
+        "description": "All runs, newest to oldest, including runs being collected. Each run includes its current revision's counts and the job working on it, if any.",
         "operationId": "list_runs",
         "responses": {
           "200": {
@@ -2258,7 +2258,7 @@
         ]
       },
       "post": {
-        "description": "Reads the calendar over the days given and stores what it finds as a new run, ready to review. The identifier is minted here and is never the path of a file.\n\nAnswers as soon as the run exists, with the job doing the work: reading a calendar and naming every opportunity it finds takes longer than a request should be held open. Read the job, or follow its events, to see how far it has got. The run is in the list from the moment this answers, so a person who closed the page can find it again.\n\nThe window is a first day and the day after the last, read in the server's time zone, and there is no limit on its length. An event that cannot become a correct shift does not stop the collection: it is stored, named as unmatched, and stops the **send** instead, so a reviewer sees everything the calendar held rather than a run with holes in it.",
+        "description": "Collects a calendar's events in a date range into a new run, ready to review.\n\nAnswers when the run is created, with the job that collects the events. To follow its progress, read the job or its event stream. The run appears in the run list immediately.\n\nThe date range is a first day and the day after the last day, in the service's time zone, with no length limit. An event with no opportunity is collected, and blocks the send.",
         "operationId": "collect_run",
         "requestBody": {
           "content": {
@@ -2295,7 +2295,7 @@
             ]
           }
         ],
-        "summary": "Collect a calendar window into a new run",
+        "summary": "Collect a calendar's events within a date range into a new run",
         "tags": [
           "runs"
         ]
@@ -2303,7 +2303,7 @@
     },
     "/v1/runs/{run_id}": {
       "delete": {
-        "description": "Removes the run and everything that hangs off it: its revisions, their events and roles, its opportunities, its change log, its jobs and what the window left out.\n\n**Refused for a run that has sent shifts**, whether all of them or some, because the record of what a send created is the only account of that anything here holds. Refused separately, and with its own reason, while a job is working on the run: that one becomes deletable when the work finishes.\n\nWhat does not go is the run's unmatched-title sightings. What the data model is missing outlives the window that revealed it.",
+        "description": "Deletes the run, and removes its revisions, events, opportunities, change log, jobs, and uncollected events. Any unmatched titles from the run remain in the unmatched title log.\n\nYou may not delete a run that is collecting events, is sending shifts to Amplify, or already sent shifts to Amplify.",
         "operationId": "delete_run",
         "parameters": [
           {
@@ -2336,7 +2336,7 @@
             ]
           }
         ],
-        "summary": "Delete a run that never sent",
+        "summary": "Delete a run that has not sent shifts",
         "tags": [
           "runs"
         ]
@@ -2390,7 +2390,7 @@
     },
     "/v1/runs/{run_id}/events": {
       "patch": {
-        "description": "One user action, sent as the operations it is made of: set the opportunity, set a shift start or end, set how many volunteers one role wants, nudge a selection, put slots back to usual, remove events, undo an event's changes.\n\nSent as a list so a bulk action over thirty selected rows is one request, one log entry and one revision delta rather than thirty of each. The operations apply in order, each seeing what the one before it produced.\n\n**The whole call is applied or none of it is.** An operation that would leave an event unable to become a correct shift refuses the request and nothing is written, because a partly applied action is one the reviewer cannot see the shape of.\n\n`set_start` and `set_end` name the **shift** times, which are what reaches Amplify. An event's calendar times never move: they are what the calendar said, and they are what `undo` works back from.\n\nRequires an `Idempotency-Key` header. An edit is not idempotent in itself -- a nudge applied twice moves a shift twice -- so a retry after a lost answer is given the first answer rather than being carried out again. A key carrying different operations is refused rather than answered from the first request, because a key is a promise that the request is the one already made.",
+        "description": "One user action, as a list of operations: set the category, set a shift start or end, set a role's volunteer count, nudge, reset volunteer counts, remove events, or undo an event's changes.\n\nAn action over several rows is one request, one change log entry, and one revision change. The operations apply in order, and each sees the result of the previous operation.\n\n**The service applies the entire request or none of it.** If an operation would leave an event unable to become a correct shift, the service refuses the request and writes no changes.\n\n`set_start` and `set_end` set the **shift** times sent to Amplify. `undo` restores an event's collected opportunity, shift times, and volunteer count.\n\nRequires an `Idempotency-Key` header. A retry with the same key receives the first answer. A key sent with different operations is refused.",
         "operationId": "edit_events",
         "parameters": [
           {
@@ -2458,7 +2458,7 @@
         ]
       },
       "post": {
-        "description": "Adds to the run's current revision one of the events its window held and the collection did not take, named by the identifier the \"uncollected\" list carries.\n\n**Only an event nobody searched for may be pulled in.** The other three reasons -- an excluded title, an all-day event, an untitled one -- describe events that cannot become a correct shift, and naming one is refused here rather than left to a client to avoid. So is naming an event the revision already holds, which is what makes a second arrival of one request a refusal rather than a second row: no idempotency key is needed, for the reason resuming a job needs none.\n\nThe event that arrives is the one a collection would have produced, matched to a category and timed the same way. It is marked as added by hand, because reverting to the first revision drops the events a person pulled in and returns them to the uncollected list -- which is why the entry there is kept rather than deleted.\n\nThe run gains any Amplify opportunity the event names and the run has not read, so that the row can be labelled. That is the one upstream request this makes.\n\nAnswers with the revision as it now is, because the screen that asked is redrawn from it.",
+        "description": "Adds an uncollected event to the run's current revision, by its identifier in the run's uncollected list.\n\n**Only an event with the `search` reason may be added**: an event no search term returned. Events excluded by title, all-day events, and untitled events are refused. An event already in the revision is also refused, so a repeated request does not add a duplicate row.\n\nThe added event is matched and timed the same way a collected event is, and is marked as manually added. Reverting to revision 1 removes the event and returns it to the uncollected list.\n\nIf the event has an Amplify opportunity the run has not read, the service reads its title from Amplify.\n\nAnswers with the current revision.",
         "operationId": "add_event",
         "parameters": [
           {
@@ -2516,7 +2516,7 @@
     },
     "/v1/runs/{run_id}/preview": {
       "get": {
-        "description": "What a send would do, grouped by Amplify opportunity and never by category: several categories share one listing, so grouping by category would show it twice under two names and split a total the reader is about to check against Amplify.\n\nShifts are counted by identity -- need ID, date, start and end -- so two events asking for the same row count once, and a reader is told how many rows repeat rather than left to wonder why the total is below what they can see.\n\nAn event that cannot become a shift stops the whole send and is named with every reason it cannot, so fixing one does not reveal another.\n\nEvery opportunity the revision touches is read from Amplify while this is answered, so a shift that is already there is reported as skipped rather than counted in what would be created. The send asks the same question again inside its own transaction, which is what makes the total shown here the number of rows that arrive.",
+        "description": "Shifts a send would create in Amplify for each opportunity, the shifts already in Amplify, and the reasons any events may not be sent to Amplify. Several categories may share one opportunity.\n\nShifts are counted by need ID, date, start, and end. Two events that would create the same shift count once.\n\nAn event that cannot become a shift blocks the entire send. A blocking event is listed once for each reason.\n\nThe service reads every opportunity from Amplify to answer. A send checks Amplify again before it writes.",
         "operationId": "get_preview",
         "parameters": [
           {
@@ -2564,7 +2564,7 @@
     },
     "/v1/runs/{run_id}/recollect": {
       "post": {
-        "description": "Reads the same calendar over the same days and replaces what the run holds with what is there now. The run keeps its identifier and its window; a new revision holds the fresh events, and the revisions before it stay readable, so what was replaced is still there to look at.\n\n**Editing done since the run was collected is left behind.** That is what `expectedChangeCount` is for: the operator is shown how much would be discarded and sends the number back, and a number that no longer matches means they were looking at a page describing a run that has moved on.\n\nRefused while another job is working on the run, and refused for a run that has sent shifts, which Amplify cannot take back.",
+        "description": "Replaces the run's events with the current League Calendar events, from the same calendar and date range. The run keeps its identifier and date range. A new revision contains the new events, and earlier revisions remain readable.\n\n**Collecting a run again discards any changes made to it since it was collected.** Set `expectedChangeCount` to the number of changes `GET /v1/runs/{run_id}/revisions` reports for the current revision. If the number does not match, the run is not collected again.\n\nYou may not collect a run again while another job is working on it, or after it sent shifts to Amplify.",
         "operationId": "recollect_run",
         "parameters": [
           {
@@ -2614,7 +2614,7 @@
             ]
           }
         ],
-        "summary": "Collect a run's calendar window again",
+        "summary": "Collect a run's events again",
         "tags": [
           "runs"
         ]
@@ -2622,7 +2622,7 @@
     },
     "/v1/runs/{run_id}/revisions": {
       "get": {
-        "description": "Every numbered version of the run's events, in the order they were made. Everything below the current revision is history and is never written to again: editing adds a revision holding a copy, and reverting does the same rather than deleting anything, so the record of what was done survives being undone.\n\nEach carries how many changes were made while it was current, which is what says whether a revision is worth looking at.",
+        "description": "Every revision of the run, oldest to newest. Only the current revision changes. Editing and reverting add a new revision, and do not change earlier revisions.\n\nEach revision includes the number of changes made while it was current.",
         "operationId": "list_revisions",
         "parameters": [
           {
@@ -2672,7 +2672,7 @@
         ]
       },
       "post": {
-        "description": "Fixes what the run holds now as a numbered revision and moves the work to a new one holding a copy of it. Editing changes the revision a run is working in as it goes, so this is what makes a point in that work something to come back to.\n\nNothing is deleted and nothing is lost: the revision that was current keeps its rows and stays readable at its own number, which is what reverting to it later reads.\n\nA run that has collected nothing is refused. The first revision belongs to the collection, which labels it for what filled it.\n\nRequires an `Idempotency-Key` header. Sealing is not idempotent in itself -- twice is two revisions -- so a retry after a lost answer is given the first answer rather than opening a second one. The request carries nothing else, so a key already used on this run is a replay whatever it is sent with.",
+        "description": "Saves the run's current events as a numbered revision, and continues editing in a new revision that copies it. The saved revision does not change, and you may revert to it later.\n\nRefused for a run with no collected events.\n\nRequires an `Idempotency-Key` header. A retry with the same key receives the first answer. A key already used on this run is treated as a retry.",
         "operationId": "seal_revision",
         "parameters": [
           {
@@ -2732,7 +2732,7 @@
     },
     "/v1/runs/{run_id}/revisions/{number}/revert": {
       "post": {
-        "description": "Puts the run back to the events one of its earlier revisions holds, by adding a revision holding a copy of that one. The work carries on there.\n\nOne revision per revert, and nothing between the two is touched: every revision the run has been through stays readable at its own number, so a revert can itself be reverted by going back to the revision that was current before it.\n\nReverting to revision 1 also drops the events somebody pulled in by hand, because revision 1 is the run as the calendar gave it. Those events return to the list of what the collection left out, ready to be pulled in again -- the rows describing them were never deleted.\n\nAnswers with the run in full, because every row on the screen that asked has changed.\n\nRequires an `Idempotency-Key` header. Reverting twice is two revisions, so a retry after a lost answer is given the first answer rather than opening a second one. The key remembers which revision was asked for: sent again naming a different one, it is refused rather than answered from the first.",
+        "description": "Restores the events of an earlier revision by adding a new revision that copies it. Editing continues in the new revision.\n\nReverting does not change any other revision. To undo a revert, revert to the revision that was current before it.\n\nReverting to revision 1 removes manually added events and returns them to the run's uncollected list.\n\nAnswers with the full run.\n\nRequires an `Idempotency-Key` header. A retry with the same key receives the first answer. A key sent with a different revision number is refused.",
         "operationId": "revert_revision",
         "parameters": [
           {
@@ -2804,7 +2804,7 @@
     },
     "/v1/runs/{run_id}/send": {
       "post": {
-        "description": "Creates every shift the run's current revision asks for that Amplify does not already have. **This is the one thing star-pass does that cannot be undone**: Amplify has no way to take a shift back.\n\nRequires an `Idempotency-Key` header. The key is stored with what this request answered, so a retry after a lost response is given the first answer rather than sending again. A key carrying a different `expectedShiftCount` is refused rather than answered from the first request, because a key is a promise that the request is the one already made.\n\nDuplicate safety does not rest on that key. Every opportunity is read from Amplify immediately before the request that writes to it, and a shift already there is skipped -- by row identity, never by a count, so nothing depends on knowing which shifts a previous attempt reached. The same read is made here, before the job is queued, and is what `expectedShiftCount` is checked against.\n\nAnswers as soon as the job exists. One request is sent per opportunity, carrying every shift it is missing; a batch is recorded as sent only once its request has succeeded, so a batch whose answer never arrived leaves the run `partly_sent` and the next send reads the opportunity and sends the difference.\n\nRefused while another job is working on the run, while the run is still being collected, and while any event in it cannot become a shift -- a missing shift is invisible until volunteers cannot sign up, so the run stops rather than sending the rest.",
+        "description": "Creates every shift in the run's current revision that Amplify does not have. **Sending creates shifts in Amplify, and it may not be undone.**\n\nSet `expectedShiftCount` to the preview's `totals.willCreate`. If there are changes to the run or Amplify shifts after the preview, the send is refused. Read the preview again to see the current number of shifts.\n\nRequires an `Idempotency-Key` header. A retry with the same key receives the first answer. A key sent with a different `expectedShiftCount` is refused.\n\nBefore writing to each opportunity, the service reads the opportunity from Amplify and skips the shifts it already has. The service sends one request per opportunity. If a request's answer does not arrive, the run is `partly_sent`, and sending again creates only the missing shifts.\n\nAnswers when the job is created.\n\nYou may not send a run while another job is working on it, while it is being collected, or while any event in it is blocking.",
         "operationId": "send_run",
         "parameters": [
           {
@@ -2874,7 +2874,7 @@
     },
     "/v1/runs/{run_id}/uncollected": {
       "get": {
-        "description": "Everything the run's window held that did not become one of its events, grouped by the reason it was left out and earliest first within each group. A reason nothing was left out for is not published, so the groups are what there is to look at.\n\nAnswered from what the collection stored, never from a calendar read. This is read on every load of the screen, and a live read would cost a Google request per look and give the run a second opinion about its own window. It therefore describes the window as the collection found it, not as the calendar stands now; recollecting is what refreshes it.\n\n\"search\" means no configured query string returned the event, so nobody looked for it, and it is the only reason an event may be pulled into the run under. The other three describe events that cannot become a correct shift, and each event says which it is rather than leaving a client to work it out from the reason.",
+        "description": "Events in the run's date range that are not in the run, grouped by reason: outside the calendar search, excluded by title, all-day event, or untitled. Earliest first within each group. Only reasons with events are included.\n\nAnswered from the data stored at collection, not from a new League Calendar read. To update it, collect the run again.\n\nYou may only add events outside the calendar search (`search`) to the run.",
         "operationId": "list_uncollected",
         "parameters": [
           {
@@ -2918,7 +2918,7 @@
             ]
           }
         ],
-        "summary": "List what the window held and the run did not collect",
+        "summary": "List the events in a run's date range that the run did not collect",
         "tags": [
           "runs"
         ]
@@ -2926,7 +2926,7 @@
     },
     "/v1/unmatched-titles": {
       "get": {
-        "description": "One entry per title in a calendar, with how many sightings have been recorded -- one per run it turned up in, plus any recorded by hand -- and when the first and most recent were. Newest sighting first, so a title that has just started turning up is read before one somebody has already decided about.\n\nWhat it is for: the next edit of the shift data model. A title seen every month is a category the model is missing; one seen once is an event that happened once, and the count is what tells them apart.\n\nBelongs to no run. A run is a window that is eventually superseded, and what the model is missing outlives it.",
+        "description": "One entry per title and calendar, newest to oldest, with the number of sightings and when the title was first and last seen. Each run the title appears in adds one sighting, and so does each manually recorded sighting.\n\nA title that appears routinely is likely a category missing from the data model. A title seen once may be a one-time event.\n\nAny unmatched titles from a run remain in the log after the run is deleted.",
         "operationId": "list_unmatched_titles",
         "responses": {
           "200": {
@@ -2963,7 +2963,7 @@
         ]
       },
       "post": {
-        "description": "Adds one sighting, for a title noticed outside a collection: collections record what they find themselves.\n\nA title recorded twice against no run is two sightings and one entry, because how often a title turns up is what says whether it is worth an alias and an entry overwritten would answer \"once\" forever. A run counts once however often it is named, so a retry adds nothing.\n\nAnswers with the entry as the log now holds it, this sighting counted.\n\nThe calendar has to be one the deployment configured, because the categories a title is matched against belong to a calendar. The run is optional provenance: the log outlives the run, and deleting one does not take the reason somebody was going to edit the model.\n\nNo `Idempotency-Key`. A request naming a run is already answered the same way twice, and one naming none records that the title was seen again, which is true.",
+        "description": "Records one sighting of a title found outside a collection. Collections record their own sightings.\n\nA title recorded twice with no run is two sightings in one entry. A run counts each title once, so a retry that names the same run adds no sighting.\n\nAnswers with the updated entry.\n\nThe calendar must be one the deployment configured. The run is optional. Any unmatched titles from a run remain in the log after the run is deleted.\n\nTakes no `Idempotency-Key`.",
         "operationId": "record_unmatched_title",
         "requestBody": {
           "content": {
@@ -3008,7 +3008,7 @@
     },
     "/v1/version": {
       "get": {
-        "description": "Return the running version.\n\nArgs:\n    principal (Principal):\n        The authenticated caller, which the dependency supplies\n        after checking the scope.\n\nReturns:\n    version (Version):\n        The version of the application that is serving.",
+        "description": "The running version of the application.",
         "operationId": "get_version",
         "responses": {
           "200": {

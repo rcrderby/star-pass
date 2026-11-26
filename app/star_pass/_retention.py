@@ -30,6 +30,7 @@ from typing import Optional
 from . import _defaults
 from ._helpers import Helpers
 from ._logging import get_logger
+from ._wording import counted
 from ._repository import (
     IdempotencyRepository,
     JobRepository,
@@ -152,11 +153,19 @@ def sweep(
     )
 
     if swept:
+        sightings = counted(
+            count=swept.unmatched_titles,
+            noun='unmatched title sighting'
+        )
+        reservations = counted(
+            count=swept.idempotency_keys,
+            noun='abandoned reservation'
+        )
         message = (
-            f'Retention removed {swept.job_events} job event(s), '
-            f'{swept.revisions} revision(s), '
-            f'{swept.unmatched_titles} unmatched title sighting(s) '
-            f'and {swept.idempotency_keys} abandoned reservation(s).'
+            'Retention removed '
+            f'{counted(count=swept.job_events, noun="job event")}, '
+            f'{counted(count=swept.revisions, noun="revision")}, '
+            f'{sightings}, and {reservations}.'
         )
         logger.info(message)
 

@@ -15,13 +15,13 @@
     "read_opportunity": "Reading existing shifts for opportunity {subject}"
   },
   "blocker": {
-    "no_opportunity": "no opportunity to create a shift under",
-    "ends_before_start": "a shift that ends before it starts",
-    "no_slots": "no volunteers wanted"
+    "no_opportunity": "no assigned opportunity",
+    "ends_before_start": "a shift end time before the shift start time",
+    "no_slots": "a volunteer count of 0"
   },
   "matchKind": {
     "keyword": "Matched by the keyword \"{keyword}\"",
-    "fuzzy": "Matched to {category} by wording alone, scoring {score} of 100. Worth a look."
+    "fuzzy": "Matched to {category} by similarity, not by a keyword. Score: {score} of 100."
   },
   "row": {
     "calendarTimes": "League Calendar times: {start} to {end}",
@@ -61,7 +61,7 @@
     "set_end": "Set the shift end of {subject} to {time}.",
     "set_slots": "Set {slots} wanted on {subject} for {opportunity}.",
     "nudge": "Moved {subject} {minutes} {direction}.",
-    "reset_slots": "Reset the volunteers wanted on {subject} to what the opportunity asks for.",
+    "reset_slots": "Reset the volunteer count on {subject} to the opportunity's default.",
     "remove": "Removed {subject}.",
     "undo": "Undid the changes to {subject}.",
     "added": "Added {subject} from the Not Collected tab."

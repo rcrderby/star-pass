@@ -544,8 +544,8 @@ class Helpers:
         # category, which names no category and no match, because
         # neither is what happened.
         message = (
-            f'No confident shift-info match for "{need_name}" in the '
-            f'"{gcal_name}" calendar; assigning the review fallback'
+            f'No category matches "{need_name}" in the "{gcal_name}" '
+            'calendar. The event has no opportunity.'
         )
         logger.warning(message)
 
@@ -902,10 +902,14 @@ def require_env_vars(
     missing = [name for name in var_names if not getenv(name)]
 
     if missing:
+        variables = (
+            'this environment variable' if len(missing) == 1
+            else 'these environment variables'
+        )
         message = (
-            f'{", ".join(missing)} must be set.  '
-            'Add the value(s) to the .env file at the repository root '
-            '(see .env.example).'
+            f'Missing {", ".join(missing)}. Configure {variables} in '
+            'your .env file and restart the application. See '
+            '.env.example.'
         )
         logger.error(message)
         raise ConfigurationError(message)

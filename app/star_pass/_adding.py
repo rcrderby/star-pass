@@ -106,9 +106,8 @@ def _addable(
 
     if uncollected is None:
         raise _refuse(
-            f'Run {run_id} left nothing out with the identifier '
-            f'"{event_id}". Only an event the run recorded as not '
-            'collected may be pulled into it.'
+            f'Run ID {run_id} has no uncollected event "{event_id}". '
+            'You may only add events that were not collected.'
         )
 
     if uncollected.reason != UNCOLLECTED_SEARCH:

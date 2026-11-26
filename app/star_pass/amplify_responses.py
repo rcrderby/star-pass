@@ -24,6 +24,7 @@ from typing import (
 from . import _defaults
 from ._helpers import amplify_headers, Helpers, load_env_file
 from ._logging import get_logger
+from ._wording import counted
 from ._progress import Spinner
 from ._summary_window import (
     local_now,
@@ -340,8 +341,9 @@ class AmplifyResponses:
             next_id = _max_numeric_id(rows=page)
             if next_id is None or next_id == since_id:
                 message = (
-                    f'Could not advance the responses cursor after {pages} '
-                    'page(s); returning the responses collected so far.'
+                    f'Reading sign-ups stopped after '
+                    f'{counted(count=pages, noun="page")}. The summary '
+                    'shows the sign-ups read so far.'
                 )
                 logger.warning(message)
                 break
@@ -350,9 +352,9 @@ class AmplifyResponses:
 
         else:
             message = (
-                f'Reached the responses page limit ({RESPONSES_MAX_PAGES}); '
-                'results may be incomplete.  Narrow the window with '
-                'AMPLIFY_RESPONSES_SINCE_DAYS.'
+                f'Reached the limit of {RESPONSES_MAX_PAGES} sign-up '
+                'pages. The summary may be incomplete. To read fewer '
+                'sign-ups, lower AMPLIFY_RESPONSES_SINCE_DAYS.'
             )
             logger.warning(message)
 
@@ -409,17 +411,18 @@ class AmplifyResponses:
         if margin_days < RESPONSES_MARGIN_WARN_DAYS:
             message = (
                 f'The oldest counted sign-up ({oldest_display}) was created '
-                f'{margin_days:.1f} day(s) after the since_created cutoff '
-                f'({cutoff.strftime(AMPLIFY_SHIFT_DATETIME_FORMAT)}).  '
-                'Increase AMPLIFY_RESPONSES_SINCE_DAYS (currently '
-                f'{self.since_days}) if sign-ups may predate this window.'
+                f'{margin_days:.1f} days after the sign-up limit '
+                f'({cutoff.strftime(AMPLIFY_SHIFT_DATETIME_FORMAT)}). '
+                'If older sign-ups should count, increase '
+                'AMPLIFY_RESPONSES_SINCE_DAYS (currently '
+                f'{self.since_days}).'
             )
             logger.warning(message)
         else:
             message = (
-                f'Sign-up window margin is healthy: the oldest counted '
-                f'sign-up ({oldest_display}) is {margin_days:.1f} day(s) '
-                f'inside the {self.since_days}-day window.'
+                f'The oldest counted sign-up ({oldest_display}) is '
+                f'{margin_days:.1f} days inside the {self.since_days}-day '
+                'sign-up limit.'
             )
             logger.info(message)
 

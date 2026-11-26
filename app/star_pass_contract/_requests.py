@@ -58,12 +58,8 @@ Identifier = Annotated[
 
 
 class WindowRequest(RequestModel):
-    """ The days a collection is asked to cover.
-
-        No zone, unlike the window a run answers with.  The server's
-        zone is the authoritative one, and a client that sent its own
-        would be deciding which days a run covers from wherever the
-        person happened to be sitting.
+    """ The days a collection covers. The service reads the dates in its
+        own time zone.
     """
 
     start: str = Field(
@@ -77,25 +73,24 @@ class WindowRequest(RequestModel):
     end: str = Field(
         max_length=MAX_DATE_LENGTH,
         description=(
-            'Day after the last day to cover, as an ISO date. '
-            'Exclusive, so a one-day window is two consecutive dates. '
-            'There is no limit on how long a window may be.'
+            'Day after the last day to cover, as an ISO date. A '
+            'one-day date range is two consecutive dates. The date '
+            'range has no length limit.'
         ),
         examples=['2026-10-01']
     )
 
 
 class CollectRequest(RequestModel):
-    """ Which calendar to collect, and over which days. """
+    """ The calendar and date range to collect. """
 
     calendar: str = Field(
         max_length=MAX_NAME_LENGTH,
         description=(
-            'Which configured calendar to read. One the deployment '
-            'has configured; the names are not part of this contract, '
-            'because they are a property of a deployment rather than '
-            'of the API. A name that is not configured is refused, '
-            'and the refusal lists the ones that are.'
+            'The configured calendar to read. `GET /v1/config` lists '
+            'the configured calendars. A calendar that is not '
+            'configured is refused, and the refusal lists the '
+            'configured calendars.'
         ),
         examples=['events']
     )
@@ -105,81 +100,64 @@ class CollectRequest(RequestModel):
 
 
 class RecollectRequest(RequestModel):
-    """ What the operator was shown before asking to collect again. """
+    """ The number of changes collecting the run again discards. """
 
     expected_change_count: int = Field(
         ge=0,
         description=(
-            'How many changes the operator was told a recollection '
-            'would discard. Collecting again replaces the run\'s '
-            'events with what the calendar has now, so any editing '
-            'done since it was collected is left behind in the '
-            'revision it was done in.\n\n'
-            'The service refuses when this does not match what the '
-            'run actually holds. That is the stale-tab case: a number '
-            'read from a page somebody left open describes a run that '
-            'has moved on, and a confirmation dialog cannot tell the '
-            'difference. Read the run again and ask again with what '
-            'it says now.'
+            'The number of changes collecting the run again discards, '
+            'as `GET /v1/runs/{run_id}/revisions` reports for the '
+            'current revision. Collecting a run again discards any '
+            'changes made to it since it was collected.\n\nIf the '
+            'number does not match, the run is not collected again. '
+            'Read the revisions again, then send the current number.'
         ),
         examples=[0]
     )
 
 
 class UnmatchedTitleRequest(RequestModel):
-    """ A title the data model did not match, to keep for later. """
+    """ A title the data model did not match, to record in the unmatched
+        title log.
+    """
 
     calendar: str = Field(
         max_length=MAX_NAME_LENGTH,
         description=(
-            'Which configured calendar the title was seen in. Part of '
-            'what a title is, rather than a note beside it: the '
-            'categories a title is matched against belong to a '
-            'calendar, so the same title can be matched in one and '
-            'unmatched in another.'
+            'The configured calendar the title was seen in. A title '
+            'may match in one calendar and not in another.'
         ),
         examples=['events']
     )
     title: str = Field(
         min_length=1,
         max_length=MAX_TITLE_LENGTH,
-        description=(
-            'The title, as the calendar gave it. Recorded as it was '
-            'written, because what the model has to match is the '
-            'thing somebody typed.'
-        ),
+        description='The title, exactly as the calendar gave it.',
         examples=['Jet City vs Cherry City']
     )
     run_id: Optional[str] = Field(
         default=None,
         max_length=MAX_IDENTIFIER_LENGTH,
         description=(
-            'The run the title was noticed in, when it was noticed in '
-            'one. Kept as provenance and nothing more: the log '
-            'outlives the run, and deleting a run does not take the '
-            'reason somebody was going to edit the model with it.'
+            'The run the title was found in, if any. Any unmatched '
+            'titles from a run remain in the log after the run is '
+            'deleted.'
         ),
         examples=['3f2b1c...']
     )
 
 
 class SendRequest(RequestModel):
-    """ What the operator was shown before asking to send. """
+    """ The number of shifts the preview reported a send would create. """
 
     expected_shift_count: int = Field(
         ge=0,
         description=(
-            'How many shifts the operator was told a send would '
-            'create. This is the preview\'s `totals.willCreate`, which '
-            'is net of what Amplify already holds -- the number of '
-            'rows that will arrive, and so the number the confirmation '
-            'restates.\n\n'
-            'The service refuses when this does not match what a send '
-            'would create now. Two things move it: the run being '
-            'edited, and Amplify itself gaining or losing a shift. '
-            'Both mean the number somebody confirmed against described '
-            'a moment that has passed. Read the preview again and ask '
-            'again with what it says now.'
+            'The number of shifts the preview reports a send would '
+            'create: `totals.willCreate`. It does not include shifts '
+            'already in Amplify.\n\nIf there are changes to the run or '
+            'Amplify shifts after the preview, the send is refused. '
+            'Read the preview again, then send the current number.'
         ),
         examples=[12]
     )
@@ -204,23 +182,20 @@ class SendRequest(RequestModel):
 
 
 class EventOperationRequest(RequestModel):
-    """ One thing a reviewer did, over one or more events. """
+    """ One operation, applied to one or more events. """
 
     op: str = Field(
         max_length=MAX_NAME_LENGTH,
         description=(
-            'What was done. One of: `set_category`, `unassign`, '
+            'The operation. One of: `set_category`, `unassign`, '
             '`set_start`, `set_end`, `set_slots`, `nudge`, '
-            '`reset_slots`, `remove`, `undo`.\n\n'
-            '`set_start` and `set_end` name the **shift** times, which '
-            'are what reaches Amplify. An event\'s calendar times '
-            'never move: they are what the calendar said, and they are '
-            'what `undo` works back from.\n\n'
-            '`unassign` puts a row back to having no opportunity, and '
-            'is refused for any event whose `mayUnassign` is false - '
-            'unassigned is where a row starts when the collection '
-            'matched nothing, not somewhere a matched row can be put. '
-            'A matched row that should create no shift is `remove`d.'
+            '`reset_slots`, `remove`, `undo`.\n\n`set_start` and '
+            '`set_end` set the **shift** times sent to Amplify. `undo` '
+            'restores an event\'s collected opportunity, shift times, '
+            'and volunteer count.\n\n`unassign` removes an event\'s '
+            'opportunity, and is refused for an event whose '
+            '`mayUnassign` is false. To create no shift for a matched '
+            'event, use `remove`.'
         ),
         examples=['nudge']
     )
@@ -228,9 +203,8 @@ class EventOperationRequest(RequestModel):
         min_length=1,
         max_length=MAX_EVENT_IDS,
         description=(
-            'The events this applies to. A selection of thirty rows is '
-            'one operation naming thirty, which is one log entry '
-            'rather than thirty.'
+            'The events this operation applies to. An operation on '
+            'several events is one change log entry.'
         ),
         examples=[['gcal-1', 'gcal-2']]
     )
@@ -253,10 +227,8 @@ class EventOperationRequest(RequestModel):
         default=None,
         max_length=MAX_IDENTIFIER_LENGTH,
         description=(
-            'Which of an event\'s roles to set, for `set_slots`. A '
-            'role rather than the event, because an event serving '
-            'skating and non-skating officials wants different '
-            'numbers of each.'
+            'The need ID of the role to set, for `set_slots`. Each '
+            'role of an event has its own volunteer count.'
         ),
         examples=['879609']
     )
@@ -277,19 +249,17 @@ class EventOperationRequest(RequestModel):
 
 
 class EditRequest(RequestModel):
-    """ One user action, as the operations it is made of. """
+    """ One user action, as a list of operations. """
 
     operations: List[EventOperationRequest] = Field(
         min_length=1,
         max_length=MAX_OPERATIONS,
         description=(
-            'What to do, in order. Each one sees what the one before '
-            'it produced.\n\n'
-            'The whole list is applied or none of it is: an operation '
-            'that would leave an event unable to become a correct '
-            'shift refuses the call, and nothing is written. A partly '
-            'applied action is worse than a refused one, because the '
-            'reviewer cannot see which rows moved.'
+            'The operations, in order. Each sees the result of the '
+            'previous operation.\n\nThe service applies the entire '
+            'list or none of it. If an operation would leave an event '
+            'unable to become a correct shift, the service refuses the '
+            'request and writes no changes.'
         )
     )
 
@@ -320,18 +290,15 @@ class EditRequest(RequestModel):
 
 
 class AddEventRequest(RequestModel):
-    """ Which of the events nobody searched for to pull into the run. """
+    """ The uncollected event to add to the run. """
 
     uncollected_id: str = Field(
         min_length=1,
         max_length=MAX_IDENTIFIER_LENGTH,
         description=(
-            'Identifier of the event to pull in, as the run\'s record '
-            'of what it did not collect carries it. Only an event '
-            'that record marks addable may be named: the other '
-            'reasons describe events that cannot become a correct '
-            'shift, and naming one is refused here rather than left '
-            'to a client to avoid.'
+            'Identifier of the event to add, from the run\'s '
+            'uncollected list. Only an event whose `addable` is true '
+            'may be added.'
         ),
         examples=['1a2b3c4d5e6f7g8h9i0j']
     )

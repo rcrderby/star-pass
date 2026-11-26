@@ -34,8 +34,8 @@ const REVERT = 'Revert';
 
 /* What the revision picker says under its list. */
 const ABOUT_REVISIONS = (
-  'Reverting opens a new revision that duplicates the one you go '
-  + 'back to. Nothing is deleted.'
+  'Reverting restores an earlier revision as a new revision. Other '
+  + 'revisions do not change.'
 );
 
 /** Return the sentence under the run label.

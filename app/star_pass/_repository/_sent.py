@@ -8,6 +8,7 @@ from typing import List, Sequence, Set
 # Imports - Local
 from .._database import execute_many, query
 from .._logging import get_logger
+from .._wording import counted
 from .._records import SentShift, ShiftIdentity
 from ._common import insert_statement, Repository, utc_now
 
@@ -149,7 +150,10 @@ class SentShiftRepository(Repository):
             ]
         )
 
-        message = f'Recorded {len(shifts)} sent shift(s) for run {run_id}'
+        message = (
+            f'Recorded {counted(count=len(shifts), noun="sent shift")} '
+            f'for run ID {run_id}'
+        )
         logger.debug(message)
 
         return shifts

@@ -55,7 +55,7 @@ class ApiModel(BaseModel):
 
 
 class JobView(ApiModel):
-    """ A long operation, as a caller sees it. """
+    """ A job that collects or sends a run. """
 
     id: str = Field(
         description='Identifier the job is addressed by.'
@@ -68,10 +68,10 @@ class JobView(ApiModel):
     )
     status: str = Field(
         description=(
-            f'Where it is: {", ".join(JOB_STATUSES)}. "interrupted" '
-            'means the service stopped while it was in hand, so how '
-            'far it got is unknown; resuming one is a deliberate '
-            'action, never automatic.'
+            f'Where it is: {", ".join(JOB_STATUSES)}. `interrupted` '
+            'means the process running the job stopped before the job '
+            'ended. You may resume an interrupted job with `POST '
+            '/v1/jobs/{job_id}/resume`.'
         )
     )
     created_at: str = Field(
@@ -88,89 +88,75 @@ class JobView(ApiModel):
     detail: str | None = Field(
         default=None,
         description=(
-            'Why it failed, when it did and when the reason is one a '
-            'caller can act on. A failure the service did not expect '
-            'says so without its reason, which is in the service log '
-            'against the job.'
+            'Why the job failed, when the reason is one a caller can '
+            'act on. For an unexpected failure, the reason is in the '
+            'service log.'
         )
     )
 
 
 class WindowView(ApiModel):
-    """ The days a run covers, and the zone they are read in. """
+    """ A run's date range and time zone. """
 
     start: str = Field(
         description='First day the run covers, as an ISO date.'
     )
     end: str = Field(
         description=(
-            'Day after the last day the run covers, as an ISO date. '
-            'Exclusive, so a run covering one day carries two '
-            'consecutive dates. This is the authoritative value: it '
-            'is what is stored, sent and compared, and "lastDay" is '
-            'the same window said the way a reader means it.'
+            'Day after the last day the run covers, as an ISO date. A '
+            'one-day run has two consecutive dates. The service '
+            'stores, sends, and compares this value. `lastDay` gives '
+            'the same date range by its last day.'
         )
     )
     last_day: str = Field(
         description=(
-            'Last day the run covers, as an ISO date, and as a reader '
-            'means it -- the day before "end". Published rather than '
-            'worked out by each client, because every client that '
-            'shows a window has to say it this way and a second '
-            'implementation of one subtraction is a client that can '
-            'disagree with the server about which days a run covers.'
+            'Last day the run covers, as an ISO date: the day before '
+            '`end`. Clients display this value.'
         )
     )
     timezone: str = Field(
         description=(
-            'Zone the two dates are read in, which is the zone the '
-            'calendar is read in and the one the configuration '
-            'reports. The server\'s zone is the authoritative one: a '
-            'client displays these dates and never works a window out '
-            'in the zone of whoever is looking at it.'
+            'The time zone of the two dates. It is the zone the '
+            'calendar is read in, and the zone the configuration '
+            'reports. Clients display the dates in this zone.'
         )
     )
 
 
 class RunCountsView(ApiModel):
-    """ What the run's current revision holds. """
+    """ The current revision's counts. """
 
     events: int = Field(
         description='Events in the current revision.'
     )
     shifts: int = Field(
         description=(
-            'Shifts a send would create. Counted per role rather than '
-            'per event, because an event serving both skating and '
-            'non-skating officials creates two.'
+            'Shifts a send would create, counted per role. An event '
+            'with skating and non-skating officials creates two shifts.'
         )
     )
     unmatched: int = Field(
         description=(
-            'Events that would create no shift at all, and so stop '
-            'the run being sent. A title that matched nothing has no '
-            'opportunity to create a shift under, and a category that '
-            'resolved to no need ID leaves the same absence.'
+            'Events that would create no shift, and block the send. An '
+            'event has no opportunity when its title matched no '
+            'category, or its category has no need ID.'
         )
     )
     uncollected: int = Field(
         description=(
-            'Things the run\'s window held that did not become '
-            'events. Counted over the run rather than the current '
-            'revision, because it describes the window the collection '
-            'read and editing the events does not change it.'
+            'Events in the run\'s date range that are not in the run. '
+            'Counted over the run, not the current revision. Editing '
+            'events does not change this count.'
         )
     )
 
 
 class RunView(ApiModel):
-    """ One collection of calendar events, as a caller sees it. """
+    """ A run: one collection of League Calendar events. """
 
     id: str = Field(
-        description=(
-            'Identifier the run is addressed by. Minted by the '
-            'server, and never the path of a file the run produced.'
-        )
+        description='The run\'s identifier, created by the service.'
     )
     calendar: str = Field(
         description='Which configured calendar was collected.'
@@ -193,8 +179,8 @@ class RunView(ApiModel):
     )
     revised_at: str = Field(
         description=(
-            'When it last changed, as an ISO-8601 UTC time. The time '
-            'it was collected, for a run nothing has changed yet.'
+            'When the run last changed, as an ISO 8601 UTC time. For a '
+            'run with no changes, the time it was collected.'
         )
     )
     current_revision: int = Field(
@@ -204,42 +190,29 @@ class RunView(ApiModel):
         )
     )
     counts: RunCountsView = Field(
-        description='What the current revision holds.'
+        description='The current revision\'s counts.'
     )
     active_job_id: str | None = Field(
         default=None,
         description=(
-            'Identifier of the job still working on this run, or null '
-            'when nothing is. What makes a run somebody walked away '
-            'from reattachable: read the job, or follow its events.'
+            'Identifier of the job working on this run, or null. To '
+            'follow it, read the job or its event stream.'
         )
     )
     interrupted_job_id: str | None = Field(
         default=None,
         description=(
-            'Identifier of the job this run last ran, when the '
-            'service stopped while it was in hand, and null '
-            'otherwise. Resuming one is a deliberate act and never '
-            'automatic, which means a caller has to be able to '
-            'name it -- and an interrupted job is finished, so it is '
-            'never the "activeJobId". Only the run\'s most recent job '
-            'is reported here: a send that a later one has since '
-            'carried out is not something to offer to resume.'
+            'Identifier of the run\'s most recent job when it was '
+            'interrupted, and null otherwise. A job is interrupted '
+            'when the process running it stops before the job ends. '
+            'You may resume it with `POST /v1/jobs/{job_id}/resume`.'
         )
     )
     may_delete: bool = Field(
         description=(
-            'Whether this run may be deleted. False while something '
-            'is working on it, and false for ever once its shifts '
-            'reached Amplify, because the record of what it created '
-            'is the only account of that anything here holds. '
-            'Answered here for the same reason `mayUnassign` is on an '
-            'event: it is the rule the delete operation refuses by, '
-            'and a caller working it out again would be a second '
-            'opinion about what the operation will accept -- one that '
-            'agrees until the rule changes and then disagrees '
-            'quietly. Why it is false is not published: a caller that '
-            'asks anyway is told by the refusal itself.'
+            'Whether this run may be deleted. False while the run is '
+            'collecting events or sending shifts to Amplify, and after '
+            'it sent shifts to Amplify.'
         )
     )
 
@@ -261,33 +234,28 @@ class MatchView(ApiModel):
     score: int | None = Field(
         default=None,
         description=(
-            'Fuzzy confidence from 0 to 100, or null for a keyword '
-            'match, which is not scored.'
+            'Similarity score from 0 to 100, or null for a keyword '
+            'match.'
         )
     )
 
 
 class EventRoleView(ApiModel):
-    """ One opportunity an event creates a shift for, and how it does.
-
-        The timing is the role's and not the opportunity's: one Amplify
-        listing can be named by categories that time it differently, so
-        two events in a run may send to one listing on different
-        offsets.
+    """ One opportunity an event creates a shift for, and the shift's
+        timing. Two events may create shifts for the same opportunity
+        with different offsets.
     """
 
     need_id: str = Field(
-        description='Amplify need ID the shift is created under.'
+        description='The Amplify need ID for the shift.'
     )
     slots: int = Field(
         description='Volunteers wanted.'
     )
     edited: bool = Field(
         description=(
-            'Whether a person changed the count from '
-            '\'defaultSlots\'. Recorded rather than compared against '
-            'the default now, because an event collected again can '
-            'arrive with another.'
+            'Whether a person changed the volunteer count from '
+            '`defaultSlots`.'
         )
     )
     offset_start: int = Field(
@@ -316,7 +284,7 @@ class EventRoleView(ApiModel):
 
 
 class EventView(ApiModel):
-    """ One calendar event, as the current revision holds it. """
+    """ One event in the current revision. """
 
     id: str = Field(
         description='Identifier, unique within the revision.'
@@ -336,20 +304,17 @@ class EventView(ApiModel):
     calendar_note: str | None = Field(
         default=None,
         description=(
-            'What the calendar\'s description said about this event, '
-            'as text, or null where the calendar carries no notes or '
-            'the event had none. Converted from whatever the calendar '
-            'held - a description arrives as HTML about as often as '
-            'not - so what is published is text and holds no markup. '
-            'Capped at 1000 characters. An event collected before '
-            'schema version 11 has none until its run is collected '
-            'again.'
+            'The event\'s League Calendar description, as text, or '
+            'null when the calendar has no notes or the event has '
+            'none. HTML is converted to text. Up to 1,000 characters. '
+            'An event collected before schema version 11 has no note '
+            'until its run is collected again.'
         ),
         examples=['Doors at 6 PM, Game at 7 PM']
     )
     shift_start: str = Field(
         description=(
-            'Start time of the shift to create, which is the calendar '
+            'Start time of the shift to create: the calendar start '
             'time plus the opportunity\'s offset.'
         )
     )
@@ -358,56 +323,47 @@ class EventView(ApiModel):
     )
     length_minutes: int = Field(
         description=(
-            'How long the shift lasts, which is the duration Amplify '
-            'is given. Not above zero means the shift ends before it '
-            'starts, which blocks the send.'
+            'The shift\'s length in minutes, as sent to Amplify. A '
+            'length of 0 or less means the shift ends before it '
+            'starts, and blocks the send.'
         )
     )
     capped_at: int | None = Field(
         default=None,
         description=(
-            'The opportunity maximum that shortened this shift, or '
-            'null when nothing did. Present so a reader is told which '
-            'number decided the length rather than left wondering why '
-            'the shift is shorter than the event.'
+            'The opportunity\'s maximum length, when it shortened this '
+            'shift, and null otherwise.'
         )
     )
     category: str | None = Field(
         default=None,
         description=(
-            'Data model category the title matched, or null when '
-            'nothing matched.'
+            'The data model category the title matched, or null when '
+            'the title matched no category.'
         )
     )
     match: MatchView | None = Field(
         default=None,
         description=(
-            'How the category was reached, or null when the event was '
-            'added by hand or matched nothing. Stored as it happened, '
-            'because the data model can change between the day a run '
-            'is collected and the day it is read.'
+            'How the title matched its category, or null for a '
+            'manually added event or a title with no match. Stored at '
+            'collection.'
         )
     )
     added_by_hand: bool = Field(
         description=(
-            'Whether a person pulled the event in rather than the '
-            'search finding it.'
+            'Whether the event was manually added from the uncollected '
+            'list.'
         )
     )
     edited: bool = Field(
         description=(
-            'Whether undoing the changes to this event would change '
-            'it. True when its shift times no longer follow from the '
-            'calendar times and the category\'s offsets, or when a '
-            'role wants a number of volunteers somebody set. Answered '
-            'here because nothing stored says it: the calendar times '
-            'never move, so only the data model says what the shift '
-            'times would have been, and a caller working that out '
-            'would be a second copy of the timing rules. False as '
-            'well when the undo could not be carried out -- a category '
-            'that has left the data model -- because that is the '
-            'refusal the operation itself would raise, and a row said '
-            'to be editable is a row offered a control that fails.'
+            'Whether undoing this event\'s changes would change it. '
+            'True when its shift times differ from its calendar times '
+            'plus the category\'s offsets, or when a person set a '
+            'role\'s volunteer count. False when the undo would be '
+            'refused, such as when the data model does not have the '
+            'event\'s category.'
         )
     )
     roles: List[EventRoleView] = Field(
@@ -417,43 +373,31 @@ class EventView(ApiModel):
         default=None,
         description=(
             'Identifier of an earlier event in this revision that '
-            'would create the same shift, or null when none would. '
-            'Sameness is the row Amplify receives -- need ID, date, '
-            'start and end -- so two events at one hour under '
-            'different opportunities are two shifts, not a repeat.'
+            'would create the same shift, or null. The same shift '
+            'means the same need ID, date, start, and end. Two events '
+            'at the same time under different opportunities are two '
+            'shifts.'
         )
     )
     blocking: bool = Field(
         description=(
-            'Whether this event stops the run being sent. True when '
-            'it has no opportunity to create a shift under. The run '
-            'stops rather than dropping it, because a missing shift '
-            'is invisible until volunteers cannot sign up.'
+            'Whether this event blocks the send. True when the event '
+            'has no opportunity.'
         )
     )
     may_unassign: bool = Field(
         description=(
-            'Whether this event may be put back to having no '
-            'opportunity. True where the collection matched no '
-            'category for it, which is the only row unassigned is a '
-            'state of: it is where that row began, so returning it '
-            'there is putting it back rather than breaking it. '
-            'Answered here rather than worked out by a caller for the '
-            'same reason `edited` is - the rule is the one the '
-            '`unassign` operation refuses by, and a control offered '
-            'where the operation would refuse is a control that '
-            'fails. A matched row that should create no shift is '
-            'removed from the run instead.'
+            'Whether the event\'s opportunity may be removed. True '
+            'only when the collection matched no category for the '
+            'event. To create no shift for a matched event, remove it '
+            'from the run.'
         )
     )
 
 
 class OpportunityView(ApiModel):
-    """ An Amplify opportunity a run creates shifts under.
-
-        What Amplify says about the listing, and nothing else. How a
-        shift is timed under it belongs to the role that creates the
-        shift.
+    """ An Amplify opportunity a run creates shifts for, as Amplify
+        describes it. Each event's role sets the shift's timing.
     """
 
     need_id: str = Field(
@@ -490,22 +434,17 @@ class LogEntryView(ApiModel):
     )
     action: str = Field(
         description=(
-            'What was done. One of the operations an edit may carry, '
-            'or `added` for an event pulled in off the not-collected '
-            'list. An identifier rather than a sentence: a client '
-            'words it, the way it words a run status or a revision '
-            'kind, so the wording can change without every entry '
-            'already recorded still saying the old thing.'
+            'The action. One of the edit operations, or `added` for an '
+            'event added from the uncollected list. Clients word the '
+            'action.'
         ),
         examples=['set_category']
     )
     subject: str | None = Field(
         default=None,
         description=(
-            'Title of the event this was done to, or null when it '
-            'named more than one. One event is worth naming and a '
-            'selection is worth counting, so read this beside '
-            '`subjectCount`.'
+            'Title of the event the action applied to, or null when it '
+            'applied to more than one. Read with `subjectCount`.'
         ),
         examples=['Adult Scrimmages']
     )
@@ -516,11 +455,9 @@ class LogEntryView(ApiModel):
     category: str | None = Field(
         default=None,
         description=(
-            'The category a `set_category` put them under, as the data '
-            'model names it, or null for every other action. The key '
-            'rather than the label: what a category is called belongs '
-            'to whoever is showing it, and `GET /v1/config` publishes '
-            'the labels.'
+            'The category key a `set_category` assigned, or null for '
+            'other actions. `GET /v1/config` lists each category\'s '
+            'label.'
         ),
         examples=['junior_scrimmage']
     )
@@ -535,10 +472,8 @@ class LogEntryView(ApiModel):
     minutes: int | None = Field(
         default=None,
         description=(
-            'How far a `nudge` moved them, negative for earlier, or '
-            'null for every other action. Signed rather than split '
-            'into a size and a direction, which is a wording each '
-            'client makes for itself.'
+            'How many minutes a `nudge` moved the shifts, negative for '
+            'earlier, or null for other actions.'
         ),
         examples=[-15]
     )
@@ -553,22 +488,16 @@ class LogEntryView(ApiModel):
     need_id: str | None = Field(
         default=None,
         description=(
-            'The opportunity a `set_slots` was about, or null for '
-            'every other action. The identifier rather than the '
-            'Amplify title, which a reader of the run already holds '
-            'beside it.'
+            'The need ID a `set_slots` applied to, or null for other '
+            'actions.'
         ),
         examples=['905196']
     )
 
 
 class RunDetailView(RunView):
-    """ A run with everything the review screen reads at once.
-
-        The events, the opportunities labelling them and the change
-        log arrive together because a screen showing one shows all
-        three, and reading them separately would let them disagree:
-        each read would see the state at a different moment.
+    """ A run with its events, opportunities, and change log, read
+        together.
     """
 
     events: List[EventView] = Field(
@@ -578,19 +507,12 @@ class RunDetailView(RunView):
     )
     opportunities: List[OpportunityView] = Field(
         description=(
-            'Amplify titles for every need ID this run touches, '
-            'resolved while the run was collected and stored with it. '
-            'Every review row is labelled with one, so they are not a '
-            'lookup deferred to preview time.'
+            'Amplify titles for every need ID in the run, read when '
+            'the run was collected.'
         )
     )
     log: List[LogEntryView] = Field(
-        description=(
-            'Every change made to the run, oldest first. Written '
-            'where the change is made rather than assembled by '
-            'whatever displays it, so it survives a reload and reads '
-            'the same in a browser and a terminal.'
-        )
+        description='Every change made to the run, oldest first.'
     )
 
 
@@ -605,49 +527,43 @@ class RevisionView(ApiModel):
     )
     kind: str = Field(
         description=(
-            f'How the revision came to exist: {", ".join(REVISION_KINDS)}. '
-            'An identifier rather than a sentence, so that each '
-            'client words it.'
+            'How the revision was created: '
+            f'{", ".join(REVISION_KINDS)}. Clients word the kind.'
         ),
         examples=['reverted']
     )
     source_revision: int | None = Field(
         default=None,
         description=(
-            'The revision this one was made from, which is the '
-            'revision its rows were copied from. The one a revert '
-            'went back to, or the one a seal fixed; null for the two '
-            'a collection fills, which are made from a calendar and '
-            'not from a revision.'
+            'The revision this one copies: the revision a revert '
+            'restored, or the revision a save saved. Null for the '
+            'revisions a collection creates.'
         ),
         examples=[1]
     )
     changes: int = Field(
         description=(
-            'How many changes were made while this revision was the '
-            'current one. Zero means it was sealed and left, which is '
-            'what tells a reader which revision in a list is worth '
-            'looking at.'
+            'How many changes were made while this revision was '
+            'current. 0 means the revision was saved with no further '
+            'edits.'
         )
     )
     current: bool = Field(
         description=(
-            'Whether this is the revision being edited now. Exactly '
-            'one revision of a run is current, and it is the last: '
-            'everything below it is history and is never written to '
-            'again.'
+            'Whether this is the revision being edited. A run has one '
+            'current revision, the latest. Earlier revisions do not '
+            'change.'
         )
     )
 
 
 class UncollectedEventView(ApiModel):
-    """ One thing a run's window held that did not become an event. """
+    """ One event in the run's date range that is not in the run. """
 
     id: str = Field(
         description=(
-            'Calendar identifier of the event. The same identifier an '
-            'event of the run carries, which is what names one when '
-            'it is pulled in.'
+            'The event\'s League Calendar identifier. An event added '
+            'to the run keeps this identifier.'
         )
     )
     title: str | None = Field(
@@ -665,8 +581,7 @@ class UncollectedEventView(ApiModel):
     calendar_start: str | None = Field(
         default=None,
         description=(
-            'Start time on the calendar, or null for an all-day '
-            'event, which has none.'
+            'Start time on the calendar, or null for an all-day event.'
         )
     )
     calendar_end: str | None = Field(
@@ -676,41 +591,33 @@ class UncollectedEventView(ApiModel):
     calendar_note: str | None = Field(
         default=None,
         description=(
-            'What the calendar\'s description said about this event, '
-            'as text, or null where the calendar carries no notes or '
-            'the event had none. Kept so that an event pulled in from '
-            'here carries the note a collected one carries.'
+            'The event\'s League Calendar description, as text, or '
+            'null when the calendar has no notes or the event has '
+            'none. An event added to the run keeps this note.'
         ),
         examples=['Doors at 6 PM, Game at 7 PM']
     )
     addable: bool = Field(
         description=(
-            'Whether this event may be pulled into the run. The '
-            'server\'s answer rather than the client\'s, so that a '
-            'button and the endpoint behind it cannot disagree: an '
-            'event nobody searched for is addable until the run holds '
-            'it, and one that cannot become a correct shift is '
-            'refused here as well as there.\n\n'
-            'An event already pulled in keeps its entry here and '
-            'stops being addable. The entry is what a revert gives '
-            'back: reverting to the first revision drops the '
-            'hand-added events, and this list is where they return '
-            'to.'
+            'Whether this event may be added to the run. True for an '
+            'event with the `search` reason until it is added.\n\nAn '
+            'added event stays in this list, and is not addable. '
+            'Reverting to revision 1 removes added events, and they '
+            'become addable again.'
         )
     )
 
 
 class UncollectedGroupView(ApiModel):
-    """ What a run's window held and the run left out, by reason. """
+    """ The uncollected events in a run's date range, grouped by reason. """
 
     reason: str = Field(
         description=(
-            f'Why these were left out: {", ".join(UNCOLLECTED_REASONS)}. '
-            '"search" is the one no calendar event can carry -- it '
-            'means no configured query string returned it, so nobody '
-            'looked for it -- and it is the only reason an event may '
-            'be pulled in under. The other three describe events that '
-            'cannot become a correct shift.'
+            'Why these events were not collected: '
+            f'{", ".join(UNCOLLECTED_REASONS)}. `search` means no '
+            'search term returned the event. Only events with this '
+            'reason may be added to the run. The other reasons '
+            'describe events that cannot become a correct shift.'
         )
     )
     events: List[UncollectedEventView] = Field(
@@ -719,21 +626,20 @@ class UncollectedGroupView(ApiModel):
 
 
 class EditView(ApiModel):
-    """ A revision after a change, and what the change wrote down. """
+    """ The revision after an edit, and the change log entries the edit
+        added.
+    """
 
     events: List[EventView] = Field(
         description=(
-            'The revision\'s events as they now are, in the order they '
-            'are stored. Every event, not only the ones that changed: '
-            'a reviewer\'s screen is redrawn from this, and a partial '
-            'list would leave it guessing what it still holds.'
+            'Every event in the revision, in stored order, including '
+            'events that did not change.'
         )
     )
     log: List[LogEntryView] = Field(
         description=(
-            'The entries this call added to the run\'s change log, one '
-            'per operation. Written server-side, so the log survives a '
-            'reload and reads the same in a browser and a terminal.'
+            'The change log entries this request added, one per '
+            'operation.'
         )
     )
 
@@ -742,36 +648,35 @@ class EditView(ApiModel):
 # holds.  Below, because a reader working through this file is reading
 # about runs until they reach these two.
 class CategoryView(ApiModel):
-    """ One category of the data model, for a calendar that offers it.
+    """ One data model category a calendar offers.
 
-        What a reviewer chooses from when an event matched nothing, or
-        matched the wrong thing.  The identifier is what an edit
-        sends; the label is what the data model calls it, and a
-        client shows the Amplify titles for the need IDs where it has
-        them, because those are what a shift is created under.
+        A reviewer chooses from these to assign an event's opportunity.
+        An edit sends the category's key. The label is the data model's
+        name for the category. Clients display the Amplify titles for
+        its need IDs.
     """
 
     key: str = Field(
         description=(
-            'What an edit names this category by, which is what the '
-            '"category" field of a "set_category" operation takes.'
+            'The category\'s key. A `set_category` operation names the '
+            'category by this key.'
         ),
         examples=['adult_game']
     )
     label: str = Field(
         description=(
-            'What the data model calls this category. Written for a '
-            'person, and not an Amplify opportunity title: one '
-            'category can create shifts under more than one need.'
+            'The category\'s name in the data model. This is not an '
+            'Amplify opportunity title. One category may create shifts '
+            'for more than one opportunity.'
         ),
         examples=['Adult Games']
     )
     need_ids: List[str] = Field(
         description=(
-            'Amplify need IDs an event in this category creates a '
-            'shift under, one each. More than one is ordinary -- an '
-            'event serving skating and non-skating officials creates '
-            'two shifts -- and several categories may share a need.'
+            'The Amplify need IDs an event in this category creates '
+            'shifts for, one shift each. An event with skating and '
+            'non-skating officials creates two shifts. Several '
+            'categories may share a need ID.'
         ),
         examples=[['879609', '879610']]
     )
@@ -782,50 +687,43 @@ class CalendarView(ApiModel):
 
     key: str = Field(
         description=(
-            'What a collection names this calendar by, which is what '
-            'the "calendar" field of a collection request takes.'
+            'The calendar\'s key. A collection request names the '
+            'calendar by this key.'
         ),
         examples=['practices']
     )
     search_terms: List[str] = Field(
         description=(
-            'The query strings this calendar\'s window is searched '
-            'with, one request each. An empty string searches for '
-            'nothing in particular and so returns the whole window, '
-            'which is what makes a search miss impossible on a '
-            'calendar configured with one: an event left out of a run '
-            'for the "search" reason is an event none of these '
-            'returned.'
+            'The search terms for this calendar, one League Calendar '
+            'request each. A calendar with no search terms lists one '
+            'empty term, `""`. An empty term collects all events in '
+            'the date range. In a calendar with search terms, events '
+            'that do not match a search term are not collected, and '
+            'are uncollected with the `search` reason.'
         ),
         examples=[['officials', 'scrimmage']]
     )
     notes: bool = Field(
         description=(
-            'Whether entries on this calendar carry a description '
-            'worth keeping with the event. Where it is true, an '
-            'event of a run collected from this calendar publishes '
-            '"calendarNote", which is null when that event had no '
-            'description; where it is false, nothing is stored and '
-            'the field is null on every event. A client showing the '
-            'note reads this rather than testing the calendar\'s '
-            'name.'
+            'Whether this calendar\'s event descriptions are kept with '
+            'their events. When true, each event in a run from this '
+            'calendar has a `calendarNote`, null for an event with no '
+            'description. When false, `calendarNote` is null on every '
+            'event.'
         ),
         examples=[True]
     )
     categories: List[CategoryView] = Field(
         description=(
-            'The categories this calendar\'s data model offers, which '
-            'are what a "set_category" edit may name. The fallback '
-            'the model uses when a title matches nothing is not among '
-            'them: its need IDs are empty on purpose, so an event put '
-            'under it could not become a shift, and offering it would '
-            'be offering a choice the write refuses.'
+            'The categories a `set_category` operation may name for '
+            'this calendar. The fallback for a title with no match is '
+            'not included.'
         )
     )
 
 
 class UnmatchedTitleView(ApiModel):
-    """ A title the data model did not match, and how often. """
+    """ A title the data model did not match, and how often it was seen. """
 
     calendar: str = Field(
         description='Which configured calendar it was seen in.',
@@ -837,13 +735,10 @@ class UnmatchedTitleView(ApiModel):
     )
     times_seen: int = Field(
         description=(
-            'How many runs this title turned up in, plus any '
-            'sightings recorded by hand. What says whether a title is '
-            'worth an alias: one that turns up every month is a '
-            'category the model is missing, and one seen once is an '
-            'event that happened once. A run counts once however many '
-            'events carry the title and however often its window is '
-            'collected again.'
+            'The number of runs the title appeared in, plus manually '
+            'recorded sightings. A run counts each title once, no '
+            'matter how many events have the title or how many times '
+            'the run is re-collected.'
         ),
         examples=[3]
     )
@@ -858,37 +753,28 @@ class UnmatchedTitleView(ApiModel):
 
 
 class RetentionView(ApiModel):
-    """ How long what a run leaves behind is kept. """
+    """ How long the service retains each type of run data. """
 
     job_log_days: int = Field(
         description=(
-            'How long a job\'s event log is kept after the job '
-            'finished. The job itself is not removed with it: that a '
-            'send ran on a date and how it ended outlives the log of '
-            'what it did, which is the part naming volunteers and the '
-            'times they were asked to be somewhere.'
+            'How long a job\'s event log is retained after the job '
+            'finishes. The job itself remains.'
         ),
         examples=[90]
     )
     revision_days: int = Field(
         description=(
-            'How long a run may go untouched before the revisions '
-            'between its first and its current one are removed. '
-            'Neither of those two is ever removed: the first is the '
-            'run as the calendar gave it, which reverting to is a '
-            'published operation, and the current one is what the run '
-            'holds now.'
+            'How long a run may go unchanged before its revisions are '
+            'removed. The first revision and the current revision '
+            'remain.'
         ),
         examples=[90]
     )
     unmatched_title_days: int = Field(
         description=(
-            'The longest a title the data model did not match is kept '
-            'without being seen again. A backstop rather than the '
-            'rule: what usually removes a title is the model coming '
-            'to match it, since that is what recording one is for. '
-            'Measured from the most recent sighting, so a title still '
-            'turning up keeps its whole count.'
+            'How long an unmatched title is retained after it was last '
+            'seen. A title is also removed after the data model '
+            'matches it.'
         ),
         examples=[365]
     )
@@ -898,64 +784,56 @@ class CredentialTestLimitView(ApiModel):
     """ How often each credential may be tested. """
 
     attempts: int = Field(
-        description='Tests allowed per caller in each window.',
+        description=(
+            'Tests allowed per caller in each `windowSeconds` period.'
+        ),
         examples=[5]
     )
     window_seconds: int = Field(
-        description='The window\'s length, in seconds.',
+        description='The length of the rate limit period, in seconds.',
         examples=[60]
     )
 
 
 class ConfigView(ApiModel):
-    """ What the service resolved from its environment. """
+    """ The settings the service read from its environment at startup. """
 
     timezone: str = Field(
         description=(
-            'IANA zone a calendar window\'s dates are read in when '
-            'they carry no UTC offset. The server\'s zone is the '
-            'authoritative one: a client displays it rather than '
-            'working a window out in the zone of whoever is looking '
-            'at it.'
+            'The IANA time zone for dates in a date range that have no '
+            'UTC offset. Clients display dates in this zone.'
         ),
         examples=['America/Los_Angeles']
     )
     match_threshold: int = Field(
         description=(
-            'Confidence out of 100 a fuzzy title match has to reach '
-            'when no alias appears in an event title. Below it the '
-            'title is left unmatched, which blocks the send rather '
-            'than guessing at an opportunity.'
+            'The lowest similarity score, from 0 to 100, for a match. '
+            'When a title contains no alias, the alias with the '
+            'highest score matches if its score is at least this '
+            'value. A title with no match has no opportunity, and '
+            'blocks the send.'
         ),
         examples=[80]
     )
     excluded_title_terms: List[str] = Field(
         description=(
-            'Terms this deployment never collects. An event whose '
-            'title contains one of them anywhere is left out of a run '
-            'with the "excluded" reason instead of becoming a shift, '
-            'and no editing brings it back.'
+            'Filtered terms. An event whose title contains a filtered '
+            'term is not collected. It is uncollected with the '
+            '`excluded` reason, and may not be added to a run.'
         ),
         examples=[['canceled', 'cancelled']]
     )
     calendars: List[CalendarView] = Field(
         description=(
-            'The calendars a run may be collected from, by key. This '
-            'is where a client learns which keys a collection request '
-            'accepts, because the keys belong to a deployment rather '
-            'than to this contract. The calendar identifiers '
-            'themselves are not published: nothing a caller does '
-            'names one.'
+            'The calendars a run may be collected from, by key. '
+            'Calendar identifiers are not published.'
         )
     )
     retention: RetentionView = Field(
         description=(
-            'How long what a run leaves behind is kept. The record of '
-            'what a send put into Amplify is deliberately absent, '
-            'because it is never removed: duplicate safety reads it '
-            'to know which rows a run already created, so a window '
-            'there would eventually have a run offering to create '
-            'shifts Amplify already holds.'
+            'How long the service retains each type of run data. '
+            'Shifts sent to Amplify are retained indefinitely to '
+            'prevent duplicate shifts, and have no entry.'
         )
     )
     credential_test_limit: Optional[CredentialTestLimitView] = Field(

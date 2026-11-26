@@ -28,13 +28,11 @@ const QUESTION = 'Delete this run and everything in it?';
 /* Said last, above the buttons, in the alert colour. */
 const NO_UNDO = 'This cannot be undone.';
 
-/* What goes, and what does not. The titles a window did not match
- * belong to no run: what the data model is missing outlives the
- * window that revealed it. */
+/* What deleting the run also deletes, and what it does not. */
 const WHAT_GOES = (
-  'Its revisions, events, opportunities, change log and jobs go with '
-  + 'it. The titles its window did not match stay, because what the '
-  + 'shift data model is missing outlives the run that found it.'
+  'This also deletes the run\'s revisions, events, opportunities, '
+  + 'change log, and jobs. Its unmatched titles persist in the '
+  + 'unmatched title log.'
 );
 
 /* What the button that goes ahead says. Never a bare "Delete": it

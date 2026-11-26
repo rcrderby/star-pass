@@ -12,7 +12,6 @@
         "**/data/json/**",
         "**/docs/api/**",
         "**/docs/architecture/**",
-        "**/docs/design/**",
         "**/models/shift_info.yml",
         "**/node_modules/**",
         "**/tests/fixtures/**"

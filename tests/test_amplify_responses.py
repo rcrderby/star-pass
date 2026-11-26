@@ -268,7 +268,7 @@ class TestHelperFunctions:
         )
 
     def test_window_end_rejects_a_window_shorter_than_a_day(self):
-        with pytest.raises(ValueError, match='at least one day'):
+        with pytest.raises(ValueError, match='at least 1 day'):
             _window_end(NOW, 0)
 
     def test_window_title_names_a_single_day(self):
@@ -293,7 +293,7 @@ class TestHelperFunctions:
         assert _window_start(NOW, 1) == datetime(2026, 7, 15, 0, 0, 0)
 
     def test_window_start_rejects_a_past_start(self):
-        with pytest.raises(ValueError, match='cannot start in the past'):
+        with pytest.raises(ValueError, match='may not start before today'):
             _window_start(NOW, -1)
 
     def test_an_offset_window_leaves_out_the_day_it_is_built(self):
@@ -846,7 +846,7 @@ class TestBuildSummary:
     def test_rejects_a_window_shorter_than_a_day(self, monkeypatch):
         reader = self._reader_with(monkeypatch, {'shifts': []}, [])
 
-        with pytest.raises(ValueError, match='at least one day'):
+        with pytest.raises(ValueError, match='at least 1 day'):
             reader.build_summary(
                 need_ids=['1'], now=NOW, days=0
             )
@@ -925,7 +925,7 @@ class TestWindowMarginLogging:
                 need_ids=['1'], now=NOW, days=WIDE_DAYS
             )
 
-        assert 'margin is healthy' in caplog.text
+        assert 'inside the 90-day sign-up limit' in caplog.text
         assert 'AMPLIFY_RESPONSES_SINCE_DAYS' not in caplog.text
 
     def test_silent_without_counted_signups(self, monkeypatch, caplog):

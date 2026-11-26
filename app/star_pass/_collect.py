@@ -40,6 +40,7 @@ from ._building import event_from, opportunity_read
 from ._calendar_note import as_text
 from ._helpers import CategoryMatch, Helpers
 from ._logging import get_logger
+from ._wording import counted
 from ._shift_timing import role_timings
 from ._records import (
     Event,
@@ -421,8 +422,8 @@ def _window_contents(
     window_start, window_end = resolve_window(
         start=run.window_start,
         end=run.window_end,
-        start_name='the window start',
-        end_name='the window end'
+        start_name='The first day',
+        end_name='the last day'
     )
     read = calendar.read_window(
         timeMin=window_start,
@@ -731,7 +732,8 @@ def _into(
     reporter.step_finished()
 
     message = (
-        f'Collected {len(events)} event(s) into run {run_id} '
+        f'Collected {counted(count=len(events), noun="event")} into '
+        f'run ID {run_id} '
         f'from the "{run.calendar}" calendar'
     )
     logger.info(message)
