@@ -1,0 +1,55 @@
+---
+# Run CI on main when an auto-merge skipped it
+## https://docs.github.com/actions/writing-workflows/choosing-when-your-workflow-runs/triggering-a-workflow
+
+# Before each Slack post, starts each CI workflow that has no
+# successful or running run for the latest commit on main. A commit
+# is in that state after an auto-merge.
+
+# Name of the action
+name: CI after auto-merge
+
+# Events that trigger the action
+#
+# Thirty minutes before each post in 'slack-summary.yml'
+on:
+  schedule:
+    - cron: '42 17 * * 3'
+    - cron: '42 17 * * 5'
+  workflow_dispatch:
+
+# No permissions by default; the job below is granted the access it needs
+permissions: {}
+
+jobs:
+  start_ci:
+    name: Start CI for the latest commit on main
+    if: github.repository == 'rcrderby/star-pass'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    # Job permissions
+    #
+    # 'actions: write' lists workflow runs and starts new ones.
+    permissions:
+      actions: write
+
+    steps:
+      - name: Start each workflow that has not run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for workflow in build.yml pytest.yml lint-files.yml static-code-analysis.yml; do
+            runs=$(gh run list --workflow "${workflow}" --commit "${COMMIT}" \
+              --json status,conclusion \
+              --jq '[.[] | select(.status != "completed" or .conclusion == "success")] | length')
+            if [ "${runs}" -gt 0 ]; then
+              echo "${workflow}: already ran on ${COMMIT}"
+            else
+              echo "${workflow}: starting on ${COMMIT}"
+              gh workflow run "${workflow}" --ref main
+            fi
+          done

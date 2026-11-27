@@ -13,7 +13,7 @@ name: Dependabot auto-merge
 on:
   pull_request:
 
-# No permissions by default; the job below is granted what it needs
+# No permissions by default; the job below is granted the access it needs
 permissions: {}
 
 jobs:
