@@ -226,5 +226,6 @@ Dependencies are pinned, and Dependabot proposes updates to them weekly.
 Dependabot groups minor and patch updates into one pull request per ecosystem, and `.github/workflows/dependabot-auto-merge.yml` merges them after the required checks pass.
 Major updates get their own pull requests and need review.
 Dependabot waits seven days after a release before proposing it.
+After an auto-merge, `.github/workflows/ci-after-auto-merge.yml` runs CI on `main` before the next Slack post, which also publishes a new Slack image.
 
 To change the Python version, edit the `python` image tag in `Dockerfile` and `Dockerfile.dev`, and the `python-version` in `.github/workflows/*.yml`.

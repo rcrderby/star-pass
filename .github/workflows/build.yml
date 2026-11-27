@@ -187,8 +187,13 @@ jobs:
       # Two tags: the moving one a scheduled post pulls, and one naming
       # the commit, so a post can be traced to what produced it and a
       # rollback has something to name.
+      #
+      # A manual run on main also publishes a new image.
+      # 'ci-after-auto-merge.yml' starts one after an auto-merge.
       - name: Publish the image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: >-
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+          github.ref == 'refs/heads/main'
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REGISTRY_USER: ${{ github.actor }}
